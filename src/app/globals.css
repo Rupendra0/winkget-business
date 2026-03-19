@@ -19,8 +19,145 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #f4fbff 0%, #f2fff9 50%, #f7fbff 100%);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* Glass morphism animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  55% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.98);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.fade-carousel {
+  position: relative;
+}
+
+.fade-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: fade-slide 14s ease-in-out infinite;
+}
+
+.fade-delay-1 {
+  animation-delay: 0s;
+}
+
+.fade-delay-2 {
+  animation-delay: 4.7s;
+}
+
+.fade-delay-3 {
+  animation-delay: 9.4s;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-all duration-300;
+}
+
+/* Remove default button styles */
+button {
+  @apply cursor-pointer;
+}
+
+/* Glass morphism effect utilities */
+.glass-effect {
+  @apply backdrop-blur-xl bg-white/40 border border-white/60 shadow-lg;
+}
+
+.glass-effect-sm {
+  @apply backdrop-blur-md bg-white/30 border border-white/40;
+}
+
+.glass-panel {
+  @apply backdrop-blur-xl bg-white/50 border border-white/70 shadow-xl;
+}
+
+.card-float {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}
+
+.hover-glow {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -1,0 +1,221 @@
+export type CategoryListing = {
+  id: string;
+  name: string;
+  rating: number;
+  reviews: number;
+  verified: boolean;
+  address: string;
+  city: string;
+  sublocality: string;
+  subcategory: string;
+  imageUrl: string;
+};
+
+export type CategoryBanner = {
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  cta: string;
+};
+
+export type CategoryPageData = {
+  slug: string;
+  title: string;
+  city: string;
+  banner: CategoryBanner;
+  subcategories: string[];
+  sublocalities: string[];
+  listings: CategoryListing[];
+  exploreTitle: string;
+  exploreTiles: { label: string; imageUrl: string }[];
+  exploreInsertAfter: number;
+};
+
+export const categoryPages: CategoryPageData[] = [
+  {
+    slug: "restaurants",
+    title: "Restaurants",
+    city: "Lucknow",
+    banner: {
+      title: "Restaurants in Lucknow",
+      subtitle: "Discover top-rated cafes and dining spots near you.",
+      imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=60",
+      cta: "Explore offers",
+    },
+    subcategories: ["Cafe", "Bakery", "Dinner", "Sweet", "Beverages", "Burger"],
+    sublocalities: ["Gomti Nagar", "Hazratganj", "Indira Nagar", "Alambagh"],
+    exploreTitle: "Explore",
+    exploreInsertAfter: 6,
+    exploreTiles: [
+      {
+        label: "Cafes",
+        imageUrl: "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Dinner",
+        imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Chill",
+        imageUrl: "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Pubs",
+        imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "More",
+        imageUrl: "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=400&q=60",
+      },
+    ],
+    listings: [
+      {
+        id: "rest-1",
+        name: "Black Horse",
+        rating: 4.6,
+        reviews: 148,
+        verified: true,
+        address: "Vijay Chowk, Gomti Nagar",
+        city: "Lucknow",
+        sublocality: "Gomti Nagar",
+        subcategory: "Cafe",
+        imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "rest-2",
+        name: "Naina Dry Fruits",
+        rating: 4.4,
+        reviews: 92,
+        verified: true,
+        address: "Shahebganj Mandi, Hazratganj",
+        city: "Lucknow",
+        sublocality: "Hazratganj",
+        subcategory: "Sweet",
+        imageUrl: "https://images.unsplash.com/photo-1505576391880-b3f9d713dc4f?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "rest-3",
+        name: "Caribbean Blu",
+        rating: 4.7,
+        reviews: 206,
+        verified: true,
+        address: "Hari Om Nagar, Indira Nagar",
+        city: "Lucknow",
+        sublocality: "Indira Nagar",
+        subcategory: "Dinner",
+        imageUrl: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "rest-4",
+        name: "Bunker\'s Adda",
+        rating: 4.5,
+        reviews: 131,
+        verified: true,
+        address: "GDA Tower, Alambagh",
+        city: "Lucknow",
+        sublocality: "Alambagh",
+        subcategory: "Cafe",
+        imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "rest-5",
+        name: "The Oven Story",
+        rating: 4.3,
+        reviews: 76,
+        verified: false,
+        address: "Gomti Nagar Extension",
+        city: "Lucknow",
+        sublocality: "Gomti Nagar",
+        subcategory: "Dinner",
+        imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "rest-6",
+        name: "Sugar Rush",
+        rating: 4.8,
+        reviews: 244,
+        verified: true,
+        address: "Hazratganj Market",
+        city: "Lucknow",
+        sublocality: "Hazratganj",
+        subcategory: "Bakery",
+        imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=60",
+      },
+    ],
+  },
+  {
+    slug: "salon-and-spa",
+    title: "Salon & Spa",
+    city: "Gorakhpur",
+    banner: {
+      title: "Salon & Spa in Gorakhpur",
+      subtitle: "Book premium salons, grooming, and spa treatments nearby.",
+      imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=60",
+      cta: "Book now",
+    },
+    subcategories: ["Women", "Men", "Spa", "Makeup", "Hair Styling"],
+    sublocalities: ["Golghar", "Basharatpur", "Civil Lines"],
+    exploreTitle: "Explore",
+    exploreInsertAfter: 6,
+    exploreTiles: [
+      {
+        label: "Studios",
+        imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Spa",
+        imageUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Makeup",
+        imageUrl: "https://images.unsplash.com/photo-1503455637927-730bce8583c0?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Barber",
+        imageUrl: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "More",
+        imageUrl: "https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=400&q=60",
+      },
+    ],
+    listings: [
+      {
+        id: "salon-1",
+        name: "Urban Glow Studio",
+        rating: 4.7,
+        reviews: 214,
+        verified: true,
+        address: "Golghar Market",
+        city: "Gorakhpur",
+        sublocality: "Golghar",
+        subcategory: "Women",
+        imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "salon-2",
+        name: "The Gentlemen\'s Club",
+        rating: 4.5,
+        reviews: 121,
+        verified: true,
+        address: "Civil Lines Road",
+        city: "Gorakhpur",
+        sublocality: "Civil Lines",
+        subcategory: "Men",
+        imageUrl: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=800&q=60",
+      },
+      {
+        id: "salon-3",
+        name: "Serenity Spa",
+        rating: 4.6,
+        reviews: 98,
+        verified: false,
+        address: "Basharatpur",
+        city: "Gorakhpur",
+        sublocality: "Basharatpur",
+        subcategory: "Spa",
+        imageUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=60",
+      },
+    ],
+  },
+];
