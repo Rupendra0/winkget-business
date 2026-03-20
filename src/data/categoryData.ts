@@ -9,6 +9,10 @@ export type CategoryListing = {
   sublocality: string;
   subcategory: string;
   imageUrl: string;
+  ctaLabel?: string;
+  badges?: string[];
+  priceRange?: string;
+  tags?: string[];
 };
 
 export type CategoryBanner = {
@@ -34,6 +38,10 @@ export type CategoryPageData = {
 export const categoryPages: CategoryPageData[] = [
   {
     slug: "restaurants",
+        ctaLabel: "Call now",
+        badges: ["Premium", "Trending"],
+        priceRange: "Starts from ₹99",
+        tags: ["Rooftop", "Live Music", "Couple Friendly"],
     title: "Restaurants",
     city: "Lucknow",
     banner: {
@@ -46,6 +54,10 @@ export const categoryPages: CategoryPageData[] = [
     sublocalities: ["Gomti Nagar", "Hazratganj", "Indira Nagar", "Alambagh"],
     exploreTitle: "Explore",
     exploreInsertAfter: 6,
+        ctaLabel: "Get quote",
+        badges: ["Best Seller"],
+        priceRange: "$$",
+        tags: ["Gift Packs", "Same Day"],
     exploreTiles: [
       {
         label: "Cafes",
@@ -58,6 +70,10 @@ export const categoryPages: CategoryPageData[] = [
       {
         label: "Chill",
         imageUrl: "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
+        ctaLabel: "Reserve",
+        badges: ["Top Rated"],
+        priceRange: "$$$$",
+        tags: ["Fine Dine", "Family"],
       },
       {
         label: "Pubs",
@@ -70,6 +86,10 @@ export const categoryPages: CategoryPageData[] = [
     ],
     listings: [
       {
+        ctaLabel: "Book table",
+        badges: ["New"],
+        priceRange: "$$$",
+        tags: ["Co-working", "Events"],
         id: "rest-1",
         name: "Black Horse",
         rating: 4.6,
@@ -82,6 +102,10 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=800&q=60",
       },
       {
+        ctaLabel: "Order now",
+        badges: ["Budget"],
+        priceRange: "$$",
+        tags: ["Delivery", "Late Night"],
         id: "rest-2",
         name: "Naina Dry Fruits",
         rating: 4.4,
@@ -94,6 +118,10 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1505576391880-b3f9d713dc4f?auto=format&fit=crop&w=800&q=60",
       },
       {
+        ctaLabel: "Visit store",
+        badges: ["Premium", "Chef Special"],
+        priceRange: "$$",
+        tags: ["Custom Cakes", "Catering"],
         id: "rest-3",
         name: "Caribbean Blu",
         rating: 4.7,
@@ -107,6 +135,10 @@ export const categoryPages: CategoryPageData[] = [
       },
       {
         id: "rest-4",
+          ctaLabel: "Book now",
+          badges: ["Premium", "Women Only"],
+          priceRange: "$$$",
+          tags: ["Bridal", "Color"],
         name: "Bunker\'s Adda",
         rating: 4.5,
         reviews: 131,
@@ -119,6 +151,10 @@ export const categoryPages: CategoryPageData[] = [
       },
       {
         id: "rest-5",
+          ctaLabel: "Call now",
+          badges: ["Grooming"],
+          priceRange: "$$",
+          tags: ["Haircut", "Shave"],
         name: "The Oven Story",
         rating: 4.3,
         reviews: 76,
@@ -131,6 +167,10 @@ export const categoryPages: CategoryPageData[] = [
       },
       {
         id: "rest-6",
+          ctaLabel: "Book slot",
+          badges: ["Relax"],
+          priceRange: "$$$$",
+          tags: ["Massage", "Detox"],
         name: "Sugar Rush",
         rating: 4.8,
         reviews: 244,

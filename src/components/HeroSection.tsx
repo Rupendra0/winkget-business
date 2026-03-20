@@ -32,28 +32,7 @@ export default function HeroSection() {
           <p className="text-base sm:text-lg text-gray-600 mb-6 max-w-xl">
             Compare reviews, prices, and availability across your city. Book instantly or call vendors directly.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-7">
-            <div className="flex-1 flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-xl bg-white/40 border border-white/60 shadow-lg hover:bg-white/50 transition-all">
-              <MapPin size={18} className="text-blue-900 shrink-0" />
-              <input
-                type="text"
-                placeholder="Enter your city or area"
-                className="flex-1 bg-transparent outline-none text-gray-800 placeholder-gray-500 font-medium"
-              />
-            </div>
-            <div className="flex-1 flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-xl bg-white/40 border border-white/60 shadow-lg hover:bg-white/50 transition-all">
-              <Search size={18} className="text-blue-900 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search shops, services, or vendors"
-                className="flex-1 bg-transparent outline-none text-gray-800 placeholder-gray-500 font-medium"
-              />
-            </div>
-            <button className="w-full sm:w-auto px-7 py-3 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
-              <Search size={18} />
-              Find Businesses
-            </button>
-          </div>
+          <div className="mb-6 sm:mb-7" />
 
           <div className="rounded-2xl glass-panel p-5">
             <div className="text-sm font-semibold text-gray-800 mb-3">Trending near you</div>

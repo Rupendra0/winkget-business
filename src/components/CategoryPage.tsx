@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { MapPin, SlidersHorizontal, Star } from "lucide-react";
 import Footer from "@/components/Footer";
 import type { CategoryPageData } from "@/data/categoryData";
@@ -10,29 +11,6 @@ const ratingLabel = (rating: number) => rating.toFixed(1);
 export default function CategoryPage({ data }: { data: CategoryPageData }) {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("All");
   const [selectedSublocality, setSelectedSublocality] = useState<string>("All");
-
-  const exploreTiles = [
-    {
-      label: "Cafes",
-      imageUrl: "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
-    },
-    {
-      label: "Dinner",
-      imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=60",
-    },
-    {
-      label: "Chill",
-      imageUrl: "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
-    },
-    {
-      label: "Pubs",
-      imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=400&q=60",
-    },
-    {
-      label: "More",
-      imageUrl: "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=400&q=60",
-    },
-  ];
 
   const filteredListings = useMemo(() => {
     return data.listings.filter((listing) => {
@@ -85,7 +63,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             <div>
               <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Sublocality</div>
               <select
-                className="w-full rounded-xl border border-blue-200 bg-white/70 px-4 py-2 text-sm"
+                className="w-full rounded-xl border border-blue-200 bg-white/90 px-4 py-2 text-sm text-slate-700"
                 value={selectedSublocality}
                 onChange={(event) => setSelectedSublocality(event.target.value)}
               >
@@ -145,34 +123,64 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                       key={listing.id}
                       className="rounded-2xl bg-white/70 border border-white/80 shadow-md overflow-hidden card-float"
                     >
-                      <div className="h-44 w-full overflow-hidden">
-                        <img
-                          src={listing.imageUrl}
-                          alt={listing.name}
-                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
+                      <Link href={`/listing/${listing.id}`} className="block">
+                        <div className="h-44 w-full overflow-hidden">
+                          <img
+                            src={listing.imageUrl}
+                            alt={listing.name}
+                            className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
+                      </Link>
                       <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-gray-900">{listing.name}</h3>
+                        <div className="flex items-start justify-between gap-3">
+                          <Link href={`/listing/${listing.id}`} className="font-semibold text-gray-900">
+                            {listing.name}
+                          </Link>
                           {listing.verified && (
                             <span className="text-xs font-semibold text-blue-900 bg-blue-100/70 px-2 py-1 rounded-full">
                               Verified
                             </span>
                           )}
                         </div>
+                        {listing.badges && listing.badges.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {listing.badges.slice(0, 2).map((badge) => (
+                              <span
+                                key={`${listing.id}-${badge}`}
+                                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full bg-amber-100 text-amber-900"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Star size={14} className="text-yellow-500 fill-yellow-500" />
                           {ratingLabel(listing.rating)} ({listing.reviews})
                         </div>
+                        {(listing.priceRange || listing.tags?.length) && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                            {listing.priceRange && (
+                              <span className="font-semibold text-gray-700">
+                                {listing.priceRange}
+                              </span>
+                            )}
+                            {listing.tags?.slice(0, 2).map((tag) => (
+                              <span key={`${listing.id}-${tag}`} className="px-2 py-1 rounded-full bg-white/80">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="text-xs text-gray-500">{listing.address}</div>
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-xs text-blue-900 font-semibold">
                             {listing.subcategory}
                           </span>
                           <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800">
-                            Inquiry
+                            {listing.ctaLabel ?? "Inquiry"}
                           </button>
                         </div>
                       </div>
@@ -210,34 +218,64 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                       key={listing.id}
                       className="rounded-2xl bg-white/70 border border-white/80 shadow-md overflow-hidden card-float"
                     >
-                      <div className="h-44 w-full overflow-hidden">
-                        <img
-                          src={listing.imageUrl}
-                          alt={listing.name}
-                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
+                      <Link href={`/listing/${listing.id}`} className="block">
+                        <div className="h-44 w-full overflow-hidden">
+                          <img
+                            src={listing.imageUrl}
+                            alt={listing.name}
+                            className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
+                      </Link>
                       <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-gray-900">{listing.name}</h3>
+                        <div className="flex items-start justify-between gap-3">
+                          <Link href={`/listing/${listing.id}`} className="font-semibold text-gray-900">
+                            {listing.name}
+                          </Link>
                           {listing.verified && (
                             <span className="text-xs font-semibold text-blue-900 bg-blue-100/70 px-2 py-1 rounded-full">
                               Verified
                             </span>
                           )}
                         </div>
+                        {listing.badges && listing.badges.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {listing.badges.slice(0, 2).map((badge) => (
+                              <span
+                                key={`${listing.id}-${badge}`}
+                                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full bg-amber-100 text-amber-900"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Star size={14} className="text-yellow-500 fill-yellow-500" />
                           {ratingLabel(listing.rating)} ({listing.reviews})
                         </div>
+                        {(listing.priceRange || listing.tags?.length) && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                            {listing.priceRange && (
+                              <span className="font-semibold text-gray-700">
+                                {listing.priceRange}
+                              </span>
+                            )}
+                            {listing.tags?.slice(0, 2).map((tag) => (
+                              <span key={`${listing.id}-${tag}`} className="px-2 py-1 rounded-full bg-white/80">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="text-xs text-gray-500">{listing.address}</div>
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-xs text-blue-900 font-semibold">
                             {listing.subcategory}
                           </span>
                           <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800">
-                            Inquiry
+                            {listing.ctaLabel ?? "Inquiry"}
                           </button>
                         </div>
                       </div>
