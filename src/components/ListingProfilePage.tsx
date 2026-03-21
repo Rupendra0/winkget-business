@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   MapPin,
   Phone,
@@ -109,10 +110,13 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 <CalendarCheck size={16} />
                 {profile.ctaLabel}
               </button>
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800">
+              <Link
+                href={`/store/${profile.storeId ?? profile.id}`}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800"
+              >
                 <Store size={16} />
                 My Store
-              </button>
+              </Link>
               <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold">
                 <Phone size={16} />
                 Call

@@ -391,7 +391,7 @@ export const heroMosaicImages = [
 export const brandPartners = [
   {
     name: "McDonalds",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5f/McDonald%27s_Logo.svg",
+    logoUrl: "/public/image.png",
   },
   {
     name: "Flipkart",

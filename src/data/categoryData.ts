@@ -86,7 +86,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Reserve",
         badges: ["Premium", "Trending"],
-        priceRange: "$$$",
+        priceRange: "Starts from ₹99",
         tags: ["Rooftop", "Live Music", "Couple Friendly"],
       },
       {
@@ -102,7 +102,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1505576391880-b3f9d713dc4f?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Get quote",
         badges: ["Best Seller"],
-        priceRange: "$$",
+        priceRange: "Starts from ₹149",
         tags: ["Gift Packs", "Same Day"],
       },
       {
@@ -118,7 +118,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Book table",
         badges: ["Top Rated"],
-        priceRange: "$$$$",
+        priceRange: "Starts from ₹499",
         tags: ["Fine Dine", "Family"],
       },
       {
@@ -134,7 +134,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Call now",
         badges: ["New"],
-        priceRange: "$$$",
+        priceRange: "Starts from ₹199",
         tags: ["Co-working", "Events"],
       },
       {
@@ -150,7 +150,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Order now",
         badges: ["Budget"],
-        priceRange: "$$",
+        priceRange: "Starts from ₹129",
         tags: ["Delivery", "Late Night"],
       },
       {
@@ -166,7 +166,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Visit store",
         badges: ["Premium", "Chef Special"],
-        priceRange: "$$",
+        priceRange: "Starts from ₹249",
         tags: ["Custom Cakes", "Catering"],
       },
     ],
@@ -221,7 +221,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Book now",
         badges: ["Premium", "Women Only"],
-        priceRange: "$$$",
+        priceRange: "Starts from ₹699",
         tags: ["Bridal", "Color"],
       },
       {
@@ -237,7 +237,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Call now",
         badges: ["Grooming"],
-        priceRange: "$$",
+        priceRange: "Starts from ₹199",
         tags: ["Haircut", "Shave"],
       },
       {
@@ -253,7 +253,7 @@ export const categoryPages: CategoryPageData[] = [
         imageUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=60",
         ctaLabel: "Book slot",
         badges: ["Relax"],
-        priceRange: "$$$$",
+        priceRange: "Starts from ₹899",
         tags: ["Massage", "Detox"],
       },
     ],

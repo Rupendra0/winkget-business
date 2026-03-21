@@ -1,0 +1,271 @@
+"use client";
+
+import React, { useMemo, useState } from "react";
+import { Star, Filter, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import Footer from "@/components/Footer";
+import type { StorePageData } from "@/data/listingData";
+
+const ratingLabel = (rating: number) => rating.toFixed(1);
+
+const buildProductMap = (products: StorePageData["products"]) => {
+  return new Map(products.map((product) => [product.id, product]));
+};
+
+export default function StorePage({ data }: { data: StorePageData }) {
+  const productMap = buildProductMap(data.products);
+
+  const featuredProducts = data.featured.productIds
+    .map((id) => productMap.get(id))
+    .filter(Boolean);
+  const trendingProducts = data.trending.productIds
+    .map((id) => productMap.get(id))
+    .filter(Boolean);
+
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(featuredProducts.length / pageSize));
+  const [featuredPage, setFeaturedPage] = useState(0);
+  const pagedFeatured = useMemo(() => {
+    const start = featuredPage * pageSize;
+    return featuredProducts.slice(start, start + pageSize);
+  }, [featuredPage, featuredProducts]);
+  const trendingTotalPages = Math.max(1, Math.ceil(trendingProducts.length / pageSize));
+  const [trendingPage, setTrendingPage] = useState(0);
+  const pagedTrending = useMemo(() => {
+    const start = trendingPage * pageSize;
+    return trendingProducts.slice(start, start + pageSize);
+  }, [trendingPage, trendingProducts]);
+
+  return (
+    <main className="px-3 sm:px-4 lg:px-6 pb-12">
+      <div className="max-w-[1400px] mx-auto space-y-10">
+        <section className="rounded-3xl overflow-hidden bg-white/70 border border-white/80 shadow-lg">
+          <div className="relative h-44 sm:h-52">
+            <img
+              src={data.bannerImage}
+              alt={data.storeName}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-800/30 to-transparent" />
+            <div className="absolute bottom-5 left-5 flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full border-2 border-white overflow-hidden shadow-lg bg-white">
+                <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
+              </div>
+              <div className="text-white">
+                <div className="text-2xl font-bold leading-tight">{data.storeName}</div>
+                <div className="text-sm text-white/80">{data.tagline}</div>
+                <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
+                  <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                  {ratingLabel(data.rating)} ({data.reviews} reviews)
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+          <aside className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 space-y-6 h-fit lg:sticky lg:top-24">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Filter size={16} />
+              Filters
+            </div>
+            {data.filters.map((group) => (
+              <div key={group.label}>
+                <div className="text-xs font-semibold text-slate-500 uppercase mb-2">
+                  {group.label}
+                </div>
+                <div className="space-y-2">
+                  {group.options.map((option) => (
+                    <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                      <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </aside>
+
+          <div className="space-y-8">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+              <div className="flex items-center justify-between">
+                <div className="text-lg font-semibold text-slate-900">Shop by Category</div>
+                <div className="text-xs text-slate-500">{data.address}</div>
+              </div>
+              <div className="mt-4 flex gap-3 overflow-x-auto no-scrollbar">
+                {data.categories.map((category) => (
+                  <button
+                    key={category}
+                    className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 bg-white"
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
+                  {data.featured.subtitle && (
+                    <div className="text-sm text-slate-500">{data.featured.subtitle}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => setFeaturedPage((prev) => Math.max(0, prev - 1))}
+                    aria-label="Previous items"
+                    disabled={featuredPage === 0}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => setFeaturedPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                    aria-label="Next items"
+                    disabled={featuredPage >= totalPages - 1}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {pagedFeatured.map((product) => (
+                  <div
+                    key={product?.id}
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                  >
+                    <div className="h-32 bg-slate-50 shrink-0">
+                      <img
+                        src={product?.imageUrl}
+                        alt={product?.name}
+                        className="h-full w-full object-contain p-3"
+                      />
+                    </div>
+                    <div className="p-3 flex flex-1 flex-col gap-2">
+                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
+                        {product?.name}
+                      </div>
+                      <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
+                      <div className="text-xs text-slate-500">{product?.category}</div>
+                      <button className="mt-auto h-9 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                        <ShoppingCart size={14} />
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+                <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
+                  {data.trending.subtitle && (
+                    <div className="text-sm text-slate-500">{data.trending.subtitle}</div>
+                  )}
+                </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => setTrendingPage((prev) => Math.max(0, prev - 1))}
+                      aria-label="Previous items"
+                      disabled={trendingPage === 0}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => setTrendingPage((prev) => Math.min(trendingTotalPages - 1, prev + 1))}
+                      aria-label="Next items"
+                      disabled={trendingPage >= trendingTotalPages - 1}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {pagedTrending.map((product) => (
+                  <div
+                    key={product?.id}
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                  >
+                    <div className="h-32 bg-slate-50 shrink-0">
+                      <img
+                        src={product?.imageUrl}
+                        alt={product?.name}
+                        className="h-full w-full object-contain p-3"
+                      />
+                    </div>
+                    <div className="p-3 flex flex-1 flex-col gap-2">
+                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
+                        {product?.name}
+                      </div>
+                      <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
+                      <div className="text-xs text-slate-500">{product?.category}</div>
+                      <button className="mt-auto h-9 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                        <ShoppingCart size={14} />
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+              <div className="flex items-center justify-between">
+                <div className="text-lg font-semibold text-slate-900">All Products</div>
+                <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                  <option>Sort by: Featured</option>
+                  <option>Price: Low to High</option>
+                  <option>Price: High to Low</option>
+                </select>
+              </div>
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                {data.products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                  >
+                    <div className="h-40 bg-slate-50 shrink-0">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-full w-full object-contain p-4"
+                      />
+                    </div>
+                    <div className="p-4 flex flex-1 flex-col gap-2">
+                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
+                        {product.name}
+                      </div>
+                      <div className="text-sm font-semibold text-blue-700">{product.price}</div>
+                      <div className="text-xs text-slate-500">{product.category}</div>
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2">
+                        <ShoppingCart size={14} />
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+              <div className="text-lg font-semibold text-slate-900">{data.aboutTitle}</div>
+              <div className="mt-3 text-sm text-slate-600">{data.aboutBody}</div>
+            </section>
+          </div>
+        </section>
+      </div>
+      <Footer />
+    </main>
+  );
+}

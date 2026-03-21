@@ -66,13 +66,13 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, icon, color, imageUrl }: CategoryCardProps) {
   return (
-    <div className="group relative h-44 cursor-pointer">
+    <div className="group relative h-32 sm:h-36 cursor-pointer">
       <div className="absolute inset-0 rounded-2xl bg-white/40 border border-white/60 shadow-md transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl" />
       <div className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-15 bg-linear-to-br ${color} transition-opacity duration-300`} />
 
-      <div className="relative h-full flex flex-col items-center justify-center px-4 py-5">
+      <div className="relative h-full flex flex-col items-center justify-center px-3 py-4">
         <div className="relative">
-          <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-lg border border-white/60 bg-white">
+          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden shadow-lg border border-white/60 bg-white">
             <img
               src={imageUrl}
               alt={name}
@@ -80,17 +80,17 @@ function CategoryCard({ name, icon, color, imageUrl }: CategoryCardProps) {
               loading="lazy"
             />
           </div>
-          <div className={`absolute -bottom-2 -right-2 h-8 w-8 rounded-xl bg-linear-to-br ${color} shadow-md flex items-center justify-center text-white`}
+          <div className={`absolute -bottom-2 -right-2 h-7 w-7 rounded-xl bg-linear-to-br ${color} shadow-md flex items-center justify-center text-white`}
           >
             {icon}
           </div>
         </div>
 
-        <h3 className="mt-4 text-sm font-semibold text-gray-800 text-center line-clamp-2 group-hover:text-gray-900 transition-colors">
+        <h3 className="mt-3 text-[12px] font-semibold text-gray-800 text-center line-clamp-2 group-hover:text-gray-900 transition-colors">
           {name}
         </h3>
 
-        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <ChevronRight size={16} className="text-blue-900" />
         </div>
       </div>
@@ -108,18 +108,14 @@ const slugify = (value: string) =>
 export default function CategoryGrid() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const visibleCount = 11;
+  const visibleCount = 19;
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.order - b.order),
     []
   );
-  const homeCategories = useMemo(
-    () => sortedCategories.filter((category) => category.showOnHome),
-    [sortedCategories]
-  );
   const visibleCategories = useMemo(
-    () => homeCategories.slice(0, visibleCount),
-    [homeCategories]
+    () => sortedCategories.slice(0, visibleCount),
+    [sortedCategories]
   );
   const filteredCategories = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -143,14 +139,14 @@ export default function CategoryGrid() {
         </div>
 
         {/* Category Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-10 gap-3 sm:gap-4">
           {visibleCategories.map((category) => {
             const IconComponent = iconMap[category.iconKey as keyof typeof iconMap] || Building2;
             return (
               <Link key={category.name} href={`/category/${slugify(category.name)}`}>
                 <CategoryCard
                   name={category.name}
-                  icon={<IconComponent size={28} />}
+                  icon={<IconComponent size={20} />}
                   color={category.color}
                   imageUrl={category.imageUrl}
                 />
@@ -158,16 +154,16 @@ export default function CategoryGrid() {
             );
           })}
           <button
-            className="group relative h-40"
+            className="group relative h-32 sm:h-36"
             onClick={() => setIsOpen(true)}
             type="button"
           >
             <div className="absolute inset-0 backdrop-blur-xl bg-blue-900/10 border border-blue-900/20 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 group-hover:bg-blue-900/20 group-hover:border-blue-900/40 group-hover:-translate-y-1" />
-            <div className="relative h-full flex flex-col items-center justify-center px-4 py-6">
-              <div className="mb-3 p-3 rounded-xl bg-blue-900 text-white shadow-lg">
-                <ChevronRight size={28} />
+            <div className="relative h-full flex flex-col items-center justify-center px-3 py-4">
+              <div className="mb-2 p-2 rounded-xl bg-blue-900 text-white shadow-lg">
+                <ChevronRight size={22} />
               </div>
-              <h3 className="text-sm font-semibold text-blue-900 text-center">View All</h3>
+              <h3 className="text-[12px] font-semibold text-blue-900 text-center">View All</h3>
             </div>
           </button>
         </div>
@@ -208,7 +204,7 @@ export default function CategoryGrid() {
                     <Link key={category.name} href={`/category/${slugify(category.name)}`}>
                       <CategoryCard
                         name={category.name}
-                        icon={<IconComponent size={24} />}
+                        icon={<IconComponent size={20} />}
                         color={category.color}
                         imageUrl={category.imageUrl}
                       />

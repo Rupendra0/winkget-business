@@ -10,6 +10,7 @@ export type ListingReview = {
 
 export type ListingProfile = {
   id: string;
+  storeId?: string;
   name: string;
   category: string;
   coverImage: string;
@@ -38,9 +39,43 @@ export type ListingProfile = {
   suggestions: { name: string; detail: string }[];
 };
 
+export type StoreProduct = {
+  id: string;
+  name: string;
+  price: string;
+  category: string;
+  imageUrl: string;
+  badge?: string;
+};
+
+export type StoreSection = {
+  title: string;
+  subtitle?: string;
+  productIds: string[];
+};
+
+export type StorePageData = {
+  id: string;
+  storeName: string;
+  tagline: string;
+  bannerImage: string;
+  logoImage: string;
+  rating: number;
+  reviews: number;
+  address: string;
+  categories: string[];
+  filters: { label: string; options: string[] }[];
+  products: StoreProduct[];
+  featured: StoreSection;
+  trending: StoreSection;
+  aboutTitle: string;
+  aboutBody: string;
+};
+
 export const listingProfiles: Record<string, ListingProfile> = {
   "rest-1": {
     id: "rest-1",
+    storeId: "diyaratech",
     name: "Black Horse",
     category: "Restaurant",
     coverImage:
@@ -49,7 +84,7 @@ export const listingProfiles: Record<string, ListingProfile> = {
       "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=300&q=60",
     rating: 4.6,
     reviews: 148,
-    priceRange: "$$$",
+    priceRange: "Starts from ₹99",
     badges: ["Premium", "Trending"],
     tags: ["Rooftop", "Live Music", "Couple Friendly"],
     address: "Vijay Chowk, Gomti Nagar",
@@ -106,6 +141,125 @@ export const listingProfiles: Record<string, ListingProfile> = {
   },
 };
 
+export const storePages: Record<string, StorePageData> = {
+  diyaratech: {
+    id: "diyaratech",
+    storeName: "Diyaratech Software",
+    tagline: "Unlimited Possibilities",
+    bannerImage:
+      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=1600&q=80",
+    logoImage:
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=200&q=60",
+    rating: 4.8,
+    reviews: 128,
+    address: "Golghar, Gorakhpur",
+    categories: [
+      "Washing Machine",
+      "Mobile",
+      "Tablet",
+      "Microwave",
+      "Headphone",
+      "Oppo",
+      "Fan",
+      "Laptop",
+      "Heater",
+      "Realme",
+    ],
+    filters: [
+      { label: "Price", options: ["Under ₹1,000", "₹1,000 - ₹10,000", "₹10,000+"] },
+      { label: "Brand", options: ["Sony", "Samsung", "Lenovo", "Boat", "Philips"] },
+      { label: "Availability", options: ["In stock", "Pre-order", "Coming soon"] },
+    ],
+    products: [
+      {
+        id: "prod-1",
+        name: "Panasonic 20L Solo Microwave",
+        price: "₹6,440",
+        category: "Electronics",
+        imageUrl:
+          "https://images.unsplash.com/photo-1585238342028-4ce1f2f53b16?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-2",
+        name: "Lenovo IdeaPad 11 Laptop",
+        price: "₹26,999",
+        category: "Laptop",
+        imageUrl:
+          "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-3",
+        name: "Zebronics Thunder Headset",
+        price: "₹799",
+        category: "Audio",
+        imageUrl:
+          "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-4",
+        name: "Lenovo Tab M11 with Pen",
+        price: "₹16,999",
+        category: "Tablet",
+        imageUrl:
+          "https://images.unsplash.com/photo-1525203135335-74d272fc8d9c?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-5",
+        name: "OnePlus Pad Go 28",
+        price: "₹16,999",
+        category: "Tablet",
+        imageUrl:
+          "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-6",
+        name: "Boat 2025 Launch",
+        price: "₹1,099",
+        category: "Audio",
+        imageUrl:
+          "https://images.unsplash.com/photo-1518441902117-fb1c5ed0f2e3?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-7",
+        name: "Orient Electric Comfort Heater",
+        price: "₹9,300",
+        category: "Home Appliances",
+        imageUrl:
+          "https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-8",
+        name: "Pigeon Amaze Plus Kettle",
+        price: "₹549",
+        category: "Home Appliances",
+        imageUrl:
+          "https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=500&q=80",
+      },
+      {
+        id: "prod-9",
+        name: "Oppo F31 Pro 5G",
+        price: "₹28,999",
+        category: "Mobile",
+        imageUrl:
+          "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=500&q=80",
+      },
+    ],
+    featured: {
+      title: "Featured Products",
+      subtitle: "Top picks with best value",
+      productIds: ["prod-1", "prod-2", "prod-3", "prod-4", "prod-5", "prod-6"],
+    },
+    trending: {
+      title: "Trending Products",
+      subtitle: "Most loved this week",
+      productIds: ["prod-9", "prod-7", "prod-8", "prod-3", "prod-6", "prod-5"],
+    },
+    aboutTitle: "About",
+    aboutBody:
+      "We curate verified electronics and home essentials with transparent pricing, fast delivery, and service assurance. Our store specialists help you choose the right product and warranty.",
+  },
+};
+
 export const buildFallbackProfile = (listing: CategoryListing): ListingProfile => {
   return {
     id: listing.id,
@@ -115,7 +269,7 @@ export const buildFallbackProfile = (listing: CategoryListing): ListingProfile =
     logoImage: listing.imageUrl,
     rating: listing.rating,
     reviews: listing.reviews,
-    priceRange: listing.priceRange ?? "$$",
+    priceRange: listing.priceRange ?? "Starts from ₹99",
     badges: listing.badges ?? ["Featured"],
     tags: listing.tags ?? ["Popular"],
     address: listing.address,
