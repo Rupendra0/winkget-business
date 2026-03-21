@@ -12,6 +12,8 @@ import {
   CalendarCheck,
   Send,
   Store,
+  UtensilsCrossed,
+  X,
 } from "lucide-react";
 import type { ListingProfile } from "@/data/listingData";
 import Footer from "@/components/Footer";
@@ -24,6 +26,7 @@ type ProfileTab = (typeof tabList)[number];
 
 export default function ListingProfilePage({ profile }: { profile: ListingProfile }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [reviews, setReviews] = useState(profile.reviewsList);
   const [newAuthor, setNewAuthor] = useState("");
   const [newRating, setNewRating] = useState("5");
@@ -110,6 +113,16 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 <CalendarCheck size={16} />
                 {profile.ctaLabel}
               </button>
+              {profile.category === "Restaurant" && profile.menuItems?.length ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-orange-500 text-white text-sm font-semibold shadow-sm hover:bg-orange-400"
+                  onClick={() => setIsMenuOpen(true)}
+                >
+                  <UtensilsCrossed size={16} />
+                  Menu
+                </button>
+              ) : null}
               <Link
                 href={`/store/${profile.storeId ?? profile.id}`}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800"
@@ -380,6 +393,57 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 </div>
               )}
             </div>
+
+            {profile.category === "Restaurant" && profile.menuItems?.length ? (
+              <section className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">Full Menu</div>
+                    <div className="text-xs text-gray-500">
+                      {profile.menuItems.length} items
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-amber-700"
+                    onClick={() => setIsMenuOpen(true)}
+                  >
+                    View all
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {profile.menuItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden"
+                    >
+                      <div className="relative h-32 bg-orange-100/60">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                        {item.badge && (
+                          <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3 space-y-2">
+                        <div className="text-sm font-semibold text-gray-900 line-clamp-2">
+                          {item.name}
+                        </div>
+                        <div className="text-sm font-semibold text-orange-700">{item.price}</div>
+                        <div className="text-xs text-orange-700/70">{item.category}</div>
+                        <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold">
+                          Add to Cart
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
 
           <aside className="space-y-6">
@@ -450,6 +514,64 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
         </section>
       </div>
       <Footer />
+      {isMenuOpen && profile.category === "Restaurant" && profile.menuItems?.length ? (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <div className="w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-xl font-bold text-gray-900">Full Menu</div>
+                  <div className="text-xs text-gray-500">
+                    {profile.menuItems.length} items
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {profile.menuItems.map((item) => (
+                  <div
+                    key={`modal-${item.id}`}
+                    className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden"
+                  >
+                    <div className="relative h-36 bg-orange-100/60">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                      {item.badge && (
+                        <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <div className="text-sm font-semibold text-gray-900 line-clamp-2">
+                        {item.name}
+                      </div>
+                      <div className="text-sm font-semibold text-orange-700">{item.price}</div>
+                      <div className="text-xs text-orange-700/70">{item.category}</div>
+                      <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold">
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

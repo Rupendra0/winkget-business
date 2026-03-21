@@ -33,6 +33,14 @@ export type ListingProfile = {
   hours: { day: string; time: string }[];
   gallery: string[];
   menuImage?: string;
+  menuItems?: {
+    id: string;
+    name: string;
+    price: string;
+    category: string;
+    imageUrl: string;
+    badge?: string;
+  }[];
   reviewsList: ListingReview[];
   mapImage: string;
   suggestionTitle: string;
@@ -75,7 +83,6 @@ export type StorePageData = {
 export const listingProfiles: Record<string, ListingProfile> = {
   "rest-1": {
     id: "rest-1",
-    storeId: "diyaratech",
     name: "Black Horse",
     category: "Restaurant",
     coverImage:
@@ -114,6 +121,39 @@ export const listingProfiles: Record<string, ListingProfile> = {
     ],
     menuImage:
       "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+    menuItems: [
+      {
+        id: "menu-1",
+        name: "PC Rice Bowlz Reg Pepsi",
+        price: "₹239",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1604908554168-08b2a74b0b3a?auto=format&fit=crop&w=600&q=70",
+        badge: "Save 37%",
+      },
+      {
+        id: "menu-2",
+        name: "Roll Combo - Medium",
+        price: "₹198",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1604908554203-c1f76d9b7c3f?auto=format&fit=crop&w=600&q=70",
+        badge: "Save 37%",
+      },
+      {
+        id: "menu-3",
+        name: "Longer Combo - Large",
+        price: "₹248",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=70",
+        badge: "Save 32%",
+      },
+      {
+        id: "menu-4",
+        name: "Veg Rice Bowlz Reg Pepsi",
+        price: "₹208",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=70",
+      },
+    ],
     reviewsList: [
       {
         id: "rev-1",
@@ -138,6 +178,45 @@ export const listingProfiles: Record<string, ListingProfile> = {
       { name: "Sugar Rush", detail: "Dessert lounge" },
       { name: "Bunker's Adda", detail: "Cafe & co-working" },
     ],
+  },
+  diyaratech: {
+    id: "diyaratech",
+    storeId: "diyaratech",
+    name: "Diyaratech Software",
+    category: "Electronics",
+    coverImage:
+      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=1600&q=80",
+    logoImage:
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=300&q=60",
+    rating: 4.8,
+    reviews: 128,
+    priceRange: "Starts from ₹99",
+    badges: ["Premium", "Top Rated"],
+    tags: ["Electronics", "Gadgets", "Home Appliances"],
+    address: "Golghar",
+    city: "Gorakhpur",
+    phone: "+91 90000 11111",
+    email: "support@diyaratech.in",
+    whatsapp: "+91 90000 11111",
+    ctaLabel: "Visit store",
+    description:
+      "Diyaratech Software offers curated electronics, appliances, and smart gadgets with verified warranties and doorstep delivery.",
+    highlights: ["Verified electronics store", "Fast delivery", "Assured warranty"],
+    services: ["Electronics", "Appliances", "Accessories"],
+    amenities: ["Customer Support", "Warranty", "Easy Returns"],
+    hours: [
+      { day: "Monday - Sunday", time: "10:00 AM - 9:00 PM" },
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80",
+    ],
+    reviewsList: [],
+    mapImage:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=60",
+    suggestionTitle: "Suggestions",
+    suggestions: [],
   },
 };
 

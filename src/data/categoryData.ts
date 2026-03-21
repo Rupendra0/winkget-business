@@ -258,4 +258,61 @@ export const categoryPages: CategoryPageData[] = [
       },
     ],
   },
+  {
+    slug: "electronics",
+    title: "Electronics",
+    city: "Gorakhpur",
+    banner: {
+      title: "Electronics in Gorakhpur",
+      subtitle: "Shop verified electronics, appliances, and gadgets near you.",
+      imageUrl:
+        "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=1200&q=60",
+      cta: "View deals",
+    },
+    subcategories: ["Mobiles", "Laptops", "Appliances", "Accessories"],
+    sublocalities: ["Golghar", "Civil Lines", "Basharatpur"],
+    exploreTitle: "Explore",
+    exploreInsertAfter: 6,
+    exploreTiles: [
+      {
+        label: "Mobiles",
+        imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Laptops",
+        imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Audio",
+        imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "Appliances",
+        imageUrl: "https://images.unsplash.com/photo-1585238342028-4ce1f2f53b16?auto=format&fit=crop&w=400&q=60",
+      },
+      {
+        label: "More",
+        imageUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=400&q=60",
+      },
+    ],
+    listings: [
+      {
+        id: "diyaratech",
+        name: "Diyaratech Software",
+        rating: 4.8,
+        reviews: 128,
+        verified: true,
+        address: "Golghar",
+        city: "Gorakhpur",
+        sublocality: "Golghar",
+        subcategory: "Appliances",
+        imageUrl:
+          "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=800&q=60",
+        ctaLabel: "Visit store",
+        badges: ["Premium", "Top Rated"],
+        priceRange: "Starts from ₹99",
+        tags: ["Electronics", "Gadgets", "Warranty"],
+      },
+    ],
+  },
 ];

@@ -152,7 +152,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </div>
                       <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
                       <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-9 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>
@@ -210,7 +210,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </div>
                       <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
                       <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-9 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>

@@ -167,11 +167,19 @@ export const categories: CategoryItem[] = [
     showOnHome: true,
   },
   {
+    name: "Electronics",
+    iconKey: "Monitor",
+    color: "from-blue-600 to-blue-800",
+    imageUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=240&q=60",
+    order: 13,
+    showOnHome: true,
+  },
+  {
     name: "Home Service",
     iconKey: "MapPin",
     color: "from-blue-600 to-blue-800",
     imageUrl: "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=240&q=60",
-    order: 13,
+    order: 14,
     showOnHome: false,
   },
   {
@@ -179,7 +187,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Hospital",
     color: "from-cyan-400 to-cyan-600",
     imageUrl: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=240&q=60",
-    order: 14,
+    order: 15,
     showOnHome: false,
   },
   {
@@ -187,7 +195,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Sofa",
     color: "from-teal-300 to-teal-500",
     imageUrl: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=240&q=60",
-    order: 15,
+    order: 16,
     showOnHome: false,
   },
   {
@@ -195,7 +203,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Gem",
     color: "from-sky-400 to-sky-600",
     imageUrl: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=240&q=60",
-    order: 16,
+    order: 17,
     showOnHome: false,
   },
   {
@@ -203,7 +211,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Dumbbell",
     color: "from-blue-700 to-blue-900",
     imageUrl: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=240&q=60",
-    order: 17,
+    order: 18,
     showOnHome: false,
   },
   {
@@ -211,7 +219,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Scale",
     color: "from-cyan-500 to-cyan-700",
     imageUrl: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=240&q=60",
-    order: 18,
+    order: 19,
     showOnHome: false,
   },
   {
@@ -219,7 +227,7 @@ export const categories: CategoryItem[] = [
     iconKey: "PawPrint",
     color: "from-teal-400 to-teal-600",
     imageUrl: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=240&q=60",
-    order: 19,
+    order: 20,
     showOnHome: false,
   },
   {
@@ -227,7 +235,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Lightbulb",
     color: "from-sky-500 to-sky-700",
     imageUrl: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=240&q=60",
-    order: 20,
+    order: 21,
     showOnHome: false,
   },
   {
@@ -235,7 +243,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Code",
     color: "from-blue-700 to-blue-900",
     imageUrl: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=240&q=60",
-    order: 21,
+    order: 22,
     showOnHome: false,
   },
   {
@@ -243,7 +251,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Users",
     color: "from-cyan-500 to-cyan-700",
     imageUrl: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=240&q=60",
-    order: 22,
+    order: 23,
     showOnHome: false,
   },
   {
@@ -251,7 +259,7 @@ export const categories: CategoryItem[] = [
     iconKey: "Monitor",
     color: "from-teal-400 to-teal-600",
     imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=240&q=60",
-    order: 23,
+    order: 24,
     showOnHome: false,
   },
 ];
@@ -391,11 +399,11 @@ export const heroMosaicImages = [
 export const brandPartners = [
   {
     name: "McDonalds",
-    logoUrl: "/public/image.png",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
   },
   {
     name: "Flipkart",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Flipkart_logo.svg",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
   },
   {
     name: "Amazon",
@@ -403,11 +411,11 @@ export const brandPartners = [
   },
   {
     name: "Meesho",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5d/Meesho_logo.svg",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
   },
   {
     name: "Myntra",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5a/Myntra_logo.png",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
   },
 ];
 

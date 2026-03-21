@@ -1,13 +1,30 @@
+"use client";
+
 import React from 'react';
-import { Search, MapPin, Menu, ShoppingCart, LogIn } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Search, MapPin, Menu, ShoppingCart, LogIn, ChevronLeft } from 'lucide-react';
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const showBack = pathname !== "/";
+
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/30 border-b border-white/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <div className="shrink-0 flex items-center">
+          <div className="shrink-0 flex items-center gap-3">
+            {showBack ? (
+              <button
+                type="button"
+                className="h-9 w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center"
+                onClick={() => router.back()}
+                aria-label="Go back"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            ) : null}
             <div className="flex items-baseline gap-1 sm:gap-2">
               <span className="text-xl sm:text-2xl font-bold text-blue-900">Winkget</span>
               <span className="text-lg sm:text-xl font-semibold text-gray-800">Business</span>

@@ -121,7 +121,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   {firstBatch.map((listing) => (
                     <div
                       key={listing.id}
-                      className="rounded-2xl bg-white/70 border border-white/80 shadow-md overflow-hidden card-float"
+                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float"
                     >
                       <Link href={`/listing/${listing.id}`} className="block">
                         <div className="h-44 w-full overflow-hidden">
@@ -216,7 +216,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   {remainingBatch.map((listing) => (
                     <div
                       key={listing.id}
-                      className="rounded-2xl bg-white/70 border border-white/80 shadow-md overflow-hidden card-float"
+                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float"
                     >
                       <Link href={`/listing/${listing.id}`} className="block">
                         <div className="h-44 w-full overflow-hidden">
