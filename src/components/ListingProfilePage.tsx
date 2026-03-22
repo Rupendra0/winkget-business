@@ -13,6 +13,8 @@ import {
   Send,
   Store,
   UtensilsCrossed,
+  ShoppingCart,
+  Heart,
   X,
 } from "lucide-react";
 import type { ListingProfile } from "@/data/listingData";
@@ -33,6 +35,9 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   const [newComment, setNewComment] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState("");
+  const [selectedMenuItem, setSelectedMenuItem] = useState<
+    ListingProfile["menuItems"][number] | null
+  >(null);
 
   const averageRating = useMemo(() => {
     if (reviews.length === 0) return profile.rating;
@@ -80,10 +85,16 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     setEditingComment("");
   };
 
+  const getMenuOriginalPrice = (value: string) => {
+    const numeric = Number(value.replace(/[^0-9]/g, ""));
+    if (!numeric) return null;
+    return `₹${numeric + 30}`;
+  };
+
   return (
     <main className="px-4 sm:px-6 lg:px-8 pb-12">
       <div className="max-w-7xl mx-auto space-y-10">
-        <section className="rounded-3xl overflow-hidden bg-white/70 border border-white/80 shadow-lg">
+        <section className="rounded-3xl overflow-hidden bg-white/70 border border-white/80 shadow-lg card-hover">
           <div className="relative h-72 sm:h-80">
             <img
               src={profile.coverImage}
@@ -109,14 +120,14 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
           <div className="px-6 sm:px-8 py-6 bg-white">
             <div className="flex flex-wrap items-center gap-3">
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-600 text-white text-sm font-semibold hover:bg-amber-500">
+              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-600 text-white text-sm font-semibold hover:bg-amber-500 btn-hover">
                 <CalendarCheck size={16} />
                 {profile.ctaLabel}
               </button>
               {profile.category === "Restaurant" && profile.menuItems?.length ? (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-orange-500 text-white text-sm font-semibold shadow-sm hover:bg-orange-400"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-orange-500 text-white text-sm font-semibold shadow-sm hover:bg-orange-400 btn-hover"
                   onClick={() => setIsMenuOpen(true)}
                 >
                   <UtensilsCrossed size={16} />
@@ -125,24 +136,24 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               ) : null}
               <Link
                 href={`/store/${profile.storeId ?? profile.id}`}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover"
               >
                 <Store size={16} />
                 My Store
               </Link>
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold">
+              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover">
                 <Phone size={16} />
                 Call
               </button>
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold">
+              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover">
                 <Mail size={16} />
                 Email
               </button>
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold">
+              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover">
                 <MessageCircle size={16} />
                 Whatsapp
               </button>
-              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold">
+              <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover">
                 <MapPin size={16} />
                 Direction
               </button>
@@ -152,7 +163,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.6fr_0.9fr] gap-8">
           <div className="space-y-6">
-            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6">
+            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6 card-hover">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-sm uppercase tracking-wide text-amber-700 font-semibold">
@@ -197,12 +208,12 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               <p className="text-sm text-gray-600 mt-4">{profile.description}</p>
             </div>
 
-            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6">
+            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6 card-hover">
               <div className="flex flex-wrap gap-2">
                 {tabList.map((tab) => (
                   <button
                     key={tab}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all btn-hover ${
                       activeTab === tab
                         ? "bg-amber-600 text-white"
                         : "bg-amber-50 text-amber-700"
@@ -252,13 +263,13 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
               {activeTab === "Reviews" && (
                 <div className="mt-6 space-y-4">
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4">
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4 card-hover">
                     <div className="text-xl font-bold text-gray-900">
                       {ratingLabel(averageRating)}
                     </div>
                     <div className="text-xs text-gray-600">Based on {reviews.length} reviews</div>
                   </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/90 p-4 space-y-3">
+                  <div className="rounded-2xl border border-white/80 bg-white/90 p-4 space-y-3 card-hover">
                     <div className="text-sm font-semibold text-gray-900">Write a review</div>
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3">
                       <input
@@ -289,7 +300,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                     />
                     <button
                       type="button"
-                      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold"
+                      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold btn-hover"
                       onClick={handleAddReview}
                     >
                       Submit review
@@ -300,7 +311,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                       reviews.map((review) => (
                         <div
                           key={review.id}
-                          className="rounded-2xl border border-white/80 bg-white/90 p-4"
+                          className="rounded-2xl border border-white/80 bg-white/90 p-4 card-hover"
                         >
                           <div className="flex items-center justify-between text-sm">
                             <div className="font-semibold text-gray-900">{review.author}</div>
@@ -321,14 +332,14 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold"
+                                  className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold btn-hover"
                                   onClick={handleSaveEdit}
                                 >
                                   Save
                                 </button>
                                 <button
                                   type="button"
-                                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold"
+                                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold btn-hover"
                                   onClick={() => setEditingId(null)}
                                 >
                                   Cancel
@@ -341,14 +352,14 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                           <div className="mt-3 flex gap-2">
                             <button
                               type="button"
-                              className="text-xs font-semibold text-amber-700"
+                              className="text-xs font-semibold text-amber-700 btn-hover"
                               onClick={() => handleStartEdit(review.id, review.comment)}
                             >
                               Edit
                             </button>
                             <button
                               type="button"
-                              className="text-xs font-semibold text-red-600"
+                              className="text-xs font-semibold text-red-600 btn-hover"
                               onClick={() => handleDeleteReview(review.id)}
                             >
                               Delete
@@ -368,7 +379,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                   {profile.gallery.map((photo) => (
                     <div
                       key={photo}
-                      className="rounded-2xl overflow-hidden border border-white/80 bg-white"
+                      className="rounded-2xl overflow-hidden border border-white/80 bg-white card-hover"
                     >
                       <img src={photo} alt="Gallery" className="h-48 w-full object-cover" />
                     </div>
@@ -377,7 +388,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               )}
             </div>
 
-            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6">
+            <div className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6 card-hover">
               <div className="text-sm font-semibold text-gray-800">Business Info</div>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
                 {profile.hours.map((item) => (
@@ -394,60 +405,10 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               )}
             </div>
 
-            {profile.category === "Restaurant" && profile.menuItems?.length ? (
-              <section className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-semibold text-gray-900">Full Menu</div>
-                    <div className="text-xs text-gray-500">
-                      {profile.menuItems.length} items
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-amber-700"
-                    onClick={() => setIsMenuOpen(true)}
-                  >
-                    View all
-                  </button>
-                </div>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {profile.menuItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden"
-                    >
-                      <div className="relative h-32 bg-orange-100/60">
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                        />
-                        {item.badge && (
-                          <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-amber-700">
-                            {item.badge}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 space-y-2">
-                        <div className="text-sm font-semibold text-gray-900 line-clamp-2">
-                          {item.name}
-                        </div>
-                        <div className="text-sm font-semibold text-orange-700">{item.price}</div>
-                        <div className="text-xs text-orange-700/70">{item.category}</div>
-                        <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold">
-                          Add to Cart
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6 space-y-4">
+            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6 space-y-4 card-hover">
               <div className="text-lg font-semibold text-gray-900">Raise an enquiry</div>
               <div className="space-y-3">
                 <input
@@ -466,12 +427,12 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                   rows={4}
                 />
               </div>
-              <button className="w-full px-4 py-2 rounded-xl bg-blue-900 text-white text-sm font-semibold flex items-center justify-center gap-2">
+              <button className="w-full px-4 py-2 rounded-xl bg-blue-900 text-white text-sm font-semibold flex items-center justify-center gap-2 btn-hover">
                 Send Enquiry <Send size={14} />
               </button>
             </div>
 
-            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6 space-y-4">
+            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6 space-y-4 card-hover">
               <div className="text-sm font-semibold text-gray-800">Contact</div>
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
@@ -492,7 +453,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               </div>
             </div>
 
-            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6">
+            <div className="rounded-3xl bg-white/90 border border-white/80 shadow-lg p-6 card-hover">
               <div className="text-sm font-semibold text-gray-800">{profile.suggestionTitle}</div>
               <div className="mt-4 space-y-3 text-sm text-gray-600">
                 {profile.suggestions.length > 0 ? (
@@ -502,7 +463,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                         <div className="font-semibold text-gray-900">{item.name}</div>
                         <div className="text-xs text-gray-500">{item.detail}</div>
                       </div>
-                      <button className="text-xs font-semibold text-amber-700">View</button>
+                      <button className="text-xs font-semibold text-amber-700 btn-hover">View</button>
                     </div>
                   ))
                 ) : (
@@ -512,6 +473,63 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
             </div>
           </aside>
         </section>
+
+        {profile.category === "Restaurant" && profile.menuItems?.length ? (
+          <section className="rounded-3xl bg-white/80 border border-white/80 shadow-lg p-6 card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold text-gray-900">Full Menu</div>
+                <div className="text-xs text-gray-500">{profile.menuItems.length} items</div>
+              </div>
+              <button
+                type="button"
+                className="text-xs font-semibold text-amber-700 btn-hover"
+                onClick={() => setIsMenuOpen(true)}
+              >
+                View all
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {profile.menuItems.map((item) => (
+                <div
+                  key={item.id}
+                      className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden card-hover cursor-pointer"
+                      onClick={() => setSelectedMenuItem(item)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          setSelectedMenuItem(item);
+                        }
+                      }}
+                >
+                  <div className="relative h-32 bg-orange-100/60">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                    {item.badge && (
+                      <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <div className="text-sm font-semibold text-gray-900 line-clamp-2">
+                      {item.name}
+                    </div>
+                    <div className="text-sm font-semibold text-orange-700">{item.price}</div>
+                    <div className="text-xs text-orange-700/70">{item.category}</div>
+                    <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold btn-hover">
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
       <Footer />
       {isMenuOpen && profile.category === "Restaurant" && profile.menuItems?.length ? (
@@ -521,7 +539,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
             onClick={() => setIsMenuOpen(false)}
           />
           <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 max-h-[80vh] overflow-y-auto">
+            <div className="w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 max-h-[80vh] overflow-y-auto card-hover">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="text-xl font-bold text-gray-900">Full Menu</div>
@@ -531,17 +549,25 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 </div>
                 <button
                   type="button"
-                  className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"
+                  className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center btn-hover"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <X size={16} />
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {profile.menuItems.map((item) => (
                   <div
                     key={`modal-${item.id}`}
-                    className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden"
+                    className="rounded-2xl border border-orange-100 bg-orange-50/60 shadow-sm overflow-hidden card-hover cursor-pointer"
+                    onClick={() => setSelectedMenuItem(item)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        setSelectedMenuItem(item);
+                      }
+                    }}
                   >
                     <div className="relative h-36 bg-orange-100/60">
                       <img
@@ -561,12 +587,89 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                       </div>
                       <div className="text-sm font-semibold text-orange-700">{item.price}</div>
                       <div className="text-xs text-orange-700/70">{item.category}</div>
-                      <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold">
+                      <button className="w-full mt-2 h-9 rounded-xl bg-orange-500 text-white text-xs font-semibold btn-hover">
                         Add to Cart
                       </button>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {selectedMenuItem ? (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSelectedMenuItem(null)}
+          />
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 p-5 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-[1.05fr_1fr] gap-6">
+                <div className="rounded-2xl overflow-hidden bg-slate-50">
+                  <img
+                    src={selectedMenuItem.imageUrl}
+                    alt={selectedMenuItem.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {selectedMenuItem.name}
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-semibold">
+                        <Star size={12} className="fill-emerald-500 text-emerald-500" />
+                        4.3
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="h-9 w-9 rounded-full bg-orange-500 text-white flex items-center justify-center btn-hover"
+                      onClick={() => setSelectedMenuItem(null)}
+                      aria-label="Close"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 line-through text-sm">
+                      {getMenuOriginalPrice(selectedMenuItem.price)}
+                    </span>
+                    <span className="text-2xl font-bold text-orange-600">
+                      {selectedMenuItem.price}
+                    </span>
+                    {selectedMenuItem.badge ? (
+                      <span className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold">
+                        {selectedMenuItem.badge}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="text-sm text-gray-700">
+                    <div className="font-semibold text-gray-900">Description</div>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Freshly prepared {selectedMenuItem.name} with rich flavors and
+                      premium ingredients. Perfect for a quick meal or combo pairing.
+                    </p>
+                  </div>
+
+                  <button className="w-full h-12 rounded-2xl bg-orange-500 text-white font-semibold flex items-center justify-center gap-2 btn-hover">
+                    <ShoppingCart size={18} /> Add to Cart {selectedMenuItem.price}
+                  </button>
+                  <button className="w-full h-11 rounded-2xl border border-slate-200 text-slate-700 font-semibold flex items-center justify-center gap-2 btn-hover">
+                    <Heart size={18} /> Save
+                  </button>
+
+                  <div className="pt-2 text-sm text-gray-600 border-t border-slate-100">
+                    <div className="font-semibold text-gray-800">
+                      Category: {selectedMenuItem.category}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

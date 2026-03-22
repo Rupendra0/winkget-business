@@ -23,7 +23,7 @@ export default function PromoRow() {
                   <div className="text-sm font-semibold uppercase tracking-wide opacity-90">Seasonal offers</div>
                   <div className="text-2xl sm:text-3xl font-bold mt-2">{banner.title}</div>
                   <p className="text-sm opacity-90 mt-2 max-w-sm">{banner.subtitle}</p>
-                  <button className="mt-5 px-4 py-2 rounded-lg bg-white/20 border border-white/30 hover:bg-white/30 text-sm font-semibold">
+                  <button className="mt-5 px-4 py-2 rounded-lg bg-white/20 border border-white/30 hover:bg-white/30 text-sm font-semibold btn-hover">
                     {banner.cta}
                   </button>
                 </div>
@@ -36,7 +36,7 @@ export default function PromoRow() {
           {promoCards.map((card) => (
             <div
               key={card.title}
-              className={`rounded-2xl p-4 text-white shadow-lg bg-linear-to-br ${card.tone} min-h-27.5 relative overflow-hidden`}
+              className={`rounded-2xl p-4 text-white shadow-lg bg-linear-to-br ${card.tone} min-h-27.5 relative overflow-hidden card-hover`}
             >
               <img
                 src={card.imageUrl}

@@ -153,6 +153,36 @@ export const listingProfiles: Record<string, ListingProfile> = {
         category: "Food",
         imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=70",
       },
+      {
+        id: "menu-5",
+        name: "Veg Rice Bowlz Reg Pepsi",
+        price: "₹208",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=70",
+      },
+      {
+        id: "menu-6",
+        name: "Paneer Tikka Wrap",
+        price: "₹219",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1604908554203-c1f76d9b7c3f?auto=format&fit=crop&w=600&q=70",
+        badge: "Chef's pick",
+      },
+      {
+        id: "menu-7",
+        name: "Grilled Chicken Bowl",
+        price: "₹269",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=70",
+      },
+      {
+        id: "menu-8",
+        name: "Classic Veg Burger",
+        price: "₹189",
+        category: "Food",
+        imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=70",
+        badge: "Best seller",
+      },
     ],
     reviewsList: [
       {

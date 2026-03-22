@@ -66,7 +66,7 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, icon, color, imageUrl }: CategoryCardProps) {
   return (
-    <div className="group relative h-32 sm:h-36 cursor-pointer">
+    <div className="group relative h-32 sm:h-36 cursor-pointer card-hover">
       <div className="absolute inset-0 rounded-2xl bg-white/40 border border-white/60 shadow-md transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl" />
       <div className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-15 bg-linear-to-br ${color} transition-opacity duration-300`} />
 
@@ -154,7 +154,7 @@ export default function CategoryGrid() {
             );
           })}
           <button
-            className="group relative h-32 sm:h-36"
+            className="group relative h-32 sm:h-36 btn-hover"
             onClick={() => setIsOpen(true)}
             type="button"
           >
@@ -181,7 +181,7 @@ export default function CategoryGrid() {
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="w-full max-w-4xl rounded-2xl glass-panel p-6 relative max-h-[80vh] overflow-y-auto">
               <button
-                className="absolute right-4 top-4 p-2 rounded-lg bg-blue-900 text-white"
+                className="absolute right-4 top-4 p-2 rounded-lg bg-blue-900 text-white btn-hover"
                 onClick={() => setIsOpen(false)}
                 type="button"
               >

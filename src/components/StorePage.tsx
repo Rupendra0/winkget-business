@@ -87,7 +87,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </aside>
 
           <div className="space-y-8">
-            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div className="text-lg font-semibold text-slate-900">Shop by Category</div>
                 <div className="text-xs text-slate-500">{data.address}</div>
@@ -96,7 +96,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 {data.categories.map((category) => (
                   <button
                     key={category}
-                    className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 bg-white"
+                    className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 bg-white btn-hover"
                   >
                     {category}
                   </button>
@@ -104,7 +104,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
@@ -115,7 +115,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
                     onClick={() => setFeaturedPage((prev) => Math.max(0, prev - 1))}
                     aria-label="Previous items"
                     disabled={featuredPage === 0}
@@ -124,7 +124,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </button>
                   <button
                     type="button"
-                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
                     onClick={() => setFeaturedPage((prev) => Math.min(totalPages - 1, prev + 1))}
                     aria-label="Next items"
                     disabled={featuredPage >= totalPages - 1}
@@ -137,7 +137,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 {pagedFeatured.map((product) => (
                   <div
                     key={product?.id}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
                   >
                     <div className="h-32 bg-slate-50 shrink-0">
                       <img
@@ -152,7 +152,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </div>
                       <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
                       <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover">
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>
@@ -162,7 +162,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
                 <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
@@ -173,7 +173,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
                       onClick={() => setTrendingPage((prev) => Math.max(0, prev - 1))}
                       aria-label="Previous items"
                       disabled={trendingPage === 0}
@@ -182,7 +182,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                     </button>
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="h-8 w-8 rounded-full border border-slate-200 text-slate-600 hover:text-blue-900 hover:border-blue-200 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
                       onClick={() => setTrendingPage((prev) => Math.min(trendingTotalPages - 1, prev + 1))}
                       aria-label="Next items"
                       disabled={trendingPage >= trendingTotalPages - 1}
@@ -195,7 +195,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 {pagedTrending.map((product) => (
                   <div
                     key={product?.id}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
                   >
                     <div className="h-32 bg-slate-50 shrink-0">
                       <img
@@ -210,7 +210,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </div>
                       <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
                       <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover">
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>
@@ -220,7 +220,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div className="text-lg font-semibold text-slate-900">All Products</div>
                 <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -233,7 +233,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 {data.products.map((product) => (
                   <div
                     key={product.id}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col"
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
                   >
                     <div className="h-40 bg-slate-50 shrink-0">
                       <img
@@ -248,7 +248,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </div>
                       <div className="text-sm font-semibold text-blue-700">{product.price}</div>
                       <div className="text-xs text-slate-500">{product.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2">
+                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2 btn-hover">
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>
@@ -258,7 +258,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5">
+            <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="text-lg font-semibold text-slate-900">{data.aboutTitle}</div>
               <div className="mt-3 text-sm text-slate-600">{data.aboutBody}</div>
             </section>

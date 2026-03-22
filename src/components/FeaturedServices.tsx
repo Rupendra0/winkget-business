@@ -13,7 +13,7 @@ interface ServiceCardProps {
 
 function ServiceCard({ service, provider, time, rating, image }: ServiceCardProps) {
   return (
-    <div className="group relative rounded-2xl overflow-hidden backdrop-blur-xl bg-white/20 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+    <div className="group relative rounded-2xl overflow-hidden backdrop-blur-xl bg-white/20 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer card-hover">
       {/* Image */}
       <div className="relative h-48 bg-linear-to-br from-slate-200 to-slate-300 overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/20" />
@@ -85,7 +85,7 @@ export default function FeaturedServices() {
 
         {/* View More */}
         <div className="mt-12 text-center">
-          <button className="px-8 py-3 rounded-xl backdrop-blur-md bg-white/20 border border-white/40 hover:bg-white/30 hover:border-white/60 text-gray-800 font-semibold transition-all shadow-lg hover:shadow-xl">
+          <button className="px-8 py-3 rounded-xl backdrop-blur-md bg-white/20 border border-white/40 hover:bg-white/30 hover:border-white/60 text-gray-800 font-semibold transition-all shadow-lg hover:shadow-xl btn-hover">
             Browse All Services
           </button>
         </div>

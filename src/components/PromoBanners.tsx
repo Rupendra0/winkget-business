@@ -63,12 +63,12 @@ export default function PromoBanners() {
                 {group.map((item) => (
                   <div
                     key={item.title}
-                    className="rounded-2xl overflow-hidden backdrop-blur-xl bg-white/30 border border-white/50 shadow-lg grid grid-cols-[1.1fr_1fr] h-42.5"
+                    className="rounded-2xl overflow-hidden backdrop-blur-xl bg-white/30 border border-white/50 shadow-lg grid grid-cols-[1.1fr_1fr] h-42.5 card-hover"
                   >
                     <div className="p-5 h-full flex flex-col justify-center">
                       <div className="text-xl font-bold text-gray-900">{item.title}</div>
                       <div className="text-sm text-gray-600 mt-1">{item.subtitle}</div>
-                      <button className="mt-3 px-4 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800">
+                      <button className="mt-3 px-4 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover">
                         {item.button}
                       </button>
                     </div>
@@ -90,7 +90,7 @@ export default function PromoBanners() {
             <>
               <button
                 type="button"
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 shadow-md border border-white/60 flex items-center justify-center"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 shadow-md border border-white/60 flex items-center justify-center btn-hover"
                 onClick={() => {
                   setIsAnimating(true);
                   setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
@@ -101,7 +101,7 @@ export default function PromoBanners() {
               </button>
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 shadow-md border border-white/60 flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 shadow-md border border-white/60 flex items-center justify-center btn-hover"
                 onClick={() => {
                   setIsAnimating(true);
                   setActiveIndex((prev) => (prev + 1) % slides.length);
@@ -121,7 +121,7 @@ export default function PromoBanners() {
                 key={`dot-${index}`}
                 type="button"
                 onClick={() => setActiveIndex(index)}
-                className={`h-2.5 w-2.5 rounded-full ${
+                className={`h-2.5 w-2.5 rounded-full btn-hover ${
                   index === activeIndex ? "bg-blue-900" : "bg-blue-200"
                 }`}
                 aria-label={`Go to slide ${index + 1}`}

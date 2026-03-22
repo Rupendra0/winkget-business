@@ -12,7 +12,7 @@ export default function CityStrip() {
               key={city.name}
               className="w-24 text-center snap-start"
             >
-              <div className="h-16 w-16 mx-auto rounded-2xl overflow-hidden border border-white/70 shadow-sm bg-white card-float">
+              <div className="h-16 w-16 mx-auto rounded-2xl overflow-hidden border border-white/70 shadow-sm bg-white card-float card-hover">
                 <img
                   src={city.imageUrl}
                   alt={city.name}

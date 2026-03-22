@@ -37,7 +37,7 @@ export default function FeaturesSection() {
             return (
               <div
                 key={index}
-                className="p-6 rounded-2xl backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 hover:border-white/60 transition-all duration-300 group text-center"
+                className="p-6 rounded-2xl backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 hover:border-white/60 transition-all duration-300 group text-center card-hover"
               >
                 {/* Icon */}
                 <div className="flex justify-center mb-4">

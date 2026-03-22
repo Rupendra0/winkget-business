@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Search, MapPin, Menu, ShoppingCart, LogIn, ChevronLeft } from 'lucide-react';
 
@@ -18,23 +19,23 @@ export default function Navbar() {
             {showBack ? (
               <button
                 type="button"
-                className="h-9 w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center"
+                className="h-9 w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center btn-hover"
                 onClick={() => router.back()}
                 aria-label="Go back"
               >
                 <ChevronLeft size={18} />
               </button>
             ) : null}
-            <div className="flex items-baseline gap-1 sm:gap-2">
+            <Link href="/" className="flex items-baseline gap-1 sm:gap-2">
               <span className="text-xl sm:text-2xl font-bold text-blue-900">Winkget</span>
               <span className="text-lg sm:text-xl font-semibold text-gray-800">Business</span>
-            </div>
+            </Link>
           </div>
 
           {/* Center - Location and Search */}
           <div className="hidden md:flex flex-1 mx-8 items-center gap-4">
             {/* Location Selector */}
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 transition-all">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 transition-all btn-hover">
               <MapPin size={18} className="text-blue-800" />
               <span className="text-sm font-medium text-gray-800">Gorakhpur</span>
             </button>
@@ -54,16 +55,16 @@ export default function Navbar() {
 
           {/* Right Navigation */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="px-5 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium text-sm transition-all">
+            <button className="px-5 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium text-sm transition-all btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
               Explore
             </button>
-            <button className="px-5 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-sm transition-all shadow-lg">
+            <button className="px-5 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-sm transition-all shadow-lg btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
               Winkget
             </button>
-            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 transition-all">
+            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 transition-all btn-hover">
               <ShoppingCart size={18} />
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium transition-all">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium transition-all btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
               <LogIn size={18} />
               <span className="text-sm">Login</span>
             </button>
@@ -71,7 +72,7 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden">
-            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800">
+            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover">
               <Menu size={24} />
             </button>
           </div>

@@ -30,20 +30,22 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     <main className="px-4 sm:px-6 lg:px-8 py-10">
       <div className="max-w-7xl mx-auto space-y-8">
         <section className="rounded-3xl overflow-hidden glass-panel grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
-          <div className="p-8 sm:p-10">
+          <div className="p-5 sm:p-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white/70 text-blue-900 text-xs font-semibold">
               <MapPin size={14} />
               {data.city}
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
               {data.banner.title}
             </h1>
-            <p className="text-gray-600 mt-2 max-w-xl">{data.banner.subtitle}</p>
-            <button className="mt-6 px-6 py-3 rounded-xl bg-blue-900 text-white font-semibold hover:bg-blue-800">
+            <p className="text-gray-600 mt-1 max-w-xl text-sm">
+              {data.banner.subtitle}
+            </p>
+            <button className="mt-3 px-4 py-2 rounded-xl bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover">
               {data.banner.cta}
             </button>
           </div>
-          <div className="min-h-[220px] bg-white/40">
+          <div className="h-[140px] sm:h-[160px] lg:h-[180px] bg-white/40">
             <img
               src={data.banner.imageUrl}
               alt={data.banner.title}
@@ -83,7 +85,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   <button
                     key={subcategory}
                     type="button"
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all btn-hover ${
                       selectedSubcategory === subcategory
                         ? "bg-blue-900 text-white"
                         : "bg-white/60 text-gray-700 hover:bg-white"
@@ -103,7 +105,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                 <button
                   key={subcategory}
                   type="button"
-                  className={`px-4 py-2 rounded-full text-sm transition-all ${
+                  className={`px-4 py-2 rounded-full text-sm transition-all btn-hover ${
                     selectedSubcategory === subcategory
                       ? "bg-blue-900 text-white"
                       : "bg-white/70 text-gray-700 hover:bg-white"
@@ -121,7 +123,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   {firstBatch.map((listing) => (
                     <div
                       key={listing.id}
-                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float"
+                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float card-hover"
                     >
                       <Link href={`/listing/${listing.id}`} className="block">
                         <div className="h-44 w-full overflow-hidden">
@@ -179,7 +181,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                           <span className="text-xs text-blue-900 font-semibold">
                             {listing.subcategory}
                           </span>
-                          <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800">
+                          <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800 btn-hover">
                             {listing.ctaLabel ?? "Inquiry"}
                           </button>
                         </div>
@@ -194,7 +196,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                     {data.exploreTiles.map((tile) => (
                       <div
                         key={tile.label}
-                        className="rounded-2xl overflow-hidden shadow-md border border-white/70 bg-white/60 card-float"
+                        className="rounded-2xl overflow-hidden shadow-md border border-white/70 bg-white/60 card-float card-hover"
                       >
                         <div className="h-20 w-full overflow-hidden">
                           <img
@@ -216,7 +218,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   {remainingBatch.map((listing) => (
                     <div
                       key={listing.id}
-                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float"
+                      className="rounded-2xl bg-gradient-to-br from-white/90 via-blue-50/70 to-teal-50/60 border border-blue-100/60 shadow-md overflow-hidden card-float card-hover"
                     >
                       <Link href={`/listing/${listing.id}`} className="block">
                         <div className="h-44 w-full overflow-hidden">
@@ -274,7 +276,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                           <span className="text-xs text-blue-900 font-semibold">
                             {listing.subcategory}
                           </span>
-                          <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800">
+                          <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800 btn-hover">
                             {listing.ctaLabel ?? "Inquiry"}
                           </button>
                         </div>

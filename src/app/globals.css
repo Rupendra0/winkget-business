@@ -149,6 +149,14 @@ button {
   @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
 }
 
+.btn-hover {
+  @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}
+
 .hover-glow {
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
 }

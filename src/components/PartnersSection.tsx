@@ -18,7 +18,7 @@ export default function PartnersSection() {
               {localPartners.map((partner) => (
                 <div
                   key={partner.name}
-                  className="group h-20 w-20 rounded-2xl overflow-hidden bg-white/70 border border-white/80 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all"
+                  className="group h-20 w-20 rounded-2xl overflow-hidden bg-white/70 border border-white/80 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all card-hover"
                 >
                   <img
                     src={partner.logoUrl}
@@ -37,7 +37,7 @@ export default function PartnersSection() {
               {brandPartners.map((partner) => (
                 <div
                   key={partner.name}
-                  className="group h-20 w-20 rounded-full bg-white/80 border border-blue-200 shadow-md flex items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all"
+                  className="group h-20 w-20 rounded-full bg-white/80 border border-blue-200 shadow-md flex items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all card-hover"
                 >
                   <img
                     src={partner.logoUrl}

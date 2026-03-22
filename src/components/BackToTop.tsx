@@ -20,7 +20,7 @@ export default function BackToTop() {
   return (
     <button
       type="button"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-blue-900 text-white px-4 py-2 text-xs font-semibold shadow-lg hover:bg-blue-800"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-blue-900 text-white px-4 py-2 text-xs font-semibold shadow-lg hover:bg-blue-800 btn-hover"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="Back to top"
     >

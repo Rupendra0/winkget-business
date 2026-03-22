@@ -41,7 +41,7 @@ export default function HeroSection() {
                 <Link
                   key={service.label}
                   href={`/category/${slugify(service.label)}`}
-                  className="group rounded-xl backdrop-blur-md bg-white/60 border border-white/70 hover:bg-white/80 text-left p-3 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                  className="group rounded-xl backdrop-blur-md bg-white/60 border border-white/70 hover:bg-white/80 text-left p-3 transition-all hover:-translate-y-0.5 hover:shadow-md card-hover"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-9 w-9 rounded-lg overflow-hidden border border-white/70 shadow-sm bg-white">
@@ -67,7 +67,7 @@ export default function HeroSection() {
           {heroMosaicImages.map((imageUrl) => (
             <div
               key={imageUrl}
-              className="rounded-2xl h-36 sm:h-56 lg:h-64 overflow-hidden border border-white/60 shadow-lg backdrop-blur-xl bg-white/50"
+              className="rounded-2xl h-36 sm:h-56 lg:h-64 overflow-hidden border border-white/60 shadow-lg backdrop-blur-xl bg-white/50 card-hover"
             >
               <img
                 src={imageUrl}
