@@ -36,7 +36,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState("");
   const [selectedMenuItem, setSelectedMenuItem] = useState<
-    ListingProfile["menuItems"][number] | null
+    NonNullable<ListingProfile["menuItems"]>[number] | null
   >(null);
 
   const averageRating = useMemo(() => {
