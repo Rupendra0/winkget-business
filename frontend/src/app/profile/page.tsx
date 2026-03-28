@@ -3,13 +3,28 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
-import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import { Mail, Phone, LogOut, UserRound } from "lucide-react";
+import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${AUTH_BACKEND_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Ignore logout API failures in UI flow.
+    }
+
+    window.dispatchEvent(new Event("auth:changed"));
+    router.replace("/auth");
+    router.refresh();
+  };
 
   useEffect(() => {
     const loadSession = async () => {
@@ -43,7 +58,6 @@ export default function ProfilePage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{user.name || "User"}</h1>
-              <p className="text-sm text-slate-500">Role: {user.role}</p>
             </div>
           </div>
 
@@ -72,13 +86,14 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-white/85 border border-white/80 shadow-xl p-6 sm:p-8">
-          <div className="flex items-center gap-2 text-slate-800 font-semibold">
-            <ShieldCheck size={18} className="text-emerald-600" /> Session Active
-          </div>
-          <p className="mt-2 text-sm text-slate-600">
-            You are securely logged in with backend cookie session.
-          </p>
+        <section className="md:hidden rounded-3xl bg-white/85 border border-white/80 shadow-xl p-4">
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="w-full rounded-xl bg-red-600 text-white py-2.5 text-sm font-semibold hover:bg-red-700 btn-hover flex items-center justify-center gap-2"
+          >
+            <LogOut size={16} /> Logout
+          </button>
         </section>
       </div>
     </main>
