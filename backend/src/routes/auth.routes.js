@@ -6,6 +6,7 @@ const FailureLog = require("../models/FailureLog");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AUTH_COOKIE_NAME = "winkget_auth";
 
 const createToken = (user) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -17,8 +18,48 @@ const createToken = (user) => {
       phone: user.phone,
     },
     secret,
-    { expiresIn: "3d" }
+    { expiresIn: "24h" }
   );
+};
+
+const verifyToken = (token) => {
+  const secret = process.env.JWT_SECRET || "dev-secret";
+  return jwt.verify(token, secret);
+};
+
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+};
+
+const setAuthCookie = (res, token) => {
+  res.cookie(AUTH_COOKIE_NAME, token, getCookieOptions());
+};
+
+const clearAuthCookie = (res) => {
+  const clearOptions = {
+    ...getCookieOptions(),
+    maxAge: 0,
+  };
+  res.clearCookie(AUTH_COOKIE_NAME, clearOptions);
+};
+
+const resolveTokenFromRequest = (req) => {
+  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+
+  return "";
 };
 
 router.post("/auth/signup", async (req, res) => {
@@ -66,11 +107,11 @@ router.post("/auth/signup", async (req, res) => {
     });
 
     const token = createToken(user);
+    setAuthCookie(res, token);
 
     return res.status(201).json({
       ok: true,
       message: "Signup successful",
-      token,
       user: {
         id: String(user._id),
         name: user.name,
@@ -127,13 +168,14 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const token = createToken(user);
+    setAuthCookie(res, token);
 
     return res.status(200).json({
       ok: true,
       message: "Login successful",
-      token,
       user: {
         id: String(user._id),
+        name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -260,11 +302,11 @@ router.post("/auth/vendor/login", async (req, res) => {
     }
 
     const token = createToken(user);
+    setAuthCookie(res, token);
 
     return res.status(200).json({
       ok: true,
       message: "Vendor login successful",
-      token,
       user: {
         id: String(user._id),
         name: user.name,
@@ -285,6 +327,43 @@ router.post("/auth/vendor/login", async (req, res) => {
 
     return res.status(500).json({ ok: false, message: "Vendor login failed", error: error.message });
   }
+});
+
+router.get("/auth/me", async (req, res) => {
+  try {
+    const token = resolveTokenFromRequest(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub).select("_id name email phone businessName role");
+
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      user: {
+        id: String(user._id),
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        businessName: user.businessName,
+        role: user.role,
+      },
+    });
+  } catch (_error) {
+    clearAuthCookie(res);
+    return res.status(401).json({ ok: false, message: "Session expired" });
+  }
+});
+
+router.post("/auth/logout", (_req, res) => {
+  clearAuthCookie(res);
+  return res.status(200).json({ ok: true, message: "Logged out successfully" });
 });
 
 module.exports = router;

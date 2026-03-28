@@ -22,6 +22,7 @@ export default function VendorLoginPage() {
       const response = await fetch(`${BACKEND_URL}/api/auth/vendor/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ identifier, password }),
       });
 
@@ -30,10 +31,7 @@ export default function VendorLoginPage() {
         throw new Error(payload.message || "Vendor login failed");
       }
 
-      if (payload.token) {
-        localStorage.setItem("winkget_vendor_token", payload.token);
-      }
-
+      window.dispatchEvent(new Event("auth:changed"));
       router.push("/vendor");
       router.refresh();
     } catch (loginError) {

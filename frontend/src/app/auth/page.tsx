@@ -96,6 +96,7 @@ export default function AuthPage() {
       const response = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
 
@@ -108,11 +109,8 @@ export default function AuthPage() {
         return;
       }
 
-      if (payload.token) {
-        localStorage.setItem("winkget_token", payload.token);
-      }
-
       setSuccess(mode === "signin" ? "Login successful." : "Account created successfully.");
+      window.dispatchEvent(new Event("auth:changed"));
       router.push("/");
       router.refresh();
     } catch (authError) {
