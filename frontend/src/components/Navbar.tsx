@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, MapPin, Menu, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings } from 'lucide-react';
 
 type AuthUser = {
   id: string;
@@ -216,10 +216,49 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu */}
-          <div className="md:hidden">
-            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover">
-              <Menu size={24} />
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              type="button"
+              className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
+              aria-label="Current location"
+            >
+              <MapPin size={20} />
             </button>
+            <button
+              type="button"
+              className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
+              aria-label="Cart"
+            >
+              <ShoppingCart size={20} />
+            </button>
+            {authLoading ? (
+              <div className="h-10 w-20 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
+            ) : user ? (
+              <Link
+                href="/profile"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold btn-hover"
+              >
+                <UserRound size={16} /> Profile
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold btn-hover"
+              >
+                <LogIn size={16} /> Login
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <div className="md:hidden pb-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md bg-white/30 border border-white/40 focus-within:bg-white/50">
+            <Search size={18} className="text-blue-800" />
+            <input
+              type="text"
+              placeholder="Search businesses and services"
+              className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-600"
+            />
           </div>
         </div>
       </div>
