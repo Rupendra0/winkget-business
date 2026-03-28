@@ -21,11 +21,13 @@ export default function Navbar() {
   const router = useRouter();
   const showBack = pathname !== "/";
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const syncSession = async () => {
+      setAuthLoading(true);
       try {
         const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
           credentials: "include",
@@ -41,12 +43,17 @@ export default function Navbar() {
         setUser(payload.user || null);
       } catch {
         setUser(null);
+      } finally {
+        setAuthLoading(false);
       }
     };
 
     void syncSession();
-    window.addEventListener("auth:changed", syncSession);
-    return () => window.removeEventListener("auth:changed", syncSession);
+    const handler = () => {
+      void syncSession();
+    };
+    window.addEventListener("auth:changed", handler);
+    return () => window.removeEventListener("auth:changed", handler);
   }, []);
 
   useEffect(() => {
@@ -138,7 +145,9 @@ export default function Navbar() {
             <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 transition-all btn-hover">
               <ShoppingCart size={18} />
             </button>
-            {user ? (
+            {authLoading ? (
+              <div className="h-10 w-28 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
+            ) : user ? (
               <div className="relative" ref={menuRef}>
                 <button
                   type="button"
@@ -160,21 +169,30 @@ export default function Navbar() {
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          router.push("/profile");
+                        }}
                       >
                         <UserRound size={16} /> My Profile
                       </button>
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          router.push("/orders");
+                        }}
                       >
                         <Package size={16} /> My Orders
                       </button>
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          router.push("/account-settings");
+                        }}
                       >
                         <Settings size={16} /> Account Settings
                       </button>

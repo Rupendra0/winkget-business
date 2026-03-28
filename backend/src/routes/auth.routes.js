@@ -6,6 +6,7 @@ const FailureLog = require("../models/FailureLog");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9+\-()\s]{7,20}$/;
 const AUTH_COOKIE_NAME = "winkget_auth";
 
 const createToken = (user) => {
@@ -364,6 +365,123 @@ router.get("/auth/me", async (req, res) => {
 router.post("/auth/logout", (_req, res) => {
   clearAuthCookie(res);
   return res.status(200).json({ ok: true, message: "Logged out successfully" });
+});
+
+router.put("/auth/me", async (req, res) => {
+  try {
+    const token = resolveTokenFromRequest(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const name = req.body?.name !== undefined ? String(req.body.name || "").trim() : user.name || "";
+    const emailInput = req.body?.email !== undefined ? String(req.body.email || "").trim() : user.email || "";
+    const phoneInput = req.body?.phone !== undefined ? String(req.body.phone || "").trim() : user.phone || "";
+
+    if (!name) {
+      return res.status(400).json({ ok: false, message: "Name is required" });
+    }
+
+    const email = emailInput ? emailInput.toLowerCase() : "";
+    const phone = phoneInput || "";
+
+    if (!email && !phone) {
+      return res.status(400).json({ ok: false, message: "Email or phone is required" });
+    }
+
+    if (email && !EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ ok: false, message: "Invalid email format" });
+    }
+
+    if (phone && !PHONE_REGEX.test(phone)) {
+      return res.status(400).json({ ok: false, message: "Invalid phone format" });
+    }
+
+    const duplicateChecks = [];
+    if (email) duplicateChecks.push({ email });
+    if (phone) duplicateChecks.push({ phone });
+
+    if (duplicateChecks.length > 0) {
+      const duplicateUser = await User.findOne({
+        _id: { $ne: user._id },
+        $or: duplicateChecks,
+      });
+
+      if (duplicateUser) {
+        return res.status(409).json({ ok: false, message: "Email or phone already in use" });
+      }
+    }
+
+    user.name = name;
+    user.email = email || undefined;
+    user.phone = phone || undefined;
+    await user.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Profile updated successfully",
+      user: {
+        id: String(user._id),
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        businessName: user.businessName,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update profile", error: error.message });
+  }
+});
+
+router.post("/auth/change-password", async (req, res) => {
+  try {
+    const token = resolveTokenFromRequest(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    if (!user.passwordHash) {
+      return res.status(400).json({ ok: false, message: "Password change is unavailable for this account" });
+    }
+
+    const currentPassword = String(req.body?.currentPassword || "");
+    const newPassword = String(req.body?.newPassword || "");
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ ok: false, message: "Current and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ ok: false, message: "New password must be at least 6 characters" });
+    }
+
+    const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isCurrentValid) {
+      return res.status(401).json({ ok: false, message: "Current password is incorrect" });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.status(200).json({ ok: true, message: "Password updated successfully" });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to change password", error: error.message });
+  }
 });
 
 module.exports = router;
