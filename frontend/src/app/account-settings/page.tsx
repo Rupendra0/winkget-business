@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 
+const PHONE_REGEX = /^[0-9]{10}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+
+const RequiredMark = () => <span className="text-red-500">*</span>;
+
 export default function AccountSettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -42,12 +49,49 @@ export default function AccountSettingsPage() {
     setError(null);
     setProfileMessage(null);
 
+    if (!user) {
+      setError("Session expired. Please sign in again.");
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+
+    if (normalizedEmail && !EMAIL_REGEX.test(normalizedEmail)) {
+      setError("Invalid email format");
+      return;
+    }
+
+    if (normalizedPhone && !PHONE_REGEX.test(normalizedPhone)) {
+      setError("Phone must be exactly 10 digits");
+      return;
+    }
+
+    if (user.role === "vendor") {
+      if (!normalizedEmail || !normalizedPhone) {
+        setError("Personal email and personal phone are required for vendor profiles");
+        return;
+      }
+    } else if (!normalizedEmail && !normalizedPhone) {
+      setError("Email or phone is required");
+      return;
+    }
+
     try {
       const response = await fetch(`${AUTH_BACKEND_URL}/api/auth/me`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: normalizedEmail,
+          phone: normalizedPhone,
+        }),
       });
 
       const payload = await response.json();
@@ -103,27 +147,45 @@ export default function AccountSettingsPage() {
           <p className="mt-1 text-sm text-slate-600">Update your profile and security details.</p>
 
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Full name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
-            />
-            <input
-              type="text"
-              placeholder="Phone"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              className="sm:col-span-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
-            />
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Full name <RequiredMark />
+              </span>
+              <input
+                type="text"
+                placeholder="Full name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Personal email{user.role === "vendor" ? <RequiredMark /> : null}
+              </span>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
+              />
+            </label>
+            <label className="sm:col-span-2 block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Personal phone{user.role === "vendor" ? <RequiredMark /> : null}
+              </span>
+              <input
+                type="tel"
+                placeholder="10-digit phone"
+                value={phone}
+                onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-400"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
+              />
+            </label>
           </div>
 
           <button

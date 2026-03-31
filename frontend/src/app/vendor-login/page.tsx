@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Store } from "lucide-react";
+import { fetchCurrentUser } from "@/lib/authClient";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
@@ -10,8 +11,35 @@ export default function VendorLoginPage() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const guardRoute = async () => {
+      const currentUser = await fetchCurrentUser();
+      if (!active) return;
+
+      if (currentUser) {
+        if (currentUser.role === "vendor") {
+          router.replace("/vendor");
+        } else {
+          router.replace("/");
+        }
+        return;
+      }
+
+      setCheckingSession(false);
+    };
+
+    void guardRoute();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const handleVendorLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,6 +69,23 @@ export default function VendorLoginPage() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8 flex items-center justify-center">
+        <section className="w-full max-w-lg rounded-3xl bg-white/85 border border-white/80 shadow-2xl p-6 sm:p-8">
+          <div className="h-3 w-40 rounded-full bg-slate-200 animate-pulse" />
+          <div className="mt-4 h-8 w-72 rounded-lg bg-slate-200 animate-pulse" />
+          <div className="mt-3 h-4 w-64 rounded bg-slate-200 animate-pulse" />
+          <div className="mt-8 space-y-3">
+            <div className="h-12 rounded-xl bg-slate-200 animate-pulse" />
+            <div className="h-12 rounded-xl bg-slate-200 animate-pulse" />
+            <div className="h-11 rounded-xl bg-slate-200 animate-pulse" />
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">

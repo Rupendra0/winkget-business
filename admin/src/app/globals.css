@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #f5efe5;
+  --bg-panel: #fffaf2;
+  --bg-elevated: #fff4df;
+  --ink-strong: #1a1510;
+  --ink-soft: #6b5d4e;
+  --line-soft: #d8c6b2;
+  --brand-main: #bd5c2f;
+  --brand-deep: #8b2f1a;
+  --brand-soft: #f3b487;
+  --ok: #2f7d4b;
+  --warn: #ac6a1c;
+  --danger: #b33c3c;
+}
+
+@theme inline {
+  --color-background: var(--bg-canvas);
+  --color-foreground: var(--ink-strong);
+  --font-sans: var(--font-admin-display);
+  --font-mono: var(--font-admin-mono);
+}
+
+body {
+  min-height: 100%;
+  color: var(--ink-strong);
+  font-family: var(--font-admin-display), "Trebuchet MS", sans-serif;
+  background:
+    radial-gradient(circle at 12% 8%, #ffe8cc 0%, transparent 34%),
+    radial-gradient(circle at 92% 2%, #ffd7b4 0%, transparent 29%),
+    linear-gradient(160deg, #f7f0e6 0%, #efe1d1 55%, #f8e9d5 100%);
+}
+
+* {
+  border-color: var(--line-soft);
+}
+
+.mono {
+  font-family: var(--font-admin-mono), "Courier New", monospace;
+}

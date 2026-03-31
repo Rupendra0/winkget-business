@@ -5,12 +5,16 @@ const cookieParser = require("cookie-parser");
 const healthRoutes = require("./routes/health.routes");
 const devLogRoutes = require("./routes/devLogs.routes");
 const authRoutes = require("./routes/auth.routes");
+const adminRoutes = require("./routes/admin.routes");
+const catalogRoutes = require("./routes/catalog.routes");
 
 const app = express();
-const allowedOrigins = String(process.env.CORS_ORIGIN || "http://localhost:3000")
+const envOrigins = String(process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const devOrigins = process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://localhost:3001"] : [];
+const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
 
 app.use(
   cors({
@@ -25,12 +29,14 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 app.use(morgan("dev"));
 
 app.use("/api", healthRoutes);
 app.use("/api", devLogRoutes);
 app.use("/api", authRoutes);
+app.use("/api", adminRoutes);
+app.use("/api", catalogRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ ok: true, message: "Winkget backend service" });

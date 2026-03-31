@@ -7,6 +7,12 @@ import { Apple, Chrome, Lock, Mail, Store, User, Phone } from "lucide-react";
 type AuthMode = "signin" | "signup";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const PHONE_REGEX = /^[0-9]{10}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+
+const RequiredMark = () => <span className="text-red-500">*</span>;
 
 export default function AuthPage() {
   const router = useRouter();
@@ -76,6 +82,23 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
+
+      if (email.trim() && !EMAIL_REGEX.test(email.trim().toLowerCase())) {
+        const message = "Email format is invalid.";
+        setError(message);
+        await logFailure(message, { mode, email });
+        setLoading(false);
+        return;
+      }
+
+      const normalizedPhone = normalizePhone(phone);
+      if (phone.trim() && !PHONE_REGEX.test(normalizedPhone)) {
+        const message = "Phone number must be exactly 10 digits.";
+        setError(message);
+        await logFailure(message, { mode, phone });
+        setLoading(false);
+        return;
+      }
     }
 
     if (mode === "signup" && password !== confirmPassword) {
@@ -90,8 +113,13 @@ export default function AuthPage() {
       const endpoint = mode === "signin" ? "/api/auth/login" : "/api/auth/signup";
       const body =
         mode === "signin"
-          ? { identifier, password }
-          : { name, email, phone, password };
+          ? { identifier: identifier.trim(), password }
+          : {
+              name: name.trim(),
+              email: email.trim().toLowerCase(),
+              phone: normalizePhone(phone),
+              password,
+            };
 
       const response = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: "POST",
@@ -168,7 +196,9 @@ export default function AuthPage() {
         <div className="mt-6 space-y-4">
           {mode === "signup" ? (
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Full name <RequiredMark />
+              </span>
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
                 <User size={16} className="text-slate-500" />
                 <input
@@ -184,7 +214,9 @@ export default function AuthPage() {
 
           {mode === "signin" ? (
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Email or phone number</span>
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Email or phone number <RequiredMark />
+              </span>
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
                 <Mail size={16} className="text-slate-500" />
                 <input
@@ -217,19 +249,25 @@ export default function AuthPage() {
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
                   <Phone size={16} className="text-slate-500" />
                   <input
-                    type="text"
-                    placeholder="Enter your phone number"
+                    type="tel"
+                    placeholder="Enter 10-digit phone number"
                     className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
                     value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
+                    onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                    inputMode="numeric"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                   />
                 </div>
               </label>
+              <p className="text-xs text-slate-500">At least one of email or phone is required for signup.</p>
             </>
           )}
 
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Password</span>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              Password <RequiredMark />
+            </span>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
               <Lock size={16} className="text-slate-500" />
               <input
@@ -244,7 +282,9 @@ export default function AuthPage() {
 
           {mode === "signup" ? (
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Confirm Password</span>
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Confirm Password <RequiredMark />
+              </span>
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
                 <Lock size={16} className="text-slate-500" />
                 <input

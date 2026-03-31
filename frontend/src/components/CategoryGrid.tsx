@@ -1,12 +1,40 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
   X,
 } from 'lucide-react';
 import { categories } from '@/data/homeData';
+
+type LiveCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder?: number;
+};
+
+type CategoryApiResponse = {
+  ok: boolean;
+  categories?: LiveCategory[];
+};
+
+type DisplayCategory = {
+  name: string;
+  imageUrl: string;
+  order: number;
+  slug?: string;
+};
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=240&q=60',
+  'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=240&q=60',
+  'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=240&q=60',
+  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=240&q=60',
+];
 
 interface CategoryCardProps {
   name: string;
@@ -38,13 +66,69 @@ const slugify = (value: string) =>
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
+const pickFallbackImage = (name: string) => {
+  const key = name
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+  return FALLBACK_IMAGES[key % FALLBACK_IMAGES.length];
+};
+
 export default function CategoryGrid() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [liveCategories, setLiveCategories] = useState<DisplayCategory[] | null>(null);
   const visibleCount = 19;
-  const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.order - b.order),
+
+  const staticDisplayCategories = useMemo<DisplayCategory[]>(
+    () => categories.map((item) => ({ name: item.name, imageUrl: item.imageUrl, order: item.order })),
     []
+  );
+
+  const staticImageByName = useMemo(
+    () => new Map(categories.map((item) => [item.name.toLowerCase(), item.imageUrl])),
+    []
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLiveCategories = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/categories`, { cache: 'no-store' });
+        const payload = (await response.json()) as CategoryApiResponse;
+
+        if (!active) return;
+        if (!response.ok || !payload.ok || !Array.isArray(payload.categories)) return;
+
+        const mapped = payload.categories
+          .map((item, index) => ({
+            name: item.name,
+            slug: item.slug,
+            order: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
+            imageUrl: staticImageByName.get(item.name.toLowerCase()) || pickFallbackImage(item.name),
+          }))
+          .sort((a, b) => a.order - b.order);
+
+        setLiveCategories(mapped.length > 0 ? mapped : null);
+      } catch {
+        if (!active) return;
+      }
+    };
+
+    void loadLiveCategories();
+
+    return () => {
+      active = false;
+    };
+  }, [staticImageByName]);
+
+  const sortedCategories = useMemo(
+    () =>
+      liveCategories && liveCategories.length > 0
+        ? [...liveCategories].sort((a, b) => a.order - b.order)
+        : [...staticDisplayCategories].sort((a, b) => a.order - b.order),
+    [liveCategories, staticDisplayCategories]
   );
   const visibleCategories = useMemo(
     () => sortedCategories.slice(0, visibleCount),
@@ -73,10 +157,10 @@ export default function CategoryGrid() {
 
         {/* Category Grid */}
         <div className="overflow-x-auto pb-2">
-          <div className="grid grid-flow-col auto-cols-[76px] sm:auto-cols-[84px] gap-x-6 gap-y-6 sm:gap-x-7 sm:gap-y-7 lg:grid-flow-row lg:auto-cols-auto lg:[grid-template-columns:repeat(10,84px)] lg:gap-x-9 lg:gap-y-11 xl:gap-y-12 lg:justify-center min-w-max lg:min-w-0">
+          <div className="grid grid-flow-col auto-cols-[76px] sm:auto-cols-[84px] gap-x-6 gap-y-6 sm:gap-x-7 sm:gap-y-7 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-[repeat(10,84px)] lg:gap-x-9 lg:gap-y-11 xl:gap-y-12 lg:justify-center min-w-max lg:min-w-0">
           {visibleCategories.map((category) => {
             return (
-              <Link key={category.name} href={`/category/${slugify(category.name)}`}>
+              <Link key={category.name} href={`/category/${category.slug || slugify(category.name)}`}>
                 <CategoryCard
                   name={category.name}
                   imageUrl={category.imageUrl}
@@ -131,8 +215,8 @@ export default function CategoryGrid() {
                   return (
                     <Link
                       key={category.name}
-                      href={`/category/${slugify(category.name)}`}
-                      className="w-[76px] sm:w-[84px]"
+                      href={`/category/${category.slug || slugify(category.name)}`}
+                      className="w-19 sm:w-21"
                     >
                       <CategoryCard
                         name={category.name}
