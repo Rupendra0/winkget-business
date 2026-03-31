@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const displayFont = Space_Grotesk({
+const displayFont = Inter({
   variable: "--font-admin-display",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const monoFont = IBM_Plex_Mono({
+const monoFont = JetBrains_Mono({
   variable: "--font-admin-mono",
   subsets: ["latin"],
+  display: "swap",
   weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Winkget Admin Control Room",
-  description: "Database-driven administration for Winkget platform operations",
+  title: "Winkget Admin Panel",
+  description: "Page-based administration console for Winkget operations",
 };
 
 export default function RootLayout({
