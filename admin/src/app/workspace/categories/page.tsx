@@ -214,7 +214,7 @@ export default function CategoriesWorkspacePage() {
         <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">{message}</p>
       ) : null}
 
-      <section className="mb-3 grid gap-3 rounded-2xl border border-slate-200 bg-linear-to-r from-orange-50/70 via-white to-cyan-50/70 p-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="stagger-grid mb-3 grid gap-3 rounded-2xl border border-slate-200 bg-linear-to-r from-orange-50/70 via-white to-cyan-50/70 p-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Categories</p>
           <p className="mt-1 text-2xl font-black text-slate-900">{summary.totalCategories}</p>
@@ -233,8 +233,8 @@ export default function CategoriesWorkspacePage() {
         </article>
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
-        <div className="grid gap-3 md:grid-cols-2">
+      <section className="stagger-grid grid gap-3 xl:grid-cols-[1.7fr_1fr]">
+        <div className="stagger-grid grid gap-3 md:grid-cols-2">
           <article className="rounded-2xl border border-slate-200 bg-white p-3">
             <h3 className="text-base font-bold text-slate-900">Create Category</h3>
             <form onSubmit={handleCreateCategory} className="mt-2.5 space-y-2.5">
@@ -373,7 +373,7 @@ export default function CategoriesWorkspacePage() {
         </aside>
       </section>
 
-      <section className="mt-3 grid gap-3 xl:grid-cols-2">
+      <section className="stagger-grid mt-3 grid gap-3 xl:grid-cols-2">
         <article className="rounded-2xl border border-slate-200 bg-white p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-base font-bold text-slate-900">Categories</h3>

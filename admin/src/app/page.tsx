@@ -129,13 +129,13 @@ export default function HomePage() {
         <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-200 bg-slate-50/90 p-3 shadow-sm sm:p-4">
+      <section className="stagger-grid rounded-3xl border border-slate-200 bg-slate-50/90 p-3 shadow-sm sm:p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-slate-900 sm:text-lg">Operations Snapshot</h3>
           {loading ? <span className="text-[11px] text-slate-500">Refreshing...</span> : null}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="stagger-grid grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((item) => (
             <article key={item.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{item.label}</p>
@@ -146,7 +146,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+      <section className="stagger-grid mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {WORKSPACE_CARDS.map((card) => (
           <article
             key={card.href}

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   fetchAdminSession,
   loginAsAdmin,
@@ -20,6 +20,7 @@ type AdminShellProps = {
 };
 
 export default function AdminShell({ title, subtitle, children, showPageIntro = true }: AdminShellProps) {
+  const pathname = usePathname();
   const router = useRouter();
 
   const [booting, setBooting] = useState(true);
@@ -77,6 +78,17 @@ export default function AdminShell({ title, subtitle, children, showPageIntro = 
     router.push("/");
     router.refresh();
   };
+
+  const breadcrumbLabel = useMemo(() => {
+    if (title) return title;
+    if (!pathname || pathname === "/") return "Home";
+    const parts = pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1] || "workspace";
+    return last
+      .split("-")
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
+  }, [pathname, title]);
 
   if (booting) {
     return (
@@ -189,6 +201,17 @@ export default function AdminShell({ title, subtitle, children, showPageIntro = 
         </header>
 
         <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur sm:p-5">
+          {pathname !== "/" ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+              <Link href="/" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:bg-slate-50">
+                Home
+              </Link>
+              <span className="text-slate-400">/</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                {breadcrumbLabel}
+              </span>
+            </div>
+          ) : null}
           {showPageIntro ? (
             <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -198,7 +221,7 @@ export default function AdminShell({ title, subtitle, children, showPageIntro = 
             </header>
           ) : null}
 
-          {children}
+          <div className="page-fade">{children}</div>
         </section>
       </div>
     </main>
