@@ -21,8 +21,58 @@ export type UserMutationInput = {
   name?: string;
   email?: string;
   phone?: string;
+  password?: string;
   role?: "admin" | "customer" | "vendor";
+  vendorStatus?: "pending" | "approved" | "rejected";
+  vendorReviewNote?: string;
+  businessName?: string;
+  businessCategoryId?: string;
+  businessSubcategoryId?: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  gstNumber?: string;
+  gstDocument?: string;
+  website?: string;
+  establishmentYear?: number | null;
+  serviceTags?: string[];
+  businessDescription?: string;
+  idProofType?: string;
+  idProofNumber?: string;
+  idProofDocument?: string;
+  marketingOptIn?: boolean;
   status?: "active" | "inactive";
+};
+
+export type AdminUserDetail = AdminDirectoryUser & {
+  businessCategory?: {
+    id: string;
+    name?: string;
+  };
+  businessSubcategory?: {
+    id: string;
+    name?: string;
+  };
+  businessEmail?: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  gstNumber?: string;
+  gstDocument?: string;
+  website?: string;
+  establishmentYear?: number;
+  serviceTags?: string[];
+  businessDescription?: string;
+  idProofType?: string;
+  idProofNumber?: string;
+  idProofDocument?: string;
+  marketingOptIn?: boolean;
+  vendorReviewNote?: string;
 };
 
 export type OrderRecord = {
@@ -156,34 +206,32 @@ export async function fetchUsers(params: {
   if (params.role) searchParams.set("role", params.role);
 
   const query = searchParams.toString();
-  const adminPath = query ? `/api/admin/users?${query}` : "/api/admin/users";
+  const path = query ? `/api/admin/users?${query}` : "/api/admin/users";
+  const payload = await requestJson<{ users: AdminDirectoryUser[] }>(path);
+  return payload.users || [];
+}
 
-  try {
-    const payload = await requestJson<{ users: AdminDirectoryUser[] }>(adminPath);
-    return payload.users || [];
-  } catch {
-    const fallbackPath = query ? `/api/users?${query}` : "/api/users";
-    const fallback = await requestJson<{ users: AdminDirectoryUser[] }>(fallbackPath);
-    return fallback.users || [];
-  }
+export async function fetchUserDetails(id: string): Promise<AdminUserDetail> {
+  const payload = await requestJson<{ user: AdminUserDetail }>(`/api/admin/users/${id}`);
+  return payload.user;
 }
 
 export async function createUser(input: UserMutationInput): Promise<void> {
-  await requestJson<Record<string, never>>("/api/users", {
+  await requestJson<Record<string, never>>("/api/admin/users", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export async function updateUser(id: string, input: UserMutationInput): Promise<void> {
-  await requestJson<Record<string, never>>(`/api/users/${id}`, {
+  await requestJson<Record<string, never>>(`/api/admin/users/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await requestJson<Record<string, never>>(`/api/users/${id}`, {
+  await requestJson<Record<string, never>>(`/api/admin/users/${id}`, {
     method: "DELETE",
   });
 }
@@ -240,6 +288,7 @@ export async function createCategoryNode(input: {
 
 export async function createSubcategoryNode(input: {
   categoryId: string;
+  parentSubcategoryId?: string;
   name: string;
   sortOrder?: number;
   isActive?: boolean;
@@ -257,6 +306,7 @@ export async function updateCategoryNode(categoryId: string, input: {
 
 export async function updateSubcategoryNode(subcategoryId: string, input: {
   categoryId?: string;
+  parentSubcategoryId?: string;
   name?: string;
   sortOrder?: number;
   isActive?: boolean;

@@ -5,6 +5,13 @@ const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const FailureLog = require("../models/FailureLog");
+const {
+  GSTIN_REGEX,
+  AADHAAR_REGEX,
+  DOCUMENT_DATA_URL_REGEX,
+  MAX_DOCUMENT_DATA_LENGTH,
+  isValidEstablishmentYear,
+} = require("../lib/vendorValidation");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,8 +19,6 @@ const PHONE_REGEX = /^[0-9]{10}$/;
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
-const DOCUMENT_DATA_URL_REGEX = /^data:image\/(png|jpe?g|webp);base64,/i;
-const MAX_DOCUMENT_DATA_LENGTH = 4 * 1024 * 1024;
 const AUTH_COOKIE_NAME = "winkget_auth";
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
@@ -255,11 +260,14 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const state = String(req.body?.state || "").trim();
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
+    const gstDocument = String(req.body?.gstDocument || "").trim();
     const website = String(req.body?.website || "").trim();
     const businessDescription = String(req.body?.businessDescription || "").trim();
     const idProofType = String(req.body?.idProofType || "").trim().toLowerCase();
     const idProofNumber = String(req.body?.idProofNumber || "").trim();
     const idProofDocument = String(req.body?.idProofDocument || "").trim();
+    const serviceTagsInput = Array.isArray(req.body?.serviceTags) ? req.body.serviceTags : [];
+    const establishmentYearInput = req.body?.establishmentYear;
     const marketingOptIn = Boolean(req.body?.marketingOptIn);
     const yearsInBusinessInput = req.body?.yearsInBusiness;
     const password = String(req.body?.password || "");
@@ -269,10 +277,19 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const businessEmail = businessEmailInput ? businessEmailInput.toLowerCase() : "";
     const businessPhone = normalizePhone(businessPhoneInput);
     const businessAlternatePhone = normalizePhone(businessAlternatePhoneInput);
+    const establishmentYear =
+      establishmentYearInput === undefined || establishmentYearInput === null || establishmentYearInput === ""
+        ? undefined
+        : Number(establishmentYearInput);
     const yearsInBusiness =
       yearsInBusinessInput === undefined || yearsInBusinessInput === null || yearsInBusinessInput === ""
         ? undefined
         : Number(yearsInBusinessInput);
+    const serviceTags = serviceTagsInput
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    const uniqueServiceTags = Array.from(new Set(serviceTags));
 
     if (!businessName || !ownerName || !password) {
       return res.status(400).json({ ok: false, message: "Business name, owner name and password are required" });
@@ -293,12 +310,28 @@ router.post("/auth/vendor/signup", async (req, res) => {
       });
     }
 
+    if (!gstNumber) {
+      return res.status(400).json({ ok: false, message: "GSTIN number is required" });
+    }
+
+    if (!gstDocument) {
+      return res.status(400).json({ ok: false, message: "GST document is required" });
+    }
+
+    if (uniqueServiceTags.length === 0) {
+      return res.status(400).json({ ok: false, message: "Add at least one service tag" });
+    }
+
     if (!idProofType || !idProofNumber || !idProofDocument) {
       return res.status(400).json({ ok: false, message: "ID proof type, number and document are required" });
     }
 
     if (!ID_PROOF_TYPES.has(idProofType)) {
       return res.status(400).json({ ok: false, message: "Invalid ID proof type" });
+    }
+
+    if (idProofType === "aadhaar" && !AADHAAR_REGEX.test(idProofNumber)) {
+      return res.status(400).json({ ok: false, message: "Aadhaar number must be exactly 12 digits" });
     }
 
     if (!EMAIL_REGEX.test(personalEmail)) {
@@ -329,12 +362,20 @@ router.post("/auth/vendor/signup", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid postal code" });
     }
 
+    if (!GSTIN_REGEX.test(gstNumber)) {
+      return res.status(400).json({ ok: false, message: "GSTIN must be a valid 15-character value" });
+    }
+
     if (!OBJECT_ID_REGEX.test(businessCategoryId)) {
       return res.status(400).json({ ok: false, message: "Invalid business category" });
     }
 
     if (businessSubcategoryId && !OBJECT_ID_REGEX.test(businessSubcategoryId)) {
       return res.status(400).json({ ok: false, message: "Invalid business subcategory" });
+    }
+
+    if (!isValidEstablishmentYear(establishmentYear)) {
+      return res.status(400).json({ ok: false, message: "Invalid establishment year" });
     }
 
     if (yearsInBusiness !== undefined && (Number.isNaN(yearsInBusiness) || yearsInBusiness < 0 || yearsInBusiness > 80)) {
@@ -346,11 +387,19 @@ router.post("/auth/vendor/signup", async (req, res) => {
     }
 
     if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocument)) {
-      return res.status(400).json({ ok: false, message: "ID proof document must be an image" });
+      return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
     }
 
     if (idProofDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
       return res.status(400).json({ ok: false, message: "ID proof document is too large" });
+    }
+
+    if (!DOCUMENT_DATA_URL_REGEX.test(gstDocument)) {
+      return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+    }
+
+    if (gstDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
+      return res.status(400).json({ ok: false, message: "GST document is too large" });
     }
 
     const category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select("_id name");
@@ -402,9 +451,12 @@ router.post("/auth/vendor/signup", async (req, res) => {
       city,
       state,
       postalCode,
-      gstNumber: gstNumber || undefined,
+      gstNumber,
+      gstDocument,
       website: website || undefined,
+      establishmentYear,
       yearsInBusiness,
+      serviceTags: uniqueServiceTags,
       businessDescription: businessDescription || undefined,
       idProofType,
       idProofNumber,
@@ -425,6 +477,10 @@ router.post("/auth/vendor/signup", async (req, res) => {
         businessEmail: user.businessEmail,
         businessPhone: user.businessPhone,
         businessAlternatePhone: user.businessAlternatePhone,
+        gstNumber: user.gstNumber,
+        gstDocument: user.gstDocument,
+        establishmentYear: user.establishmentYear,
+        serviceTags: user.serviceTags || [],
         role: user.role,
         vendorStatus: user.vendorStatus,
         businessCategory: toCategoryReference(category),
@@ -542,7 +598,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber website yearsInBusiness businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -573,8 +629,11 @@ router.get("/auth/me", async (req, res) => {
         state: user.state,
         postalCode: user.postalCode,
         gstNumber: user.gstNumber,
+        gstDocument: user.gstDocument,
         website: user.website,
+        establishmentYear: user.establishmentYear,
         yearsInBusiness: user.yearsInBusiness,
+        serviceTags: user.serviceTags || [],
         businessDescription: user.businessDescription,
         idProofType: user.idProofType,
         idProofNumber: user.idProofNumber,
@@ -634,6 +693,20 @@ router.put("/auth/me", async (req, res) => {
           : "";
     const idProofDocumentInput =
       req.body?.idProofDocument !== undefined ? String(req.body.idProofDocument || "").trim() : user.idProofDocument || "";
+    const idProofTypeInput =
+      req.body?.idProofType !== undefined ? String(req.body.idProofType || "").trim().toLowerCase() : user.idProofType || "";
+    const idProofNumberInput =
+      req.body?.idProofNumber !== undefined ? String(req.body.idProofNumber || "").trim() : user.idProofNumber || "";
+    const gstNumberInput =
+      req.body?.gstNumber !== undefined ? String(req.body.gstNumber || "").trim() : user.gstNumber || "";
+    const gstDocumentInput =
+      req.body?.gstDocument !== undefined ? String(req.body.gstDocument || "").trim() : user.gstDocument || "";
+    const establishmentYearInput = req.body?.establishmentYear !== undefined ? req.body.establishmentYear : user.establishmentYear;
+    const serviceTagsInput = Array.isArray(req.body?.serviceTags)
+      ? req.body.serviceTags
+      : Array.isArray(user.serviceTags)
+        ? user.serviceTags
+        : [];
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Name is required" });
@@ -645,6 +718,15 @@ router.put("/auth/me", async (req, res) => {
     const businessEmail = businessEmailInput ? businessEmailInput.toLowerCase() : "";
     const businessPhone = normalizePhone(businessPhoneInput);
     const businessAlternatePhone = normalizePhone(businessAlternatePhoneInput);
+    const establishmentYear =
+      establishmentYearInput === undefined || establishmentYearInput === null || establishmentYearInput === ""
+        ? undefined
+        : Number(establishmentYearInput);
+    const serviceTags = serviceTagsInput
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    const uniqueServiceTags = Array.from(new Set(serviceTags));
 
     if (user.role === "vendor") {
       if (!email || !phone) {
@@ -690,13 +772,39 @@ router.put("/auth/me", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid business subcategory" });
     }
 
+    if (gstNumberInput && !GSTIN_REGEX.test(gstNumberInput)) {
+      return res.status(400).json({ ok: false, message: "GSTIN must be a valid 15-character value" });
+    }
+
+    if (!isValidEstablishmentYear(establishmentYear)) {
+      return res.status(400).json({ ok: false, message: "Invalid establishment year" });
+    }
+
+    if (idProofTypeInput && !ID_PROOF_TYPES.has(idProofTypeInput)) {
+      return res.status(400).json({ ok: false, message: "Invalid ID proof type" });
+    }
+
+    if (idProofTypeInput === "aadhaar" && !AADHAAR_REGEX.test(idProofNumberInput)) {
+      return res.status(400).json({ ok: false, message: "Aadhaar number must be exactly 12 digits" });
+    }
+
     if (idProofDocumentInput) {
       if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocumentInput)) {
-        return res.status(400).json({ ok: false, message: "ID proof document must be an image" });
+        return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
       }
 
       if (idProofDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
         return res.status(400).json({ ok: false, message: "ID proof document is too large" });
+      }
+    }
+
+    if (gstDocumentInput) {
+      if (!DOCUMENT_DATA_URL_REGEX.test(gstDocumentInput)) {
+        return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+      }
+
+      if (gstDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
+        return res.status(400).json({ ok: false, message: "GST document is too large" });
       }
     }
 
@@ -720,6 +828,18 @@ router.put("/auth/me", async (req, res) => {
     let category = null;
     let subcategory = null;
     if (user.role === "vendor") {
+      if (!gstNumberInput) {
+        return res.status(400).json({ ok: false, message: "GSTIN number is required" });
+      }
+
+      if (!gstDocumentInput) {
+        return res.status(400).json({ ok: false, message: "GST document is required" });
+      }
+
+      if (uniqueServiceTags.length === 0) {
+        return res.status(400).json({ ok: false, message: "Add at least one service tag" });
+      }
+
       category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select("_id name");
       if (!category) {
         return res.status(400).json({ ok: false, message: "Selected business category is invalid or inactive" });
@@ -749,6 +869,12 @@ router.put("/auth/me", async (req, res) => {
       user.businessAlternatePhone = businessAlternatePhone || undefined;
       user.businessCategory = category?._id;
       user.businessSubcategory = subcategory?._id;
+      user.gstNumber = gstNumberInput || undefined;
+      user.gstDocument = gstDocumentInput || undefined;
+      user.establishmentYear = establishmentYear;
+      user.serviceTags = uniqueServiceTags;
+      user.idProofType = idProofTypeInput || user.idProofType;
+      user.idProofNumber = idProofNumberInput || user.idProofNumber;
       user.idProofDocument = idProofDocumentInput || user.idProofDocument;
     }
 
@@ -756,7 +882,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone gstNumber gstDocument establishmentYear serviceTags"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -778,6 +904,10 @@ router.put("/auth/me", async (req, res) => {
         businessEmail: updatedUser.businessEmail,
         businessPhone: updatedUser.businessPhone,
         businessAlternatePhone: updatedUser.businessAlternatePhone,
+        gstNumber: updatedUser.gstNumber,
+        gstDocument: updatedUser.gstDocument,
+        establishmentYear: updatedUser.establishmentYear,
+        serviceTags: updatedUser.serviceTags || [],
       },
     });
   } catch (error) {

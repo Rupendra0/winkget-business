@@ -23,17 +23,17 @@ export type VendorRecord = {
   };
   email?: string;
   phone?: string;
-  alternatePhone?: string;
   businessEmail?: string;
   businessPhone?: string;
-  businessAlternatePhone?: string;
   businessAddress?: string;
   city?: string;
   state?: string;
   postalCode?: string;
   gstNumber?: string;
+  gstDocument?: string;
   website?: string;
-  yearsInBusiness?: number;
+  establishmentYear?: number;
+  serviceTags?: string[];
   businessDescription?: string;
   idProofType?: string;
   idProofNumber?: string;
@@ -92,6 +92,10 @@ export type AdminSubcategory = {
   isActive: boolean;
   sortOrder: number;
   category?: {
+    id: string;
+    name?: string;
+  };
+  parentSubcategory?: {
     id: string;
     name?: string;
   };
@@ -267,6 +271,7 @@ export async function fetchSubcategories(params?: {
   includeInactive?: boolean;
   search?: string;
   categoryId?: string;
+  parentSubcategoryId?: string;
 }): Promise<AdminSubcategory[]> {
   const searchParams = new URLSearchParams();
   if (params?.includeInactive !== undefined) {
@@ -277,6 +282,9 @@ export async function fetchSubcategories(params?: {
   }
   if (params?.categoryId) {
     searchParams.set("categoryId", params.categoryId);
+  }
+  if (params?.parentSubcategoryId) {
+    searchParams.set("parentSubcategoryId", params.parentSubcategoryId);
   }
 
   const query = searchParams.toString();
@@ -318,6 +326,7 @@ export async function updateCategory(
 
 export async function createSubcategory(input: {
   categoryId: string;
+  parentSubcategoryId?: string;
   name: string;
   description?: string;
   sortOrder?: number;
@@ -335,6 +344,7 @@ export async function updateSubcategory(
   subcategoryId: string,
   input: {
     categoryId?: string;
+    parentSubcategoryId?: string;
     name?: string;
     description?: string;
     sortOrder?: number;

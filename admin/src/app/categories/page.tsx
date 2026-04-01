@@ -10,7 +10,6 @@ import TreeView, { type TreeNode } from "@/components/admin/TreeView";
 import { findSidebarItem } from "@/data/adminNavigation";
 import {
   createCategoryNode,
-  createSecondaryNode,
   createSubcategoryNode,
   deleteCategoryNode,
   deleteSubcategoryNode,
@@ -19,10 +18,9 @@ import {
   updateSubcategoryNode,
   type AdminCategory,
   type AdminSubcategory,
-  type SecondaryNode,
 } from "@/lib/adminApi";
 
-type ModalMode = "category" | "subcategory" | "secondary";
+type ModalMode = "category" | "subcategory";
 
 export default function CategoriesPage() {
   return (
@@ -37,14 +35,14 @@ function CategoriesPageContent() {
   const viewId = searchParams.get("view") || "category-explorer";
   const activeItem = findSidebarItem(viewId);
 
-  const [secondaryNodes, setSecondaryNodes] = useState<SecondaryNode[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("category");
-  const [modalParentId, setModalParentId] = useState<string | null>(null);
+  const [modalCategoryId, setModalCategoryId] = useState<string | null>(null);
+  const [modalParentSubcategoryId, setModalParentSubcategoryId] = useState<string | null>(null);
 
   const [nameInput, setNameInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("0");
@@ -57,62 +55,85 @@ function CategoriesPageContent() {
   const categories = useMemo(() => data?.categories ?? [], [data?.categories]);
   const subcategories = useMemo(() => data?.subcategories ?? [], [data?.subcategories]);
 
+  const openModal = (mode: ModalMode, categoryId: string | null = null, parentSubcategoryId: string | null = null) => {
+    setModalMode(mode);
+    setModalCategoryId(categoryId);
+    setModalParentSubcategoryId(parentSubcategoryId);
+    setNameInput("");
+    setSortOrderInput("0");
+    setActiveInput(true);
+    setModalOpen(true);
+  };
+
   useEffect(() => {
     if (viewId === "create-category") {
       openModal("category");
-    } else if (viewId === "create-subcategory") {
-      openModal("subcategory", categories[0]?.id || null);
-    } else if (viewId === "create-secondary-subcategory") {
-      openModal("secondary", subcategories[0]?.id || null);
+      return;
+    }
+
+    if (viewId === "create-subcategory") {
+      openModal("subcategory", categories[0]?.id || null, null);
+      return;
+    }
+
+    if (viewId === "create-secondary-subcategory") {
+      const firstSubcategory = subcategories[0];
+      openModal(
+        "subcategory",
+        firstSubcategory?.category?.id || categories[0]?.id || null,
+        firstSubcategory?.id || null
+      );
     }
     // The dependency list intentionally tracks updates to route-driven actions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewId]);
 
   const treeNodes = useMemo<TreeNode[]>(() => {
-    return categories.map((category) => {
-      const categoryChildren = subcategories
-        .filter((subcategory) => subcategory.category?.id === category.id)
-        .map((subcategory) => {
-          const thirdLevel = secondaryNodes
-            .filter((secondary) => secondary.parentSubcategoryId === subcategory.id)
-            .map<TreeNode>((secondary) => ({
-              id: `secondary:${secondary.id}`,
-              label: secondary.label,
-              type: "secondary",
-              parentId: subcategory.id,
-            }));
+    const grouped = new Map<string, AdminSubcategory[]>();
 
-          return {
-            id: `subcategory:${subcategory.id}`,
-            label: subcategory.name,
-            type: "subcategory" as const,
-            parentId: category.id,
-            children: thirdLevel,
-          };
-        });
+    for (const subcategory of subcategories) {
+      const categoryId = subcategory.category?.id;
+      if (!categoryId) continue;
 
-      return {
-        id: `category:${category.id}`,
-        label: category.name,
-        type: "category" as const,
-        children: categoryChildren,
-      };
-    });
-  }, [categories, secondaryNodes, subcategories]);
+      const parentId = subcategory.parentSubcategory?.id || "root";
+      const key = `${categoryId}::${parentId}`;
+      const bucket = grouped.get(key);
+
+      if (bucket) {
+        bucket.push(subcategory);
+      } else {
+        grouped.set(key, [subcategory]);
+      }
+    }
+
+    const buildChildren = (categoryId: string, parentSubcategoryId: string | null): TreeNode[] => {
+      const key = `${categoryId}::${parentSubcategoryId || "root"}`;
+      const nodes = [...(grouped.get(key) || [])].sort((a, b) => {
+        const sortDelta = (a.sortOrder || 0) - (b.sortOrder || 0);
+        if (sortDelta !== 0) return sortDelta;
+        return a.name.localeCompare(b.name);
+      });
+
+      return nodes.map((subcategory) => ({
+        id: `subcategory:${subcategory.id}`,
+        label: subcategory.name,
+        type: "subcategory",
+        parentId: subcategory.parentSubcategory?.id || categoryId,
+        children: buildChildren(categoryId, subcategory.id),
+      }));
+    };
+
+    return categories.map((category) => ({
+      id: `category:${category.id}`,
+      label: category.name,
+      type: "category",
+      children: buildChildren(category.id, null),
+    }));
+  }, [categories, subcategories]);
 
   const parseNodeRef = (node: TreeNode) => {
     const [type, entityId] = node.id.split(":");
     return { type, entityId };
-  };
-
-  const openModal = (mode: ModalMode, parentId: string | null = null) => {
-    setModalMode(mode);
-    setModalParentId(parentId);
-    setNameInput("");
-    setSortOrderInput("0");
-    setActiveInput(true);
-    setModalOpen(true);
   };
 
   const submitCreate = async () => {
@@ -136,28 +157,19 @@ function CategoriesPageContent() {
       }
 
       if (modalMode === "subcategory") {
-        const parent = modalParentId || categories[0]?.id;
-        if (!parent) {
-          throw new Error("No parent category available");
+        const categoryId = modalCategoryId || categories[0]?.id;
+        if (!categoryId) {
+          throw new Error("Select a category before creating subcategory");
         }
 
         await createSubcategoryNode({
-          categoryId: parent,
+          categoryId,
+          parentSubcategoryId: modalParentSubcategoryId || undefined,
           name: cleanName,
           sortOrder: Number(sortOrderInput || "0"),
           isActive: activeInput,
         });
         setMessage("Subcategory created");
-      }
-
-      if (modalMode === "secondary") {
-        const parent = modalParentId || subcategories[0]?.id;
-        if (!parent) {
-          throw new Error("No parent subcategory available");
-        }
-
-        setSecondaryNodes((prev) => [...prev, createSecondaryNode(parent, cleanName)]);
-        setMessage("Secondary subcategory added (local)");
       }
 
       setModalOpen(false);
@@ -174,16 +186,14 @@ function CategoriesPageContent() {
     const { type, entityId } = parseNodeRef(node);
 
     if (type === "category") {
-      openModal("subcategory", entityId);
+      openModal("subcategory", entityId, null);
       return;
     }
 
     if (type === "subcategory") {
-      openModal("secondary", entityId);
-      return;
+      const selected = subcategories.find((item) => item.id === entityId);
+      openModal("subcategory", selected?.category?.id || null, entityId);
     }
-
-    openModal("secondary", node.parentId || null);
   };
 
   const handleInlineEdit = async (node: TreeNode, nextLabel: string) => {
@@ -204,11 +214,7 @@ function CategoriesPageContent() {
         await updateSubcategoryNode(entityId, { name: nextLabel });
         await mutate();
         setMessage("Subcategory updated");
-        return;
       }
-
-      setSecondaryNodes((prev) => prev.map((item) => (item.id === entityId ? { ...item, label: nextLabel } : item)));
-      setMessage("Secondary subcategory updated (local)");
     } catch (updateError) {
       const messageText = updateError instanceof Error ? updateError.message : "Unable to update node";
       setErrorText(messageText);
@@ -232,11 +238,7 @@ function CategoriesPageContent() {
         await deleteSubcategoryNode(entityId);
         await mutate();
         setMessage("Subcategory deleted");
-        return;
       }
-
-      setSecondaryNodes((prev) => prev.filter((item) => item.id !== entityId));
-      setMessage("Secondary subcategory deleted (local)");
     } catch (deleteError) {
       const messageText =
         deleteError instanceof Error
@@ -250,7 +252,7 @@ function CategoriesPageContent() {
     <AdminShell title="Category Explorer" subtitle="Nested tree editing for category structures.">
       <PageLayout
         title={activeItem?.label || "Category Explorer"}
-        subtitle="Expand/collapse, inline edit, add category/subcategory/secondary, and delete actions."
+        subtitle="Expand/collapse, inline edit, and add nested subcategories to unlimited depth."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -262,17 +264,24 @@ function CategoriesPageContent() {
             </button>
             <button
               type="button"
-              onClick={() => openModal("subcategory", categories[0]?.id || null)}
+              onClick={() => openModal("subcategory", categories[0]?.id || null, null)}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
             >
               Add Subcategory
             </button>
             <button
               type="button"
-              onClick={() => openModal("secondary", subcategories[0]?.id || null)}
+              onClick={() => {
+                const firstSubcategory = subcategories[0];
+                openModal(
+                  "subcategory",
+                  firstSubcategory?.category?.id || categories[0]?.id || null,
+                  firstSubcategory?.id || null
+                );
+              }}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
             >
-              Add Secondary
+              Add Nested Subcategory
             </button>
           </div>
         }
@@ -307,12 +316,14 @@ function CategoriesPageContent() {
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
         activeInput={activeInput}
-        modalParentId={modalParentId}
+        modalCategoryId={modalCategoryId}
+        modalParentSubcategoryId={modalParentSubcategoryId}
         submitting={isSubmitting}
         onNameChange={setNameInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
-        onParentChange={setModalParentId}
+        onCategoryChange={setModalCategoryId}
+        onParentSubcategoryChange={setModalParentSubcategoryId}
         onClose={() => setModalOpen(false)}
         onSubmit={() => void submitCreate()}
       />
@@ -328,12 +339,14 @@ type CreateNodeModalProps = {
   nameInput: string;
   sortOrderInput: string;
   activeInput: boolean;
-  modalParentId: string | null;
+  modalCategoryId: string | null;
+  modalParentSubcategoryId: string | null;
   submitting: boolean;
   onNameChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
-  onParentChange: (value: string | null) => void;
+  onCategoryChange: (value: string | null) => void;
+  onParentSubcategoryChange: (value: string | null) => void;
   onClose: () => void;
   onSubmit: () => void;
 };
@@ -346,25 +359,25 @@ function CreateNodeModal({
   nameInput,
   sortOrderInput,
   activeInput,
-  modalParentId,
+  modalCategoryId,
+  modalParentSubcategoryId,
   submitting,
   onNameChange,
   onSortOrderChange,
   onActiveChange,
-  onParentChange,
+  onCategoryChange,
+  onParentSubcategoryChange,
   onClose,
   onSubmit,
 }: CreateNodeModalProps) {
+  const scopedSubcategories = modalCategoryId
+    ? subcategories.filter((subcategory) => subcategory.category?.id === modalCategoryId)
+    : [];
+
   return (
     <Modal
       open={open}
-      title={
-        mode === "category"
-          ? "Add Category"
-          : mode === "subcategory"
-            ? "Add Subcategory"
-            : "Add Secondary Subcategory"
-      }
+      title={mode === "category" ? "Add Category" : "Add Subcategory"}
       onClose={onClose}
       footer={
         <>
@@ -388,10 +401,13 @@ function CreateNodeModal({
     >
       {mode === "subcategory" ? (
         <label className="block space-y-1 text-sm text-(--text-soft)">
-          Parent category
+          Category
           <select
-            value={modalParentId || ""}
-            onChange={(event) => onParentChange(event.target.value || null)}
+            value={modalCategoryId || ""}
+            onChange={(event) => {
+              onCategoryChange(event.target.value || null);
+              onParentSubcategoryChange(null);
+            }}
             className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2"
           >
             <option value="">Select category</option>
@@ -404,16 +420,16 @@ function CreateNodeModal({
         </label>
       ) : null}
 
-      {mode === "secondary" ? (
+      {mode === "subcategory" ? (
         <label className="block space-y-1 text-sm text-(--text-soft)">
-          Parent subcategory
+          Parent subcategory (optional)
           <select
-            value={modalParentId || ""}
-            onChange={(event) => onParentChange(event.target.value || null)}
+            value={modalParentSubcategoryId || ""}
+            onChange={(event) => onParentSubcategoryChange(event.target.value || null)}
             className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2"
           >
-            <option value="">Select subcategory</option>
-            {subcategories.map((subcategory) => (
+            <option value="">Root level under selected category</option>
+            {scopedSubcategories.map((subcategory) => (
               <option key={subcategory.id} value={subcategory.id}>
                 {subcategory.name}
               </option>
@@ -432,28 +448,20 @@ function CreateNodeModal({
         />
       </label>
 
-      {mode !== "secondary" ? (
-        <>
-          <label className="block space-y-1 text-sm text-(--text-soft)">
-            Sort order
-            <input
-              type="number"
-              value={sortOrderInput}
-              onChange={(event) => onSortOrderChange(event.target.value)}
-              className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 outline-none focus:border-(--accent)"
-            />
-          </label>
+      <label className="block space-y-1 text-sm text-(--text-soft)">
+        Sort order
+        <input
+          type="number"
+          value={sortOrderInput}
+          onChange={(event) => onSortOrderChange(event.target.value)}
+          className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 outline-none focus:border-(--accent)"
+        />
+      </label>
 
-          <label className="inline-flex items-center gap-2 text-sm text-(--text-soft)">
-            <input
-              type="checkbox"
-              checked={activeInput}
-              onChange={(event) => onActiveChange(event.target.checked)}
-            />
-            Active
-          </label>
-        </>
-      ) : null}
+      <label className="inline-flex items-center gap-2 text-sm text-(--text-soft)">
+        <input type="checkbox" checked={activeInput} onChange={(event) => onActiveChange(event.target.checked)} />
+        Active
+      </label>
     </Modal>
   );
 }

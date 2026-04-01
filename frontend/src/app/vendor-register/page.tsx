@@ -30,10 +30,8 @@ type VendorFormState = {
   ownerName: string;
   personalEmail: string;
   personalPhone: string;
-  personalAlternatePhone: string;
   businessEmail: string;
   businessPhone: string;
-  businessAlternatePhone: string;
   password: string;
   confirmPassword: string;
   businessCategoryId: string;
@@ -43,8 +41,10 @@ type VendorFormState = {
   state: string;
   postalCode: string;
   gstNumber: string;
+  gstDocument: string;
   website: string;
-  yearsInBusiness: string;
+  establishmentYear: string;
+  serviceTags: string[];
   businessDescription: string;
   idProofType: string;
   idProofNumber: string;
@@ -56,19 +56,19 @@ const STEP_META = [
   {
     number: 1,
     title: "Personal",
-    subtitle: "Owner and login details",
+    subtitle: "Owner identity details",
     icon: UserRound,
   },
   {
     number: 2,
     title: "Business",
-    subtitle: "Address and category",
+    subtitle: "Business profile and contacts",
     icon: Building2,
   },
   {
     number: 3,
     title: "Verification",
-    subtitle: "Security and final submit",
+    subtitle: "Security, GST and proof",
     icon: ShieldCheck,
   },
 ] as const;
@@ -85,17 +85,17 @@ const ID_PROOF_OPTIONS = [
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_DOCUMENT_FILE_SIZE = 3 * 1024 * 1024;
+const GSTIN_REGEX = /^[0-9A-Z]{15}$/i;
+const AADHAAR_REGEX = /^[0-9]{12}$/;
+const MAX_DOCUMENT_FILE_SIZE = 8 * 1024 * 1024;
 
 const INITIAL_FORM: VendorFormState = {
   businessName: "",
   ownerName: "",
   personalEmail: "",
   personalPhone: "",
-  personalAlternatePhone: "",
   businessEmail: "",
   businessPhone: "",
-  businessAlternatePhone: "",
   password: "",
   confirmPassword: "",
   businessCategoryId: "",
@@ -105,8 +105,10 @@ const INITIAL_FORM: VendorFormState = {
   state: "",
   postalCode: "",
   gstNumber: "",
+  gstDocument: "",
   website: "",
-  yearsInBusiness: "",
+  establishmentYear: "",
+  serviceTags: [],
   businessDescription: "",
   idProofType: "",
   idProofNumber: "",
@@ -115,6 +117,26 @@ const INITIAL_FORM: VendorFormState = {
 };
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+const DOCUMENT_ACCEPTED_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+const DOCUMENT_ACCEPT_ATTR = DOCUMENT_ACCEPTED_TYPES.join(",");
+
+const normalizeGstin = (value: string) => value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
+
+const normalizeIdProofNumber = (value: string, idProofType: string) => {
+  if (idProofType === "aadhaar") {
+    return value.replace(/\D/g, "").slice(0, 12);
+  }
+
+  return value.trim().toUpperCase();
+};
 
 const toDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -146,7 +168,9 @@ export default function VendorRegisterPage() {
   const [categoryLoadError, setCategoryLoadError] = useState<string | null>(null);
   const [subcategoryLoadError, setSubcategoryLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<VendorFormState>(INITIAL_FORM);
-  const [selectedDocumentName, setSelectedDocumentName] = useState("");
+  const [selectedIdDocumentName, setSelectedIdDocumentName] = useState("");
+  const [selectedGstDocumentName, setSelectedGstDocumentName] = useState("");
+  const [serviceTagInput, setServiceTagInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -284,33 +308,27 @@ export default function VendorRegisterPage() {
     if (!form.personalEmail.trim()) return "Personal email is required";
     if (!EMAIL_REGEX.test(form.personalEmail.trim().toLowerCase())) return "Personal email format is invalid";
     if (!PHONE_REGEX.test(form.personalPhone.trim())) return "Personal phone must be exactly 10 digits";
-    if (form.personalAlternatePhone.trim() && !PHONE_REGEX.test(form.personalAlternatePhone.trim())) {
-      return "Personal alternate phone must be exactly 10 digits";
-    }
-    if (!form.businessEmail.trim()) return "Business email is required";
-    if (!EMAIL_REGEX.test(form.businessEmail.trim().toLowerCase())) return "Business email format is invalid";
-    if (!PHONE_REGEX.test(form.businessPhone.trim())) return "Business phone must be exactly 10 digits";
-    if (form.businessAlternatePhone.trim() && !PHONE_REGEX.test(form.businessAlternatePhone.trim())) {
-      return "Business alternate phone must be exactly 10 digits";
-    }
-    if (!form.password || form.password.length < 6) return "Password must be at least 6 characters";
-    if (form.password !== form.confirmPassword) return "Password and confirm password do not match";
     return null;
   };
 
   const validateStepTwo = () => {
     if (!form.businessName.trim()) return "Business name is required";
+    if (!form.businessEmail.trim()) return "Business email is required";
+    if (!EMAIL_REGEX.test(form.businessEmail.trim().toLowerCase())) return "Business email format is invalid";
+    if (!PHONE_REGEX.test(form.businessPhone.trim())) return "Business phone must be exactly 10 digits";
     if (!form.businessCategoryId) return "Please select a business category";
     if (!form.businessAddress.trim()) return "Business address is required";
     if (!form.city.trim()) return "City is required";
     if (!form.state.trim()) return "State is required";
     if (!form.postalCode.trim()) return "Postal code is required";
     if (!POSTAL_REGEX.test(form.postalCode.trim())) return "Postal code must be 5 to 10 digits";
+    if (form.serviceTags.length === 0) return "Add at least one service tag";
 
-    if (form.yearsInBusiness.trim()) {
-      const years = Number(form.yearsInBusiness);
-      if (Number.isNaN(years) || years < 0 || years > 80) {
-        return "Years in business must be a valid number between 0 and 80";
+    if (form.establishmentYear.trim()) {
+      const year = Number(form.establishmentYear);
+      const currentYear = new Date().getFullYear();
+      if (Number.isNaN(year) || year < 1900 || year > currentYear) {
+        return "Establishment year must be between 1900 and current year";
       }
     }
 
@@ -318,44 +336,79 @@ export default function VendorRegisterPage() {
   };
 
   const validateStepThree = () => {
+    if (!form.password || form.password.length < 6) return "Password must be at least 6 characters";
+    if (form.password !== form.confirmPassword) return "Password and confirm password do not match";
+    if (!form.gstNumber.trim()) return "GSTIN number is required";
+    if (!GSTIN_REGEX.test(form.gstNumber.trim())) return "GSTIN must be a valid 15-character value";
+    if (!form.gstDocument.trim()) return "Please upload GST document";
     if (!form.idProofType) return "Please select an ID proof type";
     if (!form.idProofNumber.trim()) return "ID proof number is required";
-    if (!form.idProofDocument.trim()) return "Please upload an ID proof document image";
+    if (form.idProofType === "aadhaar" && !AADHAAR_REGEX.test(form.idProofNumber.trim())) {
+      return "Aadhaar number must be exactly 12 digits";
+    }
+    if (!form.idProofDocument.trim()) return "Please upload an ID proof document";
     return null;
   };
 
-  const handleProofDocumentChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocumentChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    field: "idProofDocument" | "gstDocument",
+    setDocumentName: React.Dispatch<React.SetStateAction<string>>,
+    label: string
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) {
-      updateField("idProofDocument", "");
-      setSelectedDocumentName("");
+      updateField(field, "");
+      setDocumentName("");
       return;
     }
 
-    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-    if (!allowed.includes(file.type)) {
-      setError("ID proof document must be PNG, JPG, JPEG or WEBP image");
+    if (!DOCUMENT_ACCEPTED_TYPES.includes(file.type as (typeof DOCUMENT_ACCEPTED_TYPES)[number])) {
+      setError(`${label} must be PNG, JPG, JPEG, WEBP, PDF, DOC or DOCX`);
       event.target.value = "";
       return;
     }
 
     if (file.size > MAX_DOCUMENT_FILE_SIZE) {
-      setError("ID proof document must be 3MB or smaller");
+      setError(`${label} must be 8MB or smaller`);
       event.target.value = "";
       return;
     }
 
     try {
       const dataUrl = await toDataUrl(file);
-      updateField("idProofDocument", dataUrl);
-      setSelectedDocumentName(file.name);
+      updateField(field, dataUrl);
+      setDocumentName(file.name);
       setError(null);
     } catch (fileError) {
       const message = fileError instanceof Error ? fileError.message : "Failed to read selected document";
       setError(message);
       event.target.value = "";
     }
+  };
+
+  const addServiceTag = () => {
+    const normalized = serviceTagInput.trim().replace(/\s+/g, " ");
+    if (!normalized) return;
+
+    setForm((current) => {
+      const exists = current.serviceTags.some((tag) => tag.toLowerCase() === normalized.toLowerCase());
+      if (exists) return current;
+      if (current.serviceTags.length >= 100) return current;
+      return {
+        ...current,
+        serviceTags: [...current.serviceTags, normalized],
+      };
+    });
+    setServiceTagInput("");
+  };
+
+  const removeServiceTag = (tagToRemove: string) => {
+    setForm((current) => ({
+      ...current,
+      serviceTags: current.serviceTags.filter((tag) => tag !== tagToRemove),
+    }));
   };
 
   const handleNext = () => {
@@ -421,10 +474,8 @@ export default function VendorRegisterPage() {
           ownerName: form.ownerName.trim(),
           personalEmail: form.personalEmail.trim().toLowerCase(),
           personalPhone: form.personalPhone.trim(),
-          personalAlternatePhone: form.personalAlternatePhone.trim(),
           businessEmail: form.businessEmail.trim().toLowerCase(),
           businessPhone: form.businessPhone.trim(),
-          businessAlternatePhone: form.businessAlternatePhone.trim(),
           password: form.password,
           businessCategoryId: form.businessCategoryId,
           businessSubcategoryId: form.businessSubcategoryId || undefined,
@@ -433,8 +484,10 @@ export default function VendorRegisterPage() {
           state: form.state.trim(),
           postalCode: form.postalCode.trim(),
           gstNumber: form.gstNumber.trim(),
+          gstDocument: form.gstDocument,
           website: form.website.trim(),
-          yearsInBusiness: form.yearsInBusiness.trim() ? Number(form.yearsInBusiness.trim()) : undefined,
+          establishmentYear: form.establishmentYear.trim() ? Number(form.establishmentYear.trim()) : undefined,
+          serviceTags: form.serviceTags,
           businessDescription: form.businessDescription.trim(),
           idProofType: form.idProofType,
           idProofNumber: form.idProofNumber.trim(),
@@ -453,7 +506,9 @@ export default function VendorRegisterPage() {
         ...INITIAL_FORM,
         businessCategoryId: categories[0]?.id || "",
       });
-      setSelectedDocumentName("");
+      setSelectedIdDocumentName("");
+      setSelectedGstDocumentName("");
+      setServiceTagInput("");
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Vendor registration failed";
       setError(message);
@@ -582,20 +637,6 @@ export default function VendorRegisterPage() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">Personal alternate phone</span>
-                    <input
-                      type="tel"
-                      value={form.personalAlternatePhone}
-                      onChange={(event) => updateField("personalAlternatePhone", normalizePhone(event.target.value))}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Optional"
-                      inputMode="numeric"
-                      maxLength={10}
-                      pattern="[0-9]{10}"
-                    />
-                  </label>
-
-                  <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       Personal email <RequiredMark />
                     </span>
@@ -605,6 +646,24 @@ export default function VendorRegisterPage() {
                       onChange={(event) => updateField("personalEmail", event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
                       placeholder="owner@email.com"
+                      required
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {step === 2 ? (
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="sm:col-span-2 block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Business name <RequiredMark />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.businessName}
+                      onChange={(event) => updateField("businessName", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Enter legal business name"
                       required
                     />
                   </label>
@@ -636,68 +695,6 @@ export default function VendorRegisterPage() {
                       inputMode="numeric"
                       maxLength={10}
                       pattern="[0-9]{10}"
-                      required
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">Business alternate phone</span>
-                    <input
-                      type="tel"
-                      value={form.businessAlternatePhone}
-                      onChange={(event) => updateField("businessAlternatePhone", normalizePhone(event.target.value))}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Optional"
-                      inputMode="numeric"
-                      maxLength={10}
-                      pattern="[0-9]{10}"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Create password <RequiredMark />
-                    </span>
-                    <input
-                      type="password"
-                      minLength={6}
-                      value={form.password}
-                      onChange={(event) => updateField("password", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Minimum 6 characters"
-                      required
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Confirm password <RequiredMark />
-                    </span>
-                    <input
-                      type="password"
-                      minLength={6}
-                      value={form.confirmPassword}
-                      onChange={(event) => updateField("confirmPassword", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Re-enter password"
-                      required
-                    />
-                  </label>
-                </div>
-              ) : null}
-
-              {step === 2 ? (
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="sm:col-span-2 block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Business name <RequiredMark />
-                    </span>
-                    <input
-                      type="text"
-                      value={form.businessName}
-                      onChange={(event) => updateField("businessName", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Enter legal business name"
                       required
                     />
                   </label>
@@ -802,17 +799,6 @@ export default function VendorRegisterPage() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">GST number</span>
-                    <input
-                      type="text"
-                      value={form.gstNumber}
-                      onChange={(event) => updateField("gstNumber", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Optional"
-                    />
-                  </label>
-
-                  <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">Website</span>
                     <input
                       type="url"
@@ -824,16 +810,66 @@ export default function VendorRegisterPage() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">Years in business</span>
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">Establishment year</span>
                     <input
                       type="number"
-                      min={0}
-                      max={80}
-                      value={form.yearsInBusiness}
-                      onChange={(event) => updateField("yearsInBusiness", event.target.value)}
+                      min={1900}
+                      max={new Date().getFullYear()}
+                      value={form.establishmentYear}
+                      onChange={(event) => updateField("establishmentYear", event.target.value.replace(/\D/g, "").slice(0, 4))}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Optional"
+                      placeholder="e.g. 2014"
                     />
+                  </label>
+
+                  <label className="sm:col-span-2 block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Services / tags <RequiredMark />
+                    </span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={serviceTagInput}
+                        onChange={(event) => setServiceTagInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            addServiceTag();
+                          }
+                        }}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                        placeholder="Add service tags like AC repair, plumbing, catering"
+                      />
+                      <button
+                        type="button"
+                        onClick={addServiceTag}
+                        className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-800 hover:bg-orange-100"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {form.serviceTags.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {form.serviceTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-800"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => removeServiceTag(tag)}
+                              className="text-orange-700 hover:text-orange-900"
+                              aria-label={`Remove ${tag}`}
+                            >
+                              x
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-slate-500">Add one or more services. You can add as many as needed.</p>
+                    )}
                   </label>
 
                   <label className="sm:col-span-2 block">
@@ -853,11 +889,80 @@ export default function VendorRegisterPage() {
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Create password <RequiredMark />
+                    </span>
+                    <input
+                      type="password"
+                      minLength={6}
+                      value={form.password}
+                      onChange={(event) => updateField("password", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Minimum 6 characters"
+                      required
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Confirm password <RequiredMark />
+                    </span>
+                    <input
+                      type="password"
+                      minLength={6}
+                      value={form.confirmPassword}
+                      onChange={(event) => updateField("confirmPassword", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Re-enter password"
+                      required
+                    />
+                  </label>
+
+                  <label className="sm:col-span-2 block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      GSTIN number <RequiredMark />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.gstNumber}
+                      onChange={(event) => updateField("gstNumber", normalizeGstin(event.target.value))}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Example: 22AAAAA0000A1Z5"
+                      maxLength={15}
+                      required
+                    />
+                    <p className="mt-1 text-xs text-slate-500">GSTIN format example: 22AAAAA0000A1Z5 (15 characters).</p>
+                  </label>
+
+                  <label className="sm:col-span-2 block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Upload GST document <RequiredMark />
+                    </span>
+                    <input
+                      type="file"
+                      accept={DOCUMENT_ACCEPT_ATTR}
+                      onChange={(event) =>
+                        void handleDocumentChange(event, "gstDocument", setSelectedGstDocumentName, "GST document")
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800"
+                      required={!form.gstDocument}
+                    />
+                    <p className="mt-1 text-xs text-slate-500">Accepted: PNG, JPG, JPEG, WEBP, PDF, DOC, DOCX up to 8MB.</p>
+                    {selectedGstDocumentName ? (
+                      <p className="mt-1 text-xs text-emerald-700">Selected: {selectedGstDocumentName}</p>
+                    ) : null}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       ID proof type <RequiredMark />
                     </span>
                     <select
                       value={form.idProofType}
-                      onChange={(event) => updateField("idProofType", event.target.value)}
+                      onChange={(event) => {
+                        const nextType = event.target.value;
+                        updateField("idProofType", nextType);
+                        updateField("idProofNumber", normalizeIdProofNumber(form.idProofNumber, nextType));
+                      }}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
                       required
                     >
@@ -877,11 +982,18 @@ export default function VendorRegisterPage() {
                     <input
                       type="text"
                       value={form.idProofNumber}
-                      onChange={(event) => updateField("idProofNumber", event.target.value)}
+                      onChange={(event) =>
+                        updateField("idProofNumber", normalizeIdProofNumber(event.target.value, form.idProofType))
+                      }
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Enter ID number"
+                      placeholder={form.idProofType === "aadhaar" ? "Enter 12-digit Aadhaar number" : "Enter ID number"}
+                      inputMode={form.idProofType === "aadhaar" ? "numeric" : "text"}
+                      maxLength={form.idProofType === "aadhaar" ? 12 : 32}
                       required
                     />
+                    {form.idProofType === "aadhaar" ? (
+                      <p className="mt-1 text-xs text-slate-500">Aadhaar number must be exactly 12 digits.</p>
+                    ) : null}
                   </label>
 
                   <label className="sm:col-span-2 block">
@@ -890,13 +1002,15 @@ export default function VendorRegisterPage() {
                     </span>
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleProofDocumentChange}
+                      accept={DOCUMENT_ACCEPT_ATTR}
+                      onChange={(event) =>
+                        void handleDocumentChange(event, "idProofDocument", setSelectedIdDocumentName, "ID proof document")
+                      }
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800"
                       required={!form.idProofDocument}
                     />
-                    <p className="mt-1 text-xs text-slate-500">Accepted: PNG, JPG, JPEG, WEBP up to 3MB.</p>
-                    {selectedDocumentName ? <p className="mt-1 text-xs text-emerald-700">Selected: {selectedDocumentName}</p> : null}
+                    <p className="mt-1 text-xs text-slate-500">Accepted: PNG, JPG, JPEG, WEBP, PDF, DOC, DOCX up to 8MB.</p>
+                    {selectedIdDocumentName ? <p className="mt-1 text-xs text-emerald-700">Selected: {selectedIdDocumentName}</p> : null}
                   </label>
 
                   <label className="sm:col-span-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
@@ -920,7 +1034,10 @@ export default function VendorRegisterPage() {
                     </p>
                     <p>Subcategory: {subcategories.find((item) => item.id === form.businessSubcategoryId)?.name || "Not selected"}</p>
                     <p>Location: {[form.city, form.state].filter(Boolean).join(", ") || "-"}</p>
-                    <p>Document: {selectedDocumentName || "Not uploaded"}</p>
+                    <p>Established: {form.establishmentYear || "-"}</p>
+                    <p>Services: {form.serviceTags.length > 0 ? form.serviceTags.join(", ") : "-"}</p>
+                    <p>GST doc: {selectedGstDocumentName || "Not uploaded"}</p>
+                    <p>ID doc: {selectedIdDocumentName || "Not uploaded"}</p>
                   </div>
                 </div>
               ) : null}

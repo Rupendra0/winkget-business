@@ -1,15 +1,30 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
+const {
+  GSTIN_REGEX,
+  AADHAAR_REGEX,
+  DOCUMENT_DATA_URL_REGEX,
+  MAX_DOCUMENT_DATA_LENGTH,
+  isValidEstablishmentYear,
+} = require("../lib/vendorValidation");
 
 const router = express.Router();
 const AUTH_COOKIE_NAME = "winkget_auth";
 const VENDOR_STATUS_VALUES = new Set(["pending", "approved", "rejected"]);
 const VENDOR_LIST_STATUS_VALUES = new Set(["all", "pending", "approved", "rejected"]);
 const USER_LIST_ROLE_VALUES = new Set(["all", "admin", "customer", "vendor"]);
+const USER_ROLE_VALUES = new Set(["admin", "customer", "vendor"]);
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9]{10}$/;
+const POSTAL_REGEX = /^[0-9]{5,10}$/;
+const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
+
+const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -81,6 +96,7 @@ const toSubcategorySummary = (subcategory) => ({
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
   category: toCategoryReference(subcategory.category),
+  parentSubcategory: toSubcategoryReference(subcategory.parentSubcategory),
   createdAt: subcategory.createdAt,
   updatedAt: subcategory.updatedAt,
 });
@@ -108,7 +124,7 @@ const resolveUniqueSlug = async (baseSlug, excludeCategoryId) => {
   }
 };
 
-const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, excludeSubcategoryId) => {
+const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, parentSubcategoryId, excludeSubcategoryId) => {
   const sanitizedBase = baseSlug || `subcategory-${Date.now()}`;
   let slug = sanitizedBase;
   let suffix = 1;
@@ -118,6 +134,7 @@ const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, excludeSubcate
   while (true) {
     const query = {
       category: categoryId,
+      parentSubcategory: parentSubcategoryId || null,
       slug,
     };
 
@@ -131,6 +148,29 @@ const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, excludeSubcate
     slug = `${sanitizedBase}-${suffix}`;
     suffix += 1;
   }
+};
+
+const isDescendantSubcategory = async (candidateParentId, subcategoryId) => {
+  if (!candidateParentId || !subcategoryId) return false;
+
+  let currentId = String(candidateParentId);
+  const targetId = String(subcategoryId);
+
+  // Walk up the parent chain to detect cycles.
+  while (currentId) {
+    if (currentId === targetId) {
+      return true;
+    }
+
+    const node = await Subcategory.findById(currentId).select("_id parentSubcategory").lean();
+    if (!node?.parentSubcategory) {
+      return false;
+    }
+
+    currentId = String(node.parentSubcategory);
+  }
+
+  return false;
 };
 
 const toVendorSummary = (vendor) => ({
@@ -150,8 +190,11 @@ const toVendorSummary = (vendor) => ({
   state: vendor.state,
   postalCode: vendor.postalCode,
   gstNumber: vendor.gstNumber,
+  gstDocument: vendor.gstDocument,
   website: vendor.website,
+  establishmentYear: vendor.establishmentYear,
   yearsInBusiness: vendor.yearsInBusiness,
+  serviceTags: vendor.serviceTags || [],
   businessDescription: vendor.businessDescription,
   idProofType: vendor.idProofType,
   idProofNumber: vendor.idProofNumber,
@@ -171,6 +214,40 @@ const toUserSummary = (user) => ({
   businessName: user.businessName,
   role: user.role,
   vendorStatus: user.vendorStatus,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
+
+const toUserDetail = (user) => ({
+  id: String(user._id),
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  alternatePhone: user.alternatePhone,
+  businessName: user.businessName,
+  businessCategory: toCategoryReference(user.businessCategory),
+  businessSubcategory: toSubcategoryReference(user.businessSubcategory),
+  businessEmail: user.businessEmail,
+  businessPhone: user.businessPhone,
+  businessAlternatePhone: user.businessAlternatePhone,
+  businessAddress: user.businessAddress,
+  city: user.city,
+  state: user.state,
+  postalCode: user.postalCode,
+  gstNumber: user.gstNumber,
+  gstDocument: user.gstDocument,
+  website: user.website,
+  establishmentYear: user.establishmentYear,
+  yearsInBusiness: user.yearsInBusiness,
+  serviceTags: user.serviceTags || [],
+  businessDescription: user.businessDescription,
+  idProofType: user.idProofType,
+  idProofNumber: user.idProofNumber,
+  idProofDocument: user.idProofDocument,
+  marketingOptIn: user.marketingOptIn,
+  role: user.role,
+  vendorStatus: user.vendorStatus,
+  vendorReviewNote: user.vendorReviewNote,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -240,7 +317,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .select(
-          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber website yearsInBusiness businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
         )
         .populate("businessCategory", "_id name")
         .populate("businessSubcategory", "_id name"),
@@ -301,7 +378,7 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber website yearsInBusiness businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -387,6 +464,572 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load users", error: error.message });
+  }
+});
+
+router.get("/admin/users/:id", requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(userId)) {
+      return res.status(400).json({ ok: false, message: "Invalid user id" });
+    }
+
+    const user = await User.findById(userId)
+      .select(
+        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
+      )
+      .populate("businessCategory", "_id name")
+      .populate("businessSubcategory", "_id name");
+
+    if (!user) {
+      return res.status(404).json({ ok: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      user: toUserDetail(user),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load user details", error: error.message });
+  }
+});
+
+router.post("/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const role = String(req.body?.role || "customer").toLowerCase();
+    const emailInput = String(req.body?.email || "").trim();
+    const phoneInput = String(req.body?.phone || "").trim();
+    const password = String(req.body?.password || "");
+    const vendorStatusInput = String(req.body?.vendorStatus || "").toLowerCase();
+    const businessName = String(req.body?.businessName || "").trim();
+    const businessEmailInput = String(req.body?.businessEmail || "").trim();
+    const businessPhoneInput = String(req.body?.businessPhone || "").trim();
+    const businessAddress = String(req.body?.businessAddress || "").trim();
+    const city = String(req.body?.city || "").trim();
+    const state = String(req.body?.state || "").trim();
+    const postalCode = String(req.body?.postalCode || "").trim();
+    const gstNumber = String(req.body?.gstNumber || "").trim();
+    const website = String(req.body?.website || "").trim();
+
+    if (!name) {
+      return res.status(400).json({ ok: false, message: "Name is required" });
+    }
+
+    if (!USER_ROLE_VALUES.has(role)) {
+      return res.status(400).json({ ok: false, message: "Invalid user role" });
+    }
+
+    const email = emailInput ? emailInput.toLowerCase() : "";
+    const phone = normalizePhone(phoneInput);
+    const businessEmail = businessEmailInput ? businessEmailInput.toLowerCase() : "";
+    const businessPhone = normalizePhone(businessPhoneInput);
+
+    if (!email && !phone) {
+      return res.status(400).json({ ok: false, message: "Email or phone is required" });
+    }
+
+    if (email && !EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ ok: false, message: "Invalid email format" });
+    }
+
+    if (phone && !PHONE_REGEX.test(phone)) {
+      return res.status(400).json({ ok: false, message: "Phone must be exactly 10 digits" });
+    }
+
+    if (vendorStatusInput && !VENDOR_STATUS_VALUES.has(vendorStatusInput)) {
+      return res.status(400).json({ ok: false, message: "Invalid vendor status" });
+    }
+
+    if ((role === "admin" || role === "vendor") && password.length < 6) {
+      return res.status(400).json({ ok: false, message: "Password must be at least 6 characters for admin/vendor" });
+    }
+
+    if (password && password.length < 6) {
+      return res.status(400).json({ ok: false, message: "Password must be at least 6 characters" });
+    }
+
+    if (businessEmail && !EMAIL_REGEX.test(businessEmail)) {
+      return res.status(400).json({ ok: false, message: "Invalid business email format" });
+    }
+
+    if (businessPhone && !PHONE_REGEX.test(businessPhone)) {
+      return res.status(400).json({ ok: false, message: "Business phone must be exactly 10 digits" });
+    }
+
+    if (postalCode && !POSTAL_REGEX.test(postalCode)) {
+      return res.status(400).json({ ok: false, message: "Postal code must be 5 to 10 digits" });
+    }
+
+    if (role === "vendor") {
+      if (!businessName || !businessEmail || !businessPhone) {
+        return res.status(400).json({
+          ok: false,
+          message: "Business name, business email and business phone are required for vendors",
+        });
+      }
+    }
+
+    const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+
+    const user = await User.create({
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+      role,
+      provider: passwordHash ? "credentials" : "manual",
+      passwordHash,
+      vendorStatus: role === "vendor" ? vendorStatusInput || "pending" : "approved",
+      businessName: role === "vendor" ? businessName || undefined : undefined,
+      businessEmail: role === "vendor" ? businessEmail || undefined : undefined,
+      businessPhone: role === "vendor" ? businessPhone || undefined : undefined,
+      businessAddress: role === "vendor" ? businessAddress || undefined : undefined,
+      city: role === "vendor" ? city || undefined : undefined,
+      state: role === "vendor" ? state || undefined : undefined,
+      postalCode: role === "vendor" ? postalCode || undefined : undefined,
+      gstNumber: role === "vendor" ? gstNumber || undefined : undefined,
+      website: role === "vendor" ? website || undefined : undefined,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: "User created",
+      user: toUserSummary(user),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ ok: false, message: "Email or phone already exists" });
+    }
+
+    return res.status(500).json({ ok: false, message: "Failed to create user", error: error.message });
+  }
+});
+
+router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(userId)) {
+      return res.status(400).json({ ok: false, message: "Invalid user id" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ ok: false, message: "User not found" });
+    }
+
+    if (req.body?.name !== undefined) {
+      const nextName = String(req.body.name || "").trim();
+      if (!nextName) {
+        return res.status(400).json({ ok: false, message: "Name cannot be empty" });
+      }
+      user.name = nextName;
+    }
+
+    if (req.body?.email !== undefined) {
+      const nextEmail = String(req.body.email || "").trim().toLowerCase();
+      if (nextEmail && !EMAIL_REGEX.test(nextEmail)) {
+        return res.status(400).json({ ok: false, message: "Invalid email format" });
+      }
+      user.email = nextEmail || undefined;
+    }
+
+    if (req.body?.phone !== undefined) {
+      const nextPhone = normalizePhone(req.body.phone);
+      if (nextPhone && !PHONE_REGEX.test(nextPhone)) {
+        return res.status(400).json({ ok: false, message: "Phone must be exactly 10 digits" });
+      }
+      user.phone = nextPhone || undefined;
+    }
+
+    if (req.body?.alternatePhone !== undefined) {
+      const nextAlternatePhone = normalizePhone(req.body.alternatePhone);
+      if (nextAlternatePhone && !PHONE_REGEX.test(nextAlternatePhone)) {
+        return res.status(400).json({ ok: false, message: "Alternate phone must be exactly 10 digits" });
+      }
+      user.alternatePhone = nextAlternatePhone || undefined;
+    }
+
+    if (req.body?.password !== undefined) {
+      const nextPassword = String(req.body.password || "");
+      if (nextPassword && nextPassword.length < 6) {
+        return res.status(400).json({ ok: false, message: "Password must be at least 6 characters" });
+      }
+
+      if (nextPassword) {
+        user.passwordHash = await bcrypt.hash(nextPassword, 10);
+        user.provider = "credentials";
+      }
+    }
+
+    if (req.body?.role !== undefined) {
+      const nextRole = String(req.body.role || "").toLowerCase();
+      if (!USER_ROLE_VALUES.has(nextRole)) {
+        return res.status(400).json({ ok: false, message: "Invalid user role" });
+      }
+      user.role = nextRole;
+      if (nextRole !== "vendor") {
+        user.vendorStatus = "approved";
+        user.businessName = undefined;
+        user.businessCategory = undefined;
+        user.businessSubcategory = undefined;
+        user.businessEmail = undefined;
+        user.businessPhone = undefined;
+        user.businessAlternatePhone = undefined;
+        user.businessAddress = undefined;
+        user.city = undefined;
+        user.state = undefined;
+        user.postalCode = undefined;
+        user.gstNumber = undefined;
+        user.gstDocument = undefined;
+        user.website = undefined;
+        user.establishmentYear = undefined;
+        user.yearsInBusiness = undefined;
+        user.serviceTags = [];
+        user.businessDescription = undefined;
+        user.idProofType = undefined;
+        user.idProofNumber = undefined;
+        user.idProofDocument = undefined;
+        user.marketingOptIn = false;
+        user.vendorReviewNote = undefined;
+      } else if (!user.vendorStatus) {
+        user.vendorStatus = "pending";
+      }
+    }
+
+    const requireVendor = () => {
+      if (user.role !== "vendor") {
+        return res.status(400).json({ ok: false, message: "Business fields can only be set for vendor users" });
+      }
+      return null;
+    };
+
+    if (req.body?.businessName !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+      const value = String(req.body.businessName || "").trim();
+      user.businessName = value || undefined;
+    }
+
+    if (req.body?.businessCategoryId !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.businessCategoryId || "").trim();
+      if (!value) {
+        user.businessCategory = undefined;
+        user.businessSubcategory = undefined;
+      } else {
+        if (!OBJECT_ID_REGEX.test(value)) {
+          return res.status(400).json({ ok: false, message: "Invalid business category" });
+        }
+
+        const category = await Category.findById(value).select("_id");
+        if (!category) {
+          return res.status(400).json({ ok: false, message: "Selected business category is invalid" });
+        }
+
+        user.businessCategory = category._id;
+      }
+    }
+
+    if (req.body?.businessSubcategoryId !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.businessSubcategoryId || "").trim();
+      if (!value) {
+        user.businessSubcategory = undefined;
+      } else {
+        if (!OBJECT_ID_REGEX.test(value)) {
+          return res.status(400).json({ ok: false, message: "Invalid business subcategory" });
+        }
+
+        if (!user.businessCategory) {
+          return res.status(400).json({ ok: false, message: "Select a business category before subcategory" });
+        }
+
+        const subcategory = await Subcategory.findOne({
+          _id: value,
+          category: user.businessCategory,
+        }).select("_id");
+
+        if (!subcategory) {
+          return res.status(400).json({ ok: false, message: "Selected business subcategory is invalid" });
+        }
+
+        user.businessSubcategory = subcategory._id;
+      }
+    }
+
+    if (req.body?.businessEmail !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.businessEmail || "").trim().toLowerCase();
+      if (value && !EMAIL_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Invalid business email format" });
+      }
+      user.businessEmail = value || undefined;
+    }
+
+    if (req.body?.businessPhone !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = normalizePhone(req.body.businessPhone);
+      if (value && !PHONE_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Business phone must be exactly 10 digits" });
+      }
+      user.businessPhone = value || undefined;
+    }
+
+    if (req.body?.businessAlternatePhone !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = normalizePhone(req.body.businessAlternatePhone);
+      if (value && !PHONE_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Business alternate phone must be exactly 10 digits" });
+      }
+      user.businessAlternatePhone = value || undefined;
+    }
+
+    if (req.body?.businessAddress !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+      const value = String(req.body.businessAddress || "").trim();
+      user.businessAddress = value || undefined;
+    }
+
+    if (req.body?.city !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+      const value = String(req.body.city || "").trim();
+      user.city = value || undefined;
+    }
+
+    if (req.body?.state !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+      const value = String(req.body.state || "").trim();
+      user.state = value || undefined;
+    }
+
+    if (req.body?.postalCode !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.postalCode || "").trim();
+      if (value && !POSTAL_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Postal code must be 5 to 10 digits" });
+      }
+      user.postalCode = value || undefined;
+    }
+
+    if (req.body?.gstNumber !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.gstNumber || "").trim();
+      if (value && !GSTIN_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "GSTIN must be a valid 15-character value" });
+      }
+      user.gstNumber = value || undefined;
+    }
+
+    if (req.body?.gstDocument !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.gstDocument || "").trim();
+      if (value) {
+        if (!DOCUMENT_DATA_URL_REGEX.test(value)) {
+          return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+        }
+
+        if (value.length > MAX_DOCUMENT_DATA_LENGTH) {
+          return res.status(400).json({ ok: false, message: "GST document is too large" });
+        }
+      }
+      user.gstDocument = value || undefined;
+    }
+
+    if (req.body?.website !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.website || "").trim();
+      user.website = value || undefined;
+    }
+
+    if (req.body?.establishmentYear !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = req.body.establishmentYear;
+      const numericYear = value === "" || value === null ? undefined : Number(value);
+
+      if (!isValidEstablishmentYear(numericYear)) {
+        return res.status(400).json({ ok: false, message: "Invalid establishment year" });
+      }
+
+      user.establishmentYear = numericYear;
+    }
+
+    if (req.body?.yearsInBusiness !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = req.body.yearsInBusiness;
+      const numericYears = value === "" || value === null ? undefined : Number(value);
+
+      if (numericYears !== undefined && (!Number.isFinite(numericYears) || numericYears < 0 || numericYears > 80)) {
+        return res.status(400).json({ ok: false, message: "Invalid years in business" });
+      }
+
+      user.yearsInBusiness = numericYears;
+    }
+
+    if (req.body?.serviceTags !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      if (!Array.isArray(req.body.serviceTags)) {
+        return res.status(400).json({ ok: false, message: "Service tags must be an array" });
+      }
+
+      const tags = req.body.serviceTags
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .slice(0, 100);
+
+      user.serviceTags = Array.from(new Set(tags));
+    }
+
+    if (req.body?.businessDescription !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.businessDescription || "").trim();
+      user.businessDescription = value || undefined;
+    }
+
+    if (req.body?.idProofType !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.idProofType || "").trim().toLowerCase();
+      if (value && !ID_PROOF_TYPES.has(value)) {
+        return res.status(400).json({ ok: false, message: "Invalid ID proof type" });
+      }
+      user.idProofType = value || undefined;
+    }
+
+    if (req.body?.idProofNumber !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.idProofNumber || "").trim();
+      const effectiveIdProofType =
+        req.body?.idProofType !== undefined
+          ? String(req.body.idProofType || "").trim().toLowerCase()
+          : String(user.idProofType || "").trim().toLowerCase();
+
+      if (effectiveIdProofType === "aadhaar" && value && !AADHAAR_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Aadhaar number must be exactly 12 digits" });
+      }
+
+      user.idProofNumber = value || undefined;
+    }
+
+    if (req.body?.idProofDocument !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.idProofDocument || "").trim();
+      if (value) {
+        if (!DOCUMENT_DATA_URL_REGEX.test(value)) {
+          return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
+        }
+
+        if (value.length > MAX_DOCUMENT_DATA_LENGTH) {
+          return res.status(400).json({ ok: false, message: "ID proof document is too large" });
+        }
+      }
+
+      user.idProofDocument = value || undefined;
+    }
+
+    if (req.body?.marketingOptIn !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+      user.marketingOptIn = Boolean(req.body.marketingOptIn);
+    }
+
+    if (req.body?.vendorStatus !== undefined) {
+      const nextVendorStatus = String(req.body.vendorStatus || "").toLowerCase();
+
+      if (!VENDOR_STATUS_VALUES.has(nextVendorStatus)) {
+        return res.status(400).json({ ok: false, message: "Invalid vendor status" });
+      }
+
+      if (user.role !== "vendor") {
+        return res.status(400).json({ ok: false, message: "Vendor status can only be changed for vendor users" });
+      }
+
+      user.vendorStatus = nextVendorStatus;
+    }
+
+    if (req.body?.vendorReviewNote !== undefined) {
+      const note = String(req.body.vendorReviewNote || "").trim();
+      user.vendorReviewNote = note || undefined;
+    }
+
+    await user.save();
+    await user.populate("businessCategory", "_id name");
+    await user.populate("businessSubcategory", "_id name");
+
+    return res.status(200).json({
+      ok: true,
+      message: "User updated",
+      user: toUserDetail(user),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ ok: false, message: "Email or phone already exists" });
+    }
+
+    return res.status(500).json({ ok: false, message: "Failed to update user", error: error.message });
+  }
+});
+
+router.delete("/admin/users/:id", requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(userId)) {
+      return res.status(400).json({ ok: false, message: "Invalid user id" });
+    }
+
+    if (String(req.adminUser._id) === userId) {
+      return res.status(400).json({ ok: false, message: "You cannot delete your own account" });
+    }
+
+    const user = await User.findById(userId).select("_id role");
+    if (!user) {
+      return res.status(404).json({ ok: false, message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return res.status(400).json({ ok: false, message: "Cannot delete the last admin user" });
+      }
+    }
+
+    await User.deleteOne({ _id: user._id });
+    return res.status(200).json({ ok: true, message: "User deleted" });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete user", error: error.message });
   }
 });
 
@@ -513,6 +1156,7 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
     const includeInactive = String(req.query.includeInactive || "true").toLowerCase() !== "false";
     const search = String(req.query.search || "").trim();
     const categoryId = String(req.query.categoryId || "").trim();
+    const parentSubcategoryId = String(req.query.parentSubcategoryId || "").trim();
 
     const query = includeInactive ? {} : { isActive: true };
 
@@ -524,14 +1168,26 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
       query.category = categoryId;
     }
 
+    if (parentSubcategoryId) {
+      const normalizedParent = parentSubcategoryId.toLowerCase();
+      if (normalizedParent === "root" || normalizedParent === "null") {
+        query.parentSubcategory = null;
+      } else if (!OBJECT_ID_REGEX.test(parentSubcategoryId)) {
+        return res.status(400).json({ ok: false, message: "Invalid parent subcategory id" });
+      } else {
+        query.parentSubcategory = parentSubcategoryId;
+      }
+    }
+
     if (search) {
       query.name = new RegExp(escapeRegex(search), "i");
     }
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category name slug description isActive sortOrder createdAt updatedAt")
-      .populate("category", "_id name");
+      .select("_id category parentSubcategory name slug description isActive sortOrder createdAt updatedAt")
+      .populate("category", "_id name")
+      .populate("parentSubcategory", "_id name");
 
     return res.status(200).json({
       ok: true,
@@ -545,6 +1201,7 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
 router.post("/admin/subcategories", requireAdmin, async (req, res) => {
   try {
     const categoryId = String(req.body?.categoryId || "").trim();
+    const parentSubcategoryId = String(req.body?.parentSubcategoryId || "").trim();
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
     const sortOrderInput = req.body?.sortOrder;
@@ -559,15 +1216,32 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Subcategory name is required" });
     }
 
+    if (parentSubcategoryId && !OBJECT_ID_REGEX.test(parentSubcategoryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid parent subcategory id" });
+    }
+
     const category = await Category.findById(categoryId).select("_id name");
     if (!category) {
       return res.status(404).json({ ok: false, message: "Category not found" });
     }
 
-    const slug = await resolveUniqueSubcategorySlug(slugify(name), category._id);
+    let parentSubcategory = null;
+    if (parentSubcategoryId) {
+      parentSubcategory = await Subcategory.findOne({
+        _id: parentSubcategoryId,
+        category: category._id,
+      }).select("_id name category");
+
+      if (!parentSubcategory) {
+        return res.status(404).json({ ok: false, message: "Parent subcategory not found in this category" });
+      }
+    }
+
+    const slug = await resolveUniqueSubcategorySlug(slugify(name), category._id, parentSubcategory?._id || null);
 
     const subcategory = await Subcategory.create({
       category: category._id,
+      parentSubcategory: parentSubcategory?._id || null,
       name,
       slug,
       description: description || undefined,
@@ -577,6 +1251,7 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
     });
 
     await subcategory.populate("category", "_id name");
+    await subcategory.populate("parentSubcategory", "_id name");
 
     return res.status(201).json({
       ok: true,
@@ -595,13 +1270,20 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
 router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
   try {
     const subcategoryId = String(req.params.id || "").trim();
-    const subcategory = await Subcategory.findById(subcategoryId).populate("category", "_id name");
+    const subcategory = await Subcategory.findById(subcategoryId)
+      .populate("category", "_id name")
+      .populate("parentSubcategory", "_id name category parentSubcategory");
 
     if (!subcategory) {
       return res.status(404).json({ ok: false, message: "Subcategory not found" });
     }
 
     let nextCategory = subcategory.category;
+    let categoryChanged = false;
+    let parentChanged = false;
+    const previousParentSubcategoryId = subcategory.parentSubcategory ? String(subcategory.parentSubcategory._id) : null;
+    let nextParentSubcategoryId = previousParentSubcategoryId;
+    let parentExplicitlySet = false;
 
     if (req.body?.categoryId !== undefined) {
       const categoryId = String(req.body.categoryId || "").trim();
@@ -616,6 +1298,52 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
 
       nextCategory = category;
       subcategory.category = category._id;
+      categoryChanged = true;
+    }
+
+    if (req.body?.parentSubcategoryId !== undefined) {
+      parentExplicitlySet = true;
+      const parentSubcategoryId = String(req.body.parentSubcategoryId || "").trim();
+
+      if (!parentSubcategoryId) {
+        nextParentSubcategoryId = null;
+      } else {
+        if (!OBJECT_ID_REGEX.test(parentSubcategoryId)) {
+          return res.status(400).json({ ok: false, message: "Invalid parent subcategory id" });
+        }
+
+        if (parentSubcategoryId === subcategoryId) {
+          return res.status(400).json({ ok: false, message: "A subcategory cannot be its own parent" });
+        }
+
+        nextParentSubcategoryId = parentSubcategoryId;
+      }
+    }
+
+    if (categoryChanged && !parentExplicitlySet) {
+      nextParentSubcategoryId = null;
+    }
+
+    if (nextParentSubcategoryId) {
+      const parentSubcategory = await Subcategory.findOne({
+        _id: nextParentSubcategoryId,
+        category: nextCategory._id,
+      }).select("_id name parentSubcategory");
+
+      if (!parentSubcategory) {
+        return res.status(404).json({ ok: false, message: "Parent subcategory not found in this category" });
+      }
+
+      const createsCycle = await isDescendantSubcategory(nextParentSubcategoryId, subcategoryId);
+      if (createsCycle) {
+        return res.status(400).json({ ok: false, message: "Invalid parent relationship would create a cycle" });
+      }
+
+      subcategory.parentSubcategory = parentSubcategory._id;
+      parentChanged = previousParentSubcategoryId !== String(nextParentSubcategoryId);
+    } else {
+      parentChanged = Boolean(previousParentSubcategoryId);
+      subcategory.parentSubcategory = null;
     }
 
     if (req.body?.name !== undefined) {
@@ -625,9 +1353,19 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       }
 
       subcategory.name = nextName;
-      subcategory.slug = await resolveUniqueSubcategorySlug(slugify(nextName), nextCategory._id, subcategory._id);
-    } else if (req.body?.categoryId !== undefined) {
-      subcategory.slug = await resolveUniqueSubcategorySlug(slugify(subcategory.name), nextCategory._id, subcategory._id);
+      subcategory.slug = await resolveUniqueSubcategorySlug(
+        slugify(nextName),
+        nextCategory._id,
+        subcategory.parentSubcategory || null,
+        subcategory._id
+      );
+    } else if (categoryChanged || parentChanged) {
+      subcategory.slug = await resolveUniqueSubcategorySlug(
+        slugify(subcategory.name),
+        nextCategory._id,
+        subcategory.parentSubcategory || null,
+        subcategory._id
+      );
     }
 
     if (req.body?.description !== undefined) {
@@ -649,6 +1387,7 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
 
     await subcategory.save();
     await subcategory.populate("category", "_id name");
+    await subcategory.populate("parentSubcategory", "_id name");
 
     return res.status(200).json({
       ok: true,

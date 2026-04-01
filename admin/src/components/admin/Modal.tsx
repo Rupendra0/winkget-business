@@ -8,9 +8,10 @@ type ModalProps = {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  panelClassName?: string;
 };
 
-export default function Modal({ open, title, onClose, children, footer }: ModalProps) {
+export default function Modal({ open, title, onClose, children, footer, panelClassName }: ModalProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -27,12 +28,14 @@ export default function Modal({ open, title, onClose, children, footer }: ModalP
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/45 p-3 backdrop-blur-[2px] sm:p-4" onClick={onClose}>
       <section
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-xl rounded-2xl border border-(--border) bg-(--surface) p-4 shadow-2xl ring-1 ring-black/10"
+        className={`w-full max-w-xl max-h-[calc(100dvh-1.5rem)] overflow-auto rounded-2xl border border-(--border) bg-(--surface) p-4 shadow-2xl ring-1 ring-black/10 sm:max-h-[calc(100dvh-2rem)] ${
+          panelClassName || ""
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -48,7 +51,7 @@ export default function Modal({ open, title, onClose, children, footer }: ModalP
 
         <div className="space-y-3">{children}</div>
 
-        {footer ? <div className="mt-4 flex justify-end gap-2">{footer}</div> : null}
+        {footer ? <div className="mt-4 flex flex-wrap justify-end gap-2">{footer}</div> : null}
       </section>
     </div>
   );

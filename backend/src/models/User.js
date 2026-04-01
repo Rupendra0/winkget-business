@@ -17,8 +17,11 @@ const userSchema = new Schema(
     state: { type: String, trim: true },
     postalCode: { type: String, trim: true },
     gstNumber: { type: String, trim: true },
+    gstDocument: { type: String },
     website: { type: String, trim: true },
+    establishmentYear: { type: Number, min: 1800, max: 3000 },
     yearsInBusiness: { type: Number, min: 0 },
+    serviceTags: [{ type: String, trim: true }],
     businessDescription: { type: String, trim: true },
     idProofType: {
       type: String,

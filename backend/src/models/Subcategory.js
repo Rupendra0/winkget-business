@@ -3,6 +3,7 @@ const { Schema, model, models } = require("mongoose");
 const subcategorySchema = new Schema(
   {
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
+    parentSubcategory: { type: Schema.Types.ObjectId, ref: "Subcategory", default: null },
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, trim: true, lowercase: true },
     description: { type: String, trim: true },
@@ -16,6 +17,7 @@ const subcategorySchema = new Schema(
   }
 );
 
-subcategorySchema.index({ category: 1, slug: 1 }, { unique: true });
+subcategorySchema.index({ category: 1, parentSubcategory: 1, slug: 1 }, { unique: true });
+subcategorySchema.index({ parentSubcategory: 1, sortOrder: 1, name: 1 });
 
 module.exports = models.Subcategory || model("Subcategory", subcategorySchema);
