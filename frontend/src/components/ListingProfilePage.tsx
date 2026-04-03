@@ -488,6 +488,13 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                     {openStatus.openingText}
                   </span>
 
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-500/30 px-2.5 py-1 text-xs font-semibold text-amber-50 backdrop-blur-sm">
+                    <Star size={12} className="fill-amber-200 text-amber-200" />
+                    {reviewStats.totalCount > 0
+                      ? `${formatRating(reviewStats.average)} (${reviewStats.totalCount})`
+                      : "No ratings yet"}
+                  </span>
+
                   {profile.establishmentYear ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-500/30 px-2.5 py-1 text-xs font-semibold text-amber-50 backdrop-blur-sm">
                       <CalendarDays

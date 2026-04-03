@@ -28,6 +28,8 @@ type SubcategoryOption = {
 type VendorFormState = {
   businessName: string;
   ownerName: string;
+  gender: string;
+  dateOfBirth: string;
   personalEmail: string;
   personalPhone: string;
   businessEmail: string;
@@ -94,6 +96,8 @@ const MAX_DOCUMENT_FILE_SIZE = 8 * 1024 * 1024;
 const INITIAL_FORM: VendorFormState = {
   businessName: "",
   ownerName: "",
+  gender: "",
+  dateOfBirth: "",
   personalEmail: "",
   personalPhone: "",
   businessEmail: "",
@@ -309,6 +313,8 @@ export default function VendorRegisterPage() {
 
   const validateStepOne = () => {
     if (!form.ownerName.trim()) return "Owner name is required";
+    if (!form.gender.trim()) return "Gender is required";
+    if (!form.dateOfBirth.trim()) return "Date of birth is required";
     if (!form.personalEmail.trim()) return "Personal email is required";
     if (!EMAIL_REGEX.test(form.personalEmail.trim().toLowerCase())) return "Personal email format is invalid";
     if (!PHONE_REGEX.test(form.personalPhone.trim())) return "Personal phone must be exactly 10 digits";
@@ -477,6 +483,8 @@ export default function VendorRegisterPage() {
         body: JSON.stringify({
           businessName: form.businessName.trim(),
           ownerName: form.ownerName.trim(),
+          gender: form.gender,
+          dateOfBirth: form.dateOfBirth,
           personalEmail: form.personalEmail.trim().toLowerCase(),
           personalPhone: form.personalPhone.trim(),
           businessEmail: form.businessEmail.trim().toLowerCase(),
@@ -622,6 +630,38 @@ export default function VendorRegisterPage() {
                       onChange={(event) => updateField("ownerName", event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
                       placeholder="Enter owner full name"
+                      required
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Gender <RequiredMark />
+                    </span>
+                    <select
+                      value={form.gender}
+                      onChange={(event) => updateField("gender", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                      required
+                    >
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                      <option value="prefer_not_to_say">Prefer not to say</option>
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Date of birth <RequiredMark />
+                    </span>
+                    <input
+                      type="date"
+                      value={form.dateOfBirth}
+                      onChange={(event) => updateField("dateOfBirth", event.target.value)}
+                      max={new Date().toISOString().split("T")[0]}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
                       required
                     />
                   </label>
@@ -920,36 +960,6 @@ export default function VendorRegisterPage() {
 
               {step === 3 ? (
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Create password <RequiredMark />
-                    </span>
-                    <input
-                      type="password"
-                      minLength={6}
-                      value={form.password}
-                      onChange={(event) => updateField("password", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Minimum 6 characters"
-                      required
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Confirm password <RequiredMark />
-                    </span>
-                    <input
-                      type="password"
-                      minLength={6}
-                      value={form.confirmPassword}
-                      onChange={(event) => updateField("confirmPassword", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
-                      placeholder="Re-enter password"
-                      required
-                    />
-                  </label>
-
                   <label className="sm:col-span-2 block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       GSTIN number <RequiredMark />
@@ -1046,6 +1056,40 @@ export default function VendorRegisterPage() {
                     {selectedIdDocumentName ? <p className="mt-1 text-xs text-emerald-700">Selected: {selectedIdDocumentName}</p> : null}
                   </label>
 
+                  <div className="sm:col-span-2 mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                    Security
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Create password <RequiredMark />
+                    </span>
+                    <input
+                      type="password"
+                      minLength={6}
+                      value={form.password}
+                      onChange={(event) => updateField("password", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Minimum 6 characters"
+                      required
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Confirm password <RequiredMark />
+                    </span>
+                    <input
+                      type="password"
+                      minLength={6}
+                      value={form.confirmPassword}
+                      onChange={(event) => updateField("confirmPassword", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      placeholder="Re-enter password"
+                      required
+                    />
+                  </label>
+
                   <label className="sm:col-span-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
                     <input
                       type="checkbox"
@@ -1059,6 +1103,8 @@ export default function VendorRegisterPage() {
                   <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                     <p className="font-semibold text-slate-700">Review summary</p>
                     <p className="mt-1">Owner: {form.ownerName || "-"}</p>
+                    <p>Gender: {form.gender || "-"}</p>
+                    <p>DOB: {form.dateOfBirth || "-"}</p>
                     <p>Business: {form.businessName || "-"}</p>
                     <p>Personal contact: {form.personalEmail || "-"} / {form.personalPhone || "-"}</p>
                     <p>Business contact: {form.businessEmail || "-"} / {form.businessPhone || "-"}</p>
