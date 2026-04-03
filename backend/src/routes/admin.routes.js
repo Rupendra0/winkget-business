@@ -22,6 +22,7 @@ const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
+const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
@@ -173,6 +174,28 @@ const isDescendantSubcategory = async (candidateParentId, subcategoryId) => {
   return false;
 };
 
+const collectDescendantSubcategoryIds = async (rootSubcategoryId) => {
+  const collected = [];
+  const queue = [String(rootSubcategoryId)];
+
+  while (queue.length > 0) {
+    const currentBatch = queue.splice(0, queue.length);
+    const childNodes = await Subcategory.find({ parentSubcategory: { $in: currentBatch } })
+      .select("_id")
+      .lean();
+
+    const childIds = childNodes.map((item) => String(item._id));
+    if (childIds.length === 0) {
+      continue;
+    }
+
+    collected.push(...childIds);
+    queue.push(...childIds);
+  }
+
+  return collected;
+};
+
 const toVendorSummary = (vendor) => ({
   id: String(vendor._id),
   name: vendor.name,
@@ -192,6 +215,8 @@ const toVendorSummary = (vendor) => ({
   gstNumber: vendor.gstNumber,
   gstDocument: vendor.gstDocument,
   website: vendor.website,
+  shopOpeningTime: vendor.shopOpeningTime,
+  shopClosingTime: vendor.shopClosingTime,
   establishmentYear: vendor.establishmentYear,
   yearsInBusiness: vendor.yearsInBusiness,
   serviceTags: vendor.serviceTags || [],
@@ -237,6 +262,8 @@ const toUserDetail = (user) => ({
   gstNumber: user.gstNumber,
   gstDocument: user.gstDocument,
   website: user.website,
+  shopOpeningTime: user.shopOpeningTime,
+  shopClosingTime: user.shopClosingTime,
   establishmentYear: user.establishmentYear,
   yearsInBusiness: user.yearsInBusiness,
   serviceTags: user.serviceTags || [],
@@ -317,7 +344,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .select(
-          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
         )
         .populate("businessCategory", "_id name")
         .populate("businessSubcategory", "_id name"),
@@ -378,7 +405,7 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -476,7 +503,7 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
 
     const user = await User.findById(userId)
       .select(
-        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -511,6 +538,8 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
     const website = String(req.body?.website || "").trim();
+    const shopOpeningTime = String(req.body?.shopOpeningTime || "").trim();
+    const shopClosingTime = String(req.body?.shopClosingTime || "").trim();
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Name is required" });
@@ -561,6 +590,14 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Postal code must be 5 to 10 digits" });
     }
 
+    if (shopOpeningTime && !TIME_REGEX.test(shopOpeningTime)) {
+      return res.status(400).json({ ok: false, message: "Shop opening time must be in HH:MM format" });
+    }
+
+    if (shopClosingTime && !TIME_REGEX.test(shopClosingTime)) {
+      return res.status(400).json({ ok: false, message: "Shop closing time must be in HH:MM format" });
+    }
+
     if (role === "vendor") {
       if (!businessName || !businessEmail || !businessPhone) {
         return res.status(400).json({
@@ -589,6 +626,8 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       postalCode: role === "vendor" ? postalCode || undefined : undefined,
       gstNumber: role === "vendor" ? gstNumber || undefined : undefined,
       website: role === "vendor" ? website || undefined : undefined,
+      shopOpeningTime: role === "vendor" ? shopOpeningTime || undefined : undefined,
+      shopClosingTime: role === "vendor" ? shopClosingTime || undefined : undefined,
     });
 
     return res.status(201).json({
@@ -860,6 +899,30 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
 
       const value = String(req.body.website || "").trim();
       user.website = value || undefined;
+    }
+
+    if (req.body?.shopOpeningTime !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.shopOpeningTime || "").trim();
+      if (value && !TIME_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Shop opening time must be in HH:MM format" });
+      }
+
+      user.shopOpeningTime = value || undefined;
+    }
+
+    if (req.body?.shopClosingTime !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.shopClosingTime || "").trim();
+      if (value && !TIME_REGEX.test(value)) {
+        return res.status(400).json({ ok: false, message: "Shop closing time must be in HH:MM format" });
+      }
+
+      user.shopClosingTime = value || undefined;
     }
 
     if (req.body?.establishmentYear !== undefined) {
@@ -1260,7 +1323,7 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     if (error?.code === 11000) {
-      return res.status(409).json({ ok: false, message: "Subcategory already exists in this category" });
+      return res.status(409).json({ ok: false, message: "Subcategory already exists under this parent" });
     }
 
     return res.status(500).json({ ok: false, message: "Failed to create subcategory", error: error.message });
@@ -1400,10 +1463,87 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
     }
 
     if (error?.code === 11000) {
-      return res.status(409).json({ ok: false, message: "Subcategory already exists in this category" });
+      return res.status(409).json({ ok: false, message: "Subcategory already exists under this parent" });
     }
 
     return res.status(500).json({ ok: false, message: "Failed to update subcategory", error: error.message });
+  }
+});
+
+router.delete("/admin/categories/:id", requireAdmin, async (req, res) => {
+  try {
+    const categoryId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(categoryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid category id" });
+    }
+
+    const category = await Category.findById(categoryId).select("_id name");
+    if (!category) {
+      return res.status(404).json({ ok: false, message: "Category not found" });
+    }
+
+    const linkedSubcategories = await Subcategory.find({ category: category._id }).select("_id").lean();
+    const linkedSubcategoryIds = linkedSubcategories.map((item) => item._id);
+
+    if (linkedSubcategoryIds.length > 0) {
+      await Subcategory.deleteMany({ _id: { $in: linkedSubcategoryIds } });
+    }
+
+    await User.updateMany(
+      { businessCategory: category._id },
+      {
+        $unset: {
+          businessCategory: "",
+          businessSubcategory: "",
+        },
+      }
+    );
+
+    await category.deleteOne();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Category deleted",
+      deletedSubcategories: linkedSubcategoryIds.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete category", error: error.message });
+  }
+});
+
+router.delete("/admin/subcategories/:id", requireAdmin, async (req, res) => {
+  try {
+    const subcategoryId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(subcategoryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid subcategory id" });
+    }
+
+    const subcategory = await Subcategory.findById(subcategoryId).select("_id");
+    if (!subcategory) {
+      return res.status(404).json({ ok: false, message: "Subcategory not found" });
+    }
+
+    const descendantIds = await collectDescendantSubcategoryIds(subcategory._id);
+    const deleteIds = [String(subcategory._id), ...descendantIds];
+
+    await Subcategory.deleteMany({ _id: { $in: deleteIds } });
+
+    await User.updateMany(
+      { businessSubcategory: { $in: deleteIds } },
+      {
+        $unset: {
+          businessSubcategory: "",
+        },
+      }
+    );
+
+    return res.status(200).json({
+      ok: true,
+      message: "Subcategory deleted",
+      deletedNodes: deleteIds.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete subcategory", error: error.message });
   }
 });
 

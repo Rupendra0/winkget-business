@@ -25,6 +25,14 @@ export type ListingProfile = {
   phone: string;
   email: string;
   whatsapp: string;
+  businessAlternatePhone?: string;
+  website?: string;
+  state?: string;
+  postalCode?: string;
+  establishmentYear?: number;
+  yearsInBusiness?: number;
+  shopOpeningTime?: string;
+  shopClosingTime?: string;
   ctaLabel: string;
   description: string;
   highlights: string[];

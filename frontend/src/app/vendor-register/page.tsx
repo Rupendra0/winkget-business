@@ -43,6 +43,8 @@ type VendorFormState = {
   gstNumber: string;
   gstDocument: string;
   website: string;
+  shopOpeningTime: string;
+  shopClosingTime: string;
   establishmentYear: string;
   serviceTags: string[];
   businessDescription: string;
@@ -107,6 +109,8 @@ const INITIAL_FORM: VendorFormState = {
   gstNumber: "",
   gstDocument: "",
   website: "",
+  shopOpeningTime: "",
+  shopClosingTime: "",
   establishmentYear: "",
   serviceTags: [],
   businessDescription: "",
@@ -322,6 +326,7 @@ export default function VendorRegisterPage() {
     if (!form.state.trim()) return "State is required";
     if (!form.postalCode.trim()) return "Postal code is required";
     if (!POSTAL_REGEX.test(form.postalCode.trim())) return "Postal code must be 5 to 10 digits";
+    if (!form.shopOpeningTime.trim() || !form.shopClosingTime.trim()) return "Shop opening and closing time are required";
     if (form.serviceTags.length === 0) return "Add at least one service tag";
 
     if (form.establishmentYear.trim()) {
@@ -486,6 +491,8 @@ export default function VendorRegisterPage() {
           gstNumber: form.gstNumber.trim(),
           gstDocument: form.gstDocument,
           website: form.website.trim(),
+          shopOpeningTime: form.shopOpeningTime.trim(),
+          shopClosingTime: form.shopClosingTime.trim(),
           establishmentYear: form.establishmentYear.trim() ? Number(form.establishmentYear.trim()) : undefined,
           serviceTags: form.serviceTags,
           businessDescription: form.businessDescription.trim(),
@@ -806,6 +813,32 @@ export default function VendorRegisterPage() {
                       onChange={(event) => updateField("website", event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
                       placeholder="https://example.com"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Shop opening time <RequiredMark />
+                    </span>
+                    <input
+                      type="time"
+                      value={form.shopOpeningTime}
+                      onChange={(event) => updateField("shopOpeningTime", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      required
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Shop closing time <RequiredMark />
+                    </span>
+                    <input
+                      type="time"
+                      value={form.shopClosingTime}
+                      onChange={(event) => updateField("shopClosingTime", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      required
                     />
                   </label>
 

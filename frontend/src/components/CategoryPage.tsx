@@ -8,14 +8,51 @@ import type { CategoryPageData } from "@/data/categoryData";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
+type SubcategoryOption = {
+  id: string;
+  label: string;
+};
+
+const normalizeSubcategoryOptions = (subcategories: CategoryPageData["subcategories"]) => {
+  const seen = new Set<string>();
+  const normalized: SubcategoryOption[] = [];
+
+  for (const subcategory of subcategories) {
+    if (typeof subcategory === "string") {
+      const trimmed = subcategory.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      normalized.push({ id: trimmed, label: trimmed });
+      continue;
+    }
+
+    const id = String(subcategory.id || "").trim();
+    const label = String(subcategory.label || "").trim();
+    if (!id || !label || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    normalized.push({ id, label });
+  }
+
+  return normalized;
+};
+
 export default function CategoryPage({ data }: { data: CategoryPageData }) {
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("All");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
   const [selectedSublocality, setSelectedSublocality] = useState<string>("All");
+  const subcategoryOptions = useMemo(() => normalizeSubcategoryOptions(data.subcategories), [data.subcategories]);
+  const filterOptions: SubcategoryOption[] = useMemo(
+    () => [{ id: "all", label: "All" }, ...subcategoryOptions],
+    [subcategoryOptions]
+  );
 
   const filteredListings = useMemo(() => {
     return data.listings.filter((listing) => {
       const matchesSubcategory =
-        selectedSubcategory === "All" || listing.subcategory === selectedSubcategory;
+        selectedSubcategory === "all" || (listing.subcategoryId || listing.subcategory) === selectedSubcategory;
       const matchesSublocality =
         selectedSublocality === "All" || listing.sublocality === selectedSublocality;
       return matchesSubcategory && matchesSublocality;
@@ -81,18 +118,18 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             <div>
               <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Subcategory</div>
               <div className="space-y-2">
-                {["All", ...data.subcategories].map((subcategory) => (
+                {filterOptions.map((subcategory) => (
                   <button
-                    key={subcategory}
+                    key={subcategory.id}
                     type="button"
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all btn-hover ${
-                      selectedSubcategory === subcategory
+                      selectedSubcategory === subcategory.id
                         ? "bg-blue-900 text-white"
                         : "bg-white/60 text-gray-700 hover:bg-white"
                     }`}
-                    onClick={() => setSelectedSubcategory(subcategory)}
+                    onClick={() => setSelectedSubcategory(subcategory.id)}
                   >
-                    {subcategory}
+                    {subcategory.label}
                   </button>
                 ))}
               </div>
@@ -101,18 +138,18 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
 
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {["All", ...data.subcategories].map((subcategory) => (
+              {filterOptions.map((subcategory) => (
                 <button
-                  key={subcategory}
+                  key={subcategory.id}
                   type="button"
                   className={`px-4 py-2 rounded-full text-sm transition-all btn-hover ${
-                    selectedSubcategory === subcategory
+                    selectedSubcategory === subcategory.id
                       ? "bg-blue-900 text-white"
                       : "bg-white/70 text-gray-700 hover:bg-white"
                   }`}
-                  onClick={() => setSelectedSubcategory(subcategory)}
+                  onClick={() => setSelectedSubcategory(subcategory.id)}
                 >
-                  {subcategory}
+                  {subcategory.label}
                 </button>
               ))}
             </div>
@@ -158,10 +195,14 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                             ))}
                           </div>
                         )}
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                          {ratingLabel(listing.rating)} ({listing.reviews})
-                        </div>
+                        {listing.rating > 0 || listing.reviews > 0 ? (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                            {ratingLabel(listing.rating)} ({listing.reviews})
+                          </div>
+                        ) : (
+                          <div className="text-xs font-medium text-slate-500">New listing</div>
+                        )}
                         {(listing.priceRange || listing.tags?.length) && (
                           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
                             {listing.priceRange && (
@@ -179,7 +220,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                         <div className="text-xs text-gray-500">{listing.address}</div>
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-xs text-blue-900 font-semibold">
-                            {listing.subcategory}
+                            {listing.subcategory || "Business"}
                           </span>
                           <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800 btn-hover">
                             {listing.ctaLabel ?? "Inquiry"}
@@ -253,10 +294,14 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                             ))}
                           </div>
                         )}
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                          {ratingLabel(listing.rating)} ({listing.reviews})
-                        </div>
+                        {listing.rating > 0 || listing.reviews > 0 ? (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                            {ratingLabel(listing.rating)} ({listing.reviews})
+                          </div>
+                        ) : (
+                          <div className="text-xs font-medium text-slate-500">New listing</div>
+                        )}
                         {(listing.priceRange || listing.tags?.length) && (
                           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
                             {listing.priceRange && (
@@ -274,7 +319,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                         <div className="text-xs text-gray-500">{listing.address}</div>
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-xs text-blue-900 font-semibold">
-                            {listing.subcategory}
+                            {listing.subcategory || "Business"}
                           </span>
                           <button className="px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800 btn-hover">
                             {listing.ctaLabel ?? "Inquiry"}

@@ -3,13 +3,26 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Phone, LogOut, UserRound } from "lucide-react";
+import { Mail, Phone, LogOut, UserRound, Building2, BadgeCheck, MapPin, Globe } from "lucide-react";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const businessLocation = [user?.businessAddress, user?.city, user?.state, user?.postalCode].filter(Boolean).join(", ");
+  const businessTags = Array.isArray(user?.serviceTags) ? user.serviceTags.filter(Boolean) : [];
+  const hasBusinessDetails = Boolean(
+    user?.businessName ||
+      user?.businessCategory?.name ||
+      user?.businessSubcategory?.name ||
+      user?.businessAddress ||
+      user?.businessPhone ||
+      user?.businessEmail ||
+      businessTags.length > 0 ||
+      user?.businessDescription
+  );
 
   const handleLogout = async () => {
     try {
@@ -75,6 +88,69 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {hasBusinessDetails && (
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Business Profile</div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} /> {user.businessName || "Not provided"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BadgeCheck size={16} />
+                    {user.vendorStatus ? `${user.vendorStatus[0].toUpperCase()}${user.vendorStatus.slice(1)}` : "Status unavailable"}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Category:</span> {user.businessCategory?.name || "Not selected"}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Subcategory:</span> {user.businessSubcategory?.name || "Not selected"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Business Contact</div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Phone size={16} /> {user.businessPhone || "Not provided"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={16} /> {user.businessEmail || "Not provided"}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Alt Phone:</span> {user.businessAlternatePhone || "Not provided"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe size={16} /> {user.website || "No website"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Location & Services</div>
+                <div className="mt-3 text-sm text-slate-800 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <MapPin size={16} className="mt-0.5" />
+                    <span>{businessLocation || "Address not added yet"}</span>
+                  </div>
+                  {businessTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {businessTags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-white px-3 py-1 text-xs text-slate-700 border border-slate-200">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {user.businessDescription && (
+                    <p className="text-sm text-slate-700">{user.businessDescription}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/orders" className="rounded-xl bg-blue-900 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-800 btn-hover">

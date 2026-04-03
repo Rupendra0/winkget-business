@@ -11,6 +11,13 @@ import {
 } from "@/lib/adminClient";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const AUTH_RETRY_DELAY_MS = 220;
+const AUTH_TOKEN_STORAGE_KEY = "winkget_admin_token";
+
+const readAuthToken = () => {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+};
 
 type ApiEnvelope<T> = {
   ok: boolean;
@@ -37,6 +44,8 @@ export type UserMutationInput = {
   gstNumber?: string;
   gstDocument?: string;
   website?: string;
+  shopOpeningTime?: string;
+  shopClosingTime?: string;
   establishmentYear?: number | null;
   serviceTags?: string[];
   businessDescription?: string;
@@ -65,6 +74,8 @@ export type AdminUserDetail = AdminDirectoryUser & {
   gstNumber?: string;
   gstDocument?: string;
   website?: string;
+  shopOpeningTime?: string;
+  shopClosingTime?: string;
   establishmentYear?: number;
   serviceTags?: string[];
   businessDescription?: string;
@@ -93,13 +104,27 @@ export type ProductRecord = {
   status: "Active" | "Draft" | "Blocked";
 };
 
+export type InquiryStatus = "Open" | "In Progress" | "Closed";
+
 export type InquiryRecord = {
   id: string;
   subject: string;
   name: string;
+  phone: string;
+  email?: string;
+  message: string;
   channel: "Email" | "Phone" | "Web";
-  status: "Open" | "In Progress" | "Closed";
+  status: InquiryStatus;
+  adminNote?: string;
+  vendor?: {
+    id: string;
+    businessName?: string;
+    businessPhone?: string;
+    city?: string;
+    state?: string;
+  };
   createdAt: string;
+  updatedAt: string;
 };
 
 export type SecondaryNode = {
@@ -141,53 +166,44 @@ const FALLBACK_PRODUCTS: ProductRecord[] = [
   { id: "p-3", name: "Restaurant POS Kit", category: "Electronics", seller: "FoodTech", price: 35999, status: "Blocked" },
 ];
 
-const FALLBACK_INQUIRIES: InquiryRecord[] = [
-  {
-    id: "i-101",
-    subject: "Partner listing issue",
-    name: "Deepak Jain",
-    channel: "Email",
-    status: "Open",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "i-102",
-    subject: "Order dispute escalation",
-    name: "Nisha Kapoor",
-    channel: "Web",
-    status: "In Progress",
-    createdAt: new Date(Date.now() - 3600_000 * 7).toISOString(),
-  },
-  {
-    id: "i-103",
-    subject: "Product moderation follow-up",
-    name: "Arjun Dev",
-    channel: "Phone",
-    status: "Closed",
-    createdAt: new Date(Date.now() - 3600_000 * 26).toISOString(),
-  },
-];
-
 async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiEnvelope<T>> {
-  const headers = new Headers(init?.headers);
-  headers.set("Accept", "application/json");
+  const execute = async (): Promise<{ response: Response; payload: ApiEnvelope<T> | null }> => {
+    const headers = new Headers(init?.headers);
+    headers.set("Accept", "application/json");
+    const token = readAuthToken();
 
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+    if (init?.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
 
-  const response = await fetch(`${BACKEND_URL}${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-    credentials: "include",
-  });
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
 
-  let payload: ApiEnvelope<T> | null = null;
-  try {
-    payload = (await response.json()) as ApiEnvelope<T>;
-  } catch {
-    payload = null;
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      ...init,
+      headers,
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    let payload: ApiEnvelope<T> | null = null;
+    try {
+      payload = (await response.json()) as ApiEnvelope<T>;
+    } catch {
+      payload = null;
+    }
+
+    return { response, payload };
+  };
+
+  let { response, payload } = await execute();
+
+  if ((!response.ok || !payload?.ok) && (response.status === 401 || response.status === 403)) {
+    await new Promise((resolve) => setTimeout(resolve, AUTH_RETRY_DELAY_MS));
+    const retryResult = await execute();
+    response = retryResult.response;
+    payload = retryResult.payload;
   }
 
   if (!response.ok || !payload?.ok) {
@@ -260,13 +276,31 @@ export async function fetchProducts(): Promise<ProductRecord[]> {
   }
 }
 
-export async function fetchInquiries(): Promise<InquiryRecord[]> {
-  try {
-    const payload = await requestJson<{ inquiries: InquiryRecord[] }>("/api/inquiries");
-    return payload.inquiries || [];
-  } catch {
-    return FALLBACK_INQUIRIES;
-  }
+export async function fetchInquiries(filters?: {
+  status?: InquiryStatus;
+  search?: string;
+  limit?: number;
+}): Promise<InquiryRecord[]> {
+  const searchParams = new URLSearchParams();
+  if (filters?.status) searchParams.set("status", filters.status);
+  if (filters?.search) searchParams.set("search", filters.search);
+  if (typeof filters?.limit === "number") searchParams.set("limit", String(filters.limit));
+
+  const query = searchParams.toString();
+  const path = query ? `/api/inquiries?${query}` : "/api/inquiries";
+  const payload = await requestJson<{ inquiries: InquiryRecord[] }>(path);
+  return payload.inquiries || [];
+}
+
+export async function updateInquiry(
+  id: string,
+  input: { status?: InquiryStatus; adminNote?: string }
+): Promise<InquiryRecord> {
+  const payload = await requestJson<{ inquiry: InquiryRecord }>(`/api/inquiries/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  return payload.inquiry;
 }
 
 export async function fetchCategoryExplorer() {
@@ -315,13 +349,13 @@ export async function updateSubcategoryNode(subcategoryId: string, input: {
 }
 
 export async function deleteCategoryNode(categoryId: string) {
-  return requestJson<Record<string, never>>(`/api/categories/${categoryId}`, {
+  return requestJson<Record<string, never>>(`/api/admin/categories/${categoryId}`, {
     method: "DELETE",
   });
 }
 
 export async function deleteSubcategoryNode(subcategoryId: string) {
-  return requestJson<Record<string, never>>(`/api/subcategories/${subcategoryId}`, {
+  return requestJson<Record<string, never>>(`/api/admin/subcategories/${subcategoryId}`, {
     method: "DELETE",
   });
 }

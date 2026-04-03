@@ -135,30 +135,66 @@ type ApiResponse<T> = T & {
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const AUTH_RETRY_DELAY_MS = 220;
+const AUTH_TOKEN_STORAGE_KEY = "winkget_admin_token";
+
+const readAuthToken = () => {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+};
+
+const writeAuthToken = (token?: string) => {
+  if (typeof window === "undefined") return;
+
+  if (token) {
+    window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+};
 
 const toErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  const headers = new Headers(init?.headers);
-  headers.set("Accept", "application/json");
+  const execute = async (): Promise<{ response: Response; payload: ApiResponse<T> | null }> => {
+    const headers = new Headers(init?.headers);
+    headers.set("Accept", "application/json");
+    const token = readAuthToken();
 
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+    if (init?.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
 
-  const response = await fetch(`${BACKEND_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-    cache: "no-store",
-  });
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
 
-  let payload: ApiResponse<T> | null = null;
-  try {
-    payload = (await response.json()) as ApiResponse<T>;
-  } catch {
-    payload = null;
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    let payload: ApiResponse<T> | null = null;
+    try {
+      payload = (await response.json()) as ApiResponse<T>;
+    } catch {
+      payload = null;
+    }
+
+    return { response, payload };
+  };
+
+  let { response, payload } = await execute();
+
+  if ((!response.ok || !payload?.ok) && (response.status === 401 || response.status === 403)) {
+    await new Promise((resolve) => setTimeout(resolve, AUTH_RETRY_DELAY_MS));
+    const retryResult = await execute();
+    response = retryResult.response;
+    payload = retryResult.payload;
   }
 
   if (!response.ok || !payload?.ok) {
@@ -178,12 +214,18 @@ export async function fetchAdminSession(): Promise<AdminUser | null> {
 }
 
 export async function loginAsAdmin(identifier: string, password: string): Promise<AdminUser> {
-  const payload = await requestJson<{ user: AdminUser }>("/api/auth/login", {
+  const payload = await requestJson<{ user: AdminUser; token?: string }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ identifier, password }),
   });
 
   const user = payload.user;
+  const token = typeof payload.token === "string" ? payload.token : "";
+
+  if (token) {
+    writeAuthToken(token);
+  }
+
   if (!user || user.role !== "admin") {
     await logoutAdmin().catch(() => undefined);
     throw new Error("This account does not have admin access");
@@ -193,7 +235,11 @@ export async function loginAsAdmin(identifier: string, password: string): Promis
 }
 
 export async function logoutAdmin(): Promise<void> {
-  await requestJson<Record<string, never>>("/api/auth/logout", { method: "POST" });
+  try {
+    await requestJson<Record<string, never>>("/api/auth/logout", { method: "POST" });
+  } finally {
+    writeAuthToken(undefined);
+  }
 }
 
 export async function fetchDashboard(): Promise<{ stats: DashboardStats; pendingVendors: VendorRecord[] }> {

@@ -8,11 +8,17 @@ export type CategoryListing = {
   city: string;
   sublocality: string;
   subcategory: string;
+  subcategoryId?: string;
   imageUrl: string;
   ctaLabel?: string;
   badges?: string[];
   priceRange?: string;
   tags?: string[];
+};
+
+export type CategoryFilterOption = {
+  id: string;
+  label: string;
 };
 
 export type CategoryBanner = {
@@ -27,7 +33,7 @@ export type CategoryPageData = {
   title: string;
   city: string;
   banner: CategoryBanner;
-  subcategories: string[];
+  subcategories: Array<string | CategoryFilterOption>;
   sublocalities: string[];
   listings: CategoryListing[];
   exploreTitle: string;

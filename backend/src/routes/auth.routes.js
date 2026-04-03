@@ -17,6 +17,7 @@ const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
+const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 const AUTH_COOKIE_NAME = "winkget_auth";
@@ -222,6 +223,7 @@ router.post("/auth/login", async (req, res) => {
     return res.status(200).json({
       ok: true,
       message: "Login successful",
+      token,
       user: {
         id: String(user._id),
         name: user.name,
@@ -262,6 +264,8 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const gstNumber = String(req.body?.gstNumber || "").trim();
     const gstDocument = String(req.body?.gstDocument || "").trim();
     const website = String(req.body?.website || "").trim();
+    const shopOpeningTime = String(req.body?.shopOpeningTime || "").trim();
+    const shopClosingTime = String(req.body?.shopClosingTime || "").trim();
     const businessDescription = String(req.body?.businessDescription || "").trim();
     const idProofType = String(req.body?.idProofType || "").trim().toLowerCase();
     const idProofNumber = String(req.body?.idProofNumber || "").trim();
@@ -308,6 +312,10 @@ router.post("/auth/vendor/signup", async (req, res) => {
         ok: false,
         message: "Business category, address, city, state and postal code are required",
       });
+    }
+
+    if (!shopOpeningTime || !shopClosingTime) {
+      return res.status(400).json({ ok: false, message: "Shop opening and closing time are required" });
     }
 
     if (!gstNumber) {
@@ -360,6 +368,10 @@ router.post("/auth/vendor/signup", async (req, res) => {
 
     if (!POSTAL_REGEX.test(postalCode)) {
       return res.status(400).json({ ok: false, message: "Invalid postal code" });
+    }
+
+    if (!TIME_REGEX.test(shopOpeningTime) || !TIME_REGEX.test(shopClosingTime)) {
+      return res.status(400).json({ ok: false, message: "Shop timings must be in HH:MM format" });
     }
 
     if (!GSTIN_REGEX.test(gstNumber)) {
@@ -454,6 +466,8 @@ router.post("/auth/vendor/signup", async (req, res) => {
       gstNumber,
       gstDocument,
       website: website || undefined,
+      shopOpeningTime,
+      shopClosingTime,
       establishmentYear,
       yearsInBusiness,
       serviceTags: uniqueServiceTags,
@@ -479,6 +493,8 @@ router.post("/auth/vendor/signup", async (req, res) => {
         businessAlternatePhone: user.businessAlternatePhone,
         gstNumber: user.gstNumber,
         gstDocument: user.gstDocument,
+        shopOpeningTime: user.shopOpeningTime,
+        shopClosingTime: user.shopClosingTime,
         establishmentYear: user.establishmentYear,
         serviceTags: user.serviceTags || [],
         role: user.role,
@@ -569,6 +585,8 @@ router.post("/auth/vendor/login", async (req, res) => {
         businessEmail: user.businessEmail,
         businessPhone: user.businessPhone,
         businessAlternatePhone: user.businessAlternatePhone,
+        shopOpeningTime: user.shopOpeningTime,
+        shopClosingTime: user.shopClosingTime,
         role: user.role,
         vendorStatus: user.vendorStatus,
         businessCategory: toCategoryReference(user.businessCategory),
@@ -598,7 +616,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -631,6 +649,8 @@ router.get("/auth/me", async (req, res) => {
         gstNumber: user.gstNumber,
         gstDocument: user.gstDocument,
         website: user.website,
+        shopOpeningTime: user.shopOpeningTime,
+        shopClosingTime: user.shopClosingTime,
         establishmentYear: user.establishmentYear,
         yearsInBusiness: user.yearsInBusiness,
         serviceTags: user.serviceTags || [],
@@ -701,6 +721,10 @@ router.put("/auth/me", async (req, res) => {
       req.body?.gstNumber !== undefined ? String(req.body.gstNumber || "").trim() : user.gstNumber || "";
     const gstDocumentInput =
       req.body?.gstDocument !== undefined ? String(req.body.gstDocument || "").trim() : user.gstDocument || "";
+    const shopOpeningTimeInput =
+      req.body?.shopOpeningTime !== undefined ? String(req.body.shopOpeningTime || "").trim() : user.shopOpeningTime || "";
+    const shopClosingTimeInput =
+      req.body?.shopClosingTime !== undefined ? String(req.body.shopClosingTime || "").trim() : user.shopClosingTime || "";
     const establishmentYearInput = req.body?.establishmentYear !== undefined ? req.body.establishmentYear : user.establishmentYear;
     const serviceTagsInput = Array.isArray(req.body?.serviceTags)
       ? req.body.serviceTags
@@ -762,6 +786,14 @@ router.put("/auth/me", async (req, res) => {
 
     if (businessAlternatePhone && !PHONE_REGEX.test(businessAlternatePhone)) {
       return res.status(400).json({ ok: false, message: "Business alternate phone must be exactly 10 digits" });
+    }
+
+    if (shopOpeningTimeInput && !TIME_REGEX.test(shopOpeningTimeInput)) {
+      return res.status(400).json({ ok: false, message: "Shop opening time must be in HH:MM format" });
+    }
+
+    if (shopClosingTimeInput && !TIME_REGEX.test(shopClosingTimeInput)) {
+      return res.status(400).json({ ok: false, message: "Shop closing time must be in HH:MM format" });
     }
 
     if (businessCategoryId && !OBJECT_ID_REGEX.test(businessCategoryId)) {
@@ -836,6 +868,10 @@ router.put("/auth/me", async (req, res) => {
         return res.status(400).json({ ok: false, message: "GST document is required" });
       }
 
+      if (!shopOpeningTimeInput || !shopClosingTimeInput) {
+        return res.status(400).json({ ok: false, message: "Shop opening and closing time are required" });
+      }
+
       if (uniqueServiceTags.length === 0) {
         return res.status(400).json({ ok: false, message: "Add at least one service tag" });
       }
@@ -871,6 +907,8 @@ router.put("/auth/me", async (req, res) => {
       user.businessSubcategory = subcategory?._id;
       user.gstNumber = gstNumberInput || undefined;
       user.gstDocument = gstDocumentInput || undefined;
+      user.shopOpeningTime = shopOpeningTimeInput || undefined;
+      user.shopClosingTime = shopClosingTimeInput || undefined;
       user.establishmentYear = establishmentYear;
       user.serviceTags = uniqueServiceTags;
       user.idProofType = idProofTypeInput || user.idProofType;
@@ -882,7 +920,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone gstNumber gstDocument establishmentYear serviceTags"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -906,6 +944,8 @@ router.put("/auth/me", async (req, res) => {
         businessAlternatePhone: updatedUser.businessAlternatePhone,
         gstNumber: updatedUser.gstNumber,
         gstDocument: updatedUser.gstDocument,
+        shopOpeningTime: updatedUser.shopOpeningTime,
+        shopClosingTime: updatedUser.shopClosingTime,
         establishmentYear: updatedUser.establishmentYear,
         serviceTags: updatedUser.serviceTags || [],
       },

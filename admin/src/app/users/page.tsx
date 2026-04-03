@@ -134,6 +134,7 @@ const DOCUMENT_ACCEPTED_TYPES = [
 
 const DOCUMENT_ACCEPT_ATTR = DOCUMENT_ACCEPTED_TYPES.join(",");
 const MAX_DOCUMENT_FILE_SIZE = 8 * 1024 * 1024;
+const TRANSIENT_AUTH_RETRY_LIMIT = 4;
 
 export default function UsersPage() {
   return (
@@ -169,6 +170,7 @@ function UsersPageContent() {
   const [detailReviewNote, setDetailReviewNote] = useState("");
   const [activeDocument, setActiveDocument] = useState<PreviewDocument | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const [authSyncRetryCount, setAuthSyncRetryCount] = useState(0);
 
   const [pendingActionByUser, setPendingActionByUser] = useState<Record<string, boolean>>({});
 
@@ -227,6 +229,35 @@ function UsersPageContent() {
       keepPreviousData: true,
     }
   );
+
+  const errorMessage = error instanceof Error ? error.message : "";
+  const isTransientAuthError = Boolean(
+    errorMessage &&
+      /(not authenticated|session expired|request failed with status 401|request failed with status 403)/i.test(
+        errorMessage
+      )
+  );
+  const isSyncingAuthSession = isTransientAuthError && authSyncRetryCount < TRANSIENT_AUTH_RETRY_LIMIT;
+  const hasUsableRows = Array.isArray(data) && data.length > 0;
+  const shouldShowListError = Boolean(error && !isSyncingAuthSession && !(isTransientAuthError && hasUsableRows));
+
+  useEffect(() => {
+    if (!isTransientAuthError) {
+      setAuthSyncRetryCount(0);
+      return;
+    }
+
+    if (authSyncRetryCount >= TRANSIENT_AUTH_RETRY_LIMIT) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setAuthSyncRetryCount((prev) => prev + 1);
+      void mutate();
+    }, 220 + authSyncRetryCount * 180);
+
+    return () => window.clearTimeout(timer);
+  }, [authSyncRetryCount, isTransientAuthError, mutate]);
 
   const users = useMemo(() => {
     const base = data || [];
@@ -505,15 +536,15 @@ function UsersPageContent() {
           </select>
         </section>
 
-        {error ? (
+        {shouldShowListError ? (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error instanceof Error ? error.message : "Unable to load users"}
           </p>
         ) : null}
 
-        {isLoading ? (
+        {isLoading || isSyncingAuthSession ? (
           <section className="rounded-xl border border-(--border) bg-(--surface) px-3 py-8 text-center text-sm text-(--text-soft)">
-            Loading users...
+            {isSyncingAuthSession ? "Syncing admin session..." : "Loading users..."}
           </section>
         ) : (
           <Table rows={users} columns={columns} rowKey={(row) => row.id} emptyText="No users found for current filters." />
@@ -692,6 +723,8 @@ function UsersPageContent() {
                     <p><span className="font-semibold text-(--text-strong)">State:</span> {detailData.state || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">Postal Code:</span> {detailData.postalCode || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">GSTIN:</span> {detailData.gstNumber || "-"}</p>
+                    <p><span className="font-semibold text-(--text-strong)">Shop Opening Time:</span> {detailData.shopOpeningTime || "-"}</p>
+                    <p><span className="font-semibold text-(--text-strong)">Shop Closing Time:</span> {detailData.shopClosingTime || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">Establishment Year:</span> {detailData.establishmentYear || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">Website:</span> {detailData.website || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">ID Proof Type:</span> {detailData.idProofType || "-"}</p>
@@ -888,6 +921,8 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   const [gstNumber, setGstNumber] = useState(initialValue?.gstNumber || "");
   const [gstDocument, setGstDocument] = useState(initialValue?.gstDocument || "");
   const [website, setWebsite] = useState(initialValue?.website || "");
+  const [shopOpeningTime, setShopOpeningTime] = useState(initialValue?.shopOpeningTime || "");
+  const [shopClosingTime, setShopClosingTime] = useState(initialValue?.shopClosingTime || "");
   const [establishmentYear, setEstablishmentYear] = useState(
     initialValue?.establishmentYear ? String(initialValue.establishmentYear) : ""
   );
@@ -1030,6 +1065,8 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       payload.gstNumber = gstNumber.trim();
       payload.gstDocument = gstDocument.trim();
       payload.website = website.trim();
+      payload.shopOpeningTime = shopOpeningTime.trim() || undefined;
+      payload.shopClosingTime = shopClosingTime.trim() || undefined;
 
       const parsedEstablishmentYear = establishmentYear.trim() ? Number(establishmentYear) : null;
       if (parsedEstablishmentYear === null || Number.isFinite(parsedEstablishmentYear)) {
@@ -1052,6 +1089,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       open={open}
       title={title}
       onClose={onClose}
+      panelClassName={isVendor ? "max-w-[94vw] xl:max-w-[1200px]" : undefined}
       footer={
         <>
           <button
@@ -1146,7 +1184,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
               <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{taxonomyError}</p>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
               <label className="block space-y-1 text-sm text-(--text-soft)">
                 Vendor status
                 <select
@@ -1306,6 +1344,26 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
                   onChange={(event) => setEstablishmentYear(event.target.value)}
                   className="w-full rounded-lg border border-(--border) bg-(--surface) px-3 py-2 outline-none focus:border-(--accent)"
                   placeholder="e.g. 2018"
+                />
+              </label>
+
+              <label className="block space-y-1 text-sm text-(--text-soft)">
+                Shop opening time
+                <input
+                  type="time"
+                  value={shopOpeningTime}
+                  onChange={(event) => setShopOpeningTime(event.target.value)}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface) px-3 py-2 outline-none focus:border-(--accent)"
+                />
+              </label>
+
+              <label className="block space-y-1 text-sm text-(--text-soft)">
+                Shop closing time
+                <input
+                  type="time"
+                  value={shopClosingTime}
+                  onChange={(event) => setShopClosingTime(event.target.value)}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface) px-3 py-2 outline-none focus:border-(--accent)"
                 />
               </label>
 

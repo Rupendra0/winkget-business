@@ -1,6 +1,7 @@
 import ListingProfilePage from "@/components/ListingProfilePage";
 import { categoryPages } from "@/data/categoryData";
 import { buildFallbackProfile, listingProfiles } from "@/data/listingData";
+import { fetchVendorById, toListingProfileFromVendor } from "@/lib/catalogClient";
 
 const findListing = (id: string) => {
   for (const category of categoryPages) {
@@ -16,6 +17,12 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const liveVendor = await fetchVendorById(id);
+
+  if (liveVendor) {
+    return <ListingProfilePage profile={toListingProfileFromVendor(liveVendor)} />;
+  }
+
   const profile = listingProfiles[id];
   const listing = findListing(id);
 

@@ -144,7 +144,19 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
 
     try {
       const signedIn = await loginAsAdmin(identifier.trim(), password);
-      setUser(signedIn);
+
+      let settledSession: AdminUser | null = null;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const current = await fetchAdminSession();
+        if (current) {
+          settledSession = current;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 160));
+      }
+
+      setUser(settledSession || signedIn);
       setIdentifier("");
       setPassword("");
       router.refresh();
