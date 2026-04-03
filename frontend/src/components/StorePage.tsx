@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Star, Filter, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import Footer from "@/components/Footer";
 import type { StorePageData } from "@/data/listingData";
+import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -12,6 +13,24 @@ const buildProductMap = (products: StorePageData["products"]) => {
 };
 
 export default function StorePage({ data }: { data: StorePageData }) {
+  const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
+  const [isReviewHydrated, setIsReviewHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsReviewHydrated(true);
+    return subscribeReviewUpdates(() => {
+      setReviewUpdateVersion((prev) => prev + 1);
+    });
+  }, []);
+
+  const storeReviewStats = useMemo(
+    () =>
+      isReviewHydrated
+        ? getBusinessReviewAggregate(data.id, data.rating, data.reviews)
+        : { rating: data.rating, reviews: data.reviews },
+    [data.id, data.rating, data.reviews, isReviewHydrated, reviewUpdateVersion]
+  );
+
   const productMap = buildProductMap(data.products);
 
   const featuredProducts = data.featured.productIds
@@ -56,7 +75,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <div className="text-sm text-white/80">{data.tagline}</div>
                 <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
                   <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                  {ratingLabel(data.rating)} ({data.reviews} reviews)
+                  {ratingLabel(storeReviewStats.rating)} ({storeReviewStats.reviews} reviews)
                 </div>
               </div>
             </div>

@@ -4,8 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
-  FileText,
-  IdCard,
   MapPin,
   Navigation,
   Store,
@@ -17,10 +15,20 @@ import {
   CalendarDays,
   Building2,
   Globe,
+  Star,
   Zap,
 } from "lucide-react";
+import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import type { ListingProfile } from "@/data/listingData";
 import Footer from "@/components/Footer";
+import {
+  fetchBusinessReviews,
+  getBusinessReviewAggregate,
+  submitBusinessReview,
+  subscribeReviewUpdates,
+  type BusinessReview,
+  type BusinessReviewSummary,
+} from "@/lib/reviewStore";
 
 const tabList = ["Overview", "Reviews", "Photos"] as const;
 type ProfileTab = (typeof tabList)[number];
@@ -56,11 +64,45 @@ const toDisplayTime = (timeValue?: string) => {
   return `${hour12}:${String(minutes).padStart(2, "0")} ${suffix}`;
 };
 
+const formatReviewDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const SIDEBAR_PLACEHOLDER_PHOTOS = [
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=60",
+  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=600&q=60",
+  "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=60",
+  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=60",
+];
+
 export default function ListingProfilePage({ profile }: { profile: ListingProfile }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [animateHeroMeta, setAnimateHeroMeta] = useState(true);
   const [servicesExpanded, setServicesExpanded] = useState(false);
+  const [reviewAuthor, setReviewAuthor] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isReviewsLoading, setIsReviewsLoading] = useState(true);
+  const [businessReviews, setBusinessReviews] = useState<BusinessReview[]>([]);
+  const [serverSummary, setServerSummary] = useState<BusinessReviewSummary>({
+    rating: Number(profile.rating || 0),
+    reviews: Math.max(0, Number(profile.reviews || 0)),
+  });
+  const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
+  const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -70,11 +112,80 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const syncCurrentUser = async () => {
+      setIsAuthLoading(true);
+      const user = await fetchCurrentUser();
+      if (isActive) {
+        setCurrentUser(user);
+        setIsAuthLoading(false);
+      }
+    };
+
+    void syncCurrentUser();
+
+    const onAuthChanged = () => {
+      void syncCurrentUser();
+    };
+
+    window.addEventListener("auth:changed", onAuthChanged);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener("auth:changed", onAuthChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    setServerSummary({
+      rating: Number(profile.rating || 0),
+      reviews: Math.max(0, Number(profile.reviews || 0)),
+    });
+  }, [profile.rating, profile.reviews]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadBusinessReviews = async () => {
+      setIsReviewsLoading(true);
+      setBusinessReviews([]);
+      setViewerHasReviewed(false);
+      const result = await fetchBusinessReviews(profile.id, 80);
+      if (!isActive) return;
+
+      if (result.ok) {
+        setBusinessReviews(result.reviews);
+        setServerSummary(result.summary);
+        setViewerHasReviewed(result.viewerHasReviewed);
+      }
+
+      setIsReviewsLoading(false);
+    };
+
+    void loadBusinessReviews();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id, profile.id]);
+
+  useEffect(() => {
+    return subscribeReviewUpdates(() => {
+      setReviewUpdateVersion((previous) => previous + 1);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (currentUser?.name) {
+      setReviewAuthor((previous) => previous || currentUser.name || "");
+    }
+  }, [currentUser?.name]);
+
   const extendedProfile = profile as ListingProfile & {
     vendorStatus?: string;
     marketingOptIn?: boolean;
-    gstNumber?: string;
-    idProofType?: string;
   };
 
   const fullAddress = useMemo(
@@ -126,6 +237,85 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     [servicePoints, servicesExpanded]
   );
   const hiddenServicesCount = Math.max(servicePoints.length - 5, 0);
+  const sidebarPhotoTiles = useMemo(() => {
+    const available = profile.gallery.filter(Boolean).slice(0, 4);
+    if (available.length === 0) {
+      return SIDEBAR_PLACEHOLDER_PHOTOS;
+    }
+
+    if (available.length >= 4) {
+      return available;
+    }
+
+    return [...available, ...SIDEBAR_PLACEHOLDER_PHOTOS.slice(0, 4 - available.length)];
+  }, [profile.gallery]);
+  const mapEmbedUrl = useMemo(
+    () => `https://www.google.com/maps?q=${mapQuery}&z=15&output=embed`,
+    [mapQuery]
+  );
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapQuery}`;
+  const shortAddress = localAddress || fullAddress || "Address not provided";
+  const baseReviewCount = profile.reviews > 0 ? profile.reviews : profile.reviewsList.length;
+  const profileFallbackSummary = useMemo(
+    () => ({
+      rating: Number(profile.rating || 0),
+      reviews: Math.max(0, Number(baseReviewCount || 0)),
+    }),
+    [baseReviewCount, profile.rating]
+  );
+  const preferredBaseSummary = serverSummary.reviews > 0 ? serverSummary : profileFallbackSummary;
+
+  const reviewStats = useMemo(() => {
+    const aggregate = getBusinessReviewAggregate(
+      profile.id,
+      preferredBaseSummary.rating,
+      preferredBaseSummary.reviews
+    );
+
+    return {
+      totalCount: aggregate.reviews,
+      average: aggregate.rating,
+    };
+  }, [preferredBaseSummary.rating, preferredBaseSummary.reviews, profile.id, reviewUpdateVersion]);
+
+  const visibleReviews = useMemo<BusinessReview[]>(() => {
+    if (businessReviews.length > 0) {
+      return businessReviews;
+    }
+
+    return profile.reviewsList.map((review) => ({
+      id: review.id,
+      businessId: profile.id,
+      reviewerId: "",
+      author: review.author,
+      rating: Number(review.rating || 0),
+      comment: review.comment,
+      createdAt: review.date,
+    }));
+  }, [businessReviews, profile.id, profile.reviewsList]);
+
+  const reviewCardRating =
+    reviewStats.totalCount > 0 ? formatRating(reviewStats.average) : "4.5";
+  const reviewCardCount =
+    reviewStats.totalCount > 0 ? `${reviewStats.totalCount} reviews` : "No ratings yet";
+  const reviewPreviewLines = useMemo(() => {
+    return visibleReviews
+      .map((review) => String(review.comment || "").trim())
+      .filter(Boolean)
+      .slice(0, 2);
+  }, [visibleReviews]);
+
+  const hasAlreadyReviewed = useMemo(
+    () =>
+      Boolean(
+        currentUser?.id &&
+          (viewerHasReviewed ||
+            businessReviews.some((review) => review.reviewerId === currentUser.id))
+      ),
+    [businessReviews, currentUser?.id, viewerHasReviewed]
+  );
+
+  const isReviewLocked = isAuthLoading || !currentUser || hasAlreadyReviewed;
 
   const isVerified = useMemo(
     () =>
@@ -192,6 +382,57 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     }
   };
 
+  const handleReviewSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isAuthLoading) {
+      setReviewFormMessage("Checking your login status. Please wait.");
+      return;
+    }
+
+    if (!currentUser?.id) {
+      setReviewFormMessage("Please login to submit your review.");
+      return;
+    }
+
+    if (hasAlreadyReviewed) {
+      setReviewFormMessage("You have already reviewed this business.");
+      return;
+    }
+
+    const nextAuthor = reviewAuthor.trim();
+    const nextReviewText = reviewText.trim();
+
+    if (!nextAuthor || !nextReviewText) {
+      setReviewFormMessage("Please add your name and review.");
+      return;
+    }
+
+    const submitResult = await submitBusinessReview({
+      businessId: profile.id,
+      aliasBusinessIds: [profile.storeId || ""],
+      rating: reviewRating,
+      comment: nextReviewText,
+      authorName: nextAuthor,
+    });
+
+    if (!submitResult.ok) {
+      setReviewFormMessage(submitResult.message);
+      return;
+    }
+
+    setBusinessReviews((previous) => [
+      submitResult.review,
+      ...previous.filter((review) => review.id !== submitResult.review.id),
+    ]);
+    setServerSummary(submitResult.summary);
+    setViewerHasReviewed(true);
+    setReviewAuthor(currentUser.name || "");
+    setReviewText("");
+    setReviewRating(5);
+    setReviewFormMessage("Thanks for sharing your review.");
+  };
+
   return (
     <main className="px-3 sm:px-6 lg:px-10 pb-12">
       <div className="w-full space-y-8">
@@ -225,11 +466,11 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur-sm ${
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur-sm transition-transform duration-300 hover:-translate-y-0.5 ${
                       openStatus.isOpen === null
                         ? "border-white/30 bg-slate-900/55 text-white"
                         : openStatus.isOpen
-                        ? "border-emerald-200/80 bg-emerald-500/30 text-emerald-50"
+                        ? "border-emerald-200/80 bg-emerald-500/30 text-emerald-50 motion-safe:animate-[pulse_2.8s_ease-in-out_infinite]"
                         : "border-rose-200/80 bg-rose-500/30 text-rose-50"
                     }`}
                   >
@@ -265,7 +506,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <a
                 href={dialPhone ? `tel:${dialPhone}` : "#"}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover"
+                className="inline-flex items-center gap-2 rounded-full border border-amber-400 px-5 py-2 text-sm font-semibold text-amber-800 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:hover:scale-[1.03]"
               >
                 <Phone size={16} />
                 Call
@@ -409,7 +650,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
                 <a
                   href={dialPhone ? `tel:${dialPhone}` : "#"}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-3 text-sm font-semibold text-white transition hover:bg-blue-800"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-800 hover:shadow-md motion-safe:hover:scale-[1.02]"
                 >
                   <Phone size={16} />
                   Call Now
@@ -532,12 +773,57 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               ) : null}
 
               {activeTab === "Reviews" ? (
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  {profile.reviews > 0
-                    ? `This shop has ${profile.reviews} reviews with ${formatRating(
-                        profile.rating
-                      )} average rating.`
-                    : "No verified reviews available yet."}
+                <div className="mt-6 space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    {reviewStats.totalCount > 0
+                      ? `This shop has ${reviewStats.totalCount} reviews with ${formatRating(
+                          reviewStats.average
+                        )} average rating.`
+                      : "No verified reviews available yet."}
+                  </div>
+
+                  {isReviewsLoading ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                      Loading reviews...
+                    </div>
+                  ) : visibleReviews.length > 0 ? (
+                    <div className="space-y-3">
+                      {visibleReviews.slice(0, 12).map((review) => (
+                        <article
+                          key={review.id}
+                          className="rounded-2xl border border-slate-200 bg-white p-4"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {review.author || "Verified User"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {formatReviewDate(String(review.createdAt || ""))}
+                            </p>
+                          </div>
+
+                          <div className="mt-2 flex items-center gap-1 text-amber-500">
+                            {[1, 2, 3, 4, 5].map((starValue) => (
+                              <Star
+                                key={`${review.id}-${starValue}`}
+                                className={`h-3.5 w-3.5 ${
+                                  starValue <= Math.round(Number(review.rating || 0))
+                                    ? "fill-amber-400 text-amber-500"
+                                    : "text-slate-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+
+                          <p className="mt-2 text-sm text-slate-700">{review.comment}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                      No reviews yet. Be the first to review this business.
+                    </div>
+                  )}
                 </div>
               ) : null}
 
@@ -565,14 +851,97 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 </div>
               ) : null}
             </div>
+
+            <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-gray-900">Write a Review</h2>
+
+              <form className="space-y-3" onSubmit={handleReviewSubmit}>
+                <label className="block text-sm font-medium text-black">Name</label>
+                <input
+                  type="text"
+                  value={reviewAuthor}
+                  onChange={(event) => setReviewAuthor(event.target.value)}
+                  placeholder="Your name"
+                  className="w-full rounded-lg border border-gray-200 p-2 text-sm text-black placeholder:text-gray-400 outline-none focus:border-blue-300 disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={isReviewLocked}
+                />
+
+                <div>
+                  <p className="mb-1 text-sm font-medium text-black">Rating</p>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((ratingValue) => (
+                      <button
+                        key={ratingValue}
+                        type="button"
+                        onClick={() => setReviewRating(ratingValue)}
+                        className="rounded p-1 disabled:cursor-not-allowed"
+                        aria-label={`Rate ${ratingValue} stars`}
+                        disabled={isReviewLocked}
+                      >
+                        <Star
+                          className={`h-4 w-4 ${
+                            reviewRating >= ratingValue
+                              ? "fill-amber-400 text-amber-500"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="block text-sm font-medium text-black">Review</label>
+                <textarea
+                  value={reviewText}
+                  onChange={(event) => setReviewText(event.target.value)}
+                  placeholder="Write your review"
+                  className="min-h-[80px] w-full rounded-lg border border-gray-200 p-2 text-sm text-black placeholder:text-gray-400 outline-none focus:border-blue-300 disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={isReviewLocked}
+                />
+
+                {isAuthLoading ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700"
+                  >
+                    Review Locked: Checking login status
+                  </button>
+                ) : !currentUser ? (
+                  <Link
+                    href="/auth"
+                    className="block w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-bold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Please login to write a review
+                  </Link>
+                ) : hasAlreadyReviewed ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800"
+                  >
+                    You have already reviewed this business
+                  </button>
+                ) : null}
+
+                {reviewFormMessage ? (
+                  <p className="text-xs text-gray-600">{reviewFormMessage}</p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={isReviewLocked}
+                  className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  Submit Review
+                </button>
+              </form>
+            </section>
           </div>
 
           <aside className="flex flex-col gap-4">
             <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                <Building2 className="h-4 w-4" />
-                Services
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold text-gray-900">Services</h2>
 
               {servicePoints.length > 0 ? (
                 <>
@@ -580,7 +949,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                     {visibleServicePoints.map((service) => (
                       <span
                         key={service}
-                        className="cursor-pointer rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 transition hover:bg-gray-200"
+                        className="cursor-pointer rounded-full border border-slate-200 bg-gradient-to-b from-white to-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 hover:shadow"
                       >
                         {service}
                       </span>
@@ -607,38 +976,103 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
               <div className="flex flex-col gap-2 text-sm text-gray-600">
                 {isVerified ? (
-                  <p className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="font-medium">Verified Business</span>
+                  <p className="font-semibold text-emerald-700">
+                    Verified Business
                   </p>
                 ) : null}
 
                 {profile.establishmentYear ? (
-                  <p className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    <span>Since {profile.establishmentYear}</span>
+                  <p>
+                    Since {profile.establishmentYear}
                   </p>
                 ) : null}
 
-                {extendedProfile.gstNumber ? (
-                  <p className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span>GST Registered</span>
-                  </p>
-                ) : null}
-
-                {extendedProfile.idProofType ? (
-                  <p className="flex items-center gap-2">
-                    <IdCard className="h-4 w-4" />
-                    <span>ID Verified</span>
-                  </p>
-                ) : null}
-
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>Serving {shortLocation || profile.city || "your area"}</span>
+                <p>
+                  Serving {shortLocation || profile.city || "your area"}
                 </p>
               </div>
+            </section>
+
+            <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-gray-900">Photos</h2>
+
+              <div className="grid grid-cols-2 gap-2">
+                {sidebarPhotoTiles.map((photo, index) => (
+                  <img
+                    key={`${photo}-${index}`}
+                    src={photo}
+                    alt={`${profile.name} gallery ${index + 1}`}
+                    className="h-20 w-full rounded-lg object-cover"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("Photos")}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                View all photos →
+              </button>
+            </section>
+
+            <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-gray-900">Location</h2>
+
+              <div className="h-32 w-full overflow-hidden rounded-lg border border-gray-100">
+                <iframe
+                  title={`Map of ${profile.name}`}
+                  src={mapEmbedUrl}
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+
+              <p className="mt-2 truncate text-sm text-gray-600">{shortAddress}</p>
+
+              <div className="mt-2 flex justify-between text-sm text-blue-600">
+                <a href={directionsUrl} target="_blank" rel="noreferrer" className="hover:text-blue-700">
+                  Get Directions
+                </a>
+                <a href={mapsUrl} target="_blank" rel="noreferrer" className="hover:text-blue-700">
+                  View on Maps
+                </a>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-gray-900">Reviews</h2>
+
+              <div className="flex items-end gap-2">
+                <p className="text-lg font-semibold text-gray-900">{reviewCardRating}</p>
+                <Star className="mb-0.5 h-4 w-4 fill-amber-400 text-amber-500" />
+                <p className="pb-0.5 text-xs text-gray-500">{reviewCardCount}</p>
+              </div>
+
+              {reviewPreviewLines.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {reviewPreviewLines.map((line, index) => (
+                    <p key={`${line}-${index}`} className="text-sm text-gray-600">
+                      "{line}"
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-gray-500">No reviews yet.</p>
+                  <p className="text-sm text-gray-500">Be the first to review this business.</p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("Reviews")}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                View all reviews →
+              </button>
             </section>
           </aside>
         </section>

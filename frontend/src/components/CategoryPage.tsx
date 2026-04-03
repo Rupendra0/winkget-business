@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, SlidersHorizontal, Star } from "lucide-react";
 import Footer from "@/components/Footer";
 import type { CategoryPageData } from "@/data/categoryData";
+import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -43,6 +44,33 @@ const normalizeSubcategoryOptions = (subcategories: CategoryPageData["subcategor
 export default function CategoryPage({ data }: { data: CategoryPageData }) {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
   const [selectedSublocality, setSelectedSublocality] = useState<string>("All");
+  const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
+  const [isReviewHydrated, setIsReviewHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsReviewHydrated(true);
+    return subscribeReviewUpdates(() => {
+      setReviewUpdateVersion((prev) => prev + 1);
+    });
+  }, []);
+
+  const listingsWithReviewStats = useMemo(
+    () =>
+      data.listings.map((listing) => {
+        if (!isReviewHydrated) {
+          return listing;
+        }
+
+        const aggregate = getBusinessReviewAggregate(listing.id, listing.rating, listing.reviews);
+        return {
+          ...listing,
+          rating: aggregate.rating,
+          reviews: aggregate.reviews,
+        };
+      }),
+    [data.listings, isReviewHydrated, reviewUpdateVersion]
+  );
+
   const subcategoryOptions = useMemo(() => normalizeSubcategoryOptions(data.subcategories), [data.subcategories]);
   const filterOptions: SubcategoryOption[] = useMemo(
     () => [{ id: "all", label: "All" }, ...subcategoryOptions],
@@ -50,14 +78,14 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
   );
 
   const filteredListings = useMemo(() => {
-    return data.listings.filter((listing) => {
+    return listingsWithReviewStats.filter((listing) => {
       const matchesSubcategory =
         selectedSubcategory === "all" || (listing.subcategoryId || listing.subcategory) === selectedSubcategory;
       const matchesSublocality =
         selectedSublocality === "All" || listing.sublocality === selectedSublocality;
       return matchesSubcategory && matchesSublocality;
     });
-  }, [data.listings, selectedSubcategory, selectedSublocality]);
+  }, [listingsWithReviewStats, selectedSubcategory, selectedSublocality]);
 
   const exploreInsertAfter = data.exploreInsertAfter || 6;
   const firstBatch = filteredListings.slice(0, exploreInsertAfter);

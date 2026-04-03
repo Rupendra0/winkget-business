@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
 const catalogRoutes = require("./routes/catalog.routes");
 const inquiryRoutes = require("./routes/inquiries.routes");
+const reviewRoutes = require("./routes/reviews.routes");
 
 const app = express();
 const envOrigins = String(process.env.CORS_ORIGIN || "")
@@ -39,6 +40,7 @@ app.use("/api", authRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", catalogRoutes);
 app.use("/api", inquiryRoutes);
+app.use("/api", reviewRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ ok: true, message: "Winkget backend service" });

@@ -2,6 +2,7 @@ const express = require("express");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const User = require("../models/User");
+const Review = require("../models/Review");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
@@ -49,14 +50,58 @@ const toSafeRegex = (value) => new RegExp(String(value || "").replace(/[.*+?^${}
 const toVendorAddress = (vendor) =>
   [vendor.businessAddress, vendor.city, vendor.state].map((part) => String(part || "").trim()).filter(Boolean).join(", ");
 
-const toVendorSummary = (vendor) => {
+const roundRating = (value) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  return Number(numeric.toFixed(2));
+};
+
+const getVendorReviewSummaryMap = async (vendorIds) => {
+  if (!Array.isArray(vendorIds) || vendorIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await Review.aggregate([
+    {
+      $match: {
+        vendor: { $in: vendorIds },
+        isVisible: true,
+      },
+    },
+    {
+      $group: {
+        _id: "$vendor",
+        reviews: { $sum: 1 },
+        rating: { $avg: "$rating" },
+      },
+    },
+  ]);
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(String(row._id), {
+      reviews: Number(row.reviews || 0),
+      rating: roundRating(row.rating),
+    });
+  }
+
+  return map;
+};
+
+const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
   const address = toVendorAddress(vendor);
+  const summary = reviewSummaryByVendorId?.get(String(vendor._id));
+  const rating =
+    summary?.rating ?? (typeof vendor.rating === "number" ? Number(vendor.rating) : undefined);
+  const reviews =
+    summary?.reviews ?? (typeof vendor.reviews === "number" ? Number(vendor.reviews) : undefined);
+
   return {
     id: String(vendor._id),
     name: vendor.name,
     businessName: vendor.businessName,
-    rating: typeof vendor.rating === "number" ? vendor.rating : undefined,
-    reviews: typeof vendor.reviews === "number" ? vendor.reviews : undefined,
+    rating,
+    reviews,
     verified: vendor.vendorStatus === "approved",
     address: address || "Address unavailable",
     city: vendor.city || "",
@@ -72,8 +117,8 @@ const toVendorSummary = (vendor) => {
   };
 };
 
-const toVendorDetail = (vendor) => {
-  const summary = toVendorSummary(vendor);
+const toVendorDetail = (vendor, reviewSummaryByVendorId) => {
+  const summary = toVendorSummary(vendor, reviewSummaryByVendorId);
   return {
     ...summary,
     businessEmail: vendor.businessEmail,
@@ -228,9 +273,11 @@ router.get("/vendors", async (req, res) => {
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug");
 
+    const reviewSummaryByVendorId = await getVendorReviewSummaryMap(vendors.map((vendor) => vendor._id));
+
     return res.status(200).json({
       ok: true,
-      vendors: vendors.map(toVendorSummary),
+      vendors: vendors.map((vendor) => toVendorSummary(vendor, reviewSummaryByVendorId)),
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendors", error: error.message });
@@ -259,9 +306,11 @@ router.get("/vendors/:id", async (req, res) => {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
     }
 
+    const reviewSummaryByVendorId = await getVendorReviewSummaryMap([vendor._id]);
+
     return res.status(200).json({
       ok: true,
-      vendor: toVendorDetail(vendor),
+      vendor: toVendorDetail(vendor, reviewSummaryByVendorId),
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendor", error: error.message });
