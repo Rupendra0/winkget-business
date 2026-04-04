@@ -23,6 +23,10 @@ type SubcategoryOption = {
     id: string;
     name: string;
   };
+  parentSubcategory?: {
+    id: string;
+    name: string;
+  };
 };
 
 type VendorFormState = {
@@ -122,6 +126,58 @@ const INITIAL_FORM: VendorFormState = {
   idProofNumber: "",
   idProofDocument: "",
   marketingOptIn: false,
+};
+
+const buildSubcategoryLabelMap = (items: SubcategoryOption[]) => {
+  const byId = new Map<string, SubcategoryOption>();
+  const labelById = new Map<string, string>();
+
+  items.forEach((item) => {
+    const id = String(item.id || "").trim();
+    if (!id) return;
+    byId.set(id, item);
+  });
+
+  const resolveLabel = (subcategoryId: string, visited = new Set<string>()): string => {
+    const normalizedId = String(subcategoryId || "").trim();
+    if (!normalizedId) return "";
+
+    const cached = labelById.get(normalizedId);
+    if (cached) return cached;
+
+    const current = byId.get(normalizedId);
+    if (!current) return "";
+
+    const currentName = String(current.name || "").trim();
+    if (!currentName) return "";
+
+    if (visited.has(normalizedId)) {
+      return currentName;
+    }
+
+    const parentId = String(current.parentSubcategory?.id || "").trim();
+    if (!parentId) {
+      labelById.set(normalizedId, currentName);
+      return currentName;
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(normalizedId);
+
+    const parentLabel = byId.has(parentId)
+      ? resolveLabel(parentId, nextVisited)
+      : String(current.parentSubcategory?.name || "").trim();
+
+    const finalLabel = parentLabel ? `${parentLabel} > ${currentName}` : currentName;
+    labelById.set(normalizedId, finalLabel);
+    return finalLabel;
+  };
+
+  Array.from(byId.keys()).forEach((subcategoryId) => {
+    void resolveLabel(subcategoryId);
+  });
+
+  return labelById;
 };
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
@@ -310,6 +366,17 @@ export default function VendorRegisterPage() {
   };
 
   const currentStepMeta = useMemo(() => STEP_META.find((item) => item.number === step) ?? STEP_META[0], [step]);
+
+  const subcategoryLabelMap = useMemo(() => buildSubcategoryLabelMap(subcategories), [subcategories]);
+  const sortedSubcategories = useMemo(
+    () =>
+      [...subcategories].sort((left, right) => {
+        const leftLabel = subcategoryLabelMap.get(left.id) || left.name;
+        const rightLabel = subcategoryLabelMap.get(right.id) || right.name;
+        return leftLabel.localeCompare(rightLabel);
+      }),
+    [subcategories, subcategoryLabelMap]
+  );
 
   const validateStepOne = () => {
     if (!form.ownerName.trim()) return "Owner name is required";
@@ -782,9 +849,9 @@ export default function VendorRegisterPage() {
                       disabled={!form.businessCategoryId || loadingSubcategories || subcategories.length === 0}
                     >
                       <option value="">Select subcategory (optional)</option>
-                      {subcategories.map((subcategory) => (
+                      {sortedSubcategories.map((subcategory) => (
                         <option key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
+                          {subcategoryLabelMap.get(subcategory.id) || subcategory.name}
                         </option>
                       ))}
                     </select>
@@ -1111,7 +1178,7 @@ export default function VendorRegisterPage() {
                     <p>
                       Category: {categories.find((item) => item.id === form.businessCategoryId)?.name || "Not selected"}
                     </p>
-                    <p>Subcategory: {subcategories.find((item) => item.id === form.businessSubcategoryId)?.name || "Not selected"}</p>
+                    <p>Subcategory: {subcategoryLabelMap.get(form.businessSubcategoryId) || "Not selected"}</p>
                     <p>Location: {[form.city, form.state].filter(Boolean).join(", ") || "-"}</p>
                     <p>Established: {form.establishmentYear || "-"}</p>
                     <p>Services: {form.serviceTags.length > 0 ? form.serviceTags.join(", ") : "-"}</p>

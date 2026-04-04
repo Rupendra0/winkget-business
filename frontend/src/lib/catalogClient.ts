@@ -445,7 +445,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     priceRange: vendor.priceRange || "",
     badges: Array.isArray(vendor.badges) && vendor.badges.length > 0 ? vendor.badges : vendor.verified ? ["Verified"] : [],
     tags,
-    address: vendor.address || "Address unavailable",
+    address: vendor.businessAddress || vendor.address || "Address unavailable",
     city: vendor.city || "",
     phone: phone || "Not provided",
     email: email || "Not provided",

@@ -47,8 +47,28 @@ const DEFAULT_VENDOR_IMAGE =
 
 const toSafeRegex = (value) => new RegExp(String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
+const normalizeAddressToken = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const toVendorAddress = (vendor) =>
-  [vendor.businessAddress, vendor.city, vendor.state].map((part) => String(part || "").trim()).filter(Boolean).join(", ");
+  [vendor.businessAddress, vendor.city, vendor.state]
+    .flatMap((part) => String(part || "").split(","))
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .filter((part, index, list) => {
+      const normalizedPart = normalizeAddressToken(part);
+      if (!normalizedPart) return false;
+
+      return (
+        list.findIndex((candidate) => normalizeAddressToken(candidate) === normalizedPart) ===
+        index
+      );
+    })
+    .join(", ");
 
 const roundRating = (value) => {
   const numeric = Number(value || 0);
@@ -86,6 +106,35 @@ const getVendorReviewSummaryMap = async (vendorIds) => {
   }
 
   return map;
+};
+
+const collectDescendantSubcategoryIds = async (rootSubcategoryId) => {
+  if (!rootSubcategoryId) {
+    return [];
+  }
+
+  const descendants = [];
+  const queue = [String(rootSubcategoryId)];
+
+  while (queue.length > 0) {
+    const currentBatch = queue.splice(0, queue.length);
+    const childRows = await Subcategory.find({
+      parentSubcategory: { $in: currentBatch },
+      isActive: true,
+    })
+      .select("_id")
+      .lean();
+
+    const childIds = childRows.map((row) => String(row._id));
+    if (childIds.length === 0) {
+      continue;
+    }
+
+    descendants.push(...childIds);
+    queue.push(...childIds);
+  }
+
+  return descendants;
 };
 
 const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
@@ -248,12 +297,35 @@ router.get("/vendors", async (req, res) => {
       vendorStatus: "approved",
     };
 
+    let subcategoryFilterIds = [];
+
+    if (subcategoryId) {
+      const selectedSubcategory = await Subcategory.findOne({
+        _id: subcategoryId,
+        isActive: true,
+      })
+        .select("_id category")
+        .lean();
+
+      if (!selectedSubcategory) {
+        return res.status(200).json({ ok: true, vendors: [] });
+      }
+
+      const selectedCategoryId = String(selectedSubcategory.category);
+      if (resolvedCategoryId && resolvedCategoryId !== selectedCategoryId) {
+        return res.status(200).json({ ok: true, vendors: [] });
+      }
+
+      const descendantSubcategoryIds = await collectDescendantSubcategoryIds(selectedSubcategory._id);
+      subcategoryFilterIds = [String(selectedSubcategory._id), ...descendantSubcategoryIds];
+    }
+
     if (resolvedCategoryId) {
       query.businessCategory = resolvedCategoryId;
     }
 
-    if (subcategoryId) {
-      query.businessSubcategory = subcategoryId;
+    if (subcategoryFilterIds.length > 0) {
+      query.businessSubcategory = { $in: subcategoryFilterIds };
     }
 
     if (city) {

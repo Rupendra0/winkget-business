@@ -38,11 +38,28 @@ const formatRating = (rating: number) => Number(rating || 0).toFixed(1);
 const normalizeDigits = (value: string) =>
   String(value || "").replace(/\D/g, "");
 
+const normalizeAddressToken = (value: string) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const joinAddress = (parts: Array<string | undefined>) =>
   parts
-    .filter(Boolean)
+    .flatMap((part) => String(part || "").split(","))
     .map((part) => String(part).trim())
     .filter(Boolean)
+    .filter((part, index, list) => {
+      const normalizedPart = normalizeAddressToken(part);
+      if (!normalizedPart) return false;
+
+      return (
+        list.findIndex(
+          (candidate) => normalizeAddressToken(candidate) === normalizedPart
+        ) === index
+      );
+    })
     .join(", ");
 
 const toMinutes = (timeValue?: string) => {

@@ -98,6 +98,58 @@ const normalizeIdProofNumber = (value: string, idProofType: string) => {
   return value.trim().toUpperCase();
 };
 
+const buildSubcategoryPathMap = (items: AdminSubcategory[]) => {
+  const byId = new Map<string, AdminSubcategory>();
+  const labelById = new Map<string, string>();
+
+  items.forEach((item) => {
+    const id = String(item.id || "").trim();
+    if (!id) return;
+    byId.set(id, item);
+  });
+
+  const resolveLabel = (subcategoryId: string, visited = new Set<string>()): string => {
+    const normalizedId = String(subcategoryId || "").trim();
+    if (!normalizedId) return "";
+
+    const cached = labelById.get(normalizedId);
+    if (cached) return cached;
+
+    const current = byId.get(normalizedId);
+    if (!current) return "";
+
+    const currentName = String(current.name || "").trim();
+    if (!currentName) return "";
+
+    if (visited.has(normalizedId)) {
+      return currentName;
+    }
+
+    const parentId = String(current.parentSubcategory?.id || "").trim();
+    if (!parentId) {
+      labelById.set(normalizedId, currentName);
+      return currentName;
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(normalizedId);
+
+    const parentLabel = byId.has(parentId)
+      ? resolveLabel(parentId, nextVisited)
+      : String(current.parentSubcategory?.name || "").trim();
+
+    const finalLabel = parentLabel ? `${parentLabel} > ${currentName}` : currentName;
+    labelById.set(normalizedId, finalLabel);
+    return finalLabel;
+  };
+
+  Array.from(byId.keys()).forEach((subcategoryId) => {
+    void resolveLabel(subcategoryId);
+  });
+
+  return labelById;
+};
+
 const toDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -976,10 +1028,19 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
     };
   }, [isVendor]);
 
+  const subcategoryPathMap = useMemo(() => buildSubcategoryPathMap(subcategories), [subcategories]);
+
   const filteredSubcategories = useMemo(() => {
     if (!businessCategoryId) return [];
-    return subcategories.filter((item) => item.category?.id === businessCategoryId);
-  }, [businessCategoryId, subcategories]);
+
+    return subcategories
+      .filter((item) => item.category?.id === businessCategoryId)
+      .sort((left, right) => {
+        const leftLabel = subcategoryPathMap.get(left.id) || left.name;
+        const rightLabel = subcategoryPathMap.get(right.id) || right.name;
+        return leftLabel.localeCompare(rightLabel);
+      });
+  }, [businessCategoryId, subcategories, subcategoryPathMap]);
 
   useEffect(() => {
     if (!businessSubcategoryId) return;
@@ -1236,7 +1297,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
                   <option value="">No subcategory</option>
                   {filteredSubcategories.map((subcategory) => (
                     <option key={subcategory.id} value={subcategory.id}>
-                      {subcategory.name}
+                      {subcategoryPathMap.get(subcategory.id) || subcategory.name}
                     </option>
                   ))}
                 </select>
