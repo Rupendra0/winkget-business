@@ -12,6 +12,7 @@ const userSchema = new Schema(
     businessPhone: { type: String, trim: true },
     businessAddress: { type: String, trim: true },
     city: { type: String, trim: true },
+    sublocality: { type: String, trim: true },
     state: { type: String, trim: true },
     postalCode: { type: String, trim: true },
     gstNumber: { type: String, trim: true },

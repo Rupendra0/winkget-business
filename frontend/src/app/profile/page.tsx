@@ -11,7 +11,9 @@ export default function ProfilePage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const businessLocation = [user?.businessAddress, user?.city, user?.state, user?.postalCode].filter(Boolean).join(", ");
+  const businessLocation = [user?.businessAddress, user?.sublocality, user?.city, user?.state, user?.postalCode]
+    .filter(Boolean)
+    .join(", ");
   const businessTags = Array.isArray(user?.serviceTags) ? user.serviceTags.filter(Boolean) : [];
   const hasBusinessDetails = Boolean(
     user?.businessName ||

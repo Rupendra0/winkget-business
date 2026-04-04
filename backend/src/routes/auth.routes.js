@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
+const City = require("../models/City");
 const FailureLog = require("../models/FailureLog");
 const {
   GSTIN_REGEX,
@@ -23,6 +24,8 @@ const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport",
 const AUTH_COOKIE_NAME = "winkget_auth";
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const toExactRegex = (value) => new RegExp(`^${escapeRegex(value)}$`, "i");
 
 const toCategoryReference = (category) => {
   if (!category) return undefined;
@@ -259,6 +262,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const businessSubcategoryId = String(req.body?.businessSubcategoryId || "").trim();
     const businessAddress = String(req.body?.businessAddress || "").trim();
     const city = String(req.body?.city || "").trim();
+    const sublocality = String(req.body?.sublocality || "").trim();
     const state = String(req.body?.state || "").trim();
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
@@ -307,10 +311,10 @@ router.post("/auth/vendor/signup", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Business email and business phone are required" });
     }
 
-    if (!businessCategoryId || !businessAddress || !city || !state || !postalCode) {
+    if (!businessCategoryId || !businessAddress || !city || !sublocality || !postalCode) {
       return res.status(400).json({
         ok: false,
-        message: "Business category, address, city, state and postal code are required",
+        message: "Business category, address, city, sublocality and postal code are required",
       });
     }
 
@@ -432,6 +436,24 @@ router.post("/auth/vendor/signup", async (req, res) => {
       }
     }
 
+    const cityRecord = await City.findOne({ name: toExactRegex(city), isActive: true }).select("name state localities");
+    if (!cityRecord) {
+      return res.status(400).json({ ok: false, message: "Selected city is invalid or inactive" });
+    }
+
+    const matchedLocality = (Array.isArray(cityRecord.localities) ? cityRecord.localities : []).find(
+      (locality) => locality.isActive !== false && toExactRegex(sublocality).test(String(locality.name || ""))
+    );
+
+    if (!matchedLocality) {
+      return res.status(400).json({ ok: false, message: "Selected sublocality is invalid for the selected city" });
+    }
+
+    const resolvedState = state || String(cityRecord.state || "").trim();
+    if (!resolvedState) {
+      return res.status(400).json({ ok: false, message: "State is required for selected city" });
+    }
+
     const duplicateChecks = [];
     if (personalEmail) duplicateChecks.push({ email: personalEmail });
     if (personalPhone) duplicateChecks.push({ phone: personalPhone });
@@ -460,8 +482,9 @@ router.post("/auth/vendor/signup", async (req, res) => {
       businessPhone,
       businessAlternatePhone: businessAlternatePhone || undefined,
       businessAddress,
-      city,
-      state,
+      city: cityRecord.name,
+      sublocality: matchedLocality.name,
+      state: resolvedState,
       postalCode,
       gstNumber,
       gstDocument,
@@ -491,6 +514,9 @@ router.post("/auth/vendor/signup", async (req, res) => {
         businessEmail: user.businessEmail,
         businessPhone: user.businessPhone,
         businessAlternatePhone: user.businessAlternatePhone,
+        city: user.city,
+        sublocality: user.sublocality,
+        state: user.state,
         gstNumber: user.gstNumber,
         gstDocument: user.gstDocument,
         shopOpeningTime: user.shopOpeningTime,
@@ -585,6 +611,9 @@ router.post("/auth/vendor/login", async (req, res) => {
         businessEmail: user.businessEmail,
         businessPhone: user.businessPhone,
         businessAlternatePhone: user.businessAlternatePhone,
+        city: user.city,
+        sublocality: user.sublocality,
+        state: user.state,
         shopOpeningTime: user.shopOpeningTime,
         shopClosingTime: user.shopClosingTime,
         role: user.role,
@@ -616,7 +645,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -644,6 +673,7 @@ router.get("/auth/me", async (req, res) => {
         businessAlternatePhone: user.businessAlternatePhone,
         businessAddress: user.businessAddress,
         city: user.city,
+        sublocality: user.sublocality,
         state: user.state,
         postalCode: user.postalCode,
         gstNumber: user.gstNumber,
@@ -711,6 +741,10 @@ router.put("/auth/me", async (req, res) => {
         : user.businessSubcategory
           ? String(user.businessSubcategory)
           : "";
+    const cityInput = req.body?.city !== undefined ? String(req.body.city || "").trim() : user.city || "";
+    const sublocalityInput =
+      req.body?.sublocality !== undefined ? String(req.body.sublocality || "").trim() : user.sublocality || "";
+    const stateInput = req.body?.state !== undefined ? String(req.body.state || "").trim() : user.state || "";
     const idProofDocumentInput =
       req.body?.idProofDocument !== undefined ? String(req.body.idProofDocument || "").trim() : user.idProofDocument || "";
     const idProofTypeInput =
@@ -804,6 +838,10 @@ router.put("/auth/me", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid business subcategory" });
     }
 
+    const cityWasProvided = req.body?.city !== undefined;
+    const sublocalityWasProvided = req.body?.sublocality !== undefined;
+    const stateWasProvided = req.body?.state !== undefined;
+
     if (gstNumberInput && !GSTIN_REGEX.test(gstNumberInput)) {
       return res.status(400).json({ ok: false, message: "GSTIN must be a valid 15-character value" });
     }
@@ -859,6 +897,7 @@ router.put("/auth/me", async (req, res) => {
 
     let category = null;
     let subcategory = null;
+    let locationState = null;
     if (user.role === "vendor") {
       if (!gstNumberInput) {
         return res.status(400).json({ ok: false, message: "GSTIN number is required" });
@@ -892,6 +931,39 @@ router.put("/auth/me", async (req, res) => {
           return res.status(400).json({ ok: false, message: "Selected business subcategory is invalid or inactive" });
         }
       }
+
+      const locationNeedsValidation = cityWasProvided || sublocalityWasProvided || !user.city || !user.sublocality;
+      if (locationNeedsValidation) {
+        if (!cityInput || !sublocalityInput) {
+          return res.status(400).json({ ok: false, message: "City and sublocality are required" });
+        }
+
+        const cityRecord = await City.findOne({ name: toExactRegex(cityInput), isActive: true }).select(
+          "name state localities"
+        );
+        if (!cityRecord) {
+          return res.status(400).json({ ok: false, message: "Selected city is invalid or inactive" });
+        }
+
+        const matchedLocality = (Array.isArray(cityRecord.localities) ? cityRecord.localities : []).find(
+          (locality) => locality.isActive !== false && toExactRegex(sublocalityInput).test(String(locality.name || ""))
+        );
+
+        if (!matchedLocality) {
+          return res.status(400).json({ ok: false, message: "Selected sublocality is invalid for the selected city" });
+        }
+
+        const resolvedState = stateInput || String(cityRecord.state || "").trim();
+        if (!resolvedState) {
+          return res.status(400).json({ ok: false, message: "State is required for selected city" });
+        }
+
+        locationState = {
+          city: cityRecord.name,
+          sublocality: matchedLocality.name,
+          state: resolvedState,
+        };
+      }
     }
 
     user.name = name;
@@ -905,6 +977,13 @@ router.put("/auth/me", async (req, res) => {
       user.businessAlternatePhone = businessAlternatePhone || undefined;
       user.businessCategory = category?._id;
       user.businessSubcategory = subcategory?._id;
+      if (locationState) {
+        user.city = locationState.city;
+        user.sublocality = locationState.sublocality;
+        user.state = locationState.state;
+      } else if (stateWasProvided) {
+        user.state = stateInput || undefined;
+      }
       user.gstNumber = gstNumberInput || undefined;
       user.gstDocument = gstDocumentInput || undefined;
       user.shopOpeningTime = shopOpeningTimeInput || undefined;
@@ -920,7 +999,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone city sublocality state gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -942,6 +1021,9 @@ router.put("/auth/me", async (req, res) => {
         businessEmail: updatedUser.businessEmail,
         businessPhone: updatedUser.businessPhone,
         businessAlternatePhone: updatedUser.businessAlternatePhone,
+        city: updatedUser.city,
+        sublocality: updatedUser.sublocality,
+        state: updatedUser.state,
         gstNumber: updatedUser.gstNumber,
         gstDocument: updatedUser.gstDocument,
         shopOpeningTime: updatedUser.shopOpeningTime,

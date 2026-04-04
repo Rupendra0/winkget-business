@@ -28,6 +28,22 @@ export type CatalogReference = {
   slug?: string;
 };
 
+export type CatalogLocality = {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder?: number;
+};
+
+export type CatalogCity = {
+  id: string;
+  name: string;
+  slug: string;
+  state?: string;
+  sortOrder?: number;
+  localities: CatalogLocality[];
+};
+
 export type CatalogCategory = {
   id: string;
   name: string;
@@ -91,6 +107,10 @@ export type CatalogVendorDetail = CatalogVendorSummary & {
 
 type CategoryListResponse = CatalogResponse & {
   categories?: CatalogCategory[];
+};
+
+type CityListResponse = CatalogResponse & {
+  cities?: CatalogCity[];
 };
 
 type SubcategoryListResponse = CatalogResponse & {
@@ -166,6 +186,27 @@ export async function fetchCategories(): Promise<CatalogCategory[]> {
   }
 }
 
+export async function fetchCities(): Promise<CatalogCity[]> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/cities`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as CityListResponse;
+    if (!payload.ok || !Array.isArray(payload.cities)) {
+      return [];
+    }
+
+    return payload.cities;
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchSubcategories(filters: {
   categoryId?: string;
   categorySlug?: string;
@@ -200,6 +241,7 @@ export async function fetchVendors(filters: {
   categorySlug?: string;
   subcategoryId?: string;
   city?: string;
+  sublocality?: string;
   search?: string;
 }): Promise<CatalogVendorSummary[]> {
   try {
@@ -208,6 +250,7 @@ export async function fetchVendors(filters: {
       categorySlug: filters.categorySlug,
       subcategoryId: filters.subcategoryId,
       city: filters.city,
+      sublocality: filters.sublocality,
       search: filters.search,
     });
 
@@ -264,14 +307,21 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
   return {
     id: vendor.id,
     name: displayName,
+    businessName: vendor.businessName,
     rating: Number(vendor.rating || 0),
     reviews: Number(vendor.reviews || 0),
     verified: Boolean(vendor.verified),
+    vendorStatus: vendor.verified ? "approved" : undefined,
     address: vendor.address || "Address unavailable",
     city: vendor.city || "",
     sublocality: vendor.sublocality || vendor.city || "",
     subcategory: subcategoryLabel,
     subcategoryId,
+    businessDescription: vendor.businessDescription,
+    businessPhone: vendor.businessPhone,
+    shopOpeningTime: vendor.shopOpeningTime,
+    shopClosingTime: vendor.shopClosingTime,
+    establishmentYear: vendor.establishmentYear,
     imageUrl: vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
     ctaLabel: vendor.ctaLabel || "Inquiry",
     badges: Array.isArray(vendor.badges) ? vendor.badges : vendor.verified ? ["Verified"] : [],
@@ -282,10 +332,11 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
 
 const toSubcategoryOptions = (
   subcategories: CatalogSubcategory[],
-  listings: CategoryListing[]
+  categoryName?: string
 ): CategoryFilterOption[] => {
   const options: CategoryFilterOption[] = [];
   const seen = new Set<string>();
+  const normalizedCategoryName = String(categoryName || "").trim().toLowerCase();
 
   const sortedSubcategories = [...subcategories].sort((left, right) => {
     const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
@@ -303,16 +354,9 @@ const toSubcategoryOptions = (
 
     const id = String(subcategory.id || "").trim();
     const label = String(subcategory.name || "").trim();
-    if (!id || !label || seen.has(id)) {
+    if (label.toLowerCase() === normalizedCategoryName) {
       return;
     }
-    seen.add(id);
-    options.push({ id, label });
-  });
-
-  listings.forEach((listing) => {
-    const id = String(listing.subcategoryId || `name:${listing.subcategory}`).trim();
-    const label = String(listing.subcategory || "").trim();
     if (!id || !label || seen.has(id)) {
       return;
     }
@@ -375,12 +419,9 @@ export function toCategoryPageDataFromCatalog(input: {
   const listings = input.vendors.map(toListingFromVendor);
   const cityValues = uniqueStrings(listings.map((listing) => listing.city));
   const localityValues = uniqueStrings(listings.map((listing) => listing.sublocality));
-  const subcategoryOptions = toSubcategoryOptions(input.subcategories, listings);
+  const subcategoryOptions = toSubcategoryOptions(input.subcategories, input.category.name);
 
-  const exploreLabels = uniqueStrings([
-    ...subcategoryOptions.map((option) => option.label),
-    ...listings.map((listing) => listing.subcategory),
-  ]).slice(0, 5);
+  const exploreLabels = uniqueStrings(subcategoryOptions.map((option) => option.label)).slice(0, 5);
 
   const exploreTiles = (exploreLabels.length > 0 ? exploreLabels : ["Popular", "Top Rated", "Nearby", "Deals", "More"]).map(
     (label, index) => ({
@@ -393,6 +434,7 @@ export function toCategoryPageDataFromCatalog(input: {
   const cityLabel = cityValues[0] || "Your City";
 
   return {
+    categoryId: input.category.id,
     slug: input.category.slug,
     title: input.category.name,
     city: cityLabel,

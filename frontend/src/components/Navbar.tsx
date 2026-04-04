@@ -2,8 +2,9 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings } from 'lucide-react';
+import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 
 type AuthUser = {
   id: string;
@@ -14,15 +15,24 @@ type AuthUser = {
   role: "admin" | "vendor" | "customer";
 };
 
+type CityOption = {
+  id: string;
+  name: string;
+};
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const showBack = pathname !== "/";
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [loadingCities, setLoadingCities] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -55,6 +65,71 @@ export default function Navbar() {
     window.addEventListener("auth:changed", handler);
     return () => window.removeEventListener("auth:changed", handler);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCities = async () => {
+      setLoadingCities(true);
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/cities`, {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (!active) return;
+
+        if (!response.ok || !payload.ok || !Array.isArray(payload.cities)) {
+          setCityOptions([]);
+          return;
+        }
+
+        const options = payload.cities
+          .map((city: { id?: string; name?: string }) => ({
+            id: String(city.id || ""),
+            name: String(city.name || "").trim(),
+          }))
+          .filter((city: CityOption) => Boolean(city.id && city.name));
+
+        setCityOptions(options);
+      } catch {
+        if (!active) return;
+        setCityOptions([]);
+      } finally {
+        if (!active) return;
+        setLoadingCities(false);
+      }
+    };
+
+    void loadCities();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const cityFromQuery = String(searchParams.get("city") || "").trim();
+    if (cityFromQuery) {
+      if (selectedCity !== cityFromQuery) {
+        setSelectedCity(cityFromQuery);
+      }
+      if (readSelectedCity() !== cityFromQuery) {
+        writeSelectedCity(cityFromQuery);
+      }
+      return;
+    }
+
+    const persistedCity = readSelectedCity();
+    if (persistedCity && cityOptions.some((city) => city.name === persistedCity)) {
+      setSelectedCity(persistedCity);
+      return;
+    }
+
+    if (!selectedCity && cityOptions.length > 0) {
+      setSelectedCity(cityOptions[0].name);
+    }
+  }, [cityOptions, searchParams, selectedCity]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -91,6 +166,23 @@ export default function Navbar() {
     router.refresh();
   };
 
+  const handleCityChange = (nextCity: string) => {
+    const cityName = String(nextCity || "").trim();
+    setSelectedCity(cityName);
+    writeSelectedCity(cityName);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (cityName) {
+      params.set("city", cityName);
+    } else {
+      params.delete("city");
+    }
+
+    const query = params.toString();
+    const target = query ? `${pathname}?${query}` : pathname;
+    router.replace(target, { scroll: false });
+  };
+
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/30 border-b border-white/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -116,10 +208,23 @@ export default function Navbar() {
           {/* Center - Location and Search */}
           <div className="hidden md:flex flex-1 mx-8 items-center gap-4">
             {/* Location Selector */}
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 transition-all btn-hover">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 transition-all">
               <MapPin size={18} className="text-blue-800" />
-              <span className="text-sm font-medium text-gray-800">Gorakhpur</span>
-            </button>
+              <select
+                value={selectedCity}
+                onChange={(event) => handleCityChange(event.target.value)}
+                disabled={loadingCities || cityOptions.length === 0}
+                className="bg-transparent text-sm font-medium text-gray-800 outline-none"
+              >
+                {loadingCities ? <option value="">Loading city...</option> : null}
+                {!loadingCities && cityOptions.length === 0 ? <option value="">No cities</option> : null}
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Search Bar */}
             <div className="flex-1 relative">
@@ -217,13 +322,24 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden flex items-center gap-2">
-            <button
-              type="button"
-              className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
-              aria-label="Current location"
-            >
+            <div className="flex items-center gap-1 p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800">
               <MapPin size={20} />
-            </button>
+              <select
+                value={selectedCity}
+                onChange={(event) => handleCityChange(event.target.value)}
+                disabled={loadingCities || cityOptions.length === 0}
+                className="max-w-24 bg-transparent text-xs text-gray-800 outline-none"
+                aria-label="Current location"
+              >
+                {loadingCities ? <option value="">City...</option> : null}
+                {!loadingCities && cityOptions.length === 0 ? <option value="">No city</option> : null}
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"

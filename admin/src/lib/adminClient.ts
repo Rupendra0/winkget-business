@@ -27,6 +27,7 @@ export type VendorRecord = {
   businessPhone?: string;
   businessAddress?: string;
   city?: string;
+  sublocality?: string;
   state?: string;
   postalCode?: string;
   gstNumber?: string;
@@ -103,6 +104,26 @@ export type AdminSubcategory = {
   updatedAt?: string;
 };
 
+export type AdminCityLocality = {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export type AdminCity = {
+  id: string;
+  name: string;
+  slug: string;
+  state?: string;
+  isActive: boolean;
+  sortOrder: number;
+  localities: AdminCityLocality[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type DashboardResponse = {
   ok: true;
   stats: DashboardStats;
@@ -127,6 +148,11 @@ type CategoryListResponse = {
 type SubcategoryListResponse = {
   ok: true;
   subcategories: AdminSubcategory[];
+};
+
+type CityListResponse = {
+  ok: true;
+  cities: AdminCity[];
 };
 
 type ApiResponse<T> = T & {
@@ -339,6 +365,24 @@ export async function fetchSubcategories(params?: {
   return payload.subcategories || [];
 }
 
+export async function fetchCities(params?: {
+  includeInactive?: boolean;
+  search?: string;
+}): Promise<AdminCity[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.includeInactive !== undefined) {
+    searchParams.set("includeInactive", String(params.includeInactive));
+  }
+  if (params?.search) {
+    searchParams.set("search", params.search);
+  }
+
+  const query = searchParams.toString();
+  const path = query ? `/api/admin/cities?${query}` : "/api/admin/cities";
+  const payload = await requestJson<CityListResponse>(path);
+  return payload.cities || [];
+}
+
 export async function createCategory(input: {
   name: string;
   description?: string;
@@ -403,6 +447,70 @@ export async function updateSubcategory(
   });
 
   return payload.subcategory;
+}
+
+export async function createCity(input: {
+  name: string;
+  state?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}): Promise<AdminCity> {
+  const payload = await requestJson<{ city: AdminCity }>("/api/admin/cities", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return payload.city;
+}
+
+export async function updateCity(
+  cityId: string,
+  input: {
+    name?: string;
+    state?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+): Promise<AdminCity> {
+  const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  return payload.city;
+}
+
+export async function createCityLocality(
+  cityId: string,
+  input: {
+    name: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+): Promise<AdminCity> {
+  const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}/localities`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return payload.city;
+}
+
+export async function updateCityLocality(
+  cityId: string,
+  localityId: string,
+  input: {
+    name?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+): Promise<AdminCity> {
+  const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}/localities/${localityId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  return payload.city;
 }
 
 export { BACKEND_URL, toErrorMessage };

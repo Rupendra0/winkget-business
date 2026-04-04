@@ -20,6 +20,7 @@ export type AuthUser = {
   businessAlternatePhone?: string;
   businessAddress?: string;
   city?: string;
+  sublocality?: string;
   state?: string;
   postalCode?: string;
   gstNumber?: string;

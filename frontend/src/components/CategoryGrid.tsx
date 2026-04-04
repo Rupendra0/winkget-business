@@ -7,6 +7,7 @@ import {
   X,
 } from 'lucide-react';
 import { categories } from '@/data/homeData';
+import { readSelectedCity, subscribeLocationCity } from '@/lib/locationStore';
 
 type LiveCategory = {
   id: string;
@@ -78,6 +79,7 @@ export default function CategoryGrid() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [liveCategories, setLiveCategories] = useState<DisplayCategory[] | null>(null);
+  const [selectedCity, setSelectedCity] = useState(() => readSelectedCity());
   const visibleCount = 19;
 
   const staticDisplayCategories = useMemo<DisplayCategory[]>(
@@ -123,6 +125,22 @@ export default function CategoryGrid() {
     };
   }, [staticImageByName]);
 
+  useEffect(() => {
+    return subscribeLocationCity((city) => {
+      setSelectedCity(city);
+    });
+  }, []);
+
+  const buildCategoryHref = (slug: string) => {
+    const cleanSlug = String(slug || '').trim();
+    const city = String(selectedCity || '').trim();
+    if (!city) {
+      return `/category/${cleanSlug}`;
+    }
+
+    return `/category/${cleanSlug}?city=${encodeURIComponent(city)}`;
+  };
+
   const sortedCategories = useMemo(
     () =>
       liveCategories && liveCategories.length > 0
@@ -160,7 +178,7 @@ export default function CategoryGrid() {
           <div className="grid grid-flow-col auto-cols-[76px] sm:auto-cols-[84px] gap-x-6 gap-y-6 sm:gap-x-7 sm:gap-y-7 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-[repeat(10,84px)] lg:gap-x-9 lg:gap-y-11 xl:gap-y-12 lg:justify-center min-w-max lg:min-w-0">
           {visibleCategories.map((category) => {
             return (
-              <Link key={category.name} href={`/category/${category.slug || slugify(category.name)}`}>
+              <Link key={category.name} href={buildCategoryHref(category.slug || slugify(category.name))}>
                 <CategoryCard
                   name={category.name}
                   imageUrl={category.imageUrl}
@@ -215,7 +233,7 @@ export default function CategoryGrid() {
                   return (
                     <Link
                       key={category.name}
-                      href={`/category/${category.slug || slugify(category.name)}`}
+                      href={buildCategoryHref(category.slug || slugify(category.name))}
                       className="w-19 sm:w-21"
                     >
                       <CategoryCard

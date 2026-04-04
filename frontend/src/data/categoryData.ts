@@ -1,14 +1,21 @@
 export type CategoryListing = {
   id: string;
   name: string;
+  businessName?: string;
   rating: number;
   reviews: number;
   verified: boolean;
+  vendorStatus?: string;
   address: string;
   city: string;
   sublocality: string;
   subcategory: string;
   subcategoryId?: string;
+  businessDescription?: string;
+  businessPhone?: string;
+  shopOpeningTime?: string;
+  shopClosingTime?: string;
+  establishmentYear?: number;
   imageUrl: string;
   ctaLabel?: string;
   badges?: string[];
@@ -29,9 +36,14 @@ export type CategoryBanner = {
 };
 
 export type CategoryPageData = {
+  categoryId?: string;
   slug: string;
   title: string;
   city: string;
+  selectedCity?: string;
+  selectedSublocality?: string;
+  availableCities?: string[];
+  localitiesByCity?: Record<string, string[]>;
   banner: CategoryBanner;
   subcategories: Array<string | CategoryFilterOption>;
   sublocalities: string[];

@@ -772,6 +772,7 @@ function UsersPageContent() {
                     <p><span className="font-semibold text-(--text-strong)">Subcategory:</span> {detailData.businessSubcategory?.name || "-"}</p>
                     <p className="xl:col-span-4"><span className="font-semibold text-(--text-strong)">Business Address:</span> {detailData.businessAddress || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">City:</span> {detailData.city || "-"}</p>
+                    <p><span className="font-semibold text-(--text-strong)">Sublocality:</span> {detailData.sublocality || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">State:</span> {detailData.state || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">Postal Code:</span> {detailData.postalCode || "-"}</p>
                     <p><span className="font-semibold text-(--text-strong)">GSTIN:</span> {detailData.gstNumber || "-"}</p>
@@ -968,6 +969,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   );
   const [businessAddress, setBusinessAddress] = useState(initialValue?.businessAddress || "");
   const [city, setCity] = useState(initialValue?.city || "");
+  const [sublocality, setSublocality] = useState(initialValue?.sublocality || "");
   const [state, setState] = useState(initialValue?.state || "");
   const [postalCode, setPostalCode] = useState(initialValue?.postalCode || "");
   const [gstNumber, setGstNumber] = useState(initialValue?.gstNumber || "");
@@ -1121,6 +1123,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       payload.businessPhone = businessPhone.trim() || undefined;
       payload.businessAddress = businessAddress.trim();
       payload.city = city.trim();
+      payload.sublocality = sublocality.trim();
       payload.state = state.trim();
       payload.postalCode = postalCode.trim();
       payload.gstNumber = gstNumber.trim();
@@ -1330,6 +1333,16 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
                   onChange={(event) => setCity(event.target.value)}
                   className="w-full rounded-lg border border-(--border) bg-(--surface) px-3 py-2 outline-none focus:border-(--accent)"
                   placeholder="City"
+                />
+              </label>
+
+              <label className="block space-y-1 text-sm text-(--text-soft)">
+                Sublocality
+                <input
+                  value={sublocality}
+                  onChange={(event) => setSublocality(event.target.value)}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface) px-3 py-2 outline-none focus:border-(--accent)"
+                  placeholder="Sublocality"
                 />
               </label>
 

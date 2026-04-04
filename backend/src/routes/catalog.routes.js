@@ -1,6 +1,7 @@
 const express = require("express");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
+const City = require("../models/City");
 const User = require("../models/User");
 const Review = require("../models/Review");
 
@@ -39,6 +40,33 @@ const toSubcategoryReference = (subcategory) => {
     id: String(subcategoryId),
     name: subcategory.name,
     slug: subcategory.slug,
+  };
+};
+
+const toCitySummary = (city) => {
+  const localities = Array.isArray(city.localities) ? city.localities : [];
+  const visibleLocalities = localities
+    .filter((locality) => locality.isActive !== false)
+    .sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return String(left.name || "").localeCompare(String(right.name || ""));
+    })
+    .map((locality) => ({
+      id: String(locality._id),
+      name: locality.name,
+      slug: locality.slug,
+      sortOrder: locality.sortOrder,
+    }));
+
+  return {
+    id: String(city._id),
+    name: city.name,
+    slug: city.slug,
+    state: city.state,
+    sortOrder: city.sortOrder,
+    localities: visibleLocalities,
   };
 };
 
@@ -149,18 +177,29 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     id: String(vendor._id),
     name: vendor.name,
     businessName: vendor.businessName,
+    businessPhone: vendor.businessPhone,
+    businessAlternatePhone: vendor.businessAlternatePhone,
+    businessEmail: vendor.businessEmail,
     rating,
     reviews,
     verified: vendor.vendorStatus === "approved",
+    vendorStatus: vendor.vendorStatus,
     address: address || "Address unavailable",
     city: vendor.city || "",
-    sublocality: vendor.city || "",
+    sublocality: vendor.sublocality || vendor.city || "",
+    state: vendor.state,
+    postalCode: vendor.postalCode,
     subcategory: vendor.businessSubcategory?.name || vendor.businessCategory?.name || "",
     imageUrl: vendor.image || DEFAULT_VENDOR_IMAGE,
     ctaLabel: "Inquiry",
     badges: vendor.vendorStatus === "approved" ? ["Verified"] : [],
     priceRange: undefined,
     tags: Array.isArray(vendor.serviceTags) ? vendor.serviceTags.slice(0, 4) : [],
+    businessDescription: vendor.businessDescription,
+    establishmentYear: vendor.establishmentYear,
+    yearsInBusiness: vendor.yearsInBusiness,
+    shopOpeningTime: vendor.shopOpeningTime,
+    shopClosingTime: vendor.shopClosingTime,
     businessCategory: toCategoryReference(vendor.businessCategory),
     businessSubcategory: toSubcategoryReference(vendor.businessSubcategory),
   };
@@ -176,6 +215,7 @@ const toVendorDetail = (vendor, reviewSummaryByVendorId) => {
     website: vendor.website,
     businessDescription: vendor.businessDescription,
     businessAddress: vendor.businessAddress,
+    sublocality: vendor.sublocality,
     establishmentYear: vendor.establishmentYear,
     yearsInBusiness: vendor.yearsInBusiness,
     shopOpeningTime: vendor.shopOpeningTime,
@@ -203,6 +243,22 @@ const toSubcategorySummary = (subcategory) => ({
         name: subcategory.parentSubcategory.name,
       }
     : undefined,
+});
+
+router.get("/cities", async (_req, res) => {
+  try {
+    const cities = await City.find({ isActive: true })
+      .sort({ sortOrder: 1, name: 1 })
+      .select("_id name slug state isActive sortOrder localities")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      cities: cities.map(toCitySummary),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load cities", error: error.message });
+  }
 });
 
 router.get("/categories", async (_req, res) => {
@@ -272,6 +328,7 @@ router.get("/vendors", async (req, res) => {
     const categorySlug = String(req.query.categorySlug || "").trim().toLowerCase();
     const subcategoryId = String(req.query.subcategoryId || "").trim();
     const city = String(req.query.city || "").trim();
+    const sublocality = String(req.query.sublocality || "").trim();
     const search = String(req.query.search || "").trim();
 
     let resolvedCategoryId = categoryIdInput;
@@ -332,6 +389,10 @@ router.get("/vendors", async (req, res) => {
       query.city = toSafeRegex(city);
     }
 
+    if (sublocality) {
+      query.sublocality = toSafeRegex(sublocality);
+    }
+
     if (search) {
       const regex = toSafeRegex(search);
       query.$or = [{ businessName: regex }, { name: regex }, { businessDescription: regex }, { serviceTags: regex }];
@@ -340,7 +401,7 @@ router.get("/vendors", async (req, res) => {
     const vendors = await User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
-        "_id name businessName city state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+        "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug");
@@ -369,7 +430,7 @@ router.get("/vendors/:id", async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName city state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug");

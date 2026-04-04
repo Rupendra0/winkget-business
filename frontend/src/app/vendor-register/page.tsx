@@ -29,6 +29,20 @@ type SubcategoryOption = {
   };
 };
 
+type CityLocalityOption = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type CityOption = {
+  id: string;
+  name: string;
+  slug: string;
+  state?: string;
+  localities: CityLocalityOption[];
+};
+
 type VendorFormState = {
   businessName: string;
   ownerName: string;
@@ -44,6 +58,7 @@ type VendorFormState = {
   businessSubcategoryId: string;
   businessAddress: string;
   city: string;
+  sublocality: string;
   state: string;
   postalCode: string;
   gstNumber: string;
@@ -112,6 +127,7 @@ const INITIAL_FORM: VendorFormState = {
   businessSubcategoryId: "",
   businessAddress: "",
   city: "",
+  sublocality: "",
   state: "",
   postalCode: "",
   gstNumber: "",
@@ -227,10 +243,13 @@ export default function VendorRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
+  const [cities, setCities] = useState<CityOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadingCities, setLoadingCities] = useState(true);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
   const [categoryLoadError, setCategoryLoadError] = useState<string | null>(null);
   const [subcategoryLoadError, setSubcategoryLoadError] = useState<string | null>(null);
+  const [cityLoadError, setCityLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<VendorFormState>(INITIAL_FORM);
   const [selectedIdDocumentName, setSelectedIdDocumentName] = useState("");
   const [selectedGstDocumentName, setSelectedGstDocumentName] = useState("");
@@ -310,6 +329,58 @@ export default function VendorRegisterPage() {
   useEffect(() => {
     let active = true;
 
+    const loadCities = async () => {
+      setLoadingCities(true);
+      setCityLoadError(null);
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/cities`, { cache: "no-store" });
+        const payload = await response.json();
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || "Failed to load cities");
+        }
+
+        if (!active) return;
+
+        const nextCities = Array.isArray(payload.cities) ? payload.cities : [];
+        setCities(nextCities);
+
+        if (nextCities.length > 0) {
+          setForm((current) => {
+            if (current.city) return current;
+
+            const firstCity = nextCities[0] as CityOption;
+            const firstLocality = Array.isArray(firstCity.localities) ? firstCity.localities[0] : undefined;
+
+            return {
+              ...current,
+              city: firstCity.name,
+              sublocality: firstLocality?.name || "",
+              state: current.state || firstCity.state || "",
+            };
+          });
+        }
+      } catch (loadError) {
+        if (!active) return;
+        const message = loadError instanceof Error ? loadError.message : "Failed to load cities";
+        setCityLoadError(message);
+      } finally {
+        if (!active) return;
+        setLoadingCities(false);
+      }
+    };
+
+    void loadCities();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
     const loadSubcategories = async () => {
       if (!form.businessCategoryId) {
         setSubcategories([]);
@@ -378,6 +449,16 @@ export default function VendorRegisterPage() {
     [subcategories, subcategoryLabelMap]
   );
 
+  const selectedCity = useMemo(
+    () => cities.find((cityOption) => cityOption.name === form.city) || null,
+    [cities, form.city]
+  );
+
+  const cityLocalities = useMemo(
+    () => (selectedCity && Array.isArray(selectedCity.localities) ? selectedCity.localities : []),
+    [selectedCity]
+  );
+
   const validateStepOne = () => {
     if (!form.ownerName.trim()) return "Owner name is required";
     if (!form.gender.trim()) return "Gender is required";
@@ -396,6 +477,7 @@ export default function VendorRegisterPage() {
     if (!form.businessCategoryId) return "Please select a business category";
     if (!form.businessAddress.trim()) return "Business address is required";
     if (!form.city.trim()) return "City is required";
+    if (!form.sublocality.trim()) return "Sublocality is required";
     if (!form.state.trim()) return "State is required";
     if (!form.postalCode.trim()) return "Postal code is required";
     if (!POSTAL_REGEX.test(form.postalCode.trim())) return "Postal code must be 5 to 10 digits";
@@ -561,6 +643,7 @@ export default function VendorRegisterPage() {
           businessSubcategoryId: form.businessSubcategoryId || undefined,
           businessAddress: form.businessAddress.trim(),
           city: form.city.trim(),
+          sublocality: form.sublocality.trim(),
           state: form.state.trim(),
           postalCode: form.postalCode.trim(),
           gstNumber: form.gstNumber.trim(),
@@ -877,13 +960,52 @@ export default function VendorRegisterPage() {
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       City <RequiredMark />
                     </span>
-                    <input
-                      type="text"
+                    <select
                       value={form.city}
-                      onChange={(event) => updateField("city", event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
+                      onChange={(event) => {
+                        const nextCityName = event.target.value;
+                        const nextCity = cities.find((item) => item.name === nextCityName) || null;
+                        const nextLocalities = nextCity && Array.isArray(nextCity.localities) ? nextCity.localities : [];
+
+                        updateField("city", nextCityName);
+                        updateField("sublocality", nextLocalities[0]?.name || "");
+                        if (nextCity?.state) {
+                          updateField("state", nextCity.state);
+                        }
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                      disabled={loadingCities || cities.length === 0}
                       required
-                    />
+                    >
+                      {loadingCities ? <option value="">Loading cities...</option> : null}
+                      {!loadingCities && cities.length === 0 ? <option value="">No cities available</option> : null}
+                      {cities.map((cityOption) => (
+                        <option key={cityOption.id} value={cityOption.name}>
+                          {cityOption.name}
+                        </option>
+                      ))}
+                    </select>
+                    {cityLoadError ? <p className="mt-1 text-xs text-red-600">{cityLoadError}</p> : null}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Sublocality <RequiredMark />
+                    </span>
+                    <select
+                      value={form.sublocality}
+                      onChange={(event) => updateField("sublocality", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                      disabled={!form.city || cityLocalities.length === 0}
+                      required
+                    >
+                      <option value="">Select sublocality</option>
+                      {cityLocalities.map((locality) => (
+                        <option key={locality.id} value={locality.name}>
+                          {locality.name}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="block">
@@ -1179,7 +1301,7 @@ export default function VendorRegisterPage() {
                       Category: {categories.find((item) => item.id === form.businessCategoryId)?.name || "Not selected"}
                     </p>
                     <p>Subcategory: {subcategoryLabelMap.get(form.businessSubcategoryId) || "Not selected"}</p>
-                    <p>Location: {[form.city, form.state].filter(Boolean).join(", ") || "-"}</p>
+                    <p>Location: {[form.sublocality, form.city, form.state].filter(Boolean).join(", ") || "-"}</p>
                     <p>Established: {form.establishmentYear || "-"}</p>
                     <p>Services: {form.serviceTags.length > 0 ? form.serviceTags.join(", ") : "-"}</p>
                     <p>GST doc: {selectedGstDocumentName || "Not uploaded"}</p>

@@ -3,6 +3,7 @@ const app = require("./app");
 const { connectDatabase } = require("./config/db");
 const Subcategory = require("./models/Subcategory");
 const Review = require("./models/Review");
+const City = require("./models/City");
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -13,6 +14,7 @@ async function startServer() {
     // Ensure DB indexes match current schema so parent-scoped subcategory uniqueness works.
     await Subcategory.syncIndexes();
     await Review.syncIndexes();
+    await City.syncIndexes();
 
     app.listen(PORT, () => {
       // eslint-disable-next-line no-console

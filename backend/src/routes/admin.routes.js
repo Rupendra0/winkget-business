@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
+const City = require("../models/City");
 const {
   GSTIN_REGEX,
   AADHAAR_REGEX,
@@ -26,6 +27,7 @@ const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
+const toExactRegex = (value) => new RegExp(`^${escapeRegex(String(value || ""))}$`, "i");
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -102,6 +104,37 @@ const toSubcategorySummary = (subcategory) => ({
   updatedAt: subcategory.updatedAt,
 });
 
+const toCitySummary = (city, includeInactiveLocalities = false) => {
+  const localities = Array.isArray(city.localities) ? city.localities : [];
+  const items = localities
+    .filter((locality) => includeInactiveLocalities || locality.isActive !== false)
+    .sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return String(left.name || "").localeCompare(String(right.name || ""));
+    })
+    .map((locality) => ({
+      id: String(locality._id),
+      name: locality.name,
+      slug: locality.slug,
+      isActive: locality.isActive !== false,
+      sortOrder: locality.sortOrder,
+    }));
+
+  return {
+    id: String(city._id),
+    name: city.name,
+    slug: city.slug,
+    state: city.state,
+    isActive: city.isActive,
+    sortOrder: city.sortOrder,
+    localities: items,
+    createdAt: city.createdAt,
+    updatedAt: city.updatedAt,
+  };
+};
+
 const resolveUniqueSlug = async (baseSlug, excludeCategoryId) => {
   const sanitizedBase = baseSlug || `category-${Date.now()}`;
   let slug = sanitizedBase;
@@ -146,6 +179,50 @@ const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, parentSubcateg
     const existing = await Subcategory.findOne(query).select("_id");
     if (!existing) return slug;
 
+    slug = `${sanitizedBase}-${suffix}`;
+    suffix += 1;
+  }
+};
+
+const resolveUniqueCitySlug = async (baseSlug, excludeCityId) => {
+  const sanitizedBase = baseSlug || `city-${Date.now()}`;
+  let slug = sanitizedBase;
+  let suffix = 1;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const existing = await City.findOne(
+      excludeCityId
+        ? {
+            slug,
+            _id: { $ne: excludeCityId },
+          }
+        : { slug }
+    ).select("_id");
+
+    if (!existing) return slug;
+    slug = `${sanitizedBase}-${suffix}`;
+    suffix += 1;
+  }
+};
+
+const resolveUniqueLocalitySlug = (city, baseSlug, excludeLocalityId) => {
+  const localities = Array.isArray(city?.localities) ? city.localities : [];
+  const sanitizedBase = baseSlug || `locality-${Date.now()}`;
+  let slug = sanitizedBase;
+  let suffix = 1;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const exists = localities.some((locality) => {
+      if (excludeLocalityId && String(locality._id) === String(excludeLocalityId)) {
+        return false;
+      }
+
+      return String(locality.slug || "") === slug;
+    });
+
+    if (!exists) return slug;
     slug = `${sanitizedBase}-${suffix}`;
     suffix += 1;
   }
@@ -210,6 +287,7 @@ const toVendorSummary = (vendor) => ({
   businessAlternatePhone: vendor.businessAlternatePhone,
   businessAddress: vendor.businessAddress,
   city: vendor.city,
+  sublocality: vendor.sublocality,
   state: vendor.state,
   postalCode: vendor.postalCode,
   gstNumber: vendor.gstNumber,
@@ -257,6 +335,7 @@ const toUserDetail = (user) => ({
   businessAlternatePhone: user.businessAlternatePhone,
   businessAddress: user.businessAddress,
   city: user.city,
+  sublocality: user.sublocality,
   state: user.state,
   postalCode: user.postalCode,
   gstNumber: user.gstNumber,
@@ -344,7 +423,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .select(
-          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
         )
         .populate("businessCategory", "_id name")
         .populate("businessSubcategory", "_id name"),
@@ -405,7 +484,7 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -503,7 +582,7 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
 
     const user = await User.findById(userId)
       .select(
-        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name")
       .populate("businessSubcategory", "_id name");
@@ -534,6 +613,7 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const businessPhoneInput = String(req.body?.businessPhone || "").trim();
     const businessAddress = String(req.body?.businessAddress || "").trim();
     const city = String(req.body?.city || "").trim();
+    const sublocality = String(req.body?.sublocality || "").trim();
     const state = String(req.body?.state || "").trim();
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
@@ -622,6 +702,7 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       businessPhone: role === "vendor" ? businessPhone || undefined : undefined,
       businessAddress: role === "vendor" ? businessAddress || undefined : undefined,
       city: role === "vendor" ? city || undefined : undefined,
+      sublocality: role === "vendor" ? sublocality || undefined : undefined,
       state: role === "vendor" ? state || undefined : undefined,
       postalCode: role === "vendor" ? postalCode || undefined : undefined,
       gstNumber: role === "vendor" ? gstNumber || undefined : undefined,
@@ -716,6 +797,7 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
         user.businessAlternatePhone = undefined;
         user.businessAddress = undefined;
         user.city = undefined;
+        user.sublocality = undefined;
         user.state = undefined;
         user.postalCode = undefined;
         user.gstNumber = undefined;
@@ -840,18 +922,52 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
       user.businessAddress = value || undefined;
     }
 
-    if (req.body?.city !== undefined) {
+    if (req.body?.city !== undefined || req.body?.sublocality !== undefined || req.body?.state !== undefined) {
       const vendorError = requireVendor();
       if (vendorError) return vendorError;
-      const value = String(req.body.city || "").trim();
-      user.city = value || undefined;
-    }
 
-    if (req.body?.state !== undefined) {
-      const vendorError = requireVendor();
-      if (vendorError) return vendorError;
-      const value = String(req.body.state || "").trim();
-      user.state = value || undefined;
+      const requestedCity =
+        req.body?.city !== undefined ? String(req.body.city || "").trim() : String(user.city || "").trim();
+      const requestedSublocality =
+        req.body?.sublocality !== undefined
+          ? String(req.body.sublocality || "").trim()
+          : String(user.sublocality || "").trim();
+      const requestedState =
+        req.body?.state !== undefined ? String(req.body.state || "").trim() : String(user.state || "").trim();
+
+      if (!requestedCity) {
+        user.city = undefined;
+        user.sublocality = undefined;
+        user.state = requestedState || undefined;
+      } else {
+        const cityRecord = await City.findOne({ name: toExactRegex(requestedCity), isActive: true }).select(
+          "name state localities"
+        );
+
+        if (!cityRecord) {
+          return res.status(400).json({ ok: false, message: "Selected city is invalid or inactive" });
+        }
+
+        user.city = cityRecord.name;
+
+        if (requestedSublocality) {
+          const matchedLocality = (Array.isArray(cityRecord.localities) ? cityRecord.localities : []).find(
+            (locality) =>
+              locality.isActive !== false && toExactRegex(requestedSublocality).test(String(locality.name || ""))
+          );
+
+          if (!matchedLocality) {
+            return res.status(400).json({ ok: false, message: "Selected sublocality is invalid for the selected city" });
+          }
+
+          user.sublocality = matchedLocality.name;
+        } else if (req.body?.sublocality !== undefined) {
+          user.sublocality = undefined;
+        }
+
+        const resolvedState = requestedState || String(cityRecord.state || "").trim();
+        user.state = resolvedState || undefined;
+      }
     }
 
     if (req.body?.postalCode !== undefined) {
@@ -1544,6 +1660,243 @@ router.delete("/admin/subcategories/:id", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to delete subcategory", error: error.message });
+  }
+});
+
+router.get("/admin/cities", requireAdmin, async (req, res) => {
+  try {
+    const includeInactive = String(req.query.includeInactive || "true").toLowerCase() !== "false";
+    const search = String(req.query.search || "").trim();
+
+    const query = includeInactive ? {} : { isActive: true };
+    if (search) {
+      query.name = new RegExp(escapeRegex(search), "i");
+    }
+
+    const cities = await City.find(query)
+      .sort({ sortOrder: 1, name: 1 })
+      .select("_id name slug state isActive sortOrder localities createdAt updatedAt");
+
+    return res.status(200).json({
+      ok: true,
+      cities: cities.map((city) => toCitySummary(city, includeInactive)),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load cities", error: error.message });
+  }
+});
+
+router.post("/admin/cities", requireAdmin, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const state = String(req.body?.state || "").trim();
+    const sortOrderInput = req.body?.sortOrder;
+    const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
+    const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
+
+    if (!name) {
+      return res.status(400).json({ ok: false, message: "City name is required" });
+    }
+
+    const existingByName = await City.findOne({ name: toExactRegex(name) }).select("_id");
+    if (existingByName) {
+      return res.status(409).json({ ok: false, message: "City already exists" });
+    }
+
+    const slug = await resolveUniqueCitySlug(slugify(name));
+    const city = await City.create({
+      name,
+      slug,
+      state: state || undefined,
+      isActive,
+      sortOrder,
+      createdBy: req.adminUser._id,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: "City created",
+      city: toCitySummary(city, true),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ ok: false, message: "City already exists" });
+    }
+
+    return res.status(500).json({ ok: false, message: "Failed to create city", error: error.message });
+  }
+});
+
+router.patch("/admin/cities/:id", requireAdmin, async (req, res) => {
+  try {
+    const cityId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(cityId)) {
+      return res.status(400).json({ ok: false, message: "Invalid city id" });
+    }
+
+    const city = await City.findById(cityId);
+    if (!city) {
+      return res.status(404).json({ ok: false, message: "City not found" });
+    }
+
+    if (req.body?.name !== undefined) {
+      const nextName = String(req.body.name || "").trim();
+      if (!nextName) {
+        return res.status(400).json({ ok: false, message: "City name cannot be empty" });
+      }
+
+      const duplicate = await City.findOne({
+        _id: { $ne: city._id },
+        name: toExactRegex(nextName),
+      }).select("_id");
+
+      if (duplicate) {
+        return res.status(409).json({ ok: false, message: "City already exists" });
+      }
+
+      city.name = nextName;
+      city.slug = await resolveUniqueCitySlug(slugify(nextName), city._id);
+    }
+
+    if (req.body?.state !== undefined) {
+      city.state = String(req.body.state || "").trim() || undefined;
+    }
+
+    if (req.body?.isActive !== undefined) {
+      city.isActive = Boolean(req.body.isActive);
+    }
+
+    if (req.body?.sortOrder !== undefined) {
+      const numericSort = Number(req.body.sortOrder);
+      if (!Number.isFinite(numericSort)) {
+        return res.status(400).json({ ok: false, message: "Invalid sort order" });
+      }
+      city.sortOrder = numericSort;
+    }
+
+    await city.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "City updated",
+      city: toCitySummary(city, true),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ ok: false, message: "City already exists" });
+    }
+
+    return res.status(500).json({ ok: false, message: "Failed to update city", error: error.message });
+  }
+});
+
+router.post("/admin/cities/:id/localities", requireAdmin, async (req, res) => {
+  try {
+    const cityId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(cityId)) {
+      return res.status(400).json({ ok: false, message: "Invalid city id" });
+    }
+
+    const name = String(req.body?.name || "").trim();
+    const sortOrderInput = req.body?.sortOrder;
+    const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
+    const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
+
+    if (!name) {
+      return res.status(400).json({ ok: false, message: "Locality name is required" });
+    }
+
+    const city = await City.findById(cityId);
+    if (!city) {
+      return res.status(404).json({ ok: false, message: "City not found" });
+    }
+
+    const duplicateByName = (Array.isArray(city.localities) ? city.localities : []).some(
+      (locality) => toExactRegex(name).test(String(locality.name || ""))
+    );
+    if (duplicateByName) {
+      return res.status(409).json({ ok: false, message: "Locality already exists for this city" });
+    }
+
+    const slug = resolveUniqueLocalitySlug(city, slugify(name));
+    city.localities.push({
+      name,
+      slug,
+      isActive,
+      sortOrder,
+    });
+
+    await city.save();
+
+    return res.status(201).json({
+      ok: true,
+      message: "Locality created",
+      city: toCitySummary(city, true),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to create locality", error: error.message });
+  }
+});
+
+router.patch("/admin/cities/:cityId/localities/:localityId", requireAdmin, async (req, res) => {
+  try {
+    const cityId = String(req.params.cityId || "").trim();
+    const localityId = String(req.params.localityId || "").trim();
+    if (!OBJECT_ID_REGEX.test(cityId) || !OBJECT_ID_REGEX.test(localityId)) {
+      return res.status(400).json({ ok: false, message: "Invalid city/locality id" });
+    }
+
+    const city = await City.findById(cityId);
+    if (!city) {
+      return res.status(404).json({ ok: false, message: "City not found" });
+    }
+
+    const locality = (Array.isArray(city.localities) ? city.localities : []).find(
+      (item) => String(item._id) === localityId
+    );
+
+    if (!locality) {
+      return res.status(404).json({ ok: false, message: "Locality not found" });
+    }
+
+    if (req.body?.name !== undefined) {
+      const nextName = String(req.body.name || "").trim();
+      if (!nextName) {
+        return res.status(400).json({ ok: false, message: "Locality name cannot be empty" });
+      }
+
+      const duplicateByName = (Array.isArray(city.localities) ? city.localities : []).some(
+        (item) => String(item._id) !== localityId && toExactRegex(nextName).test(String(item.name || ""))
+      );
+      if (duplicateByName) {
+        return res.status(409).json({ ok: false, message: "Locality already exists for this city" });
+      }
+
+      locality.name = nextName;
+      locality.slug = resolveUniqueLocalitySlug(city, slugify(nextName), localityId);
+    }
+
+    if (req.body?.isActive !== undefined) {
+      locality.isActive = Boolean(req.body.isActive);
+    }
+
+    if (req.body?.sortOrder !== undefined) {
+      const numericSort = Number(req.body.sortOrder);
+      if (!Number.isFinite(numericSort)) {
+        return res.status(400).json({ ok: false, message: "Invalid sort order" });
+      }
+      locality.sortOrder = numericSort;
+    }
+
+    await city.save();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Locality updated",
+      city: toCitySummary(city, true),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update locality", error: error.message });
   }
 });
 
