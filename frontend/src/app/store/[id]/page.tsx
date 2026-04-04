@@ -1,6 +1,7 @@
 import StorePage from "@/components/StorePage";
 import { categoryPages } from "@/data/categoryData";
 import { buildFallbackProfile, listingProfiles, storePages } from "@/data/listingData";
+import { notFound } from "next/navigation";
 
 const findListing = (id: string) => {
   for (const category of categoryPages) {
@@ -80,5 +81,10 @@ export default async function StoreProfilePage({
     );
   }
 
-  return <StorePage data={storePages["rest-1"]} />;
+  const fallbackStore = storePages["rest-1"] ?? Object.values(storePages)[0];
+  if (fallbackStore) {
+    return <StorePage data={fallbackStore} />;
+  }
+
+  notFound();
 }

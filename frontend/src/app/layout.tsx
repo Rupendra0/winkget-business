@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackToTop from "@/components/BackToTop";
@@ -29,7 +30,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
+        <Suspense
+          fallback={
+            <div className="sticky top-0 z-50 h-16 sm:h-20 border-b border-white/20 bg-white/30 backdrop-blur-xl" />
+          }
+        >
+          <Navbar />
+        </Suspense>
         {children}
         <BackToTop />
       </body>
