@@ -2,6 +2,7 @@ import ListingProfilePage from "@/components/ListingProfilePage";
 import { categoryPages } from "@/data/categoryData";
 import { buildFallbackProfile, listingProfiles } from "@/data/listingData";
 import { fetchVendorById, toListingProfileFromVendor } from "@/lib/catalogClient";
+import { notFound } from "next/navigation";
 
 const findListing = (id: string) => {
   for (const category of categoryPages) {
@@ -34,25 +35,5 @@ export default async function ListingPage({
     return <ListingProfilePage profile={buildFallbackProfile(listing)} />;
   }
 
-  return (
-    <ListingProfilePage
-      profile={buildFallbackProfile({
-        id,
-        name: "Business Profile",
-        rating: 4.3,
-        reviews: 0,
-        verified: false,
-        address: "Your city",
-        city: "",
-        sublocality: "",
-        subcategory: "Business",
-        imageUrl:
-          "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=60",
-        ctaLabel: "Enquiry",
-        badges: ["Featured"],
-        priceRange: "$$",
-        tags: ["Verified"],
-      })}
-    />
-  );
+  notFound();
 }

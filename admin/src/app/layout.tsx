@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 
 const displayFont = Inter({
@@ -30,7 +31,11 @@ export default function RootLayout({
       lang="en"
       className={`${displayFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={<div className="min-h-screen bg-(--bg)" />}>
+          {children}
+        </Suspense>
+      </body>
     </html>
   );
 }
