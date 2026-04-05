@@ -1,6 +1,35 @@
 export type UserRole = "admin" | "vendor" | "customer";
 export type VendorStatus = "pending" | "approved" | "rejected";
 
+export type CustomFormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "select"
+  | "multi-select"
+  | "email"
+  | "phone"
+  | "url";
+
+export type CustomFormField = {
+  key: string;
+  label: string;
+  type: CustomFormFieldType;
+  required: boolean;
+  placeholder?: string;
+  helpText?: string;
+  options?: string[];
+  span?: 6 | 12;
+  sortOrder: number;
+};
+
+export type EffectiveCustomForm = {
+  source: "none" | "category" | "subcategory";
+  title?: string;
+  fields: CustomFormField[];
+};
+
 export type AdminUser = {
   id: string;
   name?: string;
@@ -40,6 +69,7 @@ export type VendorRecord = {
   idProofNumber?: string;
   idProofDocument?: string;
   marketingOptIn?: boolean;
+  customFormData?: Record<string, string | number | string[]>;
   vendorStatus: VendorStatus;
   vendorReviewNote?: string;
   createdAt?: string;
@@ -81,6 +111,9 @@ export type AdminCategory = {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -92,6 +125,9 @@ export type AdminSubcategory = {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
   category?: {
     id: string;
     name?: string;
@@ -388,6 +424,9 @@ export async function createCategory(input: {
   description?: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }): Promise<AdminCategory> {
   const payload = await requestJson<{ category: AdminCategory }>("/api/admin/categories", {
     method: "POST",
@@ -404,6 +443,9 @@ export async function updateCategory(
     description?: string;
     sortOrder?: number;
     isActive?: boolean;
+    customFormEnabled?: boolean;
+    customFormTitle?: string;
+    customFormFields?: CustomFormField[];
   }
 ): Promise<AdminCategory> {
   const payload = await requestJson<{ category: AdminCategory }>(`/api/admin/categories/${categoryId}`, {
@@ -421,6 +463,9 @@ export async function createSubcategory(input: {
   description?: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }): Promise<AdminSubcategory> {
   const payload = await requestJson<{ subcategory: AdminSubcategory }>("/api/admin/subcategories", {
     method: "POST",
@@ -439,6 +484,9 @@ export async function updateSubcategory(
     description?: string;
     sortOrder?: number;
     isActive?: boolean;
+    customFormEnabled?: boolean;
+    customFormTitle?: string;
+    customFormFields?: CustomFormField[];
   }
 ): Promise<AdminSubcategory> {
   const payload = await requestJson<{ subcategory: AdminSubcategory }>(`/api/admin/subcategories/${subcategoryId}`, {
@@ -508,6 +556,20 @@ export async function updateCityLocality(
   const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}/localities/${localityId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
+  });
+
+  return payload.city;
+}
+
+export async function deleteCity(cityId: string): Promise<void> {
+  await requestJson<Record<string, never>>(`/api/admin/cities/${cityId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function deleteCityLocality(cityId: string, localityId: string): Promise<AdminCity> {
+  const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}/localities/${localityId}`, {
+    method: "DELETE",
   });
 
   return payload.city;

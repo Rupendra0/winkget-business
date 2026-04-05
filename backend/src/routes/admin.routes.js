@@ -12,6 +12,11 @@ const {
   MAX_DOCUMENT_DATA_LENGTH,
   isValidEstablishmentYear,
 } = require("../lib/vendorValidation");
+const {
+  sanitizeCustomFormFields,
+  resolveEffectiveCustomForm,
+  validateCustomFormData,
+} = require("../lib/customForm");
 
 const router = express.Router();
 const AUTH_COOKIE_NAME = "winkget_auth";
@@ -56,6 +61,17 @@ const slugify = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 
+const toCustomFormSummary = (entity) => {
+  const customFormFields = sanitizeCustomFormFields(entity?.customFormFields);
+  const customFormEnabled = Boolean(entity?.customFormEnabled) && customFormFields.length > 0;
+
+  return {
+    customFormEnabled,
+    customFormTitle: customFormEnabled ? String(entity?.customFormTitle || "").trim() || undefined : undefined,
+    customFormFields,
+  };
+};
+
 const toCategorySummary = (category) => ({
   id: String(category._id),
   name: category.name,
@@ -63,6 +79,7 @@ const toCategorySummary = (category) => ({
   description: category.description,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
+  ...toCustomFormSummary(category),
   createdAt: category.createdAt,
   updatedAt: category.updatedAt,
 });
@@ -76,6 +93,7 @@ const toCategoryReference = (category) => {
   return {
     id: String(categoryId),
     name: category.name,
+    ...toCustomFormSummary(category),
   };
 };
 
@@ -88,6 +106,7 @@ const toSubcategoryReference = (subcategory) => {
   return {
     id: String(subcategoryId),
     name: subcategory.name,
+    ...toCustomFormSummary(subcategory),
   };
 };
 
@@ -98,6 +117,7 @@ const toSubcategorySummary = (subcategory) => ({
   description: subcategory.description,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
+  ...toCustomFormSummary(subcategory),
   category: toCategoryReference(subcategory.category),
   parentSubcategory: toSubcategoryReference(subcategory.parentSubcategory),
   createdAt: subcategory.createdAt,
@@ -303,6 +323,7 @@ const toVendorSummary = (vendor) => ({
   idProofNumber: vendor.idProofNumber,
   idProofDocument: vendor.idProofDocument,
   marketingOptIn: vendor.marketingOptIn,
+  customFormData: vendor.customFormData && typeof vendor.customFormData === "object" ? vendor.customFormData : {},
   vendorStatus: vendor.vendorStatus,
   vendorReviewNote: vendor.vendorReviewNote,
   createdAt: vendor.createdAt,
@@ -351,6 +372,14 @@ const toUserDetail = (user) => ({
   idProofNumber: user.idProofNumber,
   idProofDocument: user.idProofDocument,
   marketingOptIn: user.marketingOptIn,
+  customFormData: user.customFormData && typeof user.customFormData === "object" ? user.customFormData : {},
+  effectiveCustomForm:
+    user.role === "vendor"
+      ? resolveEffectiveCustomForm({
+          category: user.businessCategory,
+          subcategory: user.businessSubcategory,
+        })
+      : { source: "none", title: "", fields: [] },
   role: user.role,
   vendorStatus: user.vendorStatus,
   vendorReviewNote: user.vendorReviewNote,
@@ -423,10 +452,10 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .select(
-          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
         )
-        .populate("businessCategory", "_id name")
-        .populate("businessSubcategory", "_id name"),
+        .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+        .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields"),
     ]);
 
     return res.status(200).json({
@@ -484,10 +513,10 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
       )
-      .populate("businessCategory", "_id name")
-      .populate("businessSubcategory", "_id name");
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
@@ -518,8 +547,8 @@ router.patch("/admin/vendors/:id/status", requireAdmin, async (req, res) => {
     vendor.vendorStatus = nextStatus;
     vendor.vendorReviewNote = reviewNote || undefined;
     await vendor.save();
-    await vendor.populate("businessCategory", "_id name");
-    await vendor.populate("businessSubcategory", "_id name");
+    await vendor.populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields");
+    await vendor.populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
@@ -582,10 +611,10 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
 
     const user = await User.findById(userId)
       .select(
-        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn role vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData role vendorStatus vendorReviewNote createdAt updatedAt"
       )
-      .populate("businessCategory", "_id name")
-      .populate("businessSubcategory", "_id name");
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     if (!user) {
       return res.status(404).json({ ok: false, message: "User not found" });
@@ -609,6 +638,8 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const password = String(req.body?.password || "");
     const vendorStatusInput = String(req.body?.vendorStatus || "").toLowerCase();
     const businessName = String(req.body?.businessName || "").trim();
+    const businessCategoryId = String(req.body?.businessCategoryId || "").trim();
+    const businessSubcategoryId = String(req.body?.businessSubcategoryId || "").trim();
     const businessEmailInput = String(req.body?.businessEmail || "").trim();
     const businessPhoneInput = String(req.body?.businessPhone || "").trim();
     const businessAddress = String(req.body?.businessAddress || "").trim();
@@ -617,9 +648,18 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const state = String(req.body?.state || "").trim();
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
+    const gstDocument = String(req.body?.gstDocument || "").trim();
     const website = String(req.body?.website || "").trim();
     const shopOpeningTime = String(req.body?.shopOpeningTime || "").trim();
     const shopClosingTime = String(req.body?.shopClosingTime || "").trim();
+    const establishmentYearInput = req.body?.establishmentYear;
+    const serviceTagsInput = Array.isArray(req.body?.serviceTags) ? req.body.serviceTags : [];
+    const businessDescription = String(req.body?.businessDescription || "").trim();
+    const idProofType = String(req.body?.idProofType || "").trim().toLowerCase();
+    const idProofNumber = String(req.body?.idProofNumber || "").trim();
+    const idProofDocument = String(req.body?.idProofDocument || "").trim();
+    const marketingOptIn = Boolean(req.body?.marketingOptIn);
+    const customFormDataInput = req.body?.customFormData;
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Name is required" });
@@ -633,6 +673,18 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const phone = normalizePhone(phoneInput);
     const businessEmail = businessEmailInput ? businessEmailInput.toLowerCase() : "";
     const businessPhone = normalizePhone(businessPhoneInput);
+    const establishmentYear =
+      establishmentYearInput === undefined || establishmentYearInput === null || establishmentYearInput === ""
+        ? undefined
+        : Number(establishmentYearInput);
+    const serviceTags = Array.from(
+      new Set(
+        serviceTagsInput
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .slice(0, 100)
+      )
+    );
 
     if (!email && !phone) {
       return res.status(400).json({ ok: false, message: "Email or phone is required" });
@@ -678,6 +730,18 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Shop closing time must be in HH:MM format" });
     }
 
+    if (businessCategoryId && !OBJECT_ID_REGEX.test(businessCategoryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid business category" });
+    }
+
+    if (businessSubcategoryId && !OBJECT_ID_REGEX.test(businessSubcategoryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid business subcategory" });
+    }
+
+    if (!isValidEstablishmentYear(establishmentYear)) {
+      return res.status(400).json({ ok: false, message: "Invalid establishment year" });
+    }
+
     if (role === "vendor") {
       if (!businessName || !businessEmail || !businessPhone) {
         return res.status(400).json({
@@ -685,6 +749,106 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
           message: "Business name, business email and business phone are required for vendors",
         });
       }
+
+      if (idProofType && !ID_PROOF_TYPES.has(idProofType)) {
+        return res.status(400).json({ ok: false, message: "Invalid ID proof type" });
+      }
+
+      if (idProofType === "aadhaar" && idProofNumber && !AADHAAR_REGEX.test(idProofNumber)) {
+        return res.status(400).json({ ok: false, message: "Aadhaar number must be exactly 12 digits" });
+      }
+
+      if (idProofDocument) {
+        if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocument)) {
+          return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
+        }
+
+        if (idProofDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
+          return res.status(400).json({ ok: false, message: "ID proof document is too large" });
+        }
+      }
+
+      if (gstDocument) {
+        if (!DOCUMENT_DATA_URL_REGEX.test(gstDocument)) {
+          return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+        }
+
+        if (gstDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
+          return res.status(400).json({ ok: false, message: "GST document is too large" });
+        }
+      }
+    }
+
+    let category = null;
+    if (role === "vendor" && businessCategoryId) {
+      category = await Category.findById(businessCategoryId).select(
+        "_id name customFormEnabled customFormTitle customFormFields"
+      );
+
+      if (!category) {
+        return res.status(400).json({ ok: false, message: "Selected business category is invalid" });
+      }
+    }
+
+    let subcategory = null;
+    if (role === "vendor" && businessSubcategoryId) {
+      if (!category) {
+        return res.status(400).json({ ok: false, message: "Select a business category before subcategory" });
+      }
+
+      subcategory = await Subcategory.findOne({
+        _id: businessSubcategoryId,
+        category: category._id,
+      }).select("_id name customFormEnabled customFormTitle customFormFields");
+
+      if (!subcategory) {
+        return res.status(400).json({ ok: false, message: "Selected business subcategory is invalid" });
+      }
+    }
+
+    let resolvedCity = city || undefined;
+    let resolvedSublocality = sublocality || undefined;
+    let resolvedState = state || undefined;
+
+    if (role === "vendor") {
+      if (city) {
+        const cityRecord = await City.findOne({ name: toExactRegex(city), isActive: true }).select("name state localities");
+        if (!cityRecord) {
+          return res.status(400).json({ ok: false, message: "Selected city is invalid or inactive" });
+        }
+
+        resolvedCity = cityRecord.name;
+        resolvedState = state || String(cityRecord.state || "").trim() || undefined;
+
+        if (sublocality) {
+          const matchedLocality = (Array.isArray(cityRecord.localities) ? cityRecord.localities : []).find(
+            (locality) => locality.isActive !== false && toExactRegex(sublocality).test(String(locality.name || ""))
+          );
+
+          if (!matchedLocality) {
+            return res.status(400).json({ ok: false, message: "Selected sublocality is invalid for the selected city" });
+          }
+
+          resolvedSublocality = matchedLocality.name;
+        }
+      } else if (sublocality) {
+        return res.status(400).json({ ok: false, message: "Select city before sublocality" });
+      }
+    }
+
+    let customFormData = {};
+    if (role === "vendor") {
+      const effectiveCustomForm = resolveEffectiveCustomForm({
+        category,
+        subcategory,
+      });
+
+      const customDataValidation = validateCustomFormData(customFormDataInput, effectiveCustomForm.fields);
+      if (!customDataValidation.ok) {
+        return res.status(400).json({ ok: false, message: customDataValidation.message || "Invalid custom form data" });
+      }
+
+      customFormData = customDataValidation.data;
     }
 
     const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
@@ -698,17 +862,28 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       passwordHash,
       vendorStatus: role === "vendor" ? vendorStatusInput || "pending" : "approved",
       businessName: role === "vendor" ? businessName || undefined : undefined,
+      businessCategory: role === "vendor" ? category?._id : undefined,
+      businessSubcategory: role === "vendor" ? subcategory?._id : undefined,
       businessEmail: role === "vendor" ? businessEmail || undefined : undefined,
       businessPhone: role === "vendor" ? businessPhone || undefined : undefined,
       businessAddress: role === "vendor" ? businessAddress || undefined : undefined,
-      city: role === "vendor" ? city || undefined : undefined,
-      sublocality: role === "vendor" ? sublocality || undefined : undefined,
-      state: role === "vendor" ? state || undefined : undefined,
+      city: role === "vendor" ? resolvedCity : undefined,
+      sublocality: role === "vendor" ? resolvedSublocality : undefined,
+      state: role === "vendor" ? resolvedState : undefined,
       postalCode: role === "vendor" ? postalCode || undefined : undefined,
       gstNumber: role === "vendor" ? gstNumber || undefined : undefined,
+      gstDocument: role === "vendor" ? gstDocument || undefined : undefined,
       website: role === "vendor" ? website || undefined : undefined,
       shopOpeningTime: role === "vendor" ? shopOpeningTime || undefined : undefined,
       shopClosingTime: role === "vendor" ? shopClosingTime || undefined : undefined,
+      establishmentYear: role === "vendor" ? establishmentYear : undefined,
+      serviceTags: role === "vendor" ? serviceTags : [],
+      businessDescription: role === "vendor" ? businessDescription || undefined : undefined,
+      idProofType: role === "vendor" ? idProofType || undefined : undefined,
+      idProofNumber: role === "vendor" ? idProofNumber || undefined : undefined,
+      idProofDocument: role === "vendor" ? idProofDocument || undefined : undefined,
+      marketingOptIn: role === "vendor" ? marketingOptIn : false,
+      customFormData: role === "vendor" && Object.keys(customFormData).length > 0 ? customFormData : undefined,
     });
 
     return res.status(201).json({
@@ -811,6 +986,7 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
         user.idProofNumber = undefined;
         user.idProofDocument = undefined;
         user.marketingOptIn = false;
+        user.customFormData = undefined;
         user.vendorReviewNote = undefined;
       } else if (!user.vendorStatus) {
         user.vendorStatus = "pending";
@@ -880,6 +1056,36 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
 
         user.businessSubcategory = subcategory._id;
       }
+    }
+
+    const categoryOrSubcategoryChanged =
+      req.body?.businessCategoryId !== undefined || req.body?.businessSubcategoryId !== undefined;
+
+    if (req.body?.customFormData !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const category = user.businessCategory
+        ? await Category.findById(user.businessCategory).select("_id name customFormEnabled customFormTitle customFormFields")
+        : null;
+      const subcategory = user.businessSubcategory
+        ? await Subcategory.findById(user.businessSubcategory).select("_id name customFormEnabled customFormTitle customFormFields")
+        : null;
+
+      const effectiveCustomForm = resolveEffectiveCustomForm({
+        category,
+        subcategory,
+      });
+
+      const customDataValidation = validateCustomFormData(req.body.customFormData, effectiveCustomForm.fields);
+      if (!customDataValidation.ok) {
+        return res.status(400).json({ ok: false, message: customDataValidation.message || "Invalid custom form data" });
+      }
+
+      user.customFormData =
+        Object.keys(customDataValidation.data).length > 0 ? customDataValidation.data : undefined;
+    } else if (user.role === "vendor" && categoryOrSubcategoryChanged) {
+      user.customFormData = undefined;
     }
 
     if (req.body?.businessEmail !== undefined) {
@@ -1165,8 +1371,8 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
     }
 
     await user.save();
-    await user.populate("businessCategory", "_id name");
-    await user.populate("businessSubcategory", "_id name");
+    await user.populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields");
+    await user.populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
@@ -1224,7 +1430,7 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
 
     const categories = await Category.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description isActive sortOrder createdAt updatedAt");
+      .select("_id name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt");
 
     return res.status(200).json({
       ok: true,
@@ -1242,6 +1448,9 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
     const sortOrderInput = req.body?.sortOrder;
     const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
+    const customFormEnabled = req.body?.customFormEnabled !== undefined ? Boolean(req.body.customFormEnabled) : false;
+    const customFormTitle = String(req.body?.customFormTitle || "").trim();
+    const customFormFields = sanitizeCustomFormFields(req.body?.customFormFields);
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Category name is required" });
@@ -1255,6 +1464,9 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       description: description || undefined,
       isActive,
       sortOrder,
+      customFormEnabled,
+      customFormTitle: customFormEnabled ? customFormTitle || undefined : undefined,
+      customFormFields: customFormEnabled ? customFormFields : [],
       createdBy: req.adminUser._id,
     });
 
@@ -1308,6 +1520,24 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
         return res.status(400).json({ ok: false, message: "Invalid sort order" });
       }
       category.sortOrder = numericSort;
+    }
+
+    if (req.body?.customFormEnabled !== undefined) {
+      category.customFormEnabled = Boolean(req.body.customFormEnabled);
+    }
+
+    if (req.body?.customFormTitle !== undefined) {
+      const title = String(req.body.customFormTitle || "").trim();
+      category.customFormTitle = title || undefined;
+    }
+
+    if (req.body?.customFormFields !== undefined) {
+      category.customFormFields = sanitizeCustomFormFields(req.body.customFormFields);
+    }
+
+    if (!category.customFormEnabled) {
+      category.customFormTitle = undefined;
+      category.customFormFields = [];
     }
 
     await category.save();
@@ -1364,7 +1594,7 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description isActive sortOrder createdAt updatedAt")
+      .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name");
 
@@ -1386,6 +1616,9 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
     const sortOrderInput = req.body?.sortOrder;
     const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
+    const customFormEnabled = req.body?.customFormEnabled !== undefined ? Boolean(req.body.customFormEnabled) : false;
+    const customFormTitle = String(req.body?.customFormTitle || "").trim();
+    const customFormFields = sanitizeCustomFormFields(req.body?.customFormFields);
 
     if (!categoryId || !OBJECT_ID_REGEX.test(categoryId)) {
       return res.status(400).json({ ok: false, message: "Valid category is required" });
@@ -1426,6 +1659,9 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
       description: description || undefined,
       isActive,
       sortOrder,
+      customFormEnabled,
+      customFormTitle: customFormEnabled ? customFormTitle || undefined : undefined,
+      customFormFields: customFormEnabled ? customFormFields : [],
       createdBy: req.adminUser._id,
     });
 
@@ -1562,6 +1798,24 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
         return res.status(400).json({ ok: false, message: "Invalid sort order" });
       }
       subcategory.sortOrder = numericSort;
+    }
+
+    if (req.body?.customFormEnabled !== undefined) {
+      subcategory.customFormEnabled = Boolean(req.body.customFormEnabled);
+    }
+
+    if (req.body?.customFormTitle !== undefined) {
+      const title = String(req.body.customFormTitle || "").trim();
+      subcategory.customFormTitle = title || undefined;
+    }
+
+    if (req.body?.customFormFields !== undefined) {
+      subcategory.customFormFields = sanitizeCustomFormFields(req.body.customFormFields);
+    }
+
+    if (!subcategory.customFormEnabled) {
+      subcategory.customFormTitle = undefined;
+      subcategory.customFormFields = [];
     }
 
     await subcategory.save();
@@ -1897,6 +2151,92 @@ router.patch("/admin/cities/:cityId/localities/:localityId", requireAdmin, async
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to update locality", error: error.message });
+  }
+});
+
+router.delete("/admin/cities/:id", requireAdmin, async (req, res) => {
+  try {
+    const cityId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(cityId)) {
+      return res.status(400).json({ ok: false, message: "Invalid city id" });
+    }
+
+    const city = await City.findById(cityId);
+    if (!city) {
+      return res.status(404).json({ ok: false, message: "City not found" });
+    }
+
+    const cityName = String(city.name || "").trim();
+    const updateResult = await User.updateMany(
+      {
+        role: "vendor",
+        city: toExactRegex(cityName),
+      },
+      {
+        $unset: {
+          city: "",
+          sublocality: "",
+          state: "",
+        },
+      }
+    );
+
+    await city.deleteOne();
+
+    return res.status(200).json({
+      ok: true,
+      message: "City deleted",
+      affectedVendors: Number(updateResult.modifiedCount || 0),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete city", error: error.message });
+  }
+});
+
+router.delete("/admin/cities/:cityId/localities/:localityId", requireAdmin, async (req, res) => {
+  try {
+    const cityId = String(req.params.cityId || "").trim();
+    const localityId = String(req.params.localityId || "").trim();
+
+    if (!OBJECT_ID_REGEX.test(cityId) || !OBJECT_ID_REGEX.test(localityId)) {
+      return res.status(400).json({ ok: false, message: "Invalid city/locality id" });
+    }
+
+    const city = await City.findById(cityId);
+    if (!city) {
+      return res.status(404).json({ ok: false, message: "City not found" });
+    }
+
+    const locality = city.localities.id(localityId);
+    if (!locality) {
+      return res.status(404).json({ ok: false, message: "Locality not found" });
+    }
+
+    const localityName = String(locality.name || "").trim();
+    locality.deleteOne();
+    await city.save();
+
+    const updateResult = await User.updateMany(
+      {
+        role: "vendor",
+        city: toExactRegex(String(city.name || "")),
+        sublocality: toExactRegex(localityName),
+      },
+      {
+        $unset: {
+          sublocality: "",
+        },
+      }
+    );
+
+    return res.status(200).json({
+      ok: true,
+      message: "Locality deleted",
+      affectedVendors: Number(updateResult.modifiedCount || 0),
+      city: toCitySummary(city, true),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete locality", error: error.message });
   }
 });
 

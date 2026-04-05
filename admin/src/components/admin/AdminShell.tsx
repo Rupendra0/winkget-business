@@ -5,8 +5,9 @@ import { Suspense, type FormEvent, type ReactNode, useCallback, useEffect, useMe
 import CommandPalette from "@/components/admin/CommandPalette";
 import Navbar from "@/components/admin/Navbar";
 import Sidebar from "@/components/admin/Sidebar";
-import { findSidebarItem, findSidebarSectionByPath, SIDEBAR_SECTIONS } from "@/data/adminNavigation";
+import { findSidebarItem, findSidebarSectionByPath, SIDEBAR_SECTIONS, type SidebarSection } from "@/data/adminNavigation";
 import {
+  fetchDashboard,
   fetchAdminSession,
   loginAsAdmin,
   logoutAdmin,
@@ -20,6 +21,7 @@ type AdminShellProps = {
   subtitle?: string;
   children: ReactNode;
   showPageIntro?: boolean;
+  sidebarSections?: SidebarSection[];
 };
 
 export default function AdminShell(props: AdminShellProps) {
@@ -30,7 +32,7 @@ export default function AdminShell(props: AdminShellProps) {
   );
 }
 
-function AdminShellInner({ title, subtitle, children, showPageIntro = true }: AdminShellProps) {
+function AdminShellInner({ title, subtitle, children, showPageIntro = true, sidebarSections }: AdminShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -47,6 +49,31 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+
+  const sections = useMemo(() => {
+    const baseSections =
+      sidebarSections ||
+      SIDEBAR_SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.map((item) => ({ ...item })),
+      }));
+
+    return baseSections.map((section) => {
+      if (section.id !== "users-partners") return section;
+
+      return {
+        ...section,
+        items: section.items.map((item) => {
+          if (item.id !== "verification-pending") return item;
+          return {
+            ...item,
+            badgeCount: pendingVerificationCount,
+          };
+        }),
+      };
+    });
+  }, [pendingVerificationCount, sidebarSections]);
 
   const currentSearch = searchParams.get("q") || "";
   const activeItemId = searchParams.get("view");
@@ -99,6 +126,32 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setPendingVerificationCount(0);
+      return;
+    }
+
+    let active = true;
+
+    const loadBadgeCounts = async () => {
+      try {
+        const payload = await fetchDashboard();
+        if (!active) return;
+        setPendingVerificationCount(Number(payload.stats?.pendingVendors || 0));
+      } catch {
+        if (!active) return;
+        setPendingVerificationCount(0);
+      }
+    };
+
+    void loadBadgeCounts();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     setSearchDraft(currentSearch);
@@ -258,7 +311,7 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
       <div className="flex min-h-screen">
         <div className="hidden lg:block">
           <Sidebar
-            sections={SIDEBAR_SECTIONS}
+            sections={sections}
             pathname={pathname}
             activeItemId={activeItemId}
             collapsed={desktopCollapsed}
@@ -272,7 +325,7 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
 
         <div className="fixed inset-y-0 left-0 z-30 lg:hidden" style={{ transform: mobileSidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 160ms ease" }}>
           <Sidebar
-            sections={SIDEBAR_SECTIONS}
+            sections={sections}
             pathname={pathname}
             activeItemId={activeItemId}
             collapsed={false}
@@ -315,7 +368,7 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true }: Ad
 
       <CommandPalette
         open={paletteOpen}
-        sections={SIDEBAR_SECTIONS}
+        sections={sections}
         onClose={() => setPaletteOpen(false)}
         onSelect={navigateToItem}
       />

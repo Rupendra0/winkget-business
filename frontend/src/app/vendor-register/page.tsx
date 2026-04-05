@@ -12,6 +12,9 @@ type CategoryOption = {
   name: string;
   slug: string;
   description?: string;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 };
 
 type SubcategoryOption = {
@@ -19,6 +22,9 @@ type SubcategoryOption = {
   name: string;
   slug: string;
   description?: string;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
   category?: {
     id: string;
     name: string;
@@ -42,6 +48,37 @@ type CityOption = {
   state?: string;
   localities: CityLocalityOption[];
 };
+
+type CustomFormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "select"
+  | "multi-select"
+  | "email"
+  | "phone"
+  | "url";
+
+type CustomFormField = {
+  key: string;
+  label: string;
+  type: CustomFormFieldType;
+  required: boolean;
+  placeholder?: string;
+  helpText?: string;
+  options?: string[];
+  span?: 6 | 12;
+  sortOrder: number;
+};
+
+type EffectiveCustomForm = {
+  source: "none" | "category" | "subcategory";
+  title?: string;
+  fields: CustomFormField[];
+};
+
+type CustomFormDataMap = Record<string, string | number | string[]>;
 
 type VendorFormState = {
   businessName: string;
@@ -73,6 +110,7 @@ type VendorFormState = {
   idProofNumber: string;
   idProofDocument: string;
   marketingOptIn: boolean;
+  customFormData: CustomFormDataMap;
 };
 
 const STEP_META = [
@@ -142,6 +180,192 @@ const INITIAL_FORM: VendorFormState = {
   idProofNumber: "",
   idProofDocument: "",
   marketingOptIn: false,
+  customFormData: {},
+};
+
+const sortAndNormalizeCustomFields = (fields?: CustomFormField[]): CustomFormField[] => {
+  if (!Array.isArray(fields)) return [];
+
+  const seen = new Set<string>();
+  const next: CustomFormField[] = [];
+
+  fields.forEach((field, index) => {
+    const label = String(field?.label || "").trim();
+    if (!label) return;
+
+    const key = String(field?.key || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+
+    const type = String(field?.type || "text") as CustomFormFieldType;
+    const supportedType = ["text", "textarea", "number", "date", "select", "multi-select", "email", "phone", "url"].includes(type)
+      ? type
+      : "text";
+
+    next.push({
+      key,
+      label,
+      type: supportedType,
+      required: Boolean(field?.required),
+      placeholder: String(field?.placeholder || "").trim() || undefined,
+      helpText: String(field?.helpText || "").trim() || undefined,
+      options: Array.isArray(field?.options)
+        ? field.options.map((option) => String(option || "").trim()).filter(Boolean)
+        : [],
+      span: field?.span === 6 ? 6 : 12,
+      sortOrder: Number.isFinite(Number(field?.sortOrder)) ? Number(field.sortOrder) : (index + 1) * 10,
+    });
+  });
+
+  return next.sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+    return left.label.localeCompare(right.label);
+  });
+};
+
+const resolveEffectiveCustomForm = (
+  category: CategoryOption | null,
+  subcategory: SubcategoryOption | null
+): EffectiveCustomForm => {
+  const subcategoryFields = sortAndNormalizeCustomFields(subcategory?.customFormFields);
+  if (subcategory?.customFormEnabled && subcategoryFields.length > 0) {
+    return {
+      source: "subcategory",
+      title: String(subcategory.customFormTitle || "").trim() || subcategory.name || "Additional details",
+      fields: subcategoryFields,
+    };
+  }
+
+  const categoryFields = sortAndNormalizeCustomFields(category?.customFormFields);
+  if (category?.customFormEnabled && categoryFields.length > 0) {
+    return {
+      source: "category",
+      title: String(category.customFormTitle || "").trim() || category.name || "Additional details",
+      fields: categoryFields,
+    };
+  }
+
+  return {
+    source: "none",
+    title: "",
+    fields: [],
+  };
+};
+
+const retainCustomFormDataForFields = (data: CustomFormDataMap, fields: CustomFormField[]) => {
+  const nextData: CustomFormDataMap = {};
+
+  fields.forEach((field) => {
+    const current = data[field.key];
+    if (Array.isArray(current)) {
+      nextData[field.key] = current;
+      return;
+    }
+
+    if (typeof current === "number" && Number.isFinite(current)) {
+      nextData[field.key] = current;
+      return;
+    }
+
+    if (typeof current === "string") {
+      nextData[field.key] = current;
+      return;
+    }
+
+    nextData[field.key] = field.type === "multi-select" ? [] : "";
+  });
+
+  return nextData;
+};
+
+const areCustomMapsEqual = (left: CustomFormDataMap, right: CustomFormDataMap) => {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    const leftValue = left[key];
+    const rightValue = right[key];
+
+    if (Array.isArray(leftValue) || Array.isArray(rightValue)) {
+      if (!Array.isArray(leftValue) || !Array.isArray(rightValue)) return false;
+      if (leftValue.length !== rightValue.length) return false;
+      if (leftValue.some((value, index) => value !== rightValue[index])) return false;
+      continue;
+    }
+
+    if (leftValue !== rightValue) return false;
+  }
+
+  return true;
+};
+
+const validateCustomFormRequired = (data: CustomFormDataMap, fields: CustomFormField[]): string | null => {
+  for (const field of fields) {
+    if (!field.required) continue;
+
+    const value = data[field.key];
+    if (field.type === "multi-select") {
+      const values = Array.isArray(value) ? value : [];
+      if (values.length === 0) return `${field.label} is required`;
+      continue;
+    }
+
+    if (!String(value || "").trim()) {
+      return `${field.label} is required`;
+    }
+  }
+
+  return null;
+};
+
+const serializeCustomFormDataForPayload = (data: CustomFormDataMap, fields: CustomFormField[]) => {
+  const payload: CustomFormDataMap = {};
+
+  fields.forEach((field) => {
+    const value = data[field.key];
+
+    if (field.type === "multi-select") {
+      const values = Array.isArray(value)
+        ? Array.from(new Set(value.map((entry) => String(entry || "").trim()).filter(Boolean)))
+        : [];
+      if (values.length > 0) {
+        payload[field.key] = values;
+      }
+      return;
+    }
+
+    const raw = typeof value === "number" ? String(value) : String(value || "").trim();
+    if (!raw) return;
+
+    if (field.type === "number") {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        payload[field.key] = numeric;
+      }
+      return;
+    }
+
+    payload[field.key] = raw;
+  });
+
+  return payload;
+};
+
+const formatCustomDataValue = (value: string | number | string[] | undefined) => {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "-";
+  }
+
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  return String(value || "").trim() || "-";
 };
 
 const buildSubcategoryLabelMap = (items: SubcategoryOption[]) => {
@@ -436,6 +660,38 @@ export default function VendorRegisterPage() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const updateCustomFieldValue = (fieldKey: string, value: string | number | string[]) => {
+    setForm((current) => ({
+      ...current,
+      customFormData: {
+        ...current.customFormData,
+        [fieldKey]: value,
+      },
+    }));
+  };
+
+  const toggleCustomFieldOption = (fieldKey: string, option: string, checked: boolean) => {
+    setForm((current) => {
+      const currentValues = Array.isArray(current.customFormData[fieldKey])
+        ? (current.customFormData[fieldKey] as string[])
+        : [];
+
+      const nextValues = checked
+        ? currentValues.includes(option)
+          ? currentValues
+          : [...currentValues, option]
+        : currentValues.filter((entry) => entry !== option);
+
+      return {
+        ...current,
+        customFormData: {
+          ...current.customFormData,
+          [fieldKey]: nextValues,
+        },
+      };
+    });
+  };
+
   const currentStepMeta = useMemo(() => STEP_META.find((item) => item.number === step) ?? STEP_META[0], [step]);
 
   const subcategoryLabelMap = useMemo(() => buildSubcategoryLabelMap(subcategories), [subcategories]);
@@ -454,10 +710,39 @@ export default function VendorRegisterPage() {
     [cities, form.city]
   );
 
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === form.businessCategoryId) || null,
+    [categories, form.businessCategoryId]
+  );
+
+  const selectedSubcategory = useMemo(
+    () => subcategories.find((subcategory) => subcategory.id === form.businessSubcategoryId) || null,
+    [form.businessSubcategoryId, subcategories]
+  );
+
+  const effectiveCustomForm = useMemo(
+    () => resolveEffectiveCustomForm(selectedCategory, selectedSubcategory),
+    [selectedCategory, selectedSubcategory]
+  );
+
   const cityLocalities = useMemo(
     () => (selectedCity && Array.isArray(selectedCity.localities) ? selectedCity.localities : []),
     [selectedCity]
   );
+
+  useEffect(() => {
+    setForm((current) => {
+      const nextCustomFormData = retainCustomFormDataForFields(current.customFormData, effectiveCustomForm.fields);
+      if (areCustomMapsEqual(current.customFormData, nextCustomFormData)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        customFormData: nextCustomFormData,
+      };
+    });
+  }, [effectiveCustomForm.fields]);
 
   const validateStepOne = () => {
     if (!form.ownerName.trim()) return "Owner name is required";
@@ -490,6 +775,11 @@ export default function VendorRegisterPage() {
       if (Number.isNaN(year) || year < 1900 || year > currentYear) {
         return "Establishment year must be between 1900 and current year";
       }
+    }
+
+    const customFieldError = validateCustomFormRequired(form.customFormData, effectiveCustomForm.fields);
+    if (customFieldError) {
+      return customFieldError;
     }
 
     return null;
@@ -658,6 +948,7 @@ export default function VendorRegisterPage() {
           idProofNumber: form.idProofNumber.trim(),
           idProofDocument: form.idProofDocument,
           marketingOptIn: form.marketingOptIn,
+          customFormData: serializeCustomFormDataForPayload(form.customFormData, effectiveCustomForm.fields),
         }),
       });
 
@@ -941,6 +1232,135 @@ export default function VendorRegisterPage() {
                     {loadingSubcategories ? <p className="mt-1 text-xs text-slate-500">Loading subcategories...</p> : null}
                     {subcategoryLoadError ? <p className="mt-1 text-xs text-red-600">{subcategoryLoadError}</p> : null}
                   </label>
+
+                  <div className="sm:col-span-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-800">
+                        {effectiveCustomForm.title || "Additional details"}
+                      </p>
+                      <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700">
+                        {effectiveCustomForm.source}
+                      </span>
+                    </div>
+
+                    {effectiveCustomForm.fields.length === 0 ? (
+                      <p className="mt-2 text-xs text-sky-700">
+                        No extra fields configured for this category/subcategory.
+                      </p>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-12 gap-3">
+                        {effectiveCustomForm.fields.map((field) => {
+                          const rawValue = form.customFormData[field.key];
+                          const value = Array.isArray(rawValue)
+                            ? rawValue
+                            : typeof rawValue === "number"
+                              ? String(rawValue)
+                              : String(rawValue || "");
+
+                          return (
+                            <label
+                              key={field.key}
+                              className={`block space-y-1 ${field.span === 6 ? "col-span-12 sm:col-span-6" : "col-span-12"}`}
+                            >
+                              <span className="block text-sm font-medium text-slate-700">
+                                {field.label}
+                                {field.required ? <RequiredMark /> : null}
+                              </span>
+
+                              {field.type === "textarea" ? (
+                                <textarea
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                                  rows={2}
+                                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                                  placeholder={field.placeholder || "Enter details"}
+                                />
+                              ) : null}
+
+                              {field.type === "select" ? (
+                                <select
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                                >
+                                  <option value="">Select {field.label}</option>
+                                  {(field.options || []).map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : null}
+
+                              {field.type === "multi-select" ? (
+                                (field.options || []).length > 0 ? (
+                                  <div className="grid gap-1 rounded-xl border border-slate-200 bg-white p-2.5">
+                                    {(field.options || []).map((option) => {
+                                      const selectedValues = Array.isArray(rawValue) ? rawValue : [];
+                                      const checked = selectedValues.includes(option);
+
+                                      return (
+                                        <label key={option} className="inline-flex items-center gap-2 text-xs text-slate-700">
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={(event) =>
+                                              toggleCustomFieldOption(field.key, option, event.target.checked)
+                                            }
+                                            className="h-3.5 w-3.5"
+                                          />
+                                          {option}
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <input
+                                    value={Array.isArray(rawValue) ? rawValue.join(", ") : ""}
+                                    onChange={(event) =>
+                                      updateCustomFieldValue(
+                                        field.key,
+                                        event.target.value
+                                          .split(",")
+                                          .map((entry) => entry.trim())
+                                          .filter(Boolean)
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                                    placeholder={field.placeholder || "Comma separated values"}
+                                  />
+                                )
+                              ) : null}
+
+                              {!["textarea", "select", "multi-select"].includes(field.type) ? (
+                                <input
+                                  type={
+                                    field.type === "number"
+                                      ? "number"
+                                      : field.type === "date"
+                                        ? "date"
+                                        : field.type === "email"
+                                          ? "email"
+                                          : field.type === "url"
+                                            ? "url"
+                                            : field.type === "phone"
+                                              ? "tel"
+                                              : "text"
+                                  }
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                                  placeholder={field.placeholder || "Enter value"}
+                                />
+                              ) : null}
+
+                              {field.helpText ? <p className="text-xs text-slate-500">{field.helpText}</p> : null}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <label className="sm:col-span-2 block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -1304,6 +1724,16 @@ export default function VendorRegisterPage() {
                     <p>Location: {[form.sublocality, form.city, form.state].filter(Boolean).join(", ") || "-"}</p>
                     <p>Established: {form.establishmentYear || "-"}</p>
                     <p>Services: {form.serviceTags.length > 0 ? form.serviceTags.join(", ") : "-"}</p>
+                    {effectiveCustomForm.fields.length > 0 ? (
+                      <>
+                        <p className="mt-1 font-semibold text-slate-700">{effectiveCustomForm.title || "Additional details"}</p>
+                        {effectiveCustomForm.fields.map((field) => (
+                          <p key={field.key}>
+                            {field.label}: {formatCustomDataValue(form.customFormData[field.key])}
+                          </p>
+                        ))}
+                      </>
+                    ) : null}
                     <p>GST doc: {selectedGstDocumentName || "Not uploaded"}</p>
                     <p>ID doc: {selectedIdDocumentName || "Not uploaded"}</p>
                   </div>

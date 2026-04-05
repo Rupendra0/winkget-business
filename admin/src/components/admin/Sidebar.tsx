@@ -14,6 +14,16 @@ type SidebarProps = {
 export default function Sidebar({ sections, pathname, activeItemId, collapsed, onNavigate }: SidebarProps) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
+  const sectionBadgeTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+
+    sections.forEach((section) => {
+      totals[section.id] = section.items.reduce((count, item) => count + Math.max(0, Number(item.badgeCount || 0)), 0);
+    });
+
+    return totals;
+  }, [sections]);
+
   const resolvedOpenSections = useMemo(() => {
     const defaults: Record<string, boolean> = {};
     sections.forEach((section) => {
@@ -41,6 +51,7 @@ export default function Sidebar({ sections, pathname, activeItemId, collapsed, o
           {sections.map((section) => {
             const sectionOpen = resolvedOpenSections[section.id] ?? true;
             const sectionActive = pathname.startsWith(section.route);
+            const sectionBadgeCount = sectionBadgeTotals[section.id] || 0;
 
             return (
               <div key={section.id} className="rounded-xl border border-(--border) bg-(--surface-muted)/50">
@@ -56,7 +67,14 @@ export default function Sidebar({ sections, pathname, activeItemId, collapsed, o
                     sectionActive ? "text-(--text-strong)" : "text-(--text-soft)"
                   }`}
                 >
-                  <span className="truncate">{collapsed ? section.title.charAt(0) : section.title}</span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
+                    <span className="truncate">{collapsed ? section.title.charAt(0) : section.title}</span>
+                    {sectionBadgeCount > 0 && !collapsed ? (
+                      <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {sectionBadgeCount}
+                      </span>
+                    ) : null}
+                  </span>
                   {!collapsed ? <span>{sectionOpen ? "-" : "+"}</span> : null}
                 </button>
 
@@ -75,7 +93,14 @@ export default function Sidebar({ sections, pathname, activeItemId, collapsed, o
                               : "text-(--text-soft) hover:bg-(--surface-hover)"
                           }`}
                         >
-                          {item.label}
+                          <span className="inline-flex w-full items-center justify-between gap-1.5">
+                            <span className="truncate">{item.label}</span>
+                            {Number(item.badgeCount || 0) > 0 ? (
+                              <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {item.badgeCount}
+                              </span>
+                            ) : null}
+                          </span>
                         </button>
                       );
                     })}

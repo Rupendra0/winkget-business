@@ -19,8 +19,10 @@ import {
   type AdminCategory,
   type AdminSubcategory,
 } from "@/lib/adminApi";
+import { type CustomFormField } from "@/lib/adminClient";
 
 type ModalMode = "category" | "subcategory" | "secondary";
+type ModalIntent = "create" | "edit";
 type NodeRefType = TreeNode["type"];
 
 const ROOT_PARENT_KEY = "root";
@@ -30,17 +32,122 @@ const byOrderThenName = <T extends { sortOrder: number; name: string }>(a: T, b:
   return a.name.localeCompare(b.name);
 };
 
-function reorderAfter(items: string[], sourceId: string, targetId: string) {
-  const withoutSource = items.filter((id) => id !== sourceId);
-  const targetIndex = withoutSource.indexOf(targetId);
-  if (targetIndex < 0) {
-    return [...withoutSource, sourceId];
-  }
+const CUSTOM_FIELD_TYPE_OPTIONS: Array<{ value: CustomFormField["type"]; label: string }> = [
+  { value: "text", label: "Text" },
+  { value: "textarea", label: "Long Text" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "url", label: "URL" },
+  { value: "select", label: "Single Select" },
+  { value: "multi-select", label: "Multi Select" },
+];
 
-  const reordered = [...withoutSource];
-  reordered.splice(targetIndex + 1, 0, sourceId);
-  return reordered;
-}
+type DraftCustomFormField = {
+  draftId: string;
+  key: string;
+  label: string;
+  type: CustomFormField["type"];
+  required: boolean;
+  placeholder: string;
+  helpText: string;
+  optionsText: string;
+  span: 6 | 12;
+  sortOrder: string;
+};
+
+const createDraftId = () => `field-${Date.now()}-${Math.round(Math.random() * 100000)}`;
+
+const toFieldKey = (value: string) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48);
+
+const createDraftCustomField = (index = 0): DraftCustomFormField => ({
+  draftId: createDraftId(),
+  key: "",
+  label: "",
+  type: "text",
+  required: false,
+  placeholder: "",
+  helpText: "",
+  optionsText: "",
+  span: 12,
+  sortOrder: String((index + 1) * 10),
+});
+
+const toDraftCustomFormFields = (fields: CustomFormField[] | undefined): DraftCustomFormField[] => {
+  const source = Array.isArray(fields) ? [...fields] : [];
+  source.sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+    return left.label.localeCompare(right.label);
+  });
+
+  return source.map((field, index) => ({
+    draftId: createDraftId(),
+    key: String(field.key || ""),
+    label: String(field.label || ""),
+    type: field.type,
+    required: Boolean(field.required),
+    placeholder: String(field.placeholder || ""),
+    helpText: String(field.helpText || ""),
+    optionsText: Array.isArray(field.options) ? field.options.join(", ") : "",
+    span: field.span === 6 ? 6 : 12,
+    sortOrder: Number.isFinite(Number(field.sortOrder)) ? String(field.sortOrder) : String((index + 1) * 10),
+  }));
+};
+
+const toCustomFormFieldsPayload = (
+  customFormEnabled: boolean,
+  draftFields: DraftCustomFormField[]
+): CustomFormField[] => {
+  if (!customFormEnabled) return [];
+
+  const usedKeys = new Set<string>();
+  const nextFields: CustomFormField[] = [];
+
+  draftFields.forEach((draftField, index) => {
+    const label = String(draftField.label || "").trim().slice(0, 80);
+    if (!label) return;
+
+    const desiredKey = toFieldKey(draftField.key || draftField.label) || `field_${index + 1}`;
+    let nextKey = desiredKey;
+    let suffix = 2;
+
+    while (usedKeys.has(nextKey)) {
+      nextKey = `${desiredKey}_${suffix}`;
+      suffix += 1;
+    }
+    usedKeys.add(nextKey);
+
+    const options = String(draftField.optionsText || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 60);
+
+    nextFields.push({
+      key: nextKey,
+      label,
+      type: draftField.type,
+      required: Boolean(draftField.required),
+      placeholder: String(draftField.placeholder || "").trim() || undefined,
+      helpText: String(draftField.helpText || "").trim() || undefined,
+      options: draftField.type === "select" || draftField.type === "multi-select" ? options : [],
+      span: draftField.span === 6 ? 6 : 12,
+      sortOrder: Number.isFinite(Number(draftField.sortOrder)) ? Number(draftField.sortOrder) : (index + 1) * 10,
+    });
+  });
+
+  return nextFields.sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+    return left.label.localeCompare(right.label);
+  });
+};
 
 export default function CategoriesPage() {
   return (
@@ -60,13 +167,23 @@ function CategoriesPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalIntent, setModalIntent] = useState<ModalIntent>("create");
   const [modalMode, setModalMode] = useState<ModalMode>("category");
   const [modalCategoryId, setModalCategoryId] = useState<string | null>(null);
   const [modalParentSubcategoryId, setModalParentSubcategoryId] = useState<string | null>(null);
+  const [editingNodeRef, setEditingNodeRef] = useState<{ type: "category" | "subcategory"; entityId: string } | null>(
+    null
+  );
+  const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null);
+  const [deleteTargetNode, setDeleteTargetNode] = useState<TreeNode | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [nameInput, setNameInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("0");
   const [activeInput, setActiveInput] = useState(true);
+  const [customFormEnabledInput, setCustomFormEnabledInput] = useState(false);
+  const [customFormTitleInput, setCustomFormTitleInput] = useState("");
+  const [customFormFieldsInput, setCustomFormFieldsInput] = useState<DraftCustomFormField[]>([]);
 
   const { data, error, isLoading, mutate } = useSWR("category-explorer", fetchCategoryExplorer, {
     keepPreviousData: true,
@@ -78,6 +195,14 @@ function CategoriesPageContent() {
   const orderedCategories = useMemo(() => [...categories].sort(byOrderThenName), [categories]);
   const orderedSubcategories = useMemo(() => [...subcategories].sort(byOrderThenName), [subcategories]);
 
+  const categoryById = useMemo(() => {
+    const lookup = new Map<string, AdminCategory>();
+    for (const category of categories) {
+      lookup.set(category.id, category);
+    }
+    return lookup;
+  }, [categories]);
+
   const subcategoryById = useMemo(() => {
     const lookup = new Map<string, AdminSubcategory>();
     for (const subcategory of subcategories) {
@@ -86,7 +211,7 @@ function CategoriesPageContent() {
     return lookup;
   }, [subcategories]);
 
-  const openModal = useCallback(
+  const openCreateModal = useCallback(
     (
       mode: ModalMode,
       context?: {
@@ -115,12 +240,18 @@ function CategoriesPageContent() {
         }
       }
 
+      setModalIntent("create");
       setModalMode(mode);
       setModalCategoryId(nextCategoryId);
       setModalParentSubcategoryId(nextParentSubcategoryId);
+      setEditingNodeRef(null);
+      setEditingSubcategoryId(null);
       setNameInput("");
       setSortOrderInput("0");
       setActiveInput(true);
+      setCustomFormEnabledInput(false);
+      setCustomFormTitleInput("");
+      setCustomFormFieldsInput([]);
       setModalOpen(true);
     },
     [orderedCategories, orderedSubcategories, subcategoryById]
@@ -128,13 +259,13 @@ function CategoriesPageContent() {
 
   useEffect(() => {
     if (viewId === "create-category") {
-      openModal("category");
+      openCreateModal("category");
     } else if (viewId === "create-subcategory") {
-      openModal("subcategory", { categoryId: orderedCategories[0]?.id || null });
+      openCreateModal("subcategory", { categoryId: orderedCategories[0]?.id || null });
     } else if (viewId === "create-secondary-subcategory") {
-      openModal("secondary", { parentSubcategoryId: orderedSubcategories[0]?.id || null });
+      openCreateModal("secondary", { parentSubcategoryId: orderedSubcategories[0]?.id || null });
     }
-  }, [openModal, orderedCategories, orderedSubcategories, viewId]);
+  }, [openCreateModal, orderedCategories, orderedSubcategories, viewId]);
 
   useEffect(() => {
     if (!modalOpen || modalMode === "category") return;
@@ -240,7 +371,64 @@ function CategoriesPageContent() {
     };
   }, []);
 
-  const submitCreate = async () => {
+  const openEditModal = useCallback(
+    (node: TreeNode) => {
+      const { type, entityId } = parseNodeRef(node);
+      setMessage(null);
+      setErrorText(null);
+
+      if (type === "category") {
+        const category = categoryById.get(entityId);
+        if (!category) {
+          setErrorText("Category not found for editing");
+          return;
+        }
+
+        setModalIntent("edit");
+        setModalMode("category");
+        setModalCategoryId(category.id);
+        setModalParentSubcategoryId(null);
+        setEditingNodeRef({ type: "category", entityId });
+        setEditingSubcategoryId(null);
+        setNameInput(category.name || "");
+        setSortOrderInput(String(Number.isFinite(Number(category.sortOrder)) ? category.sortOrder : 0));
+        setActiveInput(Boolean(category.isActive));
+        setCustomFormEnabledInput(Boolean(category.customFormEnabled));
+        setCustomFormTitleInput(String(category.customFormTitle || ""));
+        setCustomFormFieldsInput(toDraftCustomFormFields(category.customFormFields));
+        setModalOpen(true);
+        return;
+      }
+
+      if (type === "subcategory") {
+        const subcategory = subcategoryById.get(entityId);
+        if (!subcategory) {
+          setErrorText("Subcategory not found for editing");
+          return;
+        }
+
+        setModalIntent("edit");
+        setModalMode("subcategory");
+        setModalCategoryId(subcategory.category?.id || node.categoryId || orderedCategories[0]?.id || null);
+        setModalParentSubcategoryId(subcategory.parentSubcategory?.id || null);
+        setEditingNodeRef({ type: "subcategory", entityId });
+        setEditingSubcategoryId(entityId);
+        setNameInput(subcategory.name || "");
+        setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
+        setActiveInput(Boolean(subcategory.isActive));
+        setCustomFormEnabledInput(Boolean(subcategory.customFormEnabled));
+        setCustomFormTitleInput(String(subcategory.customFormTitle || ""));
+        setCustomFormFieldsInput(toDraftCustomFormFields(subcategory.customFormFields));
+        setModalOpen(true);
+        return;
+      }
+
+      setErrorText("This node type cannot be edited.");
+    },
+    [categoryById, orderedCategories, parseNodeRef, subcategoryById]
+  );
+
+  const submitModal = async () => {
     setIsSubmitting(true);
     setMessage(null);
     setErrorText(null);
@@ -256,40 +444,89 @@ function CategoriesPageContent() {
         throw new Error("Sort order must be a number");
       }
 
-      if (modalMode === "category") {
-        await createCategoryNode({
-          name: cleanName,
-          sortOrder: parsedSortOrder,
-          isActive: activeInput,
-        });
-        setMessage("Category created");
-      }
+      const customFormFields = toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput);
+      const customFormEnabled = customFormEnabledInput && customFormFields.length > 0;
+      const customFormTitle = customFormTitleInput.trim();
 
-      if (modalMode === "subcategory" || modalMode === "secondary") {
-        const categoryId = modalCategoryId || orderedCategories[0]?.id;
-        if (!categoryId) {
-          throw new Error("No category available");
+      if (modalIntent === "create") {
+        if (modalMode === "category") {
+          await createCategoryNode({
+            name: cleanName,
+            sortOrder: parsedSortOrder,
+            isActive: activeInput,
+            customFormEnabled,
+            customFormTitle,
+            customFormFields,
+          });
+          setMessage("Category created");
         }
 
-        const parentSubcategoryId = modalParentSubcategoryId || undefined;
-        if (modalMode === "secondary" && !parentSubcategoryId) {
-          throw new Error("Parent subcategory is required for secondary nodes");
+        if (modalMode === "subcategory" || modalMode === "secondary") {
+          const categoryId = modalCategoryId || orderedCategories[0]?.id;
+          if (!categoryId) {
+            throw new Error("No category available");
+          }
+
+          const parentSubcategoryId = modalParentSubcategoryId || undefined;
+          if (modalMode === "secondary" && !parentSubcategoryId) {
+            throw new Error("Parent subcategory is required for secondary nodes");
+          }
+
+          await createSubcategoryNode({
+            categoryId,
+            parentSubcategoryId,
+            name: cleanName,
+            sortOrder: parsedSortOrder,
+            isActive: activeInput,
+            customFormEnabled,
+            customFormTitle,
+            customFormFields,
+          });
+          setMessage(modalMode === "secondary" ? "Secondary subcategory created" : "Subcategory created");
+        }
+      } else {
+        if (!editingNodeRef) {
+          throw new Error("No node selected for editing");
         }
 
-        await createSubcategoryNode({
-          categoryId,
-          parentSubcategoryId,
-          name: cleanName,
-          sortOrder: parsedSortOrder,
-          isActive: activeInput,
-        });
-        setMessage(modalMode === "secondary" ? "Secondary subcategory created" : "Subcategory created");
+        if (editingNodeRef.type === "category") {
+          await updateCategoryNode(editingNodeRef.entityId, {
+            name: cleanName,
+            sortOrder: parsedSortOrder,
+            isActive: activeInput,
+            customFormEnabled,
+            customFormTitle,
+            customFormFields,
+          });
+          setMessage("Category updated");
+        }
+
+        if (editingNodeRef.type === "subcategory") {
+          const categoryId = modalCategoryId || subcategoryById.get(editingNodeRef.entityId)?.category?.id;
+          if (!categoryId) {
+            throw new Error("No category selected for subcategory");
+          }
+
+          await updateSubcategoryNode(editingNodeRef.entityId, {
+            categoryId,
+            parentSubcategoryId: modalParentSubcategoryId || "",
+            name: cleanName,
+            sortOrder: parsedSortOrder,
+            isActive: activeInput,
+            customFormEnabled,
+            customFormTitle,
+            customFormFields,
+          });
+          setMessage("Subcategory updated");
+        }
       }
 
       setModalOpen(false);
+      setEditingNodeRef(null);
+      setEditingSubcategoryId(null);
       await mutate();
     } catch (submitError) {
-      const messageText = submitError instanceof Error ? submitError.message : "Create operation failed";
+      const messageText = submitError instanceof Error ? submitError.message : "Save operation failed";
       setErrorText(messageText);
     } finally {
       setIsSubmitting(false);
@@ -300,275 +537,88 @@ function CategoriesPageContent() {
     const { type, entityId } = parseNodeRef(node);
 
     if (type === "category") {
-      openModal("subcategory", { categoryId: entityId });
+      openCreateModal("subcategory", { categoryId: entityId });
       return;
     }
 
     if (type === "subcategory") {
-      openModal("secondary", {
+      openCreateModal("secondary", {
         categoryId: node.categoryId || subcategoryById.get(entityId)?.category?.id || null,
         parentSubcategoryId: entityId,
       });
       return;
     }
 
-    openModal("secondary", {
+    openCreateModal("secondary", {
       categoryId: node.categoryId || null,
       parentSubcategoryId: node.parentSubcategoryId || null,
     });
   };
 
-  const handleInlineCreate = async (parent: TreeNode | null, label: string) => {
-    const cleanLabel = label.trim();
-    if (!cleanLabel) return;
-
+  const handleDeleteRequest = (node: TreeNode) => {
     setMessage(null);
     setErrorText(null);
-
-    try {
-      if (!parent) {
-        await createCategoryNode({
-          name: cleanLabel,
-          sortOrder: 0,
-          isActive: true,
-        });
-        await mutate();
-        setMessage("Category created");
-        return;
-      }
-
-      const parentRef = parseNodeRef(parent);
-      if (parentRef.type === "category") {
-        await createSubcategoryNode({
-          categoryId: parentRef.entityId,
-          name: cleanLabel,
-          sortOrder: 0,
-          isActive: true,
-        });
-        await mutate();
-        setMessage("Subcategory created");
-        return;
-      }
-
-      if (parentRef.type === "subcategory") {
-        const categoryId = parent.categoryId || subcategoryById.get(parentRef.entityId)?.category?.id;
-        if (!categoryId) {
-          throw new Error("Unable to resolve category for nested create");
-        }
-
-        await createSubcategoryNode({
-          categoryId,
-          parentSubcategoryId: parentRef.entityId,
-          name: cleanLabel,
-          sortOrder: 0,
-          isActive: true,
-        });
-        await mutate();
-        setMessage("Child subcategory created");
-        return;
-      }
-
-      throw new Error("Inline create is unsupported for this node type");
-    } catch (createError) {
-      const messageText = createError instanceof Error ? createError.message : "Unable to create node";
-      setErrorText(messageText);
-    }
+    setDeleteTargetNode(node);
   };
 
-  const handleInlineEdit = async (node: TreeNode, nextLabel: string) => {
-    setMessage(null);
-    setErrorText(null);
+  const confirmDelete = async () => {
+    if (!deleteTargetNode) return;
 
-    const { type, entityId } = parseNodeRef(node);
-
-    try {
-      if (type === "category") {
-        await updateCategoryNode(entityId, { name: nextLabel });
-        await mutate();
-        setMessage("Category updated");
-        return;
-      }
-
-      if (type === "subcategory") {
-        await updateSubcategoryNode(entityId, { name: nextLabel });
-        await mutate();
-        setMessage("Subcategory updated");
-        return;
-      }
-
-      setErrorText("Secondary nodes are not persisted by the current API");
-    } catch (updateError) {
-      const messageText = updateError instanceof Error ? updateError.message : "Unable to update node";
-      setErrorText(messageText);
-    }
-  };
-
-  const handleDelete = async (node: TreeNode) => {
-    const { type, entityId } = parseNodeRef(node);
+    const { type, entityId } = parseNodeRef(deleteTargetNode);
+    setDeleteSubmitting(true);
     setMessage(null);
     setErrorText(null);
 
     try {
       if (type === "category") {
         await deleteCategoryNode(entityId);
-        await mutate();
         setMessage("Category deleted");
-        return;
-      }
-
-      if (type === "subcategory") {
+      } else if (type === "subcategory") {
         await deleteSubcategoryNode(entityId);
-        await mutate();
         setMessage("Subcategory deleted");
-        return;
+      } else {
+        throw new Error("This node type cannot be deleted");
       }
 
-      setErrorText("Secondary nodes are not persisted by the current API");
+      setDeleteTargetNode(null);
+      await mutate();
     } catch (deleteError) {
       const messageText = deleteError instanceof Error ? deleteError.message : "Delete operation failed";
       setErrorText(messageText);
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
-  const getSiblingIds = useCallback(
-    (categoryId: string, parentSubcategoryId: string | null) => {
-      return orderedSubcategories
-        .filter(
-          (subcategory) =>
-            subcategory.category?.id === categoryId &&
-            (subcategory.parentSubcategory?.id || null) === (parentSubcategoryId || null)
-        )
-        .map((subcategory) => subcategory.id);
-    },
-    [orderedSubcategories]
-  );
-
-  const handleMove = async (sourceNode: TreeNode, targetNode: TreeNode) => {
-    const source = parseNodeRef(sourceNode);
-    const target = parseNodeRef(targetNode);
-
-    if (source.type === target.type && source.entityId === target.entityId) {
-      return;
-    }
+  const handleReorder = async (updates: Array<{ node: TreeNode; sortOrder: number }>) => {
+    if (!updates.length) return;
 
     setMessage(null);
     setErrorText(null);
 
     try {
-      if (source.type === "category") {
-        if (target.type !== "category") {
-          throw new Error("Categories can only be reordered against other categories");
-        }
+      await Promise.all(
+        updates.map(async ({ node, sortOrder }) => {
+          const { type, entityId } = parseNodeRef(node);
 
-        const currentOrder = orderedCategories.map((category) => category.id);
-        const nextOrder = reorderAfter(currentOrder, source.entityId, target.entityId);
-        const isSameOrder = nextOrder.every((id, index) => id === currentOrder[index]);
-        if (isSameOrder) return;
+          if (type === "category") {
+            await updateCategoryNode(entityId, { sortOrder });
+            return;
+          }
 
-        await Promise.all(
-          nextOrder.map((id, index) =>
-            updateCategoryNode(id, {
-              sortOrder: (index + 1) * 10,
-            })
-          )
-        );
-        await mutate();
-        setMessage("Category order updated");
-        return;
-      }
+          if (type === "subcategory") {
+            await updateSubcategoryNode(entityId, { sortOrder });
+            return;
+          }
 
-      if (source.type !== "subcategory") {
-        throw new Error("This node type cannot be moved");
-      }
-
-      const sourceSubcategory = subcategoryById.get(source.entityId);
-      if (!sourceSubcategory?.category?.id) {
-        throw new Error("Source subcategory no longer exists");
-      }
-
-      const sourceCategoryId = sourceSubcategory.category.id;
-      const sourceParentSubcategoryId = sourceSubcategory.parentSubcategory?.id || null;
-
-      let destinationCategoryId = sourceCategoryId;
-      let destinationParentSubcategoryId: string | null = sourceParentSubcategoryId;
-      let siblingReorderTargetId: string | null = null;
-
-      if (target.type === "category") {
-        destinationCategoryId = target.entityId;
-        destinationParentSubcategoryId = null;
-      } else if (target.type === "subcategory") {
-        const targetSubcategory = subcategoryById.get(target.entityId);
-        if (!targetSubcategory?.category?.id) {
-          throw new Error("Target subcategory no longer exists");
-        }
-
-        const targetCategoryId = targetSubcategory.category.id;
-        const targetParentSubcategoryId = targetSubcategory.parentSubcategory?.id || null;
-
-        if (targetCategoryId === sourceCategoryId && targetParentSubcategoryId === sourceParentSubcategoryId) {
-          destinationCategoryId = sourceCategoryId;
-          destinationParentSubcategoryId = sourceParentSubcategoryId;
-          siblingReorderTargetId = target.entityId;
-        } else {
-          destinationCategoryId = targetCategoryId;
-          destinationParentSubcategoryId = target.entityId;
-        }
-      } else {
-        throw new Error("Unsupported drop target");
-      }
-
-      const movedAcrossBranch =
-        destinationCategoryId !== sourceCategoryId || destinationParentSubcategoryId !== sourceParentSubcategoryId;
-
-      const destinationBase = getSiblingIds(destinationCategoryId, destinationParentSubcategoryId).filter(
-        (id) => id !== source.entityId
-      );
-
-      const destinationOrder = siblingReorderTargetId
-        ? reorderAfter(destinationBase, source.entityId, siblingReorderTargetId)
-        : [...destinationBase, source.entityId];
-
-      const sourceRemainingOrder = movedAcrossBranch
-        ? getSiblingIds(sourceCategoryId, sourceParentSubcategoryId).filter((id) => id !== source.entityId)
-        : [];
-
-      const destinationUpdates = destinationOrder.map((id, index) => {
-        if (id !== source.entityId) {
-          return updateSubcategoryNode(id, {
-            sortOrder: (index + 1) * 10,
-          });
-        }
-
-        const payload: {
-          sortOrder: number;
-          categoryId?: string;
-          parentSubcategoryId?: string;
-        } = {
-          sortOrder: (index + 1) * 10,
-        };
-
-        if (destinationCategoryId !== sourceCategoryId) {
-          payload.categoryId = destinationCategoryId;
-        }
-
-        if (destinationParentSubcategoryId !== sourceParentSubcategoryId) {
-          payload.parentSubcategoryId = destinationParentSubcategoryId || "";
-        }
-
-        return updateSubcategoryNode(id, payload);
-      });
-
-      const sourceUpdates = sourceRemainingOrder.map((id, index) =>
-        updateSubcategoryNode(id, {
-          sortOrder: (index + 1) * 10,
+          throw new Error("This node type does not support sorting");
         })
       );
 
-      await Promise.all([...destinationUpdates, ...sourceUpdates]);
       await mutate();
-      setMessage(movedAcrossBranch ? "Subcategory moved" : "Subcategory reordered");
-    } catch (moveError) {
-      const messageText = moveError instanceof Error ? moveError.message : "Unable to move node";
+      setMessage("Order updated");
+    } catch (reorderError) {
+      const messageText = reorderError instanceof Error ? reorderError.message : "Unable to update sort order";
       setErrorText(messageText);
     }
   };
@@ -577,12 +627,12 @@ function CategoriesPageContent() {
     <AdminShell title="Category Explorer" subtitle="Nested tree editing for category structures.">
       <PageLayout
         title={activeItem?.label || "Category Explorer"}
-        subtitle="Explore hierarchy, drag to reorder, and manage nested category relationships with full context."
+        subtitle="Explore hierarchy, manage nested relationships, and reorder siblings with drag and drop."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => openModal("category")}
+              onClick={() => openCreateModal("category")}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
             >
               Add Category
@@ -590,7 +640,7 @@ function CategoriesPageContent() {
             <button
               type="button"
               onClick={() =>
-                openModal("subcategory", {
+                openCreateModal("subcategory", {
                   categoryId: orderedCategories[0]?.id || null,
                 })
               }
@@ -601,7 +651,7 @@ function CategoriesPageContent() {
             <button
               type="button"
               onClick={() =>
-                openModal("secondary", {
+                openCreateModal("secondary", {
                   parentSubcategoryId: orderedSubcategories[0]?.id || null,
                 })
               }
@@ -633,51 +683,105 @@ function CategoriesPageContent() {
           <TreeView
             nodes={treeNodes}
             onAdd={handleAdd}
-            onEdit={handleInlineEdit}
-            onDelete={handleDelete}
-            onInlineCreate={handleInlineCreate}
-            onMove={handleMove}
+            onEdit={openEditModal}
+            onDelete={handleDeleteRequest}
+            onReorder={handleReorder}
           />
         )}
       </PageLayout>
 
       <CreateNodeModal
         open={modalOpen}
+        intent={modalIntent}
         mode={modalMode}
         categories={categories}
         subcategories={subcategories}
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
         activeInput={activeInput}
+        customFormEnabledInput={customFormEnabledInput}
+        customFormTitleInput={customFormTitleInput}
+        customFormFieldsInput={customFormFieldsInput}
         modalCategoryId={modalCategoryId}
         modalParentSubcategoryId={modalParentSubcategoryId}
+        editingSubcategoryId={editingSubcategoryId}
         submitting={isSubmitting}
         onNameChange={setNameInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
+        onCustomFormEnabledChange={setCustomFormEnabledInput}
+        onCustomFormTitleChange={setCustomFormTitleInput}
+        onCustomFormFieldsChange={setCustomFormFieldsInput}
         onCategoryChange={setModalCategoryId}
         onParentSubcategoryChange={setModalParentSubcategoryId}
-        onClose={() => setModalOpen(false)}
-        onSubmit={() => void submitCreate()}
+        onClose={() => {
+          if (isSubmitting) return;
+          setModalOpen(false);
+          setEditingNodeRef(null);
+          setEditingSubcategoryId(null);
+        }}
+        onSubmit={() => void submitModal()}
       />
+
+      <Modal
+        open={Boolean(deleteTargetNode)}
+        title="Delete node"
+        onClose={() => {
+          if (deleteSubmitting) return;
+          setDeleteTargetNode(null);
+        }}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteTargetNode(null)}
+              disabled={deleteSubmitting}
+              className="rounded-lg border border-(--border) px-3 py-1.5 text-xs text-(--text-soft)"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmDelete()}
+              disabled={deleteSubmitting}
+              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-60"
+            >
+              {deleteSubmitting ? "Deleting..." : "Yes, delete"}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-(--text-soft)">
+          Are you sure you want to delete <span className="font-semibold text-(--text-strong)">{deleteTargetNode?.label}</span>
+          ? This will also remove all nested children.
+        </p>
+      </Modal>
     </AdminShell>
   );
 }
 
 type CreateNodeModalProps = {
   open: boolean;
+  intent: ModalIntent;
   mode: ModalMode;
   categories: AdminCategory[];
   subcategories: AdminSubcategory[];
   nameInput: string;
   sortOrderInput: string;
   activeInput: boolean;
+  customFormEnabledInput: boolean;
+  customFormTitleInput: string;
+  customFormFieldsInput: DraftCustomFormField[];
   modalCategoryId: string | null;
   modalParentSubcategoryId: string | null;
+  editingSubcategoryId: string | null;
   submitting: boolean;
   onNameChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
+  onCustomFormEnabledChange: (value: boolean) => void;
+  onCustomFormTitleChange: (value: string) => void;
+  onCustomFormFieldsChange: (value: DraftCustomFormField[]) => void;
   onCategoryChange: (value: string | null) => void;
   onParentSubcategoryChange: (value: string | null) => void;
   onClose: () => void;
@@ -686,46 +790,101 @@ type CreateNodeModalProps = {
 
 function CreateNodeModal({
   open,
+  intent,
   mode,
   categories,
   subcategories,
   nameInput,
   sortOrderInput,
   activeInput,
+  customFormEnabledInput,
+  customFormTitleInput,
+  customFormFieldsInput,
   modalCategoryId,
   modalParentSubcategoryId,
+  editingSubcategoryId,
   submitting,
   onNameChange,
   onSortOrderChange,
   onActiveChange,
+  onCustomFormEnabledChange,
+  onCustomFormTitleChange,
+  onCustomFormFieldsChange,
   onCategoryChange,
   onParentSubcategoryChange,
   onClose,
   onSubmit,
 }: CreateNodeModalProps) {
   const parentOptions = useMemo(
-    () => buildSubcategoryOptions(subcategories, modalCategoryId),
-    [modalCategoryId, subcategories]
+    () =>
+      buildSubcategoryOptions(
+        subcategories,
+        modalCategoryId,
+        new Set(editingSubcategoryId ? [editingSubcategoryId] : [])
+      ),
+    [editingSubcategoryId, modalCategoryId, subcategories]
   );
 
   const parentRequired = mode === "secondary";
+  const customFieldCount = useMemo(
+    () => toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput).length,
+    [customFormEnabledInput, customFormFieldsInput]
+  );
+
+  const modalTitle =
+    intent === "create"
+      ? mode === "category"
+        ? "Add Category"
+        : mode === "subcategory"
+          ? "Add Subcategory"
+          : "Add Secondary Subcategory"
+      : mode === "category"
+        ? "Edit Category"
+        : mode === "subcategory"
+          ? "Edit Subcategory"
+          : "Edit Secondary Subcategory";
+
+  const submitLabel = submitting ? "Saving..." : intent === "create" ? "Create" : "Update";
 
   const disableSave =
     submitting ||
     !nameInput.trim() ||
     (mode !== "category" && !modalCategoryId) ||
-    (parentRequired && !modalParentSubcategoryId);
+    (parentRequired && !modalParentSubcategoryId) ||
+    (customFormEnabledInput && customFieldCount === 0);
+
+  const addCustomField = () => {
+    onCustomFormFieldsChange([...customFormFieldsInput, createDraftCustomField(customFormFieldsInput.length)]);
+  };
+
+  const updateCustomField = (draftId: string, patch: Partial<DraftCustomFormField>) => {
+    onCustomFormFieldsChange(
+      customFormFieldsInput.map((field) => {
+        if (field.draftId !== draftId) return field;
+        const nextField = { ...field, ...patch };
+        if (patch.label !== undefined && !nextField.key.trim()) {
+          nextField.key = toFieldKey(nextField.label);
+        }
+        return nextField;
+      })
+    );
+  };
+
+  const removeCustomField = (draftId: string) => {
+    onCustomFormFieldsChange(customFormFieldsInput.filter((field) => field.draftId !== draftId));
+  };
+
+  const customFormSourceLabel =
+    mode === "category"
+      ? "for this category"
+      : mode === "subcategory"
+        ? "for this subcategory"
+        : "for this nested subcategory";
 
   return (
     <Modal
       open={open}
-      title={
-        mode === "category"
-          ? "Add Category"
-          : mode === "subcategory"
-            ? "Add Subcategory"
-            : "Add Secondary Subcategory"
-      }
+      title={modalTitle}
       onClose={onClose}
       footer={
         <>
@@ -742,7 +901,7 @@ function CreateNodeModal({
             disabled={disableSave}
             className="rounded-lg bg-(--accent) px-3 py-1.5 text-xs font-medium text-white disabled:opacity-70"
           >
-            {submitting ? "Saving..." : "Save"}
+            {submitLabel}
           </button>
         </>
       }
@@ -813,11 +972,188 @@ function CreateNodeModal({
         <input type="checkbox" checked={activeInput} onChange={(event) => onActiveChange(event.target.checked)} />
         Active
       </label>
+
+      <section className="space-y-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
+        <label className="inline-flex items-center gap-2 text-sm font-medium text-sky-900">
+          <input
+            type="checkbox"
+            checked={customFormEnabledInput}
+            onChange={(event) => onCustomFormEnabledChange(event.target.checked)}
+          />
+          Enable additional vendor form {customFormSourceLabel}
+        </label>
+
+        {!customFormEnabledInput ? (
+          <p className="text-xs text-sky-800">
+            Turn this on to collect custom details on vendor registration and admin user forms.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <label className="block space-y-1 text-sm text-sky-900">
+              Form title (optional)
+              <input
+                value={customFormTitleInput}
+                onChange={(event) => onCustomFormTitleChange(event.target.value)}
+                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+                placeholder="Additional business details"
+              />
+            </label>
+
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-800">
+                Fields ({customFieldCount} valid)
+              </p>
+              <button
+                type="button"
+                onClick={addCustomField}
+                className="rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+              >
+                Add field
+              </button>
+            </div>
+
+            {customFormFieldsInput.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-sky-300 bg-white px-3 py-2 text-xs text-sky-800">
+                Add at least one field to enable this custom form.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {customFormFieldsInput.map((field, index) => (
+                  <article key={field.draftId} className="space-y-2 rounded-lg border border-sky-200 bg-white p-2.5">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Label
+                        <input
+                          value={field.label}
+                          onChange={(event) => updateCustomField(field.draftId, { label: event.target.value })}
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                          placeholder="Field label"
+                        />
+                      </label>
+
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Key
+                        <input
+                          value={field.key}
+                          onChange={(event) => updateCustomField(field.draftId, { key: toFieldKey(event.target.value) })}
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                          placeholder="auto_from_label"
+                        />
+                      </label>
+
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Type
+                        <select
+                          value={field.type}
+                          onChange={(event) =>
+                            updateCustomField(field.draftId, {
+                              type: event.target.value as CustomFormField["type"],
+                            })
+                          }
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5"
+                        >
+                          {CUSTOM_FIELD_TYPE_OPTIONS.map((typeOption) => (
+                            <option key={typeOption.value} value={typeOption.value}>
+                              {typeOption.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Sort order
+                        <input
+                          type="number"
+                          value={field.sortOrder}
+                          onChange={(event) => updateCustomField(field.draftId, { sortOrder: event.target.value })}
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                        />
+                      </label>
+
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Row span
+                        <select
+                          value={field.span}
+                          onChange={(event) =>
+                            updateCustomField(field.draftId, {
+                              span: event.target.value === "6" ? 6 : 12,
+                            })
+                          }
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5"
+                        >
+                          <option value="12">Full row</option>
+                          <option value="6">Half row (same line)</option>
+                        </select>
+                      </label>
+
+                      <label className="flex items-end gap-2 text-xs text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(event) => updateCustomField(field.draftId, { required: event.target.checked })}
+                        />
+                        Required field
+                      </label>
+                    </div>
+
+                    <label className="block space-y-1 text-xs text-slate-700">
+                      Placeholder
+                      <input
+                        value={field.placeholder}
+                        onChange={(event) => updateCustomField(field.draftId, { placeholder: event.target.value })}
+                        className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                        placeholder="Placeholder text"
+                      />
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-slate-700">
+                      Help text
+                      <input
+                        value={field.helpText}
+                        onChange={(event) => updateCustomField(field.draftId, { helpText: event.target.value })}
+                        className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                        placeholder="Optional helper text"
+                      />
+                    </label>
+
+                    {field.type === "select" || field.type === "multi-select" ? (
+                      <label className="block space-y-1 text-xs text-slate-700">
+                        Options (comma separated)
+                        <input
+                          value={field.optionsText}
+                          onChange={(event) => updateCustomField(field.draftId, { optionsText: event.target.value })}
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                          placeholder="Option A, Option B, Option C"
+                        />
+                      </label>
+                    ) : null}
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-slate-500">Field #{index + 1}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomField(field.draftId)}
+                        className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </Modal>
   );
 }
 
-function buildSubcategoryOptions(subcategories: AdminSubcategory[], categoryId: string | null) {
+function buildSubcategoryOptions(
+  subcategories: AdminSubcategory[],
+  categoryId: string | null,
+  blockedIds?: Set<string>
+) {
   if (!categoryId) return [] as Array<{ id: string; name: string; depth: number }>;
 
   const groupedByParent = new Map<string, AdminSubcategory[]>();
@@ -846,6 +1182,7 @@ function buildSubcategoryOptions(subcategories: AdminSubcategory[], categoryId: 
 
     for (const sibling of siblings) {
       if (lineage.has(sibling.id)) continue;
+      if (blockedIds?.has(sibling.id)) continue;
 
       options.push({
         id: sibling.id,

@@ -79,7 +79,7 @@ export default function CategoryGrid() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [liveCategories, setLiveCategories] = useState<DisplayCategory[] | null>(null);
-  const [selectedCity, setSelectedCity] = useState(() => readSelectedCity());
+  const [selectedCity, setSelectedCity] = useState('');
   const visibleCount = 19;
 
   const staticDisplayCategories = useMemo<DisplayCategory[]>(
@@ -126,6 +126,7 @@ export default function CategoryGrid() {
   }, [staticImageByName]);
 
   useEffect(() => {
+    setSelectedCity(readSelectedCity());
     return subscribeLocationCity((city) => {
       setSelectedCity(city);
     });

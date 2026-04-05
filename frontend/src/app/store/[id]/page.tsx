@@ -19,7 +19,13 @@ const findListing = (id: string) => {
 };
 
 const toStoreDataFromProfile = (profile: ListingProfile, idFallback: string): StorePageData => {
-  const storeId = String(profile.storeId || profile.id || idFallback || "store").trim();
+  const fallbackId = String(idFallback || "").trim();
+  const profileId = String(profile.id || "").trim();
+  const rawStoreId = String(profile.storeId || "").trim();
+  const storeId =
+    rawStoreId && (rawStoreId === profileId || rawStoreId === fallbackId)
+      ? rawStoreId
+      : profileId || fallbackId || "store";
   const profileName = String(profile.name || "Business Store").trim();
   const categoryLabel = String(profile.category || "Business").trim() || "Business";
   const imageUrl = String(profile.coverImage || profile.logoImage || "").trim();
@@ -98,7 +104,11 @@ export default async function StoreProfilePage({
   const listing = findListing(resolvedId);
   if (listing) {
     const profile = listingProfiles[resolvedId] ?? buildFallbackProfile(listing);
-    const mappedStore = profile.storeId ? storePages[profile.storeId] : undefined;
+    const mappedStoreId = String(profile.storeId || "").trim();
+    const mappedStore =
+      mappedStoreId && mappedStoreId.toLowerCase() === resolvedId.toLowerCase()
+        ? storePages[mappedStoreId]
+        : undefined;
     if (mappedStore) {
       return <StorePage data={mappedStore} />;
     }

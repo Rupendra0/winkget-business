@@ -22,6 +22,7 @@ import {
   type AdminDirectoryUser,
   type UserMutationInput,
 } from "@/lib/adminApi";
+import { type CustomFormField, type EffectiveCustomForm } from "@/lib/adminClient";
 import {
   buildDocumentFileName,
   downloadDocument,
@@ -42,6 +43,8 @@ type PreviewDocument = {
   dataUrl: string;
   fileName: string;
 };
+
+type CustomFormDataMap = Record<string, string | number | string[]>;
 
 const DEFAULT_ROLE_BY_VIEW: Record<string, RoleFilter> = {
   "manage-users": "all",
@@ -148,6 +151,236 @@ const buildSubcategoryPathMap = (items: AdminSubcategory[]) => {
   });
 
   return labelById;
+};
+
+const sortAndNormalizeCustomFields = (fields?: CustomFormField[]): CustomFormField[] => {
+  if (!Array.isArray(fields)) return [];
+
+  const seen = new Set<string>();
+  const nextFields: CustomFormField[] = [];
+
+  fields.forEach((field, index) => {
+    const label = String(field?.label || "").trim();
+    if (!label) return;
+
+    const key = String(field?.key || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+
+    const type = String(field?.type || "text") as CustomFormField["type"];
+    const supportedType = ["text", "textarea", "number", "date", "select", "multi-select", "email", "phone", "url"].includes(type)
+      ? type
+      : "text";
+
+    nextFields.push({
+      key,
+      label,
+      type: supportedType,
+      required: Boolean(field?.required),
+      placeholder: String(field?.placeholder || "").trim() || undefined,
+      helpText: String(field?.helpText || "").trim() || undefined,
+      options: Array.isArray(field?.options)
+        ? field.options.map((option) => String(option || "").trim()).filter(Boolean)
+        : [],
+      span: field?.span === 6 ? 6 : 12,
+      sortOrder: Number.isFinite(Number(field?.sortOrder)) ? Number(field.sortOrder) : (index + 1) * 10,
+    });
+  });
+
+  return nextFields.sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+    return left.label.localeCompare(right.label);
+  });
+};
+
+const normalizeCustomFormData = (value: unknown): CustomFormDataMap => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  const nextData: CustomFormDataMap = {};
+  Object.entries(value as Record<string, unknown>).forEach(([rawKey, rawValue]) => {
+    const key = String(rawKey || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!key) return;
+
+    if (Array.isArray(rawValue)) {
+      nextData[key] = rawValue.map((entry) => String(entry || "").trim()).filter(Boolean);
+      return;
+    }
+
+    if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+      nextData[key] = rawValue;
+      return;
+    }
+
+    nextData[key] = String(rawValue || "").trim();
+  });
+
+  return nextData;
+};
+
+const resolveEffectiveCustomTemplate = (
+  category: Pick<AdminCategory, "name" | "customFormEnabled" | "customFormTitle" | "customFormFields"> | null,
+  subcategory:
+    | Pick<AdminSubcategory, "name" | "customFormEnabled" | "customFormTitle" | "customFormFields">
+    | null,
+  fallback?: EffectiveCustomForm
+): EffectiveCustomForm => {
+  const subcategoryFields = sortAndNormalizeCustomFields(subcategory?.customFormFields);
+  if (subcategory?.customFormEnabled && subcategoryFields.length > 0) {
+    return {
+      source: "subcategory",
+      title: String(subcategory.customFormTitle || "").trim() || String(subcategory.name || "").trim() || "Additional details",
+      fields: subcategoryFields,
+    };
+  }
+
+  const categoryFields = sortAndNormalizeCustomFields(category?.customFormFields);
+  if (category?.customFormEnabled && categoryFields.length > 0) {
+    return {
+      source: "category",
+      title: String(category.customFormTitle || "").trim() || String(category.name || "").trim() || "Additional details",
+      fields: categoryFields,
+    };
+  }
+
+  if (fallback?.fields?.length) {
+    return {
+      source: fallback.source,
+      title: String(fallback.title || "").trim() || "Additional details",
+      fields: sortAndNormalizeCustomFields(fallback.fields),
+    };
+  }
+
+  return {
+    source: "none",
+    title: "",
+    fields: [],
+  };
+};
+
+const retainCustomDataForFields = (data: CustomFormDataMap, fields: CustomFormField[]): CustomFormDataMap => {
+  const nextData: CustomFormDataMap = {};
+
+  fields.forEach((field) => {
+    const current = data[field.key];
+    if (Array.isArray(current)) {
+      nextData[field.key] = current;
+      return;
+    }
+
+    if (typeof current === "number" && Number.isFinite(current)) {
+      nextData[field.key] = current;
+      return;
+    }
+
+    if (typeof current === "string") {
+      nextData[field.key] = current;
+      return;
+    }
+
+    nextData[field.key] = field.type === "multi-select" ? [] : "";
+  });
+
+  return nextData;
+};
+
+const validateCustomDataForFields = (data: CustomFormDataMap, fields: CustomFormField[]): string | null => {
+  for (const field of fields) {
+    const value = data[field.key];
+
+    if (!field.required) continue;
+
+    if (field.type === "multi-select") {
+      const values = Array.isArray(value) ? value : [];
+      if (values.length === 0) {
+        return `${field.label} is required`;
+      }
+      continue;
+    }
+
+    const text = String(value || "").trim();
+    if (!text) {
+      return `${field.label} is required`;
+    }
+  }
+
+  return null;
+};
+
+const serializeCustomDataForPayload = (data: CustomFormDataMap, fields: CustomFormField[]): CustomFormDataMap => {
+  const nextData: CustomFormDataMap = {};
+
+  fields.forEach((field) => {
+    const value = data[field.key];
+
+    if (field.type === "multi-select") {
+      const values = Array.isArray(value)
+        ? Array.from(new Set(value.map((entry) => String(entry || "").trim()).filter(Boolean)))
+        : [];
+
+      if (values.length > 0) {
+        nextData[field.key] = values;
+      }
+      return;
+    }
+
+    const raw = typeof value === "number" ? String(value) : String(value || "").trim();
+    if (!raw) return;
+
+    if (field.type === "number") {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        nextData[field.key] = numeric;
+      }
+      return;
+    }
+
+    nextData[field.key] = raw;
+  });
+
+  return nextData;
+};
+
+const formatCustomFieldValue = (value: string | number | string[] | undefined) => {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "-";
+  }
+
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  const text = String(value || "").trim();
+  return text || "-";
+};
+
+const areCustomDataMapsEqual = (left: CustomFormDataMap, right: CustomFormDataMap) => {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    const leftValue = left[key];
+    const rightValue = right[key];
+
+    if (Array.isArray(leftValue) || Array.isArray(rightValue)) {
+      if (!Array.isArray(leftValue) || !Array.isArray(rightValue)) return false;
+      if (leftValue.length !== rightValue.length) return false;
+      if (leftValue.some((value, index) => value !== rightValue[index])) return false;
+      continue;
+    }
+
+    if (leftValue !== rightValue) return false;
+  }
+
+  return true;
 };
 
 const toDataUrl = (file: File) =>
@@ -788,6 +1021,47 @@ function UsersPageContent() {
                   </div>
                 </div>
 
+                {(() => {
+                  const templateFields = sortAndNormalizeCustomFields(detailData.effectiveCustomForm?.fields);
+                  const customData = normalizeCustomFormData(detailData.customFormData);
+                  const hasTemplate = templateFields.length > 0;
+                  const hasRawData = Object.keys(customData).length > 0;
+
+                  if (!hasTemplate && !hasRawData) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="space-y-1 rounded-lg border border-sky-200 bg-sky-50 p-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-700">
+                        {detailData.effectiveCustomForm?.title || "Additional vendor details"}
+                      </p>
+
+                      {hasTemplate ? (
+                        <div className="grid gap-x-4 gap-y-1 xl:grid-cols-3 2xl:grid-cols-4">
+                          {templateFields.map((field) => (
+                            <p key={field.key} className={field.span === 12 ? "xl:col-span-3 2xl:col-span-4" : ""}>
+                              <span className="font-semibold text-(--text-strong)">{field.label}:</span>{" "}
+                              {formatCustomFieldValue(customData[field.key])}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {!hasTemplate && hasRawData ? (
+                        <div className="grid gap-x-4 gap-y-1 xl:grid-cols-3 2xl:grid-cols-4">
+                          {Object.entries(customData).map(([key, value]) => (
+                            <p key={key}>
+                              <span className="font-semibold text-(--text-strong)">{key}:</span>{" "}
+                              {formatCustomFieldValue(value)}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-2 rounded-lg border border-(--border) bg-(--surface) p-2.5">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-(--text-soft)">Documents</p>
 
@@ -987,6 +1261,9 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   const [idProofDocument, setIdProofDocument] = useState(initialValue?.idProofDocument || "");
   const [marketingOptIn, setMarketingOptIn] = useState(Boolean(initialValue?.marketingOptIn));
   const [vendorReviewNote, setVendorReviewNote] = useState(initialValue?.vendorReviewNote || "");
+  const [customFormData, setCustomFormData] = useState<CustomFormDataMap>(() =>
+    normalizeCustomFormData(initialValue?.customFormData)
+  );
 
   const [taxonomyLoading, setTaxonomyLoading] = useState(false);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
@@ -1044,6 +1321,21 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       });
   }, [businessCategoryId, subcategories, subcategoryPathMap]);
 
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === businessCategoryId) || null,
+    [businessCategoryId, categories]
+  );
+
+  const selectedSubcategory = useMemo(
+    () => subcategories.find((subcategory) => subcategory.id === businessSubcategoryId) || null,
+    [businessSubcategoryId, subcategories]
+  );
+
+  const effectiveCustomForm = useMemo(
+    () => resolveEffectiveCustomTemplate(selectedCategory, selectedSubcategory, initialValue?.effectiveCustomForm),
+    [initialValue?.effectiveCustomForm, selectedCategory, selectedSubcategory]
+  );
+
   useEffect(() => {
     if (!businessSubcategoryId) return;
     const existsInCategory = filteredSubcategories.some((item) => item.id === businessSubcategoryId);
@@ -1051,6 +1343,18 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       setBusinessSubcategoryId("");
     }
   }, [businessSubcategoryId, filteredSubcategories]);
+
+  useEffect(() => {
+    if (!isVendor) return;
+
+    setCustomFormData((current) => {
+      const next = retainCustomDataForFields(current, effectiveCustomForm.fields);
+      if (areCustomDataMapsEqual(current, next)) {
+        return current;
+      }
+      return next;
+    });
+  }, [effectiveCustomForm.fields, isVendor]);
 
   const parsedServiceTags = useMemo(() => {
     const tags = serviceTagsInput
@@ -1062,6 +1366,11 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
     return Array.from(new Set(tags));
   }, [serviceTagsInput]);
 
+  const customFormValidationError = useMemo(
+    () => (isVendor ? validateCustomDataForFields(customFormData, effectiveCustomForm.fields) : null),
+    [customFormData, effectiveCustomForm.fields, isVendor]
+  );
+
   const roleNeedsPassword = role === "admin" || role === "vendor";
   const passwordValid =
     password.trim().length === 0 ? !(isCreate && roleNeedsPassword) : password.trim().length >= 6;
@@ -1069,7 +1378,8 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   const vendorRequiredValid =
     !isVendor ||
     (businessName.trim().length > 0 && businessEmail.trim().length > 0 && businessPhone.trim().length === 10);
-  const canSubmit = name.trim().length > 0 && hasContact && passwordValid && vendorRequiredValid;
+  const canSubmit =
+    name.trim().length > 0 && hasContact && passwordValid && vendorRequiredValid && !customFormValidationError;
 
   const handleDocumentUpload = async (field: "idProofDocument" | "gstDocument", files: FileList | null) => {
     const file = files?.[0];
@@ -1099,6 +1409,34 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
     } catch {
       setDocumentError("Failed to read selected file.");
     }
+  };
+
+  const updateCustomFieldValue = (fieldKey: string, value: string | number | string[]) => {
+    setCustomFormData((current) => ({
+      ...current,
+      [fieldKey]: value,
+    }));
+  };
+
+  const toggleCustomFieldOption = (fieldKey: string, option: string, checked: boolean) => {
+    setCustomFormData((current) => {
+      const currentValues = Array.isArray(current[fieldKey])
+        ? (current[fieldKey] as string[])
+        : [];
+
+      if (checked) {
+        if (currentValues.includes(option)) return current;
+        return {
+          ...current,
+          [fieldKey]: [...currentValues, option],
+        };
+      }
+
+      return {
+        ...current,
+        [fieldKey]: currentValues.filter((value) => value !== option),
+      };
+    });
   };
 
   const submit = () => {
@@ -1143,6 +1481,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       payload.idProofNumber = idProofNumber.trim();
       payload.idProofDocument = idProofDocument.trim();
       payload.marketingOptIn = marketingOptIn;
+      payload.customFormData = serializeCustomDataForPayload(customFormData, effectiveCustomForm.fields);
     }
 
     onSubmit(payload);
@@ -1305,6 +1644,140 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
                   ))}
                 </select>
               </label>
+
+              <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50 p-3 sm:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-700">
+                    {effectiveCustomForm.title || "Additional vendor details"}
+                  </p>
+                  <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700">
+                    {effectiveCustomForm.source}
+                  </span>
+                </div>
+
+                {effectiveCustomForm.fields.length === 0 ? (
+                  <p className="text-xs text-sky-700">
+                    No dynamic fields are configured for the selected category/subcategory.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-12 gap-2">
+                    {effectiveCustomForm.fields.map((field) => {
+                      const rawValue = customFormData[field.key];
+                      const value = Array.isArray(rawValue)
+                        ? rawValue
+                        : typeof rawValue === "number"
+                          ? String(rawValue)
+                          : String(rawValue || "");
+                      const isHalf = field.span === 6;
+
+                      return (
+                        <label
+                          key={field.key}
+                          className={`block space-y-1 text-xs text-slate-700 ${isHalf ? "col-span-12 sm:col-span-6" : "col-span-12"}`}
+                        >
+                          <span className="font-medium text-slate-700">
+                            {field.label}
+                            {field.required ? <span className="ml-1 text-rose-600">*</span> : null}
+                          </span>
+
+                          {field.type === "textarea" ? (
+                            <textarea
+                              rows={2}
+                              value={typeof value === "string" ? value : ""}
+                              onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                              placeholder={field.placeholder || "Enter details"}
+                              className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-sky-500"
+                            />
+                          ) : null}
+
+                          {field.type === "select" ? (
+                            <select
+                              value={typeof value === "string" ? value : ""}
+                              onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                              className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5"
+                            >
+                              <option value="">Select {field.label}</option>
+                              {(field.options || []).map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          ) : null}
+
+                          {field.type === "multi-select" ? (
+                            (field.options || []).length > 0 ? (
+                              <div className="grid gap-1 rounded-md border border-slate-200 bg-white p-2">
+                                {(field.options || []).map((option) => {
+                                  const selectedValues = Array.isArray(rawValue) ? rawValue : [];
+                                  const checked = selectedValues.includes(option);
+                                  return (
+                                    <label key={option} className="inline-flex items-center gap-1.5 text-xs text-slate-700">
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) =>
+                                          toggleCustomFieldOption(field.key, option, event.target.checked)
+                                        }
+                                      />
+                                      {option}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <input
+                                value={Array.isArray(rawValue) ? rawValue.join(", ") : ""}
+                                onChange={(event) =>
+                                  updateCustomFieldValue(
+                                    field.key,
+                                    event.target.value
+                                      .split(",")
+                                      .map((entry) => entry.trim())
+                                      .filter(Boolean)
+                                  )
+                                }
+                                placeholder={field.placeholder || "comma separated values"}
+                                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-sky-500"
+                              />
+                            )
+                          ) : null}
+
+                          {!["textarea", "select", "multi-select"].includes(field.type) ? (
+                            <input
+                              type={
+                                field.type === "number"
+                                  ? "number"
+                                  : field.type === "date"
+                                    ? "date"
+                                    : field.type === "email"
+                                      ? "email"
+                                      : field.type === "url"
+                                        ? "url"
+                                        : field.type === "phone"
+                                          ? "tel"
+                                          : "text"
+                              }
+                              value={typeof value === "string" ? value : ""}
+                              onChange={(event) => updateCustomFieldValue(field.key, event.target.value)}
+                              placeholder={field.placeholder || "Enter value"}
+                              className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-sky-500"
+                            />
+                          ) : null}
+
+                          {field.helpText ? <p className="text-[11px] text-slate-500">{field.helpText}</p> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {customFormValidationError ? (
+                  <p className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700">
+                    {customFormValidationError}
+                  </p>
+                ) : null}
+              </div>
 
               <label className="block space-y-1 text-sm text-(--text-soft)">
                 Business email

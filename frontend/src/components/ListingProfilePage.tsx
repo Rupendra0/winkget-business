@@ -240,7 +240,26 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   );
   const mapsUrl =
     `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
-  const storeUrl = `/store/${profile.storeId || profile.id}`;
+  const storefrontId = useMemo(() => {
+    const profileId = String(profile.id || "").trim();
+    const rawStoreId = String(profile.storeId || "").trim();
+
+    if (!rawStoreId) {
+      return profileId;
+    }
+
+    if (
+      profileId &&
+      rawStoreId.toLowerCase() !== profileId.toLowerCase() &&
+      rawStoreId.toLowerCase() === "diyaratech"
+    ) {
+      return profileId;
+    }
+
+    return rawStoreId;
+  }, [profile.id, profile.storeId]);
+  const storeUrl = storefrontId ? `/store/${storefrontId}` : "#";
+  const hasStorefront = Boolean(storefrontId);
   const emailUrl =
     profile.email && profile.email !== "Not provided"
       ? `mailto:${profile.email}`
@@ -427,7 +446,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
     const submitResult = await submitBusinessReview({
       businessId: profile.id,
-      aliasBusinessIds: [profile.storeId || ""],
+      aliasBusinessIds: [profile.storeId || "", profile.id || ""].filter(Boolean),
       rating: reviewRating,
       comment: nextReviewText,
       authorName: nextAuthor,
@@ -572,9 +591,9 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 <Share2 size={16} />
                 Share
               </button>
-              {profile.storeId ? (
+              {hasStorefront ? (
                 <Link
-                  href={`/store/${profile.storeId}`}
+                  href={storeUrl}
                   className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover"
                 >
                   Shop Storefront

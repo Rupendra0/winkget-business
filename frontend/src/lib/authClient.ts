@@ -4,6 +4,35 @@ export type AuthReference = {
   slug?: string;
 };
 
+export type AuthCustomFormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "select"
+  | "multi-select"
+  | "email"
+  | "phone"
+  | "url";
+
+export type AuthCustomFormField = {
+  key: string;
+  label: string;
+  type: AuthCustomFormFieldType;
+  required: boolean;
+  placeholder?: string;
+  helpText?: string;
+  options?: string[];
+  span?: 6 | 12;
+  sortOrder: number;
+};
+
+export type AuthEffectiveCustomForm = {
+  source: "none" | "category" | "subcategory";
+  title?: string;
+  fields: AuthCustomFormField[];
+};
+
 export type AuthUser = {
   id: string;
   name?: string;
@@ -36,6 +65,8 @@ export type AuthUser = {
   idProofNumber?: string;
   idProofDocument?: string;
   marketingOptIn?: boolean;
+  customFormData?: Record<string, string | number | string[]>;
+  effectiveCustomForm?: AuthEffectiveCustomForm;
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";

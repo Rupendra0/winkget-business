@@ -2,6 +2,7 @@ export type SidebarItem = {
   id: string;
   label: string;
   route: string;
+  badgeCount?: number;
 };
 
 export type SidebarSection = {
@@ -41,9 +42,6 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     route: "/categories",
     items: [
       makeItem("category-explorer", "Category Explorer", "/categories"),
-      makeItem("create-category", "Create Category", "/categories"),
-      makeItem("create-subcategory", "Create Subcategory", "/categories"),
-      makeItem("create-secondary-subcategory", "Create Secondary Subcategory", "/categories"),
       makeItem("manage-category", "Manage Category", "/categories"),
       makeItem("manage-subcategory", "Manage Subcategory", "/categories"),
       makeItem("manage-secondary-subcategory", "Manage Secondary Subcategory", "/categories"),

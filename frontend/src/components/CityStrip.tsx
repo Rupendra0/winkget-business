@@ -25,9 +25,10 @@ const pickImage = (name: string, fallbackIndex: number) => {
 
 export default function CityStrip() {
   const [cities, setCities] = useState<CityStripItem[]>([]);
-  const [selectedCity, setSelectedCity] = useState(() => readSelectedCity());
+  const [selectedCity, setSelectedCity] = useState("");
 
   useEffect(() => {
+    setSelectedCity(readSelectedCity());
     return subscribeLocationCity((city) => {
       setSelectedCity(city);
     });

@@ -5,6 +5,8 @@ import {
   fetchSubcategories,
   updateCategory,
   updateSubcategory,
+  type CustomFormField,
+  type EffectiveCustomForm,
   type AdminCategory,
   type AdminSubcategory,
   type AdminDirectoryUser,
@@ -54,6 +56,7 @@ export type UserMutationInput = {
   idProofNumber?: string;
   idProofDocument?: string;
   marketingOptIn?: boolean;
+  customFormData?: Record<string, string | number | string[]>;
   status?: "active" | "inactive";
 };
 
@@ -85,6 +88,8 @@ export type AdminUserDetail = AdminDirectoryUser & {
   idProofNumber?: string;
   idProofDocument?: string;
   marketingOptIn?: boolean;
+  customFormData?: Record<string, string | number | string[]>;
+  effectiveCustomForm?: EffectiveCustomForm;
   vendorReviewNote?: string;
 };
 
@@ -318,6 +323,9 @@ export async function createCategoryNode(input: {
   name: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }) {
   return createCategory(input);
 }
@@ -328,6 +336,9 @@ export async function createSubcategoryNode(input: {
   name: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }) {
   return createSubcategory(input);
 }
@@ -336,6 +347,9 @@ export async function updateCategoryNode(categoryId: string, input: {
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }) {
   return updateCategory(categoryId, input);
 }
@@ -346,6 +360,9 @@ export async function updateSubcategoryNode(subcategoryId: string, input: {
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: CustomFormField[];
 }) {
   return updateSubcategory(subcategoryId, input);
 }

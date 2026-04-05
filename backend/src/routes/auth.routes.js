@@ -13,6 +13,11 @@ const {
   MAX_DOCUMENT_DATA_LENGTH,
   isValidEstablishmentYear,
 } = require("../lib/vendorValidation");
+const {
+  sanitizeCustomFormFields,
+  resolveEffectiveCustomForm,
+  validateCustomFormData,
+} = require("../lib/customForm");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +32,17 @@ const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(value)}$`, "i");
 
+const toCustomFormSummary = (entity) => {
+  const customFormFields = sanitizeCustomFormFields(entity?.customFormFields);
+  const customFormEnabled = Boolean(entity?.customFormEnabled) && customFormFields.length > 0;
+
+  return {
+    customFormEnabled,
+    customFormTitle: customFormEnabled ? String(entity?.customFormTitle || "").trim() || undefined : undefined,
+    customFormFields,
+  };
+};
+
 const toCategoryReference = (category) => {
   if (!category) return undefined;
 
@@ -36,6 +52,7 @@ const toCategoryReference = (category) => {
   return {
     id: String(categoryId),
     name: category.name,
+    ...toCustomFormSummary(category),
   };
 };
 
@@ -48,6 +65,7 @@ const toSubcategoryReference = (subcategory) => {
   return {
     id: String(subcategoryId),
     name: subcategory.name,
+    ...toCustomFormSummary(subcategory),
   };
 };
 
@@ -275,6 +293,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const idProofNumber = String(req.body?.idProofNumber || "").trim();
     const idProofDocument = String(req.body?.idProofDocument || "").trim();
     const serviceTagsInput = Array.isArray(req.body?.serviceTags) ? req.body.serviceTags : [];
+    const customFormDataInput = req.body?.customFormData;
     const establishmentYearInput = req.body?.establishmentYear;
     const marketingOptIn = Boolean(req.body?.marketingOptIn);
     const yearsInBusinessInput = req.body?.yearsInBusiness;
@@ -418,7 +437,9 @@ router.post("/auth/vendor/signup", async (req, res) => {
       return res.status(400).json({ ok: false, message: "GST document is too large" });
     }
 
-    const category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select("_id name");
+    const category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select(
+      "_id name customFormEnabled customFormTitle customFormFields"
+    );
     if (!category) {
       return res.status(400).json({ ok: false, message: "Selected business category is invalid or inactive" });
     }
@@ -429,7 +450,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
         _id: businessSubcategoryId,
         category: category._id,
         isActive: true,
-      }).select("_id name");
+      }).select("_id name customFormEnabled customFormTitle customFormFields");
 
       if (!subcategory) {
         return res.status(400).json({ ok: false, message: "Selected business subcategory is invalid or inactive" });
@@ -463,6 +484,16 @@ router.post("/auth/vendor/signup", async (req, res) => {
 
     if (existing) {
       return res.status(409).json({ ok: false, message: "Vendor account or contact details already exist" });
+    }
+
+    const effectiveCustomForm = resolveEffectiveCustomForm({
+      category,
+      subcategory,
+    });
+
+    const customDataValidation = validateCustomFormData(customFormDataInput, effectiveCustomForm.fields);
+    if (!customDataValidation.ok) {
+      return res.status(400).json({ ok: false, message: customDataValidation.message || "Invalid custom form data" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -499,6 +530,8 @@ router.post("/auth/vendor/signup", async (req, res) => {
       idProofNumber,
       idProofDocument,
       marketingOptIn,
+      customFormData:
+        Object.keys(customDataValidation.data).length > 0 ? customDataValidation.data : undefined,
     });
 
     return res.status(201).json({
@@ -523,6 +556,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
         shopClosingTime: user.shopClosingTime,
         establishmentYear: user.establishmentYear,
         serviceTags: user.serviceTags || [],
+        customFormData: user.customFormData && typeof user.customFormData === "object" ? user.customFormData : {},
         role: user.role,
         vendorStatus: user.vendorStatus,
         businessCategory: toCategoryReference(category),
@@ -561,8 +595,8 @@ router.post("/auth/vendor/login", async (req, res) => {
         ...(normalizedPhone ? [{ phone: normalizedPhone }, { businessPhone: normalizedPhone }] : []),
       ],
     })
-      .populate("businessCategory", "_id name")
-      .populate("businessSubcategory", "_id name");
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     if (!user || !user.passwordHash) {
       await FailureLog.create({
@@ -616,6 +650,11 @@ router.post("/auth/vendor/login", async (req, res) => {
         state: user.state,
         shopOpeningTime: user.shopOpeningTime,
         shopClosingTime: user.shopClosingTime,
+        customFormData: user.customFormData && typeof user.customFormData === "object" ? user.customFormData : {},
+        effectiveCustomForm: resolveEffectiveCustomForm({
+          category: user.businessCategory,
+          subcategory: user.businessSubcategory,
+        }),
         role: user.role,
         vendorStatus: user.vendorStatus,
         businessCategory: toCategoryReference(user.businessCategory),
@@ -645,10 +684,10 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
-      .populate("businessCategory", "_id name")
-      .populate("businessSubcategory", "_id name");
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     if (!user) {
       clearAuthCookie(res);
@@ -689,6 +728,14 @@ router.get("/auth/me", async (req, res) => {
         idProofNumber: user.idProofNumber,
         idProofDocument: user.idProofDocument,
         marketingOptIn: user.marketingOptIn,
+        customFormData: user.customFormData && typeof user.customFormData === "object" ? user.customFormData : {},
+        effectiveCustomForm:
+          user.role === "vendor"
+            ? resolveEffectiveCustomForm({
+                category: user.businessCategory,
+                subcategory: user.businessSubcategory,
+              })
+            : { source: "none", title: "", fields: [] },
       },
     });
   } catch (_error) {
@@ -765,6 +812,7 @@ router.put("/auth/me", async (req, res) => {
       : Array.isArray(user.serviceTags)
         ? user.serviceTags
         : [];
+    const customFormDataInput = req.body?.customFormData !== undefined ? req.body.customFormData : user.customFormData || {};
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Name is required" });
@@ -915,7 +963,9 @@ router.put("/auth/me", async (req, res) => {
         return res.status(400).json({ ok: false, message: "Add at least one service tag" });
       }
 
-      category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select("_id name");
+      category = await Category.findOne({ _id: businessCategoryId, isActive: true }).select(
+        "_id name customFormEnabled customFormTitle customFormFields"
+      );
       if (!category) {
         return res.status(400).json({ ok: false, message: "Selected business category is invalid or inactive" });
       }
@@ -925,7 +975,7 @@ router.put("/auth/me", async (req, res) => {
           _id: businessSubcategoryId,
           category: category._id,
           isActive: true,
-        }).select("_id name");
+        }).select("_id name customFormEnabled customFormTitle customFormFields");
 
         if (!subcategory) {
           return res.status(400).json({ ok: false, message: "Selected business subcategory is invalid or inactive" });
@@ -964,6 +1014,19 @@ router.put("/auth/me", async (req, res) => {
           state: resolvedState,
         };
       }
+
+      const effectiveCustomForm = resolveEffectiveCustomForm({
+        category,
+        subcategory,
+      });
+
+      const customDataValidation = validateCustomFormData(customFormDataInput, effectiveCustomForm.fields);
+      if (!customDataValidation.ok) {
+        return res.status(400).json({ ok: false, message: customDataValidation.message || "Invalid custom form data" });
+      }
+
+      user.customFormData =
+        Object.keys(customDataValidation.data).length > 0 ? customDataValidation.data : undefined;
     }
 
     user.name = name;
@@ -999,10 +1062,10 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone city sublocality state gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone city sublocality state gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags customFormData"
       )
-      .populate("businessCategory", "_id name")
-      .populate("businessSubcategory", "_id name");
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
@@ -1030,6 +1093,17 @@ router.put("/auth/me", async (req, res) => {
         shopClosingTime: updatedUser.shopClosingTime,
         establishmentYear: updatedUser.establishmentYear,
         serviceTags: updatedUser.serviceTags || [],
+        customFormData:
+          updatedUser.customFormData && typeof updatedUser.customFormData === "object"
+            ? updatedUser.customFormData
+            : {},
+        effectiveCustomForm:
+          updatedUser.role === "vendor"
+            ? resolveEffectiveCustomForm({
+                category: updatedUser.businessCategory,
+                subcategory: updatedUser.businessSubcategory,
+              })
+            : { source: "none", title: "", fields: [] },
       },
     });
   } catch (error) {

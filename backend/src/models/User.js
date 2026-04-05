@@ -30,6 +30,7 @@ const userSchema = new Schema(
     idProofNumber: { type: String, trim: true },
     idProofDocument: { type: String },
     marketingOptIn: { type: Boolean, default: false },
+    customFormData: { type: Schema.Types.Mixed },
     vendorStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],

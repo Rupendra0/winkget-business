@@ -4,6 +4,7 @@ const Subcategory = require("../models/Subcategory");
 const City = require("../models/City");
 const User = require("../models/User");
 const Review = require("../models/Review");
+const { sanitizeCustomFormFields } = require("../lib/customForm");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
@@ -15,6 +16,9 @@ const toCategorySummary = (category) => ({
   description: category.description,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
+  customFormEnabled: Boolean(category.customFormEnabled),
+  customFormTitle: String(category.customFormTitle || "").trim() || undefined,
+  customFormFields: sanitizeCustomFormFields(category.customFormFields),
 });
 
 const toCategoryReference = (category) => {
@@ -233,6 +237,9 @@ const toSubcategorySummary = (subcategory) => ({
   description: subcategory.description,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
+  customFormEnabled: Boolean(subcategory.customFormEnabled),
+  customFormTitle: String(subcategory.customFormTitle || "").trim() || undefined,
+  customFormFields: sanitizeCustomFormFields(subcategory.customFormFields),
   category: {
     id: String(subcategory.category._id || subcategory.category),
     name: subcategory.category.name,
@@ -265,7 +272,7 @@ router.get("/categories", async (_req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description isActive sortOrder");
+      .select("_id name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
@@ -309,7 +316,7 @@ router.get("/subcategories", async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description isActive sortOrder")
+      .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name");
 
