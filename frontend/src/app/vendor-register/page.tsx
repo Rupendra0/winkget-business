@@ -1233,21 +1233,17 @@ export default function VendorRegisterPage() {
                     {subcategoryLoadError ? <p className="mt-1 text-xs text-red-600">{subcategoryLoadError}</p> : null}
                   </label>
 
-                  <div className="sm:col-span-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-800">
-                        {effectiveCustomForm.title || "Additional details"}
-                      </p>
-                      <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700">
-                        {effectiveCustomForm.source}
-                      </span>
-                    </div>
+                  {effectiveCustomForm.fields.length > 0 ? (
+                    <div className="sm:col-span-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-800">
+                          {effectiveCustomForm.title || "Additional details"}
+                        </p>
+                        <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700">
+                          {effectiveCustomForm.source}
+                        </span>
+                      </div>
 
-                    {effectiveCustomForm.fields.length === 0 ? (
-                      <p className="mt-2 text-xs text-sky-700">
-                        No extra fields configured for this category/subcategory.
-                      </p>
-                    ) : (
                       <div className="mt-3 grid grid-cols-12 gap-3">
                         {effectiveCustomForm.fields.map((field) => {
                           const rawValue = form.customFormData[field.key];
@@ -1332,7 +1328,7 @@ export default function VendorRegisterPage() {
                                 )
                               ) : null}
 
-                              {!["textarea", "select", "multi-select"].includes(field.type) ? (
+                              {!['textarea', 'select', 'multi-select'].includes(field.type) ? (
                                 <input
                                   type={
                                     field.type === "number"
@@ -1359,8 +1355,8 @@ export default function VendorRegisterPage() {
                           );
                         })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
 
                   <label className="sm:col-span-2 block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
