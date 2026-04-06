@@ -49,6 +49,26 @@ const requireAdmin = async (req, res, next) => {
   }
 };
 
+const requireVendor = async (req, res, next) => {
+  try {
+    const token = resolveTokenFromRequest(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub).select("_id role vendorStatus businessName businessPhone city state");
+    if (!user || user.role !== "vendor") {
+      return res.status(403).json({ ok: false, message: "Vendor access required" });
+    }
+
+    req.vendorUser = user;
+    return next();
+  } catch (_error) {
+    return res.status(401).json({ ok: false, message: "Session expired" });
+  }
+};
+
 const toInquirySummary = (inquiry) => {
   const vendor = inquiry.vendor && typeof inquiry.vendor === "object" ? inquiry.vendor : null;
   return {
@@ -163,6 +183,55 @@ router.get("/inquiries", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load inquiries", error: error.message });
+  }
+});
+
+router.get("/inquiries/vendor", requireVendor, async (req, res) => {
+  try {
+    const statusInput = String(req.query.status || "").trim();
+    const search = String(req.query.search || "").trim();
+    const limit = Math.min(Math.max(Number(req.query.limit || 120), 1), 500);
+
+    const query = {
+      vendor: req.vendorUser._id,
+    };
+
+    if (statusInput) {
+      if (!INQUIRY_STATUS_VALUES.has(statusInput)) {
+        return res.status(400).json({ ok: false, message: "Invalid inquiry status" });
+      }
+      query.status = statusInput;
+    }
+
+    if (search) {
+      const regex = new RegExp(escapeRegex(search), "i");
+      query.$or = [{ subject: regex }, { name: regex }, { phone: regex }, { email: regex }, { message: regex }];
+    }
+
+    const inquiries = await Inquiry.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate("vendor", "_id businessName businessPhone city state");
+
+    const summary = inquiries.reduce(
+      (acc, inquiry) => {
+        const status = String(inquiry.status || "");
+        acc.total += 1;
+        if (status === "Open") acc.open += 1;
+        if (status === "In Progress") acc.inProgress += 1;
+        if (status === "Closed") acc.closed += 1;
+        return acc;
+      },
+      { total: 0, open: 0, inProgress: 0, closed: 0 }
+    );
+
+    return res.status(200).json({
+      ok: true,
+      summary,
+      inquiries: inquiries.map(toInquirySummary),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load vendor inquiries", error: error.message });
   }
 });
 

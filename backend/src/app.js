@@ -15,7 +15,10 @@ const envOrigins = String(process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const devOrigins = process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://localhost:3001"] : [];
+const devOrigins =
+  process.env.NODE_ENV === "development"
+    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+    : [];
 const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
 
 app.use(
