@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   MapPin,
@@ -18,6 +19,7 @@ import type { ListingProfile } from "@/data/listingData";
 import Footer from "@/components/Footer";
 import ActionButtonsBottom from "@/components/listing-profile/ActionButtonsBottom";
 import ActionButtonsTop from "@/components/listing-profile/ActionButtonsTop";
+import { submitVendorInquiry } from "@/lib/catalogClient";
 import {
   fetchBusinessReviews,
   getBusinessReviewAggregate,
@@ -34,6 +36,13 @@ const formatRating = (rating: number) => Number(rating || 0).toFixed(1);
 
 const normalizeDigits = (value: string) =>
   String(value || "").replace(/\D/g, "");
+
+const normalizeInquiryPhone = (value: string) => {
+  const digits = normalizeDigits(value);
+  return digits.length > 10 ? digits.slice(-10) : digits;
+};
+
+const isObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(String(value || "").trim());
 
 const normalizeAddressToken = (value: string) =>
   String(value || "")
@@ -99,6 +108,11 @@ const SIDEBAR_PLACEHOLDER_PHOTOS = [
 ];
 
 export default function ListingProfilePage({ profile }: { profile: ListingProfile }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const shouldOpenInquiryFromQuery = searchParams.get("inquiry") === "true";
+
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [animateHeroMeta, setAnimateHeroMeta] = useState(true);
@@ -117,6 +131,14 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   });
   const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [inquiryName, setInquiryName] = useState("");
+  const [inquiryPhone, setInquiryPhone] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquirySubject, setInquirySubject] = useState(`Enquiry for ${profile.name}`);
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [inquiryFormMessage, setInquiryFormMessage] = useState<string | null>(null);
+  const [isInquirySubmitting, setIsInquirySubmitting] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -197,6 +219,41 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     }
   }, [currentUser?.name]);
 
+  useEffect(() => {
+    setInquirySubject(`Enquiry for ${profile.name}`);
+  }, [profile.name]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    if (currentUser.name) {
+      setInquiryName((previous) => previous || currentUser.name || "");
+    }
+
+    if (currentUser.email) {
+      setInquiryEmail((previous) => previous || currentUser.email || "");
+    }
+
+    const preferredPhone = String(
+      currentUser.phone || currentUser.businessPhone || currentUser.businessAlternatePhone || ""
+    ).trim();
+
+    if (preferredPhone) {
+      setInquiryPhone((previous) => previous || preferredPhone);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!shouldOpenInquiryFromQuery) return;
+
+    setIsInquiryModalOpen(true);
+    setInquiryMessage((previous) =>
+      previous ||
+      `Hi ${profile.name}, I am interested in your services. Please share details.`
+    );
+    setInquiryFormMessage(null);
+  }, [profile.name, shouldOpenInquiryFromQuery]);
+
   const extendedProfile = profile as ListingProfile & {
     vendorStatus?: string;
     marketingOptIn?: boolean;
@@ -257,6 +314,13 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   }, [profile.id, profile.storeId]);
   const storeUrl = storefrontId ? `/store/${storefrontId}` : "#";
   const hasStorefront = Boolean(storefrontId);
+  const vendorInquiryId = useMemo(() => {
+    const candidates = [profile.id, profile.storeId]
+      .map((candidate) => String(candidate || "").trim())
+      .filter(Boolean);
+
+    return candidates.find((candidate) => isObjectId(candidate)) || "";
+  }, [profile.id, profile.storeId]);
   const emailUrl =
     profile.email && profile.email !== "Not provided"
       ? `mailto:${profile.email}`
@@ -437,6 +501,71 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
       setShareMessage("Profile link copied to clipboard");
     } catch {
       setShareMessage("Unable to copy profile link");
+    }
+  };
+
+  const closeInquiryModal = useCallback(() => {
+    setIsInquiryModalOpen(false);
+
+    if (searchParams.get("inquiry") !== "true") {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("inquiry");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  const handleInquirySubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const name = inquiryName.trim();
+    const phone = normalizeInquiryPhone(inquiryPhone);
+    const email = inquiryEmail.trim();
+    const message = inquiryMessage.trim();
+    const subject = inquirySubject.trim() || `Enquiry for ${profile.name}`;
+
+    if (!vendorInquiryId) {
+      setInquiryFormMessage("Enquiry is not available for this listing right now.");
+      return;
+    }
+
+    if (!name) {
+      setInquiryFormMessage("Please enter your name.");
+      return;
+    }
+
+    if (phone.length !== 10) {
+      setInquiryFormMessage("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    if (!message || message.length < 8) {
+      setInquiryFormMessage("Please write a short enquiry message.");
+      return;
+    }
+
+    setIsInquirySubmitting(true);
+    setInquiryFormMessage(null);
+
+    try {
+      await submitVendorInquiry({
+        vendorId: vendorInquiryId,
+        name,
+        phone,
+        email: email || undefined,
+        message,
+        subject,
+      });
+
+      setInquiryFormMessage("Enquiry sent successfully. The business will contact you soon.");
+    } catch (error) {
+      setInquiryFormMessage(
+        error instanceof Error ? error.message : "Failed to send enquiry. Please try again."
+      );
+    } finally {
+      setIsInquirySubmitting(false);
     }
   };
 
@@ -1062,6 +1191,130 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
           </aside>
         </section>
       </div>
+
+      {isInquiryModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center"
+          onClick={closeInquiryModal}
+        >
+          <section
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Send Inquiry</h2>
+                <p className="text-xs text-slate-500">Quickly connect with {profile.name}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeInquiryModal}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Close
+              </button>
+            </div>
+
+            <form className="space-y-3" onSubmit={handleInquirySubmit}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-xs font-semibold text-slate-600">
+                  Name
+                  <input
+                    type="text"
+                    value={inquiryName}
+                    onChange={(event) => setInquiryName(event.target.value)}
+                    className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-300"
+                    placeholder="Your name"
+                    required
+                  />
+                </label>
+
+                <label className="space-y-1 text-xs font-semibold text-slate-600">
+                  Phone
+                  <input
+                    type="tel"
+                    value={inquiryPhone}
+                    onChange={(event) => setInquiryPhone(event.target.value)}
+                    className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-300"
+                    placeholder="10-digit number"
+                    required
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-1 text-xs font-semibold text-slate-600">
+                Email (optional)
+                <input
+                  type="email"
+                  value={inquiryEmail}
+                  onChange={(event) => setInquiryEmail(event.target.value)}
+                  className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-300"
+                  placeholder="you@example.com"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs font-semibold text-slate-600">
+                Subject
+                <input
+                  type="text"
+                  value={inquirySubject}
+                  onChange={(event) => setInquirySubject(event.target.value)}
+                  className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-300"
+                  placeholder="Enquiry subject"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs font-semibold text-slate-600">
+                Message
+                <textarea
+                  value={inquiryMessage}
+                  onChange={(event) => setInquiryMessage(event.target.value)}
+                  className="min-h-[100px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300"
+                  placeholder="Tell the business what you need"
+                  required
+                />
+              </label>
+
+              {!vendorInquiryId ? (
+                <p className="text-xs font-medium text-amber-700">
+                  Inquiry submission is available only for live verified vendor listings.
+                </p>
+              ) : null}
+
+              {inquiryFormMessage ? (
+                <p
+                  className={`text-xs font-medium ${
+                    /successfully/i.test(inquiryFormMessage)
+                      ? "text-emerald-700"
+                      : "text-rose-600"
+                  }`}
+                >
+                  {inquiryFormMessage}
+                </p>
+              ) : null}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isInquirySubmitting || !vendorInquiryId}
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  {isInquirySubmitting ? "Sending..." : "Send Inquiry"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeInquiryModal}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
         <ActionButtonsBottom

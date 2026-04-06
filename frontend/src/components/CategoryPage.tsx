@@ -449,7 +449,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
 
             {filteredListings.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
                   {firstBatch.map((listing) => (
                     <BusinessListingCard
                       key={listing.id}
@@ -486,7 +486,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   </div>
                 </section>
 
-                <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
                   {remainingBatch.map((listing) => (
                     <BusinessListingCard
                       key={listing.id}
@@ -498,7 +498,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                 </div>
               </>
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 9 }).map((_, index) => (
                   <div
                     key={`skeleton-${index}`}
