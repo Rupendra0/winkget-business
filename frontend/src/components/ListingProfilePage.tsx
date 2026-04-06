@@ -492,7 +492,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   };
 
   return (
-    <main className="px-3 sm:px-6 lg:px-10 pb-28 md:pb-12">
+    <main className="w-full overflow-x-hidden px-4 sm:px-6 lg:px-10 pb-28 md:pb-12">
       <div className="w-full space-y-8">
         <section className="rounded-3xl overflow-hidden bg-white/80 border border-white/80 shadow-xl">
           <div className="relative h-52 sm:h-60 lg:h-64">
@@ -667,10 +667,6 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                   </p>
                 ) : null}
               </div>
-
-              <p className="mt-3 text-xs font-medium text-slate-500">
-                Quick actions are optimized above and pinned on mobile for faster enquiries.
-              </p>
             </div>
 
             <div className="rounded-3xl bg-white/85 border border-white/80 shadow-lg p-5 sm:p-6">

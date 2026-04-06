@@ -188,20 +188,20 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <div className="shrink-0 flex items-center gap-3">
+          <div className="min-w-0 flex items-center gap-2 sm:gap-3">
             {showBack ? (
               <button
                 type="button"
-                className="h-9 w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center btn-hover"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center btn-hover"
                 onClick={() => router.back()}
                 aria-label="Go back"
               >
                 <ChevronLeft size={18} />
               </button>
             ) : null}
-            <Link href="/" className="flex items-baseline gap-1 sm:gap-2">
-              <span className="text-xl sm:text-2xl font-bold text-blue-900">Winkget</span>
-              <span className="text-lg sm:text-xl font-semibold text-gray-800">Business</span>
+            <Link href="/" className="min-w-0 flex items-baseline gap-1 sm:gap-2">
+              <span className="text-lg sm:text-2xl font-bold text-blue-900">Winkget</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-semibold text-gray-800">Business</span>
             </Link>
           </div>
 
@@ -321,14 +321,14 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu */}
-          <div className="md:hidden flex items-center gap-2">
-            <div className="flex items-center gap-1 p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800">
-              <MapPin size={20} />
+          <div className="md:hidden shrink-0 flex items-center gap-1.5">
+            <div className="flex items-center gap-1 px-1.5 py-1.5 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800">
+              <MapPin size={18} />
               <select
                 value={selectedCity}
                 onChange={(event) => handleCityChange(event.target.value)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="max-w-24 bg-transparent text-xs text-gray-800 outline-none"
+                className="max-w-20 sm:max-w-24 bg-transparent text-xs text-gray-800 outline-none"
                 aria-label="Current location"
               >
                 {loadingCities ? <option value="">City...</option> : null}
@@ -342,26 +342,30 @@ export default function Navbar() {
             </div>
             <button
               type="button"
-              className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
+              className="p-1.5 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
               aria-label="Cart"
             >
-              <ShoppingCart size={20} />
+              <ShoppingCart size={18} />
             </button>
             {authLoading ? (
-              <div className="h-10 w-20 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
+              <div className="h-9 w-9 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
             ) : user ? (
               <Link
                 href="/profile"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold btn-hover"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-900 text-white font-semibold btn-hover px-2.5 sm:px-3"
+                aria-label="Profile"
               >
-                <UserRound size={16} /> Profile
+                <UserRound size={16} />
+                <span className="hidden sm:inline text-sm">Profile</span>
               </Link>
             ) : (
               <Link
                 href="/auth"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold btn-hover"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-900 text-white font-semibold btn-hover px-2.5 sm:px-3"
+                aria-label="Login"
               >
-                <LogIn size={16} /> Login
+                <LogIn size={16} />
+                <span className="hidden sm:inline text-sm">Login</span>
               </Link>
             )}
           </div>
