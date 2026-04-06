@@ -190,10 +190,14 @@ const sortAndNormalizeCustomFields = (fields?: CustomFormField[]): CustomFormFie
   const next: CustomFormField[] = [];
 
   fields.forEach((field, index) => {
-    const label = String(field?.label || "").trim();
+    const fieldRecord = (field && typeof field === "object" ? field : {}) as Record<string, unknown>;
+
+    const label = String(
+      fieldRecord.label ?? fieldRecord.fieldLabel ?? fieldRecord.name ?? fieldRecord.title ?? ""
+    ).trim();
     if (!label) return;
 
-    const key = String(field?.key || "")
+    const key = String(fieldRecord.key ?? fieldRecord.fieldKey ?? "")
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9_]+/g, "_")
@@ -201,23 +205,28 @@ const sortAndNormalizeCustomFields = (fields?: CustomFormField[]): CustomFormFie
     if (!key || seen.has(key)) return;
     seen.add(key);
 
-    const type = String(field?.type || "text") as CustomFormFieldType;
+    const type = String(fieldRecord.type ?? fieldRecord.inputType ?? fieldRecord.fieldType ?? "text") as CustomFormFieldType;
     const supportedType = ["text", "textarea", "number", "date", "select", "multi-select", "email", "phone", "url"].includes(type)
       ? type
       : "text";
+
+    const rawOptions =
+      fieldRecord.options ?? fieldRecord.optionValues ?? fieldRecord.choices ?? fieldRecord.values ?? [];
 
     next.push({
       key,
       label,
       type: supportedType,
-      required: Boolean(field?.required),
-      placeholder: String(field?.placeholder || "").trim() || undefined,
-      helpText: String(field?.helpText || "").trim() || undefined,
-      options: Array.isArray(field?.options)
-        ? field.options.map((option) => String(option || "").trim()).filter(Boolean)
+      required: Boolean(fieldRecord.required ?? fieldRecord.isRequired ?? fieldRecord.mandatory),
+      placeholder: String(fieldRecord.placeholder ?? fieldRecord.hint ?? "").trim() || undefined,
+      helpText: String(fieldRecord.helpText ?? fieldRecord.description ?? "").trim() || undefined,
+      options: Array.isArray(rawOptions)
+        ? rawOptions.map((option) => String(option || "").trim()).filter(Boolean)
         : [],
-      span: field?.span === 6 ? 6 : 12,
-      sortOrder: Number.isFinite(Number(field?.sortOrder)) ? Number(field.sortOrder) : (index + 1) * 10,
+      span: Number(fieldRecord.span ?? fieldRecord.width) === 6 ? 6 : 12,
+      sortOrder: Number.isFinite(Number(fieldRecord.sortOrder ?? fieldRecord.order ?? fieldRecord.position))
+        ? Number(fieldRecord.sortOrder ?? fieldRecord.order ?? fieldRecord.position)
+        : (index + 1) * 10,
     });
   });
 
@@ -366,6 +375,73 @@ const formatCustomDataValue = (value: string | number | string[] | undefined) =>
   }
 
   return String(value || "").trim() || "-";
+};
+
+const toSlugLike = (value: string) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const normalizeReference = (value: unknown) => {
+  if (!value || typeof value !== "object") return undefined;
+
+  const record = value as Record<string, unknown>;
+  const id = String(record.id ?? record._id ?? "").trim();
+  const name = String(record.name ?? "").trim();
+
+  if (!id && !name) return undefined;
+  return {
+    id,
+    name,
+  };
+};
+
+const normalizeCategoryOption = (value: unknown): CategoryOption | null => {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const id = String(record.id ?? record._id ?? "").trim();
+  const name = String(record.name ?? record.label ?? "").trim();
+  if (!id || !name) return null;
+
+  const customFormFields = sortAndNormalizeCustomFields(record.customFormFields as CustomFormField[] | undefined);
+  const slug = String(record.slug ?? toSlugLike(name)).trim() || toSlugLike(name);
+
+  return {
+    id,
+    name,
+    slug,
+    description: String(record.description ?? "").trim() || undefined,
+    customFormEnabled: Boolean(record.customFormEnabled) || customFormFields.length > 0,
+    customFormTitle: String(record.customFormTitle ?? "").trim() || undefined,
+    customFormFields,
+  };
+};
+
+const normalizeSubcategoryOption = (value: unknown): SubcategoryOption | null => {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const id = String(record.id ?? record._id ?? "").trim();
+  const name = String(record.name ?? record.label ?? "").trim();
+  if (!id || !name) return null;
+
+  const customFormFields = sortAndNormalizeCustomFields(record.customFormFields as CustomFormField[] | undefined);
+  const slug = String(record.slug ?? toSlugLike(name)).trim() || toSlugLike(name);
+
+  return {
+    id,
+    name,
+    slug,
+    description: String(record.description ?? "").trim() || undefined,
+    customFormEnabled: Boolean(record.customFormEnabled) || customFormFields.length > 0,
+    customFormTitle: String(record.customFormTitle ?? "").trim() || undefined,
+    customFormFields,
+    category: normalizeReference(record.category),
+    parentSubcategory: normalizeReference(record.parentSubcategory),
+  };
 };
 
 const buildSubcategoryLabelMap = (items: SubcategoryOption[]) => {
@@ -524,12 +600,36 @@ export default function VendorRegisterPage() {
 
         if (!active) return;
 
-        const nextCategories = Array.isArray(payload.categories) ? payload.categories : [];
+        const seenCategoryIds = new Set<string>();
+        const nextCategories = (Array.isArray(payload.categories) ? payload.categories : [])
+          .map(normalizeCategoryOption)
+          .filter((category): category is CategoryOption => Boolean(category))
+          .filter((category) => {
+            if (seenCategoryIds.has(category.id)) return false;
+            seenCategoryIds.add(category.id);
+            return true;
+          });
+
         setCategories(nextCategories);
 
         if (nextCategories.length > 0) {
           setForm((current) => {
-            if (current.businessCategoryId) return current;
+            const currentValue = String(current.businessCategoryId || "").trim().toLowerCase();
+            if (currentValue) {
+              const matched = nextCategories.find(
+                (item) =>
+                  item.id === current.businessCategoryId ||
+                  item.slug.toLowerCase() === currentValue ||
+                  item.name.toLowerCase() === currentValue
+              );
+
+              if (matched) {
+                return matched.id === current.businessCategoryId
+                  ? current
+                  : { ...current, businessCategoryId: matched.id };
+              }
+            }
+
             return { ...current, businessCategoryId: nextCategories[0].id };
           });
         }
@@ -606,10 +706,24 @@ export default function VendorRegisterPage() {
     let active = true;
 
     const loadSubcategories = async () => {
-      if (!form.businessCategoryId) {
+      const rawCategoryValue = String(form.businessCategoryId || "").trim();
+      const normalizedCategoryValue = rawCategoryValue.toLowerCase();
+      const resolvedCategory = categories.find(
+        (category) =>
+          category.id === rawCategoryValue ||
+          category.slug.toLowerCase() === normalizedCategoryValue ||
+          category.name.toLowerCase() === normalizedCategoryValue
+      );
+      const resolvedCategoryId = resolvedCategory?.id || rawCategoryValue;
+
+      if (!resolvedCategoryId) {
         setSubcategories([]);
         setSubcategoryLoadError(null);
         return;
+      }
+
+      if (resolvedCategory && resolvedCategoryId !== rawCategoryValue) {
+        setForm((current) => ({ ...current, businessCategoryId: resolvedCategoryId }));
       }
 
       setLoadingSubcategories(true);
@@ -617,7 +731,7 @@ export default function VendorRegisterPage() {
 
       try {
         const response = await fetch(
-          `${BACKEND_URL}/api/subcategories?categoryId=${encodeURIComponent(form.businessCategoryId)}`,
+          `${BACKEND_URL}/api/subcategories?categoryId=${encodeURIComponent(resolvedCategoryId)}`,
           {
             cache: "no-store",
           }
@@ -630,7 +744,16 @@ export default function VendorRegisterPage() {
 
         if (!active) return;
 
-        const nextSubcategories = Array.isArray(payload.subcategories) ? payload.subcategories : [];
+        const seenSubcategoryIds = new Set<string>();
+        const nextSubcategories = (Array.isArray(payload.subcategories) ? payload.subcategories : [])
+          .map(normalizeSubcategoryOption)
+          .filter((subcategory): subcategory is SubcategoryOption => Boolean(subcategory))
+          .filter((subcategory) => {
+            if (seenSubcategoryIds.has(subcategory.id)) return false;
+            seenSubcategoryIds.add(subcategory.id);
+            return true;
+          });
+
         setSubcategories(nextSubcategories);
         setForm((current) => {
           if (!current.businessSubcategoryId) return current;
@@ -654,7 +777,7 @@ export default function VendorRegisterPage() {
     return () => {
       active = false;
     };
-  }, [form.businessCategoryId]);
+  }, [categories, form.businessCategoryId]);
 
   const updateField = <K extends keyof VendorFormState>(field: K, value: VendorFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -711,14 +834,43 @@ export default function VendorRegisterPage() {
   );
 
   const selectedCategory = useMemo(
-    () => categories.find((category) => category.id === form.businessCategoryId) || null,
+    () => {
+      const rawValue = String(form.businessCategoryId || "").trim();
+      if (!rawValue) return null;
+
+      const normalizedValue = rawValue.toLowerCase();
+      return (
+        categories.find(
+          (category) =>
+            category.id === rawValue ||
+            category.slug.toLowerCase() === normalizedValue ||
+            category.name.toLowerCase() === normalizedValue
+        ) || null
+      );
+    },
     [categories, form.businessCategoryId]
   );
 
   const selectedSubcategory = useMemo(
-    () => subcategories.find((subcategory) => subcategory.id === form.businessSubcategoryId) || null,
+    () => {
+      const rawValue = String(form.businessSubcategoryId || "").trim();
+      if (!rawValue) return null;
+
+      const normalizedValue = rawValue.toLowerCase();
+      return (
+        subcategories.find(
+          (subcategory) =>
+            subcategory.id === rawValue ||
+            subcategory.slug.toLowerCase() === normalizedValue ||
+            subcategory.name.toLowerCase() === normalizedValue
+        ) || null
+      );
+    },
     [form.businessSubcategoryId, subcategories]
   );
+
+  const selectedCategoryId = selectedCategory?.id || String(form.businessCategoryId || "").trim();
+  const selectedSubcategoryId = selectedSubcategory?.id || String(form.businessSubcategoryId || "").trim();
 
   const effectiveCustomForm = useMemo(
     () => resolveEffectiveCustomForm(selectedCategory, selectedSubcategory),
@@ -759,7 +911,7 @@ export default function VendorRegisterPage() {
     if (!form.businessEmail.trim()) return "Business email is required";
     if (!EMAIL_REGEX.test(form.businessEmail.trim().toLowerCase())) return "Business email format is invalid";
     if (!PHONE_REGEX.test(form.businessPhone.trim())) return "Business phone must be exactly 10 digits";
-    if (!form.businessCategoryId) return "Please select a business category";
+    if (!selectedCategoryId) return "Please select a business category";
     if (!form.businessAddress.trim()) return "Business address is required";
     if (!form.city.trim()) return "City is required";
     if (!form.sublocality.trim()) return "Sublocality is required";
@@ -929,8 +1081,8 @@ export default function VendorRegisterPage() {
           businessEmail: form.businessEmail.trim().toLowerCase(),
           businessPhone: form.businessPhone.trim(),
           password: form.password,
-          businessCategoryId: form.businessCategoryId,
-          businessSubcategoryId: form.businessSubcategoryId || undefined,
+          businessCategoryId: selectedCategoryId,
+          businessSubcategoryId: selectedSubcategoryId || undefined,
           businessAddress: form.businessAddress.trim(),
           city: form.city.trim(),
           sublocality: form.sublocality.trim(),
@@ -1192,7 +1344,7 @@ export default function VendorRegisterPage() {
                       Business category <RequiredMark />
                     </span>
                     <select
-                      value={form.businessCategoryId}
+                      value={selectedCategoryId}
                       onChange={(event) => {
                         updateField("businessCategoryId", event.target.value);
                         updateField("businessSubcategoryId", "");
@@ -1217,10 +1369,10 @@ export default function VendorRegisterPage() {
                   <label className="sm:col-span-2 block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">Business subcategory</span>
                     <select
-                      value={form.businessSubcategoryId}
+                      value={selectedSubcategoryId}
                       onChange={(event) => updateField("businessSubcategoryId", event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
-                      disabled={!form.businessCategoryId || loadingSubcategories || subcategories.length === 0}
+                      disabled={!selectedCategoryId || loadingSubcategories || subcategories.length === 0}
                     >
                       <option value="">Select subcategory (optional)</option>
                       {sortedSubcategories.map((subcategory) => (
