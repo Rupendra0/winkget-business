@@ -146,7 +146,7 @@ function BusinessListingCardComponent({
 
   const statusLabel =
     openStatus.isOpen === true
-      ? "Open now"
+      ? "Open"
       : openStatus.isOpen === false
         ? "Closed"
         : "Hours unavailable";
