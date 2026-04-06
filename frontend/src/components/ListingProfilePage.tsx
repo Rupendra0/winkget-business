@@ -6,11 +6,6 @@ import {
   CheckCircle2,
   MapPin,
   Navigation,
-  Store,
-  Phone,
-  Mail,
-  MessageCircle,
-  Share2,
   Clock3,
   CalendarDays,
   Building2,
@@ -21,6 +16,8 @@ import {
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import type { ListingProfile } from "@/data/listingData";
 import Footer from "@/components/Footer";
+import ActionButtonsBottom from "@/components/listing-profile/ActionButtonsBottom";
+import ActionButtonsTop from "@/components/listing-profile/ActionButtonsTop";
 import {
   fetchBusinessReviews,
   getBusinessReviewAggregate,
@@ -264,6 +261,31 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     profile.email && profile.email !== "Not provided"
       ? `mailto:${profile.email}`
       : "#";
+  const enquiryLabel = useMemo(() => {
+    const rawLabel = String(profile.ctaLabel || "").trim();
+    return /enquir|inquir/i.test(rawLabel) ? rawLabel : "Send Enquiry";
+  }, [profile.ctaLabel]);
+  const enquiryHref = useMemo(() => {
+    const email = String(profile.email || "").trim();
+    const subject = encodeURIComponent(`Enquiry for ${profile.name}`);
+    const message = encodeURIComponent(
+      `Hi ${profile.name}, I found your listing on Winkget and would like to know more about your services.`
+    );
+
+    if (email && email !== "Not provided") {
+      return `mailto:${email}?subject=${subject}&body=${message}`;
+    }
+
+    if (whatsappPhone) {
+      return `https://wa.me/${whatsappPhone}?text=${message}`;
+    }
+
+    if (dialPhone) {
+      return `tel:${dialPhone}`;
+    }
+
+    return "#";
+  }, [dialPhone, profile.email, profile.name, whatsappPhone]);
   const servicePoints = useMemo(
     () => profile.services.filter(Boolean),
     [profile.services]
@@ -470,7 +492,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   };
 
   return (
-    <main className="px-3 sm:px-6 lg:px-10 pb-12">
+    <main className="px-3 sm:px-6 lg:px-10 pb-28 md:pb-12">
       <div className="w-full space-y-8">
         <section className="rounded-3xl overflow-hidden bg-white/80 border border-white/80 shadow-xl">
           <div className="relative h-52 sm:h-60 lg:h-64">
@@ -546,60 +568,16 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
           </div>
 
           <div className="px-4 sm:px-6 lg:px-8 py-5 bg-white border-t border-slate-100">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <a
-                href={dialPhone ? `tel:${dialPhone}` : "#"}
-                className="inline-flex items-center gap-2 rounded-full border border-amber-400 px-5 py-2 text-sm font-semibold text-amber-800 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md motion-safe:hover:scale-[1.03]"
-              >
-                <Phone size={16} />
-                Call
-              </a>
-              <a
-                href={
-                  profile.email && profile.email !== "Not provided"
-                    ? `mailto:${profile.email}`
-                    : "#"
-                }
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover"
-              >
-                <Mail size={16} />
-                Email
-              </a>
-              <a
-                href={whatsappPhone ? `https://wa.me/${whatsappPhone}` : "#"}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover"
-              >
-                <MessageCircle size={16} />
-                Whatsapp
-              </a>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-amber-400 text-amber-800 text-sm font-semibold btn-hover"
-              >
-                <MapPin size={16} />
-                Direction
-              </a>
-              <button
-                type="button"
-                onClick={() => void handleShareProfile()}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-slate-300 text-slate-700 text-sm font-semibold btn-hover"
-              >
-                <Share2 size={16} />
-                Share
-              </button>
-              {hasStorefront ? (
-                <Link
-                  href={storeUrl}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover"
-                >
-                  Shop Storefront
-                </Link>
-              ) : null}
-            </div>
+            <ActionButtonsTop
+              callHref={dialPhone ? `tel:${dialPhone}` : undefined}
+              enquiryHref={enquiryHref !== "#" ? enquiryHref : undefined}
+              enquiryLabel={enquiryLabel}
+              whatsappHref={whatsappPhone ? `https://wa.me/${whatsappPhone}` : undefined}
+              directionsHref={directionsUrl}
+              emailHref={emailUrl !== "#" ? emailUrl : undefined}
+              onShare={handleShareProfile}
+              storeHref={hasStorefront ? storeUrl : undefined}
+            />
             {shareMessage ? (
               <p className="mt-2 text-xs font-medium text-slate-600">{shareMessage}</p>
             ) : null}
@@ -690,41 +668,9 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
                 ) : null}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-                <a
-                  href={dialPhone ? `tel:${dialPhone}` : "#"}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-800 hover:shadow-md motion-safe:hover:scale-[1.02]"
-                >
-                  <Phone size={16} />
-                  Call Now
-                </a>
-
-                <a
-                  href={whatsappPhone ? `https://wa.me/${whatsappPhone}` : "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-green-500 bg-white px-3 text-sm font-semibold text-green-700 transition hover:bg-green-50"
-                >
-                  <MessageCircle size={16} />
-                  WhatsApp
-                </a>
-
-                <Link
-                  href={storeUrl}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                >
-                  <Store size={16} />
-                  Visit Store
-                </Link>
-
-                <a
-                  href={emailUrl}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Mail size={16} />
-                  Email
-                </a>
-              </div>
+              <p className="mt-3 text-xs font-medium text-slate-500">
+                Quick actions are optimized above and pinned on mobile for faster enquiries.
+              </p>
             </div>
 
             <div className="rounded-3xl bg-white/85 border border-white/80 shadow-lg p-5 sm:p-6">
@@ -1119,6 +1065,14 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
             </section>
           </aside>
         </section>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+        <ActionButtonsBottom
+          callHref={dialPhone ? `tel:${dialPhone}` : undefined}
+          enquiryHref={enquiryHref !== "#" ? enquiryHref : undefined}
+          enquiryLabel={enquiryLabel}
+        />
       </div>
 
       <Footer />
