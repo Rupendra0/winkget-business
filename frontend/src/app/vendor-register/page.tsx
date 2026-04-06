@@ -603,8 +603,8 @@ export default function VendorRegisterPage() {
         const seenCategoryIds = new Set<string>();
         const nextCategories = (Array.isArray(payload.categories) ? payload.categories : [])
           .map(normalizeCategoryOption)
-          .filter((category): category is CategoryOption => Boolean(category))
-          .filter((category) => {
+          .filter((category: CategoryOption | null): category is CategoryOption => Boolean(category))
+          .filter((category: CategoryOption) => {
             if (seenCategoryIds.has(category.id)) return false;
             seenCategoryIds.add(category.id);
             return true;
@@ -617,7 +617,7 @@ export default function VendorRegisterPage() {
             const currentValue = String(current.businessCategoryId || "").trim().toLowerCase();
             if (currentValue) {
               const matched = nextCategories.find(
-                (item) =>
+                (item: CategoryOption) =>
                   item.id === current.businessCategoryId ||
                   item.slug.toLowerCase() === currentValue ||
                   item.name.toLowerCase() === currentValue
@@ -747,8 +747,8 @@ export default function VendorRegisterPage() {
         const seenSubcategoryIds = new Set<string>();
         const nextSubcategories = (Array.isArray(payload.subcategories) ? payload.subcategories : [])
           .map(normalizeSubcategoryOption)
-          .filter((subcategory): subcategory is SubcategoryOption => Boolean(subcategory))
-          .filter((subcategory) => {
+          .filter((subcategory: SubcategoryOption | null): subcategory is SubcategoryOption => Boolean(subcategory))
+          .filter((subcategory: SubcategoryOption) => {
             if (seenSubcategoryIds.has(subcategory.id)) return false;
             seenSubcategoryIds.add(subcategory.id);
             return true;
