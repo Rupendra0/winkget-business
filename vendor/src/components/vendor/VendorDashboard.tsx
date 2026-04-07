@@ -7,8 +7,12 @@ import {
   BarChart3,
   Bell,
   Building2,
+  Camera,
   CircleDot,
   ClipboardList,
+  Facebook,
+  ImagePlus,
+  Instagram,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -20,6 +24,8 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Upload,
+  Youtube,
 } from "lucide-react";
 import {
   fetchVendorInquiries,
@@ -35,7 +41,7 @@ import {
   type VendorSession,
 } from "@/lib/vendorApi";
 
-type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Settings";
+type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Shop" | "Settings";
 
 type SidebarItem = {
   label: SidebarLabel;
@@ -69,6 +75,18 @@ type SettingsFormState = {
   serviceTagsText: string;
 };
 
+type ShopProfileFormState = {
+  image: string;
+  shopBannerImage: string;
+  shopGalleryText: string;
+  businessAddress: string;
+  website: string;
+  businessDescription: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  youtubeUrl: string;
+};
+
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Overview", icon: LayoutDashboard },
   { label: "Enquiries", icon: MessageSquare },
@@ -76,13 +94,15 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Reviews", icon: Star },
   { label: "Orders", icon: ShoppingBag },
   { label: "Posts", icon: Megaphone },
+  { label: "Shop", icon: ImagePlus },
   { label: "Settings", icon: Settings },
 ];
 
-const MOBILE_BAR_ITEMS: Array<{ label: "Overview" | "Enquiries" | "Calls" | "Settings"; icon: SidebarItem["icon"] }> = [
+const MOBILE_BAR_ITEMS: Array<{ label: "Overview" | "Enquiries" | "Calls" | "Shop" | "Settings"; icon: SidebarItem["icon"] }> = [
   { label: "Overview", icon: LayoutDashboard },
   { label: "Enquiries", icon: MessageSquare },
   { label: "Calls", icon: PhoneCall },
+  { label: "Shop", icon: ImagePlus },
   { label: "Settings", icon: Settings },
 ];
 
@@ -111,6 +131,10 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
     title: "Posts",
     subtitle: "Content composer interface; backend posting endpoint is not available yet.",
   },
+  Shop: {
+    title: "Shop Profile",
+    subtitle: "Manage shop display photo, banner, gallery, social links, and listing details.",
+  },
   Settings: {
     title: "Settings",
     subtitle: "Update your vendor profile fields currently supported by backend.",
@@ -119,6 +143,12 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
 
 const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_MAIN_WEBSITE_URL || "http://localhost:3000";
 const VENDOR_REGISTRATION_URL = `${MAIN_WEBSITE_URL.replace(/\/$/, "")}/vendor-register`;
+const DEFAULT_VENDOR_AVATAR =
+  "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&q=60";
+const DEFAULT_VENDOR_BANNER =
+  "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=60";
+const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_SHOP_GALLERY_ITEMS = 8;
 
 const EMPTY_REVIEW_SNAPSHOT: VendorReviewSnapshot = {
   summary: { rating: 0, reviews: 0 },
@@ -214,6 +244,58 @@ function buildSettingsForm(vendor: VendorSession | null): SettingsFormState {
     shopClosingTime: String(vendor?.shopClosingTime || ""),
     serviceTagsText: Array.isArray(vendor?.serviceTags) ? vendor.serviceTags.join(", ") : "",
   };
+}
+
+function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormState {
+  return {
+    image: String(vendor?.image || "").trim(),
+    shopBannerImage: String(vendor?.shopBannerImage || "").trim(),
+    shopGalleryText: Array.isArray(vendor?.shopGallery) ? vendor.shopGallery.join("\n") : "",
+    businessAddress: String(vendor?.businessAddress || "").trim(),
+    website: String(vendor?.website || "").trim(),
+    businessDescription: String(vendor?.businessDescription || "").trim(),
+    instagramUrl: String(vendor?.instagramUrl || "").trim(),
+    facebookUrl: String(vendor?.facebookUrl || "").trim(),
+    youtubeUrl: String(vendor?.youtubeUrl || "").trim(),
+  };
+}
+
+function parseShopGalleryInput(value: string): string[] {
+  return Array.from(
+    new Set(
+      String(value || "")
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, MAX_SHOP_GALLERY_ITEMS);
+}
+
+function filterShopGalleryItems(values: string[], profileImage: string, bannerImage: string): string[] {
+  const profileToken = String(profileImage || "").trim();
+  const bannerToken = String(bannerImage || "").trim();
+  const blocked = new Set([profileToken, bannerToken].filter(Boolean));
+
+  return values.filter((value) => {
+    const normalized = String(value || "").trim();
+    return normalized && !blocked.has(normalized);
+  });
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) {
+        reject(new Error("Could not read file"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function DashboardSkeleton() {
@@ -741,6 +823,299 @@ function PostsSection({
   );
 }
 
+function ShopProfileSection({
+  form,
+  businessName,
+  onChange,
+  onSubmit,
+  onUploadSingle,
+  onUploadGallery,
+  saving,
+  message,
+  error,
+}: {
+  form: ShopProfileFormState;
+  businessName: string;
+  onChange: (field: keyof ShopProfileFormState, value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUploadSingle: (field: "image" | "shopBannerImage", files: FileList | null) => void;
+  onUploadGallery: (files: FileList | null) => void;
+  saving: boolean;
+  message: string | null;
+  error: string | null;
+}) {
+  const galleryItems = filterShopGalleryItems(
+    parseShopGalleryInput(form.shopGalleryText),
+    form.image,
+    form.shopBannerImage
+  );
+  const avatarImage = form.image || DEFAULT_VENDOR_AVATAR;
+  const bannerImage = form.shopBannerImage || DEFAULT_VENDOR_BANNER;
+  const socialLocked = true;
+
+  return (
+    <section className="space-y-4">
+      <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Live Shop Preview</p>
+
+        <div className="mt-3 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
+          <div className="vendor-shop-preview-banner relative w-full overflow-hidden bg-gray-100">
+            <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-black/5" />
+            <div className="absolute inset-x-3 bottom-3 flex items-end gap-3">
+              <div className="vendor-shop-preview-avatar overflow-hidden rounded-2xl border-2 border-white bg-white shadow-sm">
+                <img src={avatarImage} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <div className="min-w-0 flex-1 pb-1 text-white">
+                <p className="truncate text-sm font-semibold">{businessName}</p>
+                <p className="truncate text-xs text-white/90">{form.businessAddress || "Address not set"}</p>
+              </div>
+            </div>
+          </div>
+
+          {galleryItems.length > 0 ? (
+            <div className="grid grid-cols-4 gap-2 p-3">
+              {galleryItems.slice(0, 4).map((url) => (
+                <div key={url} className="h-14 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <img src={url} alt="Shop gallery" className="h-full w-full object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {form.instagramUrl ? (
+            <a
+              href={form.instagramUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 font-semibold text-pink-700"
+            >
+              <Instagram className="h-3.5 w-3.5" aria-hidden="true" />
+              Instagram
+            </a>
+          ) : null}
+          {form.facebookUrl ? (
+            <a
+              href={form.facebookUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 font-semibold text-blue-700"
+            >
+              <Facebook className="h-3.5 w-3.5" aria-hidden="true" />
+              Facebook
+            </a>
+          ) : null}
+          {form.youtubeUrl ? (
+            <a
+              href={form.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 font-semibold text-rose-700"
+            >
+              <Youtube className="h-3.5 w-3.5" aria-hidden="true" />
+              YouTube
+            </a>
+          ) : null}
+        </div>
+      </article>
+
+      <form onSubmit={onSubmit} className="space-y-4">
+        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h3 className="font-display text-lg font-semibold text-gray-900">Shop Profile</h3>
+          <p className="mt-1 text-xs text-gray-500">
+            Update your shop DP, banner, gallery photos, social links, and listing details.
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Display Photo URL</span>
+              <input
+                type="url"
+                value={form.image}
+                onChange={(event) => onChange("image", event.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Banner URL</span>
+              <input
+                type="url"
+                value={form.shopBannerImage}
+                onChange={(event) => onChange("shopBannerImage", event.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+              <Camera className="h-4 w-4" aria-hidden="true" />
+              Upload DP
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  onUploadSingle("image", event.currentTarget.files);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+              <ImagePlus className="h-4 w-4" aria-hidden="true" />
+              Upload Banner
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  onUploadSingle("shopBannerImage", event.currentTarget.files);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+          </div>
+
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">
+              Shop Photos (one URL per line, max {MAX_SHOP_GALLERY_ITEMS})
+            </span>
+            <textarea
+              value={form.shopGalleryText}
+              onChange={(event) => onChange("shopGalleryText", event.target.value)}
+              className="min-h-[100px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+            <Upload className="h-4 w-4" aria-hidden="true" />
+            Upload Shop Photos
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                onUploadGallery(event.currentTarget.files);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Address</span>
+              <input
+                type="text"
+                value={form.businessAddress}
+                onChange={(event) => onChange("businessAddress", event.target.value)}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Website URL</span>
+              <input
+                type="url"
+                value={form.website}
+                onChange={(event) => onChange("website", event.target.value)}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Description</span>
+              <textarea
+                value={form.businessDescription}
+                onChange={(event) => onChange("businessDescription", event.target.value)}
+                className="min-h-[100px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="font-semibold">Premium feature</p>
+            <p className="mt-1">Social media links are locked. Upgrade to Premium to unlock editing.</p>
+            <button
+              type="button"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Go Premium
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
+                <Instagram className="h-3.5 w-3.5" aria-hidden="true" /> Instagram URL
+              </span>
+              <input
+                type="url"
+                value={form.instagramUrl}
+                onChange={(event) => onChange("instagramUrl", event.target.value)}
+                disabled={socialLocked}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                placeholder="https://instagram.com/..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
+                <Facebook className="h-3.5 w-3.5" aria-hidden="true" /> Facebook URL
+              </span>
+              <input
+                type="url"
+                value={form.facebookUrl}
+                onChange={(event) => onChange("facebookUrl", event.target.value)}
+                disabled={socialLocked}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                placeholder="https://facebook.com/..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
+                <Youtube className="h-3.5 w-3.5" aria-hidden="true" /> YouTube URL
+              </span>
+              <input
+                type="url"
+                value={form.youtubeUrl}
+                onChange={(event) => onChange("youtubeUrl", event.target.value)}
+                disabled={socialLocked}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                placeholder="https://youtube.com/..."
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--vendor-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" aria-hidden="true" />
+              {saving ? "Saving..." : "Save Shop Profile"}
+            </button>
+
+            {message ? <p className="text-xs text-emerald-700">{message}</p> : null}
+            {error ? <p className="text-xs text-red-700">{error}</p> : null}
+          </div>
+        </article>
+      </form>
+    </section>
+  );
+}
+
 function SettingsSection({
   form,
   onChange,
@@ -771,7 +1146,6 @@ function SettingsSection({
             ["businessEmail", "Business Email"],
             ["businessPhone", "Business Phone"],
             ["businessAlternatePhone", "Business Alternate Phone"],
-            ["city", "City"],
             ["sublocality", "Sublocality"],
             ["state", "State"],
             ["shopOpeningTime", "Opening Time (HH:MM)"],
@@ -831,6 +1205,10 @@ export default function VendorDashboard() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [shopProfileForm, setShopProfileForm] = useState<ShopProfileFormState>(() => buildShopProfileForm(null));
+  const [shopProfileSaving, setShopProfileSaving] = useState(false);
+  const [shopProfileMessage, setShopProfileMessage] = useState<string | null>(null);
+  const [shopProfileError, setShopProfileError] = useState<string | null>(null);
   const [postTitle, setPostTitle] = useState("");
   const [postMessage, setPostMessage] = useState("");
   const [postCta, setPostCta] = useState("Contact Now");
@@ -846,6 +1224,7 @@ export default function VendorDashboard() {
 
       setVendor(session);
       setSettingsForm(buildSettingsForm(session));
+      setShopProfileForm(buildShopProfileForm(session));
 
       if (!session?.id) {
         setReviews(EMPTY_REVIEW_SNAPSHOT);
@@ -1008,6 +1387,7 @@ export default function VendorDashboard() {
   const greetingName = String(vendor?.name || vendor?.businessName || "Partner").trim() || "Partner";
   const businessName = String(vendor?.businessName || "Your Business").trim() || "Your Business";
   const location = [vendor?.city, vendor?.state].filter(Boolean).join(", ") || "Location not set";
+  const sidebarAvatar = String(vendor?.image || DEFAULT_VENDOR_AVATAR).trim() || DEFAULT_VENDOR_AVATAR;
 
   const handleSettingsChange = (field: keyof SettingsFormState, value: string) => {
     setSettingsForm((current) => ({
@@ -1039,7 +1419,6 @@ export default function VendorDashboard() {
         businessEmail: settingsForm.businessEmail,
         businessPhone: settingsForm.businessPhone,
         businessAlternatePhone: settingsForm.businessAlternatePhone,
-        city: settingsForm.city,
         sublocality: settingsForm.sublocality,
         state: settingsForm.state,
         shopOpeningTime: settingsForm.shopOpeningTime,
@@ -1049,12 +1428,135 @@ export default function VendorDashboard() {
 
       setVendor(updatedVendor);
       setSettingsForm(buildSettingsForm(updatedVendor));
+      setShopProfileForm(buildShopProfileForm(updatedVendor));
       setSettingsMessage("Settings updated successfully");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update settings";
       setSettingsError(message);
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleShopProfileChange = (field: keyof ShopProfileFormState, value: string) => {
+    setShopProfileForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleShopProfileSingleUpload = async (field: "image" | "shopBannerImage", files: FileList | null) => {
+    if (!files?.length) return;
+
+    const file = files[0];
+    setShopProfileMessage(null);
+    setShopProfileError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setShopProfileError("Please upload an image file only.");
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      setShopProfileError("Image is too large. Please keep each upload under 2MB.");
+      return;
+    }
+
+    try {
+      const imageData = await fileToDataUrl(file);
+      setShopProfileForm((current) => ({
+        ...current,
+        [field]: imageData,
+      }));
+      setShopProfileMessage(field === "image" ? "Shop DP selected." : "Shop banner selected.");
+    } catch {
+      setShopProfileError("Could not read image file. Please try again.");
+    }
+  };
+
+  const handleShopProfileGalleryUpload = async (files: FileList | null) => {
+    if (!files?.length) return;
+
+    setShopProfileMessage(null);
+    setShopProfileError(null);
+
+    const selectedFiles = Array.from(files);
+    const validImageFiles = selectedFiles.filter((file) => file.type.startsWith("image/"));
+
+    if (!validImageFiles.length) {
+      setShopProfileError("Please upload image files only.");
+      return;
+    }
+
+    if (validImageFiles.some((file) => file.size > MAX_UPLOAD_SIZE_BYTES)) {
+      setShopProfileError("One or more images exceed 2MB. Please use smaller files.");
+      return;
+    }
+
+    const existingGallery = parseShopGalleryInput(shopProfileForm.shopGalleryText);
+    const sanitizedExistingGallery = filterShopGalleryItems(
+      existingGallery,
+      shopProfileForm.image,
+      shopProfileForm.shopBannerImage
+    );
+    const availableSlots = Math.max(0, MAX_SHOP_GALLERY_ITEMS - sanitizedExistingGallery.length);
+    if (availableSlots === 0) {
+      setShopProfileError(`Shop gallery supports up to ${MAX_SHOP_GALLERY_ITEMS} images.`);
+      return;
+    }
+
+    try {
+      const uploadedGallery = await Promise.all(validImageFiles.slice(0, availableSlots).map((file) => fileToDataUrl(file)));
+      const mergedGallery = filterShopGalleryItems(
+        [...sanitizedExistingGallery, ...uploadedGallery],
+        shopProfileForm.image,
+        shopProfileForm.shopBannerImage
+      ).slice(0, MAX_SHOP_GALLERY_ITEMS);
+
+      setShopProfileForm((current) => ({
+        ...current,
+        shopGalleryText: mergedGallery.join("\n"),
+      }));
+      setShopProfileMessage(`${uploadedGallery.length} shop photo${uploadedGallery.length === 1 ? "" : "s"} added.`);
+    } catch {
+      setShopProfileError("Could not process one or more photos. Please try again.");
+    }
+  };
+
+  const handleShopProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!vendor || shopProfileSaving) return;
+
+    setShopProfileMessage(null);
+    setShopProfileError(null);
+    setShopProfileSaving(true);
+
+    try {
+      const updatedVendor = await updateVendorProfile({
+        image: shopProfileForm.image,
+        shopBannerImage: shopProfileForm.shopBannerImage,
+        shopGallery: filterShopGalleryItems(
+          parseShopGalleryInput(shopProfileForm.shopGalleryText),
+          shopProfileForm.image,
+          shopProfileForm.shopBannerImage
+        ),
+        businessAddress: shopProfileForm.businessAddress,
+        website: shopProfileForm.website,
+        businessDescription: shopProfileForm.businessDescription,
+        instagramUrl: shopProfileForm.instagramUrl,
+        facebookUrl: shopProfileForm.facebookUrl,
+        youtubeUrl: shopProfileForm.youtubeUrl,
+      });
+
+      setVendor(updatedVendor);
+      setShopProfileForm(buildShopProfileForm(updatedVendor));
+      setSettingsForm(buildSettingsForm(updatedVendor));
+      setShopProfileMessage("Shop profile updated successfully");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update shop profile";
+      setShopProfileError(message);
+    } finally {
+      setShopProfileSaving(false);
     }
   };
 
@@ -1125,6 +1627,22 @@ export default function VendorDashboard() {
       );
     }
 
+    if (activeNav === "Shop") {
+      return (
+        <ShopProfileSection
+          form={shopProfileForm}
+          businessName={businessName}
+          onChange={handleShopProfileChange}
+          onSubmit={handleShopProfileSubmit}
+          onUploadSingle={handleShopProfileSingleUpload}
+          onUploadGallery={handleShopProfileGalleryUpload}
+          saving={shopProfileSaving}
+          message={shopProfileMessage}
+          error={shopProfileError}
+        />
+      );
+    }
+
     return (
       <SettingsSection
         form={settingsForm}
@@ -1176,8 +1694,25 @@ export default function VendorDashboard() {
         <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_320px]">
           <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border-r border-gray-200 bg-white/60 p-4 backdrop-blur-md lg:flex">
             <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
-              <p className="font-display text-lg font-semibold text-gray-900">Vendor Panel</p>
-              <p className="mt-1 text-xs text-gray-500">Local Business Workspace</p>
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+                  <img src={sidebarAvatar} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate font-display text-lg font-semibold text-gray-900">{businessName}</p>
+                  <p className="mt-0.5 truncate text-xs text-gray-500">{location}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveNav("Shop")}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              >
+                <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+                Edit Shop Profile
+              </button>
             </div>
 
             <nav className="mt-5 space-y-1.5" aria-label="Sidebar navigation">
@@ -1216,6 +1751,14 @@ export default function VendorDashboard() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveNav("Shop")}
+                  className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm"
+                  aria-label="Open shop profile"
+                >
+                  <img src={sidebarAvatar} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
+                </button>
                 <button
                   type="button"
                   onClick={refreshDashboardData}
@@ -1279,7 +1822,7 @@ export default function VendorDashboard() {
         aria-label="Mobile quick actions"
         className="fixed inset-x-4 bottom-3 z-40 rounded-2xl border border-white/70 bg-white/90 p-2 shadow-lg backdrop-blur lg:hidden"
       >
-        <ul className="grid grid-cols-4 gap-1">
+        <ul className="grid grid-cols-5 gap-1">
           {MOBILE_BAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.label;

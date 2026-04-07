@@ -23,6 +23,12 @@ export type VendorSession = {
   postalCode?: string;
   website?: string;
   businessDescription?: string;
+  image?: string;
+  shopBannerImage?: string;
+  shopGallery?: string[];
+  instagramUrl?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
   establishmentYear?: number;
   yearsInBusiness?: number;
   vendorStatus?: "pending" | "approved" | "rejected";
@@ -67,6 +73,15 @@ export type VendorProfileUpdateInput = {
   businessEmail?: string;
   businessPhone?: string;
   businessAlternatePhone?: string;
+  businessAddress?: string;
+  website?: string;
+  businessDescription?: string;
+  image?: string;
+  shopBannerImage?: string;
+  shopGallery?: string[];
+  instagramUrl?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
   city?: string;
   sublocality?: string;
   state?: string;
@@ -102,6 +117,9 @@ function normalizeVendorSession(user: VendorSession | null | undefined): VendorS
     ...user,
     serviceTags: Array.isArray(user.serviceTags)
       ? user.serviceTags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [],
+    shopGallery: Array.isArray(user.shopGallery)
+      ? user.shopGallery.map((item) => String(item || "").trim()).filter(Boolean)
       : [],
   };
 }

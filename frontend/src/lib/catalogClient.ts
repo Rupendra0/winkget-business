@@ -86,6 +86,8 @@ export type CatalogVendorSummary = {
   sublocality?: string;
   subcategory?: string;
   imageUrl?: string;
+  shopBannerImage?: string;
+  shopGallery?: string[];
   ctaLabel?: string;
   badges?: string[];
   priceRange?: string;
@@ -475,13 +477,21 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
       ? [{ day: "Mon - Sun", time: `${vendor.shopOpeningTime} - ${vendor.shopClosingTime}` }]
       : [];
 
+  const logoImage = vendor.imageUrl || DEFAULT_VENDOR_IMAGE;
+  const coverImage = vendor.shopBannerImage || DEFAULT_BANNER_IMAGE;
+  const filteredGallery = uniqueStrings(
+    (Array.isArray(vendor.shopGallery) ? vendor.shopGallery : []).filter(
+      (url) => String(url || "").trim() && url !== logoImage && url !== coverImage
+    )
+  );
+
   return {
     id: vendor.id,
     storeId: vendor.id,
     name: displayName,
     category: categoryLabel,
-    coverImage: vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
-    logoImage: vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
+    coverImage,
+    logoImage,
     rating: Number(vendor.rating || 0),
     reviews: Number(vendor.reviews || 0),
     priceRange: vendor.priceRange || "",
@@ -498,7 +508,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     services: Array.isArray(vendor.serviceTags) ? vendor.serviceTags : tags,
     amenities: [],
     hours,
-    gallery: [vendor.imageUrl || DEFAULT_VENDOR_IMAGE],
+    gallery: filteredGallery.length > 0 ? filteredGallery : [logoImage],
     reviewsList: [],
     mapImage: DEFAULT_MAP_IMAGE,
     suggestionTitle: "Suggestions",

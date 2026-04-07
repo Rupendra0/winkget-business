@@ -71,6 +71,37 @@ body {
   }
 }
 
+.vendor-shop-preview-banner {
+  aspect-ratio: 16 / 6;
+}
+
+.vendor-shop-preview-avatar {
+  height: 84px;
+  width: 84px;
+}
+
+@media (max-width: 1024px) {
+  .vendor-shop-preview-banner {
+    aspect-ratio: 16 / 6;
+  }
+
+  .vendor-shop-preview-avatar {
+    height: 76px;
+    width: 76px;
+  }
+}
+
+@media (max-width: 640px) {
+  .vendor-shop-preview-banner {
+    aspect-ratio: 16 / 6;
+  }
+
+  .vendor-shop-preview-avatar {
+    height: 68px;
+    width: 68px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
