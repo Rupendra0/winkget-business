@@ -19,7 +19,7 @@ import type { ListingProfile } from "@/data/listingData";
 import Footer from "@/components/Footer";
 import ActionButtonsBottom from "@/components/listing-profile/ActionButtonsBottom";
 import ActionButtonsTop from "@/components/listing-profile/ActionButtonsTop";
-import { submitVendorInquiry } from "@/lib/catalogClient";
+import { submitVendorCallRequest, submitVendorInquiry } from "@/lib/catalogClient";
 import {
   fetchBusinessReviews,
   getBusinessReviewAggregate,
@@ -517,6 +517,31 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, router, searchParams]);
 
+  const handleCallClick = useCallback(() => {
+    if (!vendorInquiryId) {
+      return;
+    }
+
+    const preferredName = String(currentUser?.name || inquiryName || "Customer").trim();
+    const preferredEmail = String(currentUser?.email || inquiryEmail || "").trim();
+    const preferredPhone = normalizeInquiryPhone(
+      String(currentUser?.phone || currentUser?.businessPhone || inquiryPhone || "")
+    );
+
+    if (!preferredName || preferredPhone.length !== 10) {
+      return;
+    }
+
+    void submitVendorCallRequest({
+      vendorId: vendorInquiryId,
+      name: preferredName,
+      phone: preferredPhone,
+      email: preferredEmail || undefined,
+      subject: `Call request for ${profile.name}`,
+      message: `Customer requested a callback for ${profile.name}.`,
+    });
+  }, [currentUser?.businessPhone, currentUser?.email, currentUser?.name, currentUser?.phone, inquiryEmail, inquiryName, inquiryPhone, profile.name, vendorInquiryId]);
+
   const handleInquirySubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -705,6 +730,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
               directionsHref={directionsUrl}
               emailHref={emailUrl !== "#" ? emailUrl : undefined}
               onShare={handleShareProfile}
+              onCallClick={handleCallClick}
               storeHref={hasStorefront ? storeUrl : undefined}
             />
             {shareMessage ? (
@@ -1321,6 +1347,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
           callHref={dialPhone ? `tel:${dialPhone}` : undefined}
           enquiryHref={enquiryHref !== "#" ? enquiryHref : undefined}
           enquiryLabel={enquiryLabel}
+          onCallClick={handleCallClick}
         />
       </div>
 

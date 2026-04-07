@@ -531,6 +531,7 @@ export async function submitVendorInquiry(input: {
   email?: string;
   message: string;
   subject?: string;
+  channel?: "Web" | "Email" | "Phone";
 }): Promise<{ id: string }> {
   const response = await fetch(`${BACKEND_URL}/api/inquiries`, {
     method: "POST",
@@ -544,6 +545,40 @@ export async function submitVendorInquiry(input: {
 
   if (!response.ok || !payload.ok || !payload.inquiry?.id) {
     throw new Error(payload.message || "Failed to send enquiry");
+  }
+
+  return { id: payload.inquiry.id };
+}
+
+export async function submitVendorCallRequest(input: {
+  vendorId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  subject?: string;
+  message?: string;
+}): Promise<{ id: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/inquiries`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    keepalive: true,
+    body: JSON.stringify({
+      vendorId: input.vendorId,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      subject: input.subject || "Call request",
+      message: input.message || "Customer requested a callback from listing call action.",
+      channel: "Phone",
+    }),
+  });
+
+  const payload = (await response.json()) as InquiryCreateResponse;
+
+  if (!response.ok || !payload.ok || !payload.inquiry?.id) {
+    throw new Error(payload.message || "Failed to create call request");
   }
 
   return { id: payload.inquiry.id };

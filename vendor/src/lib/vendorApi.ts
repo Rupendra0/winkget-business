@@ -53,6 +53,20 @@ export type VendorInquiry = {
   updatedAt: string;
 };
 
+export type VendorCityLocality = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type VendorCity = {
+  id: string;
+  name: string;
+  slug: string;
+  state?: string;
+  localities: VendorCityLocality[];
+};
+
 export type VendorInquirySummary = {
   total: number;
   open: number;
@@ -266,6 +280,104 @@ export async function fetchVendorInquiries(
     };
   } catch {
     return fallback;
+  }
+}
+
+export async function updateVendorInquiryStatus(inquiryId: string, status: InquiryStatus): Promise<VendorInquiry> {
+  const normalizedId = String(inquiryId || "").trim();
+  if (!normalizedId) {
+    throw new Error("Inquiry id is required");
+  }
+
+  const payload = await requestJson<{
+    inquiry?: Partial<VendorInquiry>;
+  }>(`/api/inquiries/vendor/${encodeURIComponent(normalizedId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+  const inquiry = payload.inquiry;
+  if (!inquiry) {
+    throw new Error("Failed to update inquiry");
+  }
+
+  const statusValue = String(inquiry.status || "Open") as InquiryStatus;
+  return {
+    id: String(inquiry.id || normalizedId),
+    subject: String(inquiry.subject || "Inquiry").trim() || "Inquiry",
+    name: String(inquiry.name || "Customer").trim() || "Customer",
+    phone: String(inquiry.phone || "").trim(),
+    email: String(inquiry.email || "").trim() || undefined,
+    message: String(inquiry.message || "").trim(),
+    channel: (inquiry.channel === "Phone" || inquiry.channel === "Email" ? inquiry.channel : "Web") as
+      | "Web"
+      | "Email"
+      | "Phone",
+    status:
+      statusValue === "In Progress" || statusValue === "Closed" || statusValue === "Open"
+        ? statusValue
+        : "Open",
+    adminNote: String(inquiry.adminNote || "").trim() || undefined,
+    createdAt: String(inquiry.createdAt || ""),
+    updatedAt: String(inquiry.updatedAt || ""),
+  };
+}
+
+export async function fetchVendorCities(): Promise<VendorCity[]> {
+  try {
+    const payload = await requestJson<{
+      cities?: Array<
+        Partial<VendorCity> & {
+          localities?: Array<Partial<VendorCityLocality>>;
+        }
+      >;
+    }>("/api/cities");
+
+    if (!Array.isArray(payload.cities)) {
+      return [];
+    }
+
+    const normalizedCities: VendorCity[] = [];
+
+    payload.cities.forEach((city, cityIndex) => {
+      const cityId = String(city.id || `city-${cityIndex}`);
+      const cityName = String(city.name || "").trim();
+      const citySlug = String(city.slug || "").trim();
+
+      if (!cityName) {
+        return;
+      }
+
+      const localities: VendorCityLocality[] = [];
+      if (Array.isArray(city.localities)) {
+        city.localities.forEach((locality, localityIndex) => {
+          const localityName = String(locality.name || "").trim();
+          if (!localityName) {
+            return;
+          }
+
+          localities.push({
+            id: String(locality.id || `${cityId}-locality-${localityIndex}`),
+            name: localityName,
+            slug:
+              String(locality.slug || "").trim() ||
+              localityName.toLowerCase().replace(/\s+/g, "-"),
+          });
+        });
+      }
+
+      normalizedCities.push({
+        id: cityId,
+        name: cityName,
+        slug: citySlug || cityName.toLowerCase().replace(/\s+/g, "-"),
+        state: String(city.state || "").trim() || undefined,
+        localities,
+      });
+    });
+
+    return normalizedCities;
+  } catch {
+    return [];
   }
 }
 

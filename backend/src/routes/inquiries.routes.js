@@ -9,6 +9,7 @@ const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const INQUIRY_STATUS_VALUES = new Set(["Open", "In Progress", "Closed"]);
+const INQUIRY_CHANNEL_VALUES = new Set(["Web", "Email", "Phone"]);
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -103,6 +104,7 @@ router.post("/inquiries", async (req, res) => {
     const emailInput = String(req.body?.email || "").trim();
     const message = String(req.body?.message || "").trim();
     const subjectInput = String(req.body?.subject || "").trim();
+    const channelInput = String(req.body?.channel || "").trim();
 
     if (!OBJECT_ID_REGEX.test(vendorId)) {
       return res.status(400).json({ ok: false, message: "Invalid vendor id" });
@@ -118,6 +120,10 @@ router.post("/inquiries", async (req, res) => {
 
     if (emailInput && !EMAIL_REGEX.test(emailInput.toLowerCase())) {
       return res.status(400).json({ ok: false, message: "Invalid email format" });
+    }
+
+    if (channelInput && !INQUIRY_CHANNEL_VALUES.has(channelInput)) {
+      return res.status(400).json({ ok: false, message: "Invalid inquiry channel" });
     }
 
     if (!message || message.length < 8) {
@@ -139,7 +145,7 @@ router.post("/inquiries", async (req, res) => {
       phone,
       email: emailInput ? emailInput.toLowerCase() : undefined,
       message,
-      channel: "Web",
+      channel: channelInput || "Web",
       status: "Open",
     });
 
@@ -232,6 +238,39 @@ router.get("/inquiries/vendor", requireVendor, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendor inquiries", error: error.message });
+  }
+});
+
+router.patch("/inquiries/vendor/:id", requireVendor, async (req, res) => {
+  try {
+    const inquiryId = String(req.params.id || "").trim();
+    const statusInput = String(req.body?.status || "").trim();
+
+    if (!OBJECT_ID_REGEX.test(inquiryId)) {
+      return res.status(400).json({ ok: false, message: "Invalid inquiry id" });
+    }
+
+    if (!statusInput || !INQUIRY_STATUS_VALUES.has(statusInput)) {
+      return res.status(400).json({ ok: false, message: "Invalid inquiry status" });
+    }
+
+    const inquiry = await Inquiry.findOneAndUpdate(
+      { _id: inquiryId, vendor: req.vendorUser._id },
+      { status: statusInput },
+      { new: true }
+    ).populate("vendor", "_id businessName businessPhone city state");
+
+    if (!inquiry) {
+      return res.status(404).json({ ok: false, message: "Inquiry not found" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Inquiry status updated",
+      inquiry: toInquirySummary(inquiry),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update inquiry", error: error.message });
   }
 });
 

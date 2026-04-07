@@ -8,6 +8,7 @@ type ActionButtonsBottomProps = {
   callHref?: string;
   enquiryHref?: string;
   enquiryLabel?: string;
+  onCallClick?: () => void;
 };
 
 const isEnabled = (value?: string) => Boolean(String(value || "").trim() && value !== "#");
@@ -16,6 +17,7 @@ export default function ActionButtonsBottom({
   callHref,
   enquiryHref,
   enquiryLabel,
+  onCallClick,
 }: ActionButtonsBottomProps) {
   const callEnabled = isEnabled(callHref);
 
@@ -24,6 +26,9 @@ export default function ActionButtonsBottom({
       {callEnabled ? (
         <a
           href={callHref}
+          onClick={() => {
+            onCallClick?.();
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
           <Phone size={16} />

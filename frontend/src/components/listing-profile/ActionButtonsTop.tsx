@@ -20,6 +20,7 @@ type ActionButtonsTopProps = {
   directionsHref: string;
   emailHref?: string;
   onShare: () => void | Promise<void>;
+  onCallClick?: () => void;
   storeHref?: string;
 };
 
@@ -33,6 +34,7 @@ export default function ActionButtonsTop({
   directionsHref,
   emailHref,
   onShare,
+  onCallClick,
   storeHref,
 }: ActionButtonsTopProps) {
   const callEnabled = hasValue(callHref);
@@ -50,6 +52,9 @@ export default function ActionButtonsTop({
         {callEnabled ? (
           <a
             href={callHref}
+            onClick={() => {
+              onCallClick?.();
+            }}
             className={`${mobilePrimaryClass} bg-blue-600 hover:bg-blue-700 focus-visible:ring-blue-500`}
           >
             <Phone size={16} />

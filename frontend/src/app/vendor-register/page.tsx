@@ -143,6 +143,37 @@ const ID_PROOF_OPTIONS = [
   { value: "other", label: "Other" },
 ] as const;
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+] as const;
+
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -826,6 +857,16 @@ export default function VendorRegisterPage() {
         return leftLabel.localeCompare(rightLabel);
       }),
     [subcategories, subcategoryLabelMap]
+  );
+
+  const filteredCities = useMemo(
+    () =>
+      form.state
+        ? cities.filter(
+            (cityOption) => String(cityOption.state || "").trim().toLowerCase() === form.state.trim().toLowerCase()
+          )
+        : cities,
+    [cities, form.state]
   );
 
   const selectedCity = useMemo(
@@ -1532,7 +1573,7 @@ export default function VendorRegisterPage() {
                       value={form.city}
                       onChange={(event) => {
                         const nextCityName = event.target.value;
-                        const nextCity = cities.find((item) => item.name === nextCityName) || null;
+                        const nextCity = filteredCities.find((item) => item.name === nextCityName) || null;
                         const nextLocalities = nextCity && Array.isArray(nextCity.localities) ? nextCity.localities : [];
 
                         updateField("city", nextCityName);
@@ -1542,12 +1583,17 @@ export default function VendorRegisterPage() {
                         }
                       }}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
-                      disabled={loadingCities || cities.length === 0}
+                      disabled={loadingCities || filteredCities.length === 0}
                       required
                     >
                       {loadingCities ? <option value="">Loading cities...</option> : null}
-                      {!loadingCities && cities.length === 0 ? <option value="">No cities available</option> : null}
-                      {cities.map((cityOption) => (
+                      {!loadingCities && filteredCities.length === 0 ? (
+                        <option value="">No cities available for selected state</option>
+                      ) : null}
+                      {form.city && !filteredCities.some((cityOption) => cityOption.name === form.city) ? (
+                        <option value={form.city}>{form.city}</option>
+                      ) : null}
+                      {filteredCities.map((cityOption) => (
                         <option key={cityOption.id} value={cityOption.name}>
                           {cityOption.name}
                         </option>
@@ -1580,13 +1626,35 @@ export default function VendorRegisterPage() {
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       State <RequiredMark />
                     </span>
-                    <input
-                      type="text"
+                    <select
                       value={form.state}
-                      onChange={(event) => updateField("state", event.target.value)}
+                      onChange={(event) => {
+                        const nextState = event.target.value;
+                        const nextCities = cities.filter(
+                          (cityOption) =>
+                            String(cityOption.state || "").trim().toLowerCase() === nextState.trim().toLowerCase()
+                        );
+                        const matchedCity = nextCities.find((cityOption) => cityOption.name === form.city) || null;
+                        const resolvedCity = matchedCity || nextCities[0] || null;
+                        const resolvedLocalities = resolvedCity && Array.isArray(resolvedCity.localities) ? resolvedCity.localities : [];
+
+                        updateField("state", nextState);
+                        updateField("city", resolvedCity?.name || "");
+                        updateField("sublocality", resolvedLocalities[0]?.name || "");
+                      }}
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black placeholder:text-slate-500 outline-none focus:border-orange-400"
                       required
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {form.state && !INDIAN_STATES.some((stateName) => stateName === form.state) ? (
+                        <option value={form.state}>{form.state}</option>
+                      ) : null}
+                      {INDIAN_STATES.map((stateName) => (
+                        <option key={stateName} value={stateName}>
+                          {stateName}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="block">

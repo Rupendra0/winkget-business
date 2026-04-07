@@ -24,16 +24,21 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Trash2,
   Upload,
+  X,
   Youtube,
 } from "lucide-react";
 import {
+  fetchVendorCities,
   fetchVendorInquiries,
   fetchVendorReviewSnapshot,
   fetchVendorSession,
   logoutVendor,
+  updateVendorInquiryStatus,
   updateVendorProfile,
   type InquiryStatus,
+  type VendorCity,
   type VendorInquiry,
   type VendorInquirySnapshot,
   type VendorReview,
@@ -58,21 +63,28 @@ type StatCardItem = {
 };
 
 type InquiryStatusFilter = InquiryStatus | "All";
+type NotificationFilter = "All" | "Unread" | "Read";
 
 type SettingsFormState = {
   name: string;
   email: string;
   phone: string;
-  alternatePhone: string;
   businessEmail: string;
   businessPhone: string;
-  businessAlternatePhone: string;
   city: string;
   sublocality: string;
   state: string;
   shopOpeningTime: string;
   shopClosingTime: string;
   serviceTagsText: string;
+};
+
+type VendorNotification = {
+  id: string;
+  nav: "Enquiries" | "Calls" | "Reviews" | "Orders";
+  title: string;
+  detail: string;
+  createdAt: string;
 };
 
 type ShopProfileFormState = {
@@ -109,35 +121,35 @@ const MOBILE_BAR_ITEMS: Array<{ label: "Overview" | "Enquiries" | "Calls" | "Sho
 const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = {
   Overview: {
     title: "Overview",
-    subtitle: "Live health snapshot of your vendor profile and incoming demand.",
+    subtitle: "",
   },
   Enquiries: {
     title: "Enquiries",
-    subtitle: "All lead enquiries currently available from your live backend records.",
+    subtitle: "",
   },
   Calls: {
     title: "Calls",
-    subtitle: "Contact-first call desk view built from enquiry phone and email data.",
+    subtitle: "",
   },
   Reviews: {
     title: "Reviews",
-    subtitle: "Customer rating stream and review history from your public listing.",
+    subtitle: "",
   },
   Orders: {
     title: "Orders",
-    subtitle: "Order API is not available yet, but this section is ready for integration.",
+    subtitle: "",
   },
   Posts: {
     title: "Posts",
-    subtitle: "Content composer interface; backend posting endpoint is not available yet.",
+    subtitle: "",
   },
   Shop: {
     title: "Shop Profile",
-    subtitle: "Manage shop display photo, banner, gallery, social links, and listing details.",
+    subtitle: "",
   },
   Settings: {
     title: "Settings",
-    subtitle: "Update your vendor profile fields currently supported by backend.",
+    subtitle: "",
   },
 };
 
@@ -149,6 +161,39 @@ const DEFAULT_VENDOR_BANNER =
   "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=60";
 const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
 const MAX_SHOP_GALLERY_ITEMS = 8;
+const NOTIFICATION_READ_STORAGE_KEY_PREFIX = "winkget_vendor_notification_reads";
+const NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX = "winkget_vendor_notification_dismissed";
+const MAX_NOTIFICATIONS_IN_POPUP = 20;
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+] as const;
 
 const EMPTY_REVIEW_SNAPSHOT: VendorReviewSnapshot = {
   summary: { rating: 0, reviews: 0 },
@@ -228,15 +273,26 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
+function buildInquirySummary(inquiries: VendorInquiry[]): VendorInquirySnapshot["summary"] {
+  return inquiries.reduce(
+    (accumulator, inquiry) => {
+      accumulator.total += 1;
+      if (inquiry.status === "Open") accumulator.open += 1;
+      if (inquiry.status === "In Progress") accumulator.inProgress += 1;
+      if (inquiry.status === "Closed") accumulator.closed += 1;
+      return accumulator;
+    },
+    { total: 0, open: 0, inProgress: 0, closed: 0 }
+  );
+}
+
 function buildSettingsForm(vendor: VendorSession | null): SettingsFormState {
   return {
     name: String(vendor?.name || ""),
     email: String(vendor?.email || ""),
     phone: String(vendor?.phone || ""),
-    alternatePhone: String(vendor?.alternatePhone || ""),
     businessEmail: String(vendor?.businessEmail || ""),
     businessPhone: String(vendor?.businessPhone || ""),
-    businessAlternatePhone: String(vendor?.businessAlternatePhone || ""),
     city: String(vendor?.city || ""),
     sublocality: String(vendor?.sublocality || ""),
     state: String(vendor?.state || ""),
@@ -382,68 +438,91 @@ function StatusBadge({ status }: { status: InquiryStatus }) {
 }
 
 function OverviewSection({
-  businessName,
-  location,
-  isOpen,
   stats,
+  onStatClick,
   leadSources,
   servicePerformance,
   recentInquiries,
   recentReviews,
 }: {
-  businessName: string;
-  location: string;
-  isOpen: boolean;
   stats: StatCardItem[];
+  onStatClick: (label: StatCardItem["label"]) => void;
   leadSources: Array<{ label: string; value: number }>;
   servicePerformance: Array<{ label: string; value: number }>;
   recentInquiries: VendorInquiry[];
   recentReviews: VendorReview[];
 }) {
+  const statCardStyles: Record<
+    StatCardItem["label"],
+    {
+      card: string;
+      icon: string;
+      chip: string;
+    }
+  > = {
+    Enquiries: {
+      card:
+        "border-blue-200 bg-gradient-to-br from-blue-100/95 via-cyan-50 to-sky-100/90 shadow-[0_16px_34px_-26px_rgba(37,99,235,0.75)]",
+      icon: "bg-blue-600 text-white shadow-sm shadow-blue-200",
+      chip: "bg-blue-600/90 text-white",
+    },
+    "Call Leads": {
+      card:
+        "border-emerald-200 bg-gradient-to-br from-emerald-100/95 via-lime-50 to-green-100/90 shadow-[0_16px_34px_-26px_rgba(22,163,74,0.72)]",
+      icon: "bg-emerald-600 text-white shadow-sm shadow-emerald-200",
+      chip: "bg-emerald-600/90 text-white",
+    },
+    Reviews: {
+      card:
+        "border-amber-200 bg-gradient-to-br from-amber-100/95 via-orange-50 to-yellow-100/90 shadow-[0_16px_34px_-26px_rgba(217,119,6,0.75)]",
+      icon: "bg-amber-500 text-white shadow-sm shadow-amber-200",
+      chip: "bg-amber-500/90 text-white",
+    },
+    Orders: {
+      card:
+        "border-violet-200 bg-gradient-to-br from-violet-100/95 via-fuchsia-50 to-pink-100/90 shadow-[0_16px_34px_-26px_rgba(124,58,237,0.72)]",
+      icon: "bg-violet-600 text-white shadow-sm shadow-violet-200",
+      chip: "bg-violet-600/90 text-white",
+    },
+  };
+
   return (
     <section className="space-y-6">
-      <article className="rounded-2xl border border-white/20 bg-white/60 p-6 shadow-lg backdrop-blur-xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Business Summary</p>
-            <h2 className="mt-1 font-display text-2xl font-semibold text-gray-900">{businessName}</h2>
-            <p className="mt-1 text-sm text-gray-600">{location}</p>
-          </div>
-
-          <div
-            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
-              isOpen
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-rose-200 bg-rose-50 text-rose-700"
-            }`}
-          >
-            <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
-            {isOpen ? "Open" : "Closed"}
-          </div>
-        </div>
-      </article>
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {stats.map((item) => {
           const Icon = item.icon;
+          const cardStyle = statCardStyles[item.label];
+          const mobileLabel =
+            item.label === "Enquiries"
+              ? "Enq"
+              : item.label === "Call Leads"
+                ? "Calls"
+                : item.label;
+
           return (
-            <article key={item.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => onStatClick(item.label)}
+              className={`group rounded-2xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:p-5 ${cardStyle.card}`}
+            >
+              <div className="flex items-center justify-between sm:items-start">
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${cardStyle.icon}`}>
+                  <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden="true" />
                 </span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    item.trendPositive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
+                  className={`hidden rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex ${
+                    item.trendPositive ? cardStyle.chip : "bg-white/85 text-gray-600 ring-1 ring-gray-200"
                   }`}
                 >
                   {item.trend}
                 </span>
               </div>
-              <p className="mt-4 text-xs text-gray-500">{item.label}</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{item.value}</p>
-              <p className="mt-1 text-xs text-gray-500">{item.hint}</p>
-            </article>
+              <p className="mt-2 text-[9px] font-semibold uppercase text-gray-700 sm:hidden">{mobileLabel}</p>
+              <p className="mt-4 hidden text-xs font-semibold uppercase tracking-wide text-gray-600 sm:block">{item.label}</p>
+              <p className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:mt-1 sm:text-3xl">{item.value}</p>
+              <p className="mt-1 hidden text-xs text-gray-600 sm:block">{item.hint}</p>
+            </button>
           );
         })}
       </section>
@@ -536,6 +615,12 @@ function EnquiriesSection({
   setStatusFilter,
   search,
   setSearch,
+  statusDraftById,
+  onStatusDraftChange,
+  onStatusSave,
+  updatingInquiryId,
+  actionMessage,
+  actionError,
 }: {
   summary: VendorInquirySnapshot["summary"];
   inquiries: VendorInquiry[];
@@ -543,6 +628,12 @@ function EnquiriesSection({
   setStatusFilter: (value: InquiryStatusFilter) => void;
   search: string;
   setSearch: (value: string) => void;
+  statusDraftById: Record<string, InquiryStatus>;
+  onStatusDraftChange: (inquiryId: string, value: InquiryStatus) => void;
+  onStatusSave: (inquiryId: string) => void;
+  updatingInquiryId: string | null;
+  actionMessage: string | null;
+  actionError: string | null;
 }) {
   return (
     <section className="space-y-5">
@@ -591,6 +682,9 @@ function EnquiriesSection({
         </div>
 
         <div className="mt-4 space-y-3">
+          {actionMessage ? <p className="text-xs font-medium text-emerald-700">{actionMessage}</p> : null}
+          {actionError ? <p className="text-xs font-medium text-red-700">{actionError}</p> : null}
+
           {inquiries.length === 0 ? (
             <EmptyState
               title="No enquiries found"
@@ -620,6 +714,32 @@ function EnquiriesSection({
                     Admin note: {inquiry.adminNote}
                   </p>
                 ) : null}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <label className="text-xs font-semibold text-gray-600">
+                    Update status
+                    <select
+                      value={statusDraftById[inquiry.id] || inquiry.status}
+                      onChange={(event) =>
+                        onStatusDraftChange(inquiry.id, event.target.value as InquiryStatus)
+                      }
+                      className="ml-2 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-400"
+                    >
+                      <option value="Open">Open</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => onStatusSave(inquiry.id)}
+                    disabled={updatingInquiryId === inquiry.id}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    {updatingInquiryId === inquiry.id ? "Saving..." : "Save"}
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -634,14 +754,14 @@ function CallsSection({ callLeads }: { callLeads: VendorInquiry[] }) {
     <section className="space-y-4">
       <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <p className="text-sm text-gray-600">
-          Calls are derived from enquiry contacts currently available in backend, including phone, email, and message context.
+          Only user-generated call requests are listed here, including contact details and callback context.
         </p>
       </article>
 
       {callLeads.length === 0 ? (
         <EmptyState
           title="No call leads yet"
-          body="When enquiries include contact information, they will appear here with direct call and email actions."
+          body="New call requests from users will appear here with phone and email details."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -830,6 +950,8 @@ function ShopProfileSection({
   onSubmit,
   onUploadSingle,
   onUploadGallery,
+  onRemoveImage,
+  onRemoveGalleryItem,
   saving,
   message,
   error,
@@ -840,6 +962,8 @@ function ShopProfileSection({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onUploadSingle: (field: "image" | "shopBannerImage", files: FileList | null) => void;
   onUploadGallery: (files: FileList | null) => void;
+  onRemoveImage: (field: "image" | "shopBannerImage") => void;
+  onRemoveGalleryItem: (value: string) => void;
   saving: boolean;
   message: string | null;
   error: string | null;
@@ -925,31 +1049,37 @@ function ShopProfileSection({
         <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h3 className="font-display text-lg font-semibold text-gray-900">Shop Profile</h3>
           <p className="mt-1 text-xs text-gray-500">
-            Update your shop DP, banner, gallery photos, social links, and listing details.
+            Upload your shop DP, banner, and gallery photos with instant preview.
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Display Photo URL</span>
-              <input
-                type="url"
-                value={form.image}
-                onChange={(event) => onChange("image", event.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </label>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs font-semibold text-gray-600">Shop Display Photo</p>
+              <div className="mt-2 h-24 w-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <img src={avatarImage} alt="Shop display" className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemoveImage("image")}
+                className="mt-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Remove DP
+              </button>
+            </div>
 
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-gray-600">Shop Banner URL</span>
-              <input
-                type="url"
-                value={form.shopBannerImage}
-                onChange={(event) => onChange("shopBannerImage", event.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </label>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs font-semibold text-gray-600">Shop Banner</p>
+              <div className="mt-2 h-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemoveImage("shopBannerImage")}
+                className="mt-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Remove Banner
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -982,18 +1112,6 @@ function ShopProfileSection({
             </label>
           </div>
 
-          <label className="mt-4 block">
-            <span className="mb-1 block text-xs font-semibold text-gray-600">
-              Shop Photos (one URL per line, max {MAX_SHOP_GALLERY_ITEMS})
-            </span>
-            <textarea
-              value={form.shopGalleryText}
-              onChange={(event) => onChange("shopGalleryText", event.target.value)}
-              className="min-h-[100px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-              placeholder="https://..."
-            />
-          </label>
-
           <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
             <Upload className="h-4 w-4" aria-hidden="true" />
             Upload Shop Photos
@@ -1008,6 +1126,29 @@ function ShopProfileSection({
               }}
             />
           </label>
+
+          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-600">Shop Photos (max {MAX_SHOP_GALLERY_ITEMS})</p>
+
+            {galleryItems.length === 0 ? (
+              <p className="mt-2 text-xs text-gray-500">No photos uploaded yet.</p>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {galleryItems.map((url) => (
+                  <div key={url} className="relative overflow-hidden rounded-lg border border-gray-200 bg-white">
+                    <img src={url} alt="Shop gallery" className="h-20 w-full object-cover" loading="lazy" />
+                    <button
+                      type="button"
+                      onClick={() => onRemoveGalleryItem(url)}
+                      className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="block md:col-span-2">
@@ -1118,19 +1259,30 @@ function ShopProfileSection({
 
 function SettingsSection({
   form,
+  cities,
+  states,
   onChange,
+  onCityChange,
   onSubmit,
   saving,
   message,
   error,
+  cityLoadError,
 }: {
   form: SettingsFormState;
+  cities: VendorCity[];
+  states: string[];
   onChange: (field: keyof SettingsFormState, value: string) => void;
+  onCityChange: (city: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   saving: boolean;
   message: string | null;
   error: string | null;
+  cityLoadError: string | null;
 }) {
+  const selectedCity = cities.find((cityOption) => cityOption.name === form.city) || null;
+  const cityLocalities = selectedCity ? selectedCity.localities : [];
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -1138,29 +1290,135 @@ function SettingsSection({
         <p className="mt-1 text-xs text-gray-500">These fields submit through /api/auth/me and save directly to your vendor profile.</p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {([
-            ["name", "Owner Name"],
-            ["email", "Personal Email"],
-            ["phone", "Personal Phone"],
-            ["alternatePhone", "Personal Alternate Phone"],
-            ["businessEmail", "Business Email"],
-            ["businessPhone", "Business Phone"],
-            ["businessAlternatePhone", "Business Alternate Phone"],
-            ["sublocality", "Sublocality"],
-            ["state", "State"],
-            ["shopOpeningTime", "Opening Time (HH:MM)"],
-            ["shopClosingTime", "Closing Time (HH:MM)"],
-          ] as Array<[keyof SettingsFormState, string]>).map(([field, label]) => (
-            <label key={field} className="block">
-              <span className="mb-1 block text-xs font-semibold text-gray-600">{label}</span>
-              <input
-                type="text"
-                value={form[field]}
-                onChange={(event) => onChange(field, event.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </label>
-          ))}
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Owner Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(event) => onChange("name", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Personal Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(event) => onChange("email", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Personal Phone</span>
+            <input
+              type="text"
+              value={form.phone}
+              onChange={(event) => onChange("phone", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Business Email</span>
+            <input
+              type="email"
+              value={form.businessEmail}
+              onChange={(event) => onChange("businessEmail", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Business Phone</span>
+            <input
+              type="text"
+              value={form.businessPhone}
+              onChange={(event) => onChange("businessPhone", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">City</span>
+            <select
+              value={form.city}
+              onChange={(event) => onCityChange(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              disabled={cities.length === 0}
+            >
+              <option value="">Select city</option>
+              {cities.length === 0 ? <option value="">No cities available</option> : null}
+              {form.city && !cities.some((cityOption) => cityOption.name === form.city) ? (
+                <option value={form.city}>{form.city}</option>
+              ) : null}
+              {cities.map((cityOption) => (
+                <option key={cityOption.id} value={cityOption.name}>
+                  {cityOption.name}
+                </option>
+              ))}
+            </select>
+            {cityLoadError ? <p className="mt-1 text-[11px] text-red-600">{cityLoadError}</p> : null}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Sublocality</span>
+            <select
+              value={form.sublocality}
+              onChange={(event) => onChange("sublocality", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              disabled={cityLocalities.length === 0}
+            >
+              <option value="">Select sublocality</option>
+              {cityLocalities.length === 0 ? <option value="">No localities available</option> : null}
+              {form.sublocality && !cityLocalities.some((locality) => locality.name === form.sublocality) ? (
+                <option value={form.sublocality}>{form.sublocality}</option>
+              ) : null}
+              {cityLocalities.map((locality) => (
+                <option key={locality.id} value={locality.name}>
+                  {locality.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">State</span>
+            <select
+              value={form.state}
+              onChange={(event) => onChange("state", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              <option value="">Select state</option>
+              {form.state && !states.includes(form.state) ? <option value={form.state}>{form.state}</option> : null}
+              {states.map((stateName) => (
+                <option key={stateName} value={stateName}>
+                  {stateName}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Opening Time (HH:MM)</span>
+            <input
+              type="text"
+              value={form.shopOpeningTime}
+              onChange={(event) => onChange("shopOpeningTime", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Closing Time (HH:MM)</span>
+            <input
+              type="text"
+              value={form.shopClosingTime}
+              onChange={(event) => onChange("shopClosingTime", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
         </div>
 
         <label className="mt-3 block">
@@ -1209,6 +1467,16 @@ export default function VendorDashboard() {
   const [shopProfileSaving, setShopProfileSaving] = useState(false);
   const [shopProfileMessage, setShopProfileMessage] = useState<string | null>(null);
   const [shopProfileError, setShopProfileError] = useState<string | null>(null);
+  const [cityOptions, setCityOptions] = useState<VendorCity[]>([]);
+  const [cityOptionsError, setCityOptionsError] = useState<string | null>(null);
+  const [inquiryStatusDraftById, setInquiryStatusDraftById] = useState<Record<string, InquiryStatus>>({});
+  const [updatingInquiryId, setUpdatingInquiryId] = useState<string | null>(null);
+  const [inquiryActionMessage, setInquiryActionMessage] = useState<string | null>(null);
+  const [inquiryActionError, setInquiryActionError] = useState<string | null>(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alertsFilter, setAlertsFilter] = useState<NotificationFilter>("All");
+  const [notificationReadMap, setNotificationReadMap] = useState<Record<string, boolean>>({});
+  const [notificationDismissMap, setNotificationDismissMap] = useState<Record<string, boolean>>({});
   const [postTitle, setPostTitle] = useState("");
   const [postMessage, setPostMessage] = useState("");
   const [postCta, setPostCta] = useState("Contact Now");
@@ -1219,9 +1487,11 @@ export default function VendorDashboard() {
 
     const initialize = async () => {
       setLoading(true);
-      const session = await fetchVendorSession();
+      const [session, cities] = await Promise.all([fetchVendorSession(), fetchVendorCities()]);
       if (!active) return;
 
+      setCityOptions(cities);
+      setCityOptionsError(cities.length === 0 ? "No city/locality data found. Ask admin to configure cities." : null);
       setVendor(session);
       setSettingsForm(buildSettingsForm(session));
       setShopProfileForm(buildShopProfileForm(session));
@@ -1251,6 +1521,67 @@ export default function VendorDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    setInquiryStatusDraftById((current) => {
+      const next: Record<string, InquiryStatus> = {};
+      inquiryData.inquiries.forEach((inquiry) => {
+        next[inquiry.id] = current[inquiry.id] || inquiry.status;
+      });
+      return next;
+    });
+  }, [inquiryData.inquiries]);
+
+  useEffect(() => {
+    const vendorId = String(vendor?.id || "").trim();
+    if (!vendorId) {
+      setNotificationReadMap({});
+      setNotificationDismissMap({});
+      return;
+    }
+
+    try {
+      const storageKey = `${NOTIFICATION_READ_STORAGE_KEY_PREFIX}:${vendorId}`;
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      setNotificationReadMap(parsed && typeof parsed === "object" ? parsed : {});
+    } catch {
+      setNotificationReadMap({});
+    }
+
+    try {
+      const dismissStorageKey = `${NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX}:${vendorId}`;
+      const rawDismissed = window.localStorage.getItem(dismissStorageKey);
+      const parsedDismissed = rawDismissed ? JSON.parse(rawDismissed) : {};
+      setNotificationDismissMap(parsedDismissed && typeof parsedDismissed === "object" ? parsedDismissed : {});
+    } catch {
+      setNotificationDismissMap({});
+    }
+  }, [vendor?.id]);
+
+  useEffect(() => {
+    const vendorId = String(vendor?.id || "").trim();
+    if (!vendorId) return;
+
+    try {
+      const storageKey = `${NOTIFICATION_READ_STORAGE_KEY_PREFIX}:${vendorId}`;
+      window.localStorage.setItem(storageKey, JSON.stringify(notificationReadMap));
+    } catch {
+      // Ignore localStorage failures in restricted browser contexts.
+    }
+  }, [notificationReadMap, vendor?.id]);
+
+  useEffect(() => {
+    const vendorId = String(vendor?.id || "").trim();
+    if (!vendorId) return;
+
+    try {
+      const dismissStorageKey = `${NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX}:${vendorId}`;
+      window.localStorage.setItem(dismissStorageKey, JSON.stringify(notificationDismissMap));
+    } catch {
+      // Ignore localStorage failures in restricted browser contexts.
+    }
+  }, [notificationDismissMap, vendor?.id]);
+
   const refreshDashboardData = async () => {
     if (!vendor?.id || refreshing) return;
 
@@ -1278,10 +1609,15 @@ export default function VendorDashboard() {
     }
   };
 
+  const enquiryItems = useMemo(
+    () => inquiryData.inquiries.filter((inquiry) => inquiry.channel !== "Phone"),
+    [inquiryData.inquiries]
+  );
+
   const filteredInquiries = useMemo(() => {
     const query = inquirySearch.trim().toLowerCase();
 
-    return inquiryData.inquiries.filter((inquiry) => {
+    return enquiryItems.filter((inquiry) => {
       if (inquiryStatusFilter !== "All" && inquiry.status !== inquiryStatusFilter) {
         return false;
       }
@@ -1293,17 +1629,22 @@ export default function VendorDashboard() {
         .toLowerCase()
         .includes(query);
     });
-  }, [inquiryData.inquiries, inquirySearch, inquiryStatusFilter]);
+  }, [enquiryItems, inquirySearch, inquiryStatusFilter]);
 
   const callLeads = useMemo(
-    () => inquiryData.inquiries.filter((inquiry) => Boolean(String(inquiry.phone || "").trim() || inquiry.email)),
+    () =>
+      inquiryData.inquiries.filter(
+        (inquiry) => inquiry.channel === "Phone" && Boolean(String(inquiry.phone || "").trim() || inquiry.email)
+      ),
     [inquiryData.inquiries]
   );
 
+  const enquirySummary = useMemo(() => buildInquirySummary(enquiryItems), [enquiryItems]);
+
   const stats = useMemo<StatCardItem[]>(() => {
     const reviewCount = Number.isFinite(Number(reviews.summary.reviews)) ? Number(reviews.summary.reviews) : 0;
-    const enquiryCount = Number.isFinite(Number(inquiryData.summary.total)) ? Number(inquiryData.summary.total) : 0;
-    const openEnquiries = Number.isFinite(Number(inquiryData.summary.open)) ? Number(inquiryData.summary.open) : 0;
+    const enquiryCount = enquiryItems.length;
+    const openEnquiries = enquirySummary.open;
 
     return [
       {
@@ -1318,7 +1659,7 @@ export default function VendorDashboard() {
         label: "Call Leads",
         value: callLeads.length,
         trend: callLeads.length > 0 ? `+${callLeads.length}` : "+0",
-        hint: "From enquiry contacts",
+        hint: "From user call requests",
         icon: PhoneCall,
         trendPositive: callLeads.length > 0,
       },
@@ -1339,7 +1680,7 @@ export default function VendorDashboard() {
         trendPositive: false,
       },
     ];
-  }, [callLeads.length, inquiryData.summary.open, inquiryData.summary.total, reviews.summary.rating, reviews.summary.reviews]);
+  }, [callLeads.length, enquiryItems.length, enquirySummary.open, reviews.summary.rating, reviews.summary.reviews]);
 
   const isOpen = useMemo(() => (vendor ? isBusinessOpenNow(vendor) : false), [vendor]);
 
@@ -1383,6 +1724,123 @@ export default function VendorDashboard() {
     }));
   }, [reviews.summary.rating, vendor?.serviceTags]);
 
+  const notifications = useMemo<VendorNotification[]>(() => {
+    const inquiryNotifications = inquiryData.inquiries.map((inquiry) => ({
+      id: `inquiry-${inquiry.id}`,
+      nav: inquiry.channel === "Phone" ? ("Calls" as const) : ("Enquiries" as const),
+      title: inquiry.channel === "Phone" ? "New call request" : "New enquiry",
+      detail: `${inquiry.name} - ${inquiry.subject}`,
+      createdAt: String(inquiry.updatedAt || inquiry.createdAt || ""),
+    }));
+
+    const reviewNotifications = reviews.reviews.map((review) => ({
+      id: `review-${review.id}`,
+      nav: "Reviews" as const,
+      title: "New review",
+      detail: `${review.author} rated ${formatRating(review.rating)} star`,
+      createdAt: String(review.createdAt || ""),
+    }));
+
+    return [...inquiryNotifications, ...reviewNotifications].sort((left, right) => {
+      const leftTime = new Date(left.createdAt).getTime();
+      const rightTime = new Date(right.createdAt).getTime();
+      return rightTime - leftTime;
+    });
+  }, [inquiryData.inquiries, reviews.reviews]);
+
+  const activeNotifications = useMemo(
+    () => notifications.filter((notification) => !notificationDismissMap[notification.id]),
+    [notificationDismissMap, notifications]
+  );
+
+  useEffect(() => {
+    setNotificationDismissMap((current) => {
+      const validKeys = new Set(notifications.map((notification) => notification.id));
+      const next: Record<string, boolean> = {};
+
+      Object.entries(current).forEach(([key, value]) => {
+        if (validKeys.has(key) && value) {
+          next[key] = true;
+        }
+      });
+
+      if (Object.keys(next).length === Object.keys(current).length) {
+        return current;
+      }
+
+      return next;
+    });
+  }, [notifications]);
+
+  useEffect(() => {
+    setNotificationReadMap((current) => {
+      const validKeys = new Set(activeNotifications.map((notification) => notification.id));
+      const next: Record<string, boolean> = {};
+
+      Object.entries(current).forEach(([key, value]) => {
+        if (validKeys.has(key) && value) {
+          next[key] = true;
+        }
+      });
+
+      if (Object.keys(next).length === Object.keys(current).length) {
+        return current;
+      }
+
+      return next;
+    });
+  }, [activeNotifications]);
+
+  const notificationsWithRead = useMemo(
+    () => activeNotifications.map((notification) => ({ ...notification, read: Boolean(notificationReadMap[notification.id]) })),
+    [activeNotifications, notificationReadMap]
+  );
+
+  const unreadAlertsCount = useMemo(
+    () => notificationsWithRead.filter((notification) => !notification.read).length,
+    [notificationsWithRead]
+  );
+
+  const filteredNotifications = useMemo(() => {
+    const matchingNotifications = notificationsWithRead.filter((notification) => {
+      if (alertsFilter === "Unread") return !notification.read;
+      if (alertsFilter === "Read") return notification.read;
+      return true;
+    });
+
+    const ordered = matchingNotifications.sort((left, right) => {
+      if (left.read !== right.read) {
+        return left.read ? 1 : -1;
+      }
+
+      const leftTime = new Date(left.createdAt).getTime();
+      const rightTime = new Date(right.createdAt).getTime();
+      return rightTime - leftTime;
+    });
+
+    return ordered.slice(0, MAX_NOTIFICATIONS_IN_POPUP);
+  }, [alertsFilter, notificationsWithRead]);
+
+  const navUnreadCounts = useMemo(() => {
+    const counts: Record<SidebarLabel, number> = {
+      Overview: 0,
+      Enquiries: 0,
+      Calls: 0,
+      Reviews: 0,
+      Orders: 0,
+      Posts: 0,
+      Shop: 0,
+      Settings: 0,
+    };
+
+    notificationsWithRead.forEach((notification) => {
+      if (notification.read) return;
+      counts[notification.nav] += 1;
+    });
+
+    return counts;
+  }, [notificationsWithRead]);
+
   const sectionMeta = SECTION_META[activeNav];
   const greetingName = String(vendor?.name || vendor?.businessName || "Partner").trim() || "Partner";
   const businessName = String(vendor?.businessName || "Your Business").trim() || "Your Business";
@@ -1394,6 +1852,25 @@ export default function VendorDashboard() {
       ...current,
       [field]: value,
     }));
+  };
+
+  const handleSettingsCityChange = (cityName: string) => {
+    const selectedCity = cityOptions.find((cityOption) => cityOption.name === cityName) || null;
+    const localities = selectedCity ? selectedCity.localities : [];
+
+    setSettingsForm((current) => {
+      const nextSublocality =
+        localities.some((locality) => locality.name === current.sublocality) && current.sublocality
+          ? current.sublocality
+          : localities[0]?.name || "";
+
+      return {
+        ...current,
+        city: cityName,
+        sublocality: nextSublocality,
+        state: selectedCity?.state || current.state,
+      };
+    });
   };
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1415,10 +1892,9 @@ export default function VendorDashboard() {
         name: settingsForm.name,
         email: settingsForm.email,
         phone: settingsForm.phone,
-        alternatePhone: settingsForm.alternatePhone,
         businessEmail: settingsForm.businessEmail,
         businessPhone: settingsForm.businessPhone,
-        businessAlternatePhone: settingsForm.businessAlternatePhone,
+        city: settingsForm.city,
         sublocality: settingsForm.sublocality,
         state: settingsForm.state,
         shopOpeningTime: settingsForm.shopOpeningTime,
@@ -1436,6 +1912,81 @@ export default function VendorDashboard() {
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  const handleInquiryStatusDraftChange = (inquiryId: string, value: InquiryStatus) => {
+    setInquiryStatusDraftById((current) => ({
+      ...current,
+      [inquiryId]: value,
+    }));
+  };
+
+  const handleInquiryStatusSave = async (inquiryId: string) => {
+    if (!inquiryId || updatingInquiryId) return;
+
+    const nextStatus = inquiryStatusDraftById[inquiryId];
+    if (!nextStatus) return;
+
+    setInquiryActionMessage(null);
+    setInquiryActionError(null);
+    setUpdatingInquiryId(inquiryId);
+
+    try {
+      const updatedInquiry = await updateVendorInquiryStatus(inquiryId, nextStatus);
+
+      setInquiryData((current) => {
+        const nextInquiries = current.inquiries.map((inquiry) =>
+          inquiry.id === inquiryId ? { ...inquiry, ...updatedInquiry } : inquiry
+        );
+
+        return {
+          ...current,
+          inquiries: nextInquiries,
+          summary: buildInquirySummary(nextInquiries),
+        };
+      });
+
+      setInquiryActionMessage("Enquiry status updated.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update enquiry status";
+      setInquiryActionError(message);
+    } finally {
+      setUpdatingInquiryId(null);
+    }
+  };
+
+  const setNotificationReadState = (notificationId: string, value: boolean) => {
+    setNotificationReadMap((current) => ({
+      ...current,
+      [notificationId]: value,
+    }));
+  };
+
+  const markAllNotifications = (value: boolean) => {
+    setNotificationReadMap(() => {
+      const next: Record<string, boolean> = {};
+      activeNotifications.forEach((notification) => {
+        next[notification.id] = value;
+      });
+      return next;
+    });
+  };
+
+  const deleteNotification = (notificationId: string) => {
+    setNotificationDismissMap((current) => ({
+      ...current,
+      [notificationId]: true,
+    }));
+
+    setNotificationReadMap((current) => {
+      if (!(notificationId in current)) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[notificationId];
+      return next;
+    });
   };
 
   const handleShopProfileChange = (field: keyof ShopProfileFormState, value: string) => {
@@ -1523,6 +2074,25 @@ export default function VendorDashboard() {
     }
   };
 
+  const handleShopProfileRemoveImage = (field: "image" | "shopBannerImage") => {
+    setShopProfileForm((current) => ({
+      ...current,
+      [field]: "",
+    }));
+    setShopProfileMessage(field === "image" ? "Shop DP removed." : "Shop banner removed.");
+    setShopProfileError(null);
+  };
+
+  const handleShopProfileRemoveGalleryItem = (itemToRemove: string) => {
+    const nextGallery = parseShopGalleryInput(shopProfileForm.shopGalleryText).filter((item) => item !== itemToRemove);
+    setShopProfileForm((current) => ({
+      ...current,
+      shopGalleryText: nextGallery.join("\n"),
+    }));
+    setShopProfileMessage("Shop photo removed.");
+    setShopProfileError(null);
+  };
+
   const handleShopProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!vendor || shopProfileSaving) return;
@@ -1569,19 +2139,38 @@ export default function VendorDashboard() {
     setPostNotice("Draft saved locally. Backend publish endpoint is not available yet.");
   };
 
+  const handleOverviewStatClick = (label: StatCardItem["label"]) => {
+    if (label === "Enquiries") {
+      setActiveNav("Enquiries");
+      return;
+    }
+
+    if (label === "Call Leads") {
+      setActiveNav("Calls");
+      return;
+    }
+
+    if (label === "Reviews") {
+      setActiveNav("Reviews");
+      return;
+    }
+
+    if (label === "Orders") {
+      setActiveNav("Orders");
+    }
+  };
+
   const renderActiveSection = () => {
     if (!vendor) return null;
 
     if (activeNav === "Overview") {
       return (
         <OverviewSection
-          businessName={businessName}
-          location={location}
-          isOpen={isOpen}
           stats={stats}
+          onStatClick={handleOverviewStatClick}
           leadSources={leadSources}
           servicePerformance={servicePerformance}
-          recentInquiries={inquiryData.inquiries.slice(0, 4)}
+          recentInquiries={enquiryItems.slice(0, 4)}
           recentReviews={reviews.reviews.slice(0, 4)}
         />
       );
@@ -1590,12 +2179,18 @@ export default function VendorDashboard() {
     if (activeNav === "Enquiries") {
       return (
         <EnquiriesSection
-          summary={inquiryData.summary}
+          summary={enquirySummary}
           inquiries={filteredInquiries}
           statusFilter={inquiryStatusFilter}
           setStatusFilter={setInquiryStatusFilter}
           search={inquirySearch}
           setSearch={setInquirySearch}
+          statusDraftById={inquiryStatusDraftById}
+          onStatusDraftChange={handleInquiryStatusDraftChange}
+          onStatusSave={handleInquiryStatusSave}
+          updatingInquiryId={updatingInquiryId}
+          actionMessage={inquiryActionMessage}
+          actionError={inquiryActionError}
         />
       );
     }
@@ -1636,6 +2231,8 @@ export default function VendorDashboard() {
           onSubmit={handleShopProfileSubmit}
           onUploadSingle={handleShopProfileSingleUpload}
           onUploadGallery={handleShopProfileGalleryUpload}
+          onRemoveImage={handleShopProfileRemoveImage}
+          onRemoveGalleryItem={handleShopProfileRemoveGalleryItem}
           saving={shopProfileSaving}
           message={shopProfileMessage}
           error={shopProfileError}
@@ -1646,11 +2243,15 @@ export default function VendorDashboard() {
     return (
       <SettingsSection
         form={settingsForm}
+        cities={cityOptions}
+        states={Array.from(INDIAN_STATES)}
         onChange={handleSettingsChange}
+        onCityChange={handleSettingsCityChange}
         onSubmit={handleSettingsSubmit}
         saving={settingsSaving}
         message={settingsMessage}
         error={settingsError}
+        cityLoadError={cityOptionsError}
       />
     );
   };
@@ -1719,6 +2320,7 @@ export default function VendorDashboard() {
               {SIDEBAR_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeNav === item.label;
+                const unreadCount = navUnreadCounts[item.label] || 0;
                 return (
                   <button
                     key={item.label}
@@ -1731,6 +2333,11 @@ export default function VendorDashboard() {
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
                     <span>{item.label}</span>
+                    {unreadCount > 0 ? (
+                      <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -1742,15 +2349,9 @@ export default function VendorDashboard() {
             </div>
           </aside>
 
-          <section className="space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-md">
-              <div>
-                <p className="text-sm text-gray-600">Good to see you,</p>
-                <h1 className="font-display text-2xl font-semibold text-gray-900 sm:text-3xl">{greetingName}</h1>
-                <p className="mt-1 text-sm text-gray-600">{sectionMeta.subtitle}</p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
+          <section className="min-w-0 space-y-5">
+            <header className="rounded-3xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-md">
+              <div className="flex flex-wrap items-center justify-end gap-2 border-b border-white/80 pb-4">
                 <button
                   type="button"
                   onClick={() => setActiveNav("Shop")}
@@ -1770,6 +2371,19 @@ export default function VendorDashboard() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setAlertsOpen((current) => !current)}
+                  className="relative inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  <Bell className="h-4 w-4" aria-hidden="true" />
+                  Alerts
+                  {unreadAlertsCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">
+                      {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
                   onClick={handleLogout}
                   disabled={loggingOut}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
@@ -1777,17 +2391,36 @@ export default function VendorDashboard() {
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                   {loggingOut ? "Signing out" : "Logout"}
                 </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700/80">{sectionMeta.title}</p>
+                  <p className="mt-1 text-sm text-gray-600">Good to see you,</p>
+                  <h1 className="font-display text-2xl font-semibold text-gray-900 sm:text-3xl">{greetingName}</h1>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-600">{sectionMeta.subtitle}</p>
+
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Business Summary</p>
+                    <h2 className="mt-1 font-display text-2xl font-semibold text-gray-900">{businessName}</h2>
+                    <p className="mt-1 text-sm text-gray-600">{location}</p>
+                  </div>
+                </div>
+
+                <div
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    isOpen
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-rose-200 bg-rose-50 text-rose-700"
+                  }`}
                 >
-                  <Bell className="h-4 w-4" aria-hidden="true" />
-                  Alerts
-                </button>
+                  <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
+                  {isOpen ? "Open" : "Closed"}
+                </div>
               </div>
             </header>
 
-            <div>{renderActiveSection()}</div>
+            <div className="min-w-0">{renderActiveSection()}</div>
           </section>
 
           <aside className="hidden space-y-4 xl:block">
@@ -1798,7 +2431,7 @@ export default function VendorDashboard() {
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-white/60 bg-white/70 p-3">
                   <p className="text-xs text-gray-500">Enquiries</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">{inquiryData.summary.total}</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-900">{enquirySummary.total}</p>
                 </div>
                 <div className="rounded-xl border border-white/60 bg-white/70 p-3">
                   <p className="text-xs text-gray-500">Call Leads</p>
@@ -1826,6 +2459,7 @@ export default function VendorDashboard() {
           {MOBILE_BAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.label;
+            const unreadCount = navUnreadCounts[item.label] || 0;
 
             return (
               <li key={`mobile-${item.label}`}>
@@ -1838,13 +2472,129 @@ export default function VendorDashboard() {
                   aria-current={isActive ? "page" : undefined}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
-                  <span>{item.label}</span>
+                  <span className="inline-flex items-center gap-1">
+                    {item.label}
+                    {unreadCount > 0 ? (
+                      <span className="inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               </li>
             );
           })}
         </ul>
       </nav>
+
+      {alertsOpen ? (
+        <section className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4" aria-label="Alerts popup">
+          <button
+            type="button"
+            onClick={() => setAlertsOpen(false)}
+            className="absolute inset-0"
+            aria-label="Close alerts popup"
+          />
+
+          <article className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notifications</p>
+                <p className="text-xs text-gray-600">Unread first. Showing latest {MAX_NOTIFICATIONS_IN_POPUP} notifications.</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAlertsOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
+                aria-label="Close alerts"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {(["All", "Unread", "Read"] as NotificationFilter[]).map((filter) => (
+                <button
+                  key={`notification-filter-${filter}`}
+                  type="button"
+                  onClick={() => setAlertsFilter(filter)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    alertsFilter === filter
+                      ? "bg-blue-100 text-blue-700"
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => markAllNotifications(true)}
+                className="ml-auto rounded border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Mark all read
+              </button>
+              <button
+                type="button"
+                onClick={() => markAllNotifications(false)}
+                className="rounded border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Unread all
+              </button>
+            </div>
+
+            <div className="mt-3 max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+              {filteredNotifications.length === 0 ? (
+                <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">No notifications for this filter.</p>
+              ) : (
+                filteredNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`rounded-xl border p-2 ${
+                      notification.read ? "border-gray-200 bg-gray-50" : "border-blue-200 bg-blue-50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveNav(notification.nav);
+                        setAlertsOpen(false);
+                      }}
+                      className="w-full text-left"
+                    >
+                      <p className="text-xs font-semibold text-gray-800">{notification.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">{notification.detail}</p>
+                      <p className="mt-0.5 text-[10px] text-gray-500">{formatDateTime(notification.createdAt)}</p>
+                    </button>
+
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNotificationReadState(notification.id, !notification.read)}
+                        className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                      >
+                        Mark as {notification.read ? "unread" : "read"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteNotification(notification.id)}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                        aria-label="Delete notification"
+                        title="Delete notification"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
+      ) : null}
     </main>
   );
 }
