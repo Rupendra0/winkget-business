@@ -195,6 +195,8 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     postalCode: vendor.postalCode,
     subcategory: vendor.businessSubcategory?.name || vendor.businessCategory?.name || "",
     imageUrl: vendor.image || DEFAULT_VENDOR_IMAGE,
+    shopBannerImage: vendor.shopBannerImage || "",
+    shopGallery: Array.isArray(vendor.shopGallery) ? vendor.shopGallery.filter(Boolean).slice(0, 12) : [],
     ctaLabel: "Inquiry",
     badges: vendor.vendorStatus === "approved" ? ["Verified"] : [],
     priceRange: undefined,
@@ -408,7 +410,7 @@ router.get("/vendors", async (req, res) => {
     const vendors = await User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
-        "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+          "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug");
@@ -437,7 +439,7 @@ router.get("/vendors/:id", async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug");

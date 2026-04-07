@@ -23,6 +23,11 @@ const userSchema = new Schema(
     establishmentYear: { type: Number, min: 1800, max: 3000 },
     serviceTags: [{ type: String, trim: true }],
     businessDescription: { type: String, trim: true },
+    shopBannerImage: { type: String, trim: true },
+    shopGallery: [{ type: String, trim: true }],
+    instagramUrl: { type: String, trim: true },
+    facebookUrl: { type: String, trim: true },
+    youtubeUrl: { type: String, trim: true },
     idProofType: {
       type: String,
       enum: ["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"],

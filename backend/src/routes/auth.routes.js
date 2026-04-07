@@ -26,11 +26,22 @@ const POSTAL_REGEX = /^[0-9]{5,10}$/;
 const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
+const URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const MAX_MEDIA_VALUE_LENGTH = 3000000;
 const AUTH_COOKIE_NAME = "winkget_auth";
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(value)}$`, "i");
+const normalizeMediaValue = (value) => String(value || "").trim();
+
+const isValidMediaValue = (value) => {
+  const normalized = normalizeMediaValue(value);
+  if (!normalized) return true;
+  if (normalized.length > MAX_MEDIA_VALUE_LENGTH) return false;
+  return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
+};
 
 const toCustomFormSummary = (entity) => {
   const customFormFields = sanitizeCustomFormFields(entity?.customFormFields);
@@ -684,7 +695,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
@@ -724,6 +735,12 @@ router.get("/auth/me", async (req, res) => {
         yearsInBusiness: user.yearsInBusiness,
         serviceTags: user.serviceTags || [],
         businessDescription: user.businessDescription,
+        image: user.image,
+        shopBannerImage: user.shopBannerImage,
+        shopGallery: Array.isArray(user.shopGallery) ? user.shopGallery : [],
+        instagramUrl: user.instagramUrl,
+        facebookUrl: user.facebookUrl,
+        youtubeUrl: user.youtubeUrl,
         idProofType: user.idProofType,
         idProofNumber: user.idProofNumber,
         idProofDocument: user.idProofDocument,
@@ -776,6 +793,29 @@ router.put("/auth/me", async (req, res) => {
       req.body?.businessAlternatePhone !== undefined
         ? String(req.body.businessAlternatePhone || "").trim()
         : user.businessAlternatePhone || "";
+    const businessAddressInput =
+      req.body?.businessAddress !== undefined ? String(req.body.businessAddress || "").trim() : user.businessAddress || "";
+    const websiteInput = req.body?.website !== undefined ? String(req.body.website || "").trim() : user.website || "";
+    const businessDescriptionInput =
+      req.body?.businessDescription !== undefined
+        ? String(req.body.businessDescription || "").trim()
+        : user.businessDescription || "";
+    const imageInput = req.body?.image !== undefined ? normalizeMediaValue(req.body.image) : normalizeMediaValue(user.image);
+    const shopBannerImageInput =
+      req.body?.shopBannerImage !== undefined
+        ? normalizeMediaValue(req.body.shopBannerImage)
+        : normalizeMediaValue(user.shopBannerImage);
+    const shopGalleryInput = Array.isArray(req.body?.shopGallery)
+      ? req.body.shopGallery
+      : Array.isArray(user.shopGallery)
+        ? user.shopGallery
+        : [];
+    const instagramUrlInput =
+      req.body?.instagramUrl !== undefined ? String(req.body.instagramUrl || "").trim() : user.instagramUrl || "";
+    const facebookUrlInput =
+      req.body?.facebookUrl !== undefined ? String(req.body.facebookUrl || "").trim() : user.facebookUrl || "";
+    const youtubeUrlInput =
+      req.body?.youtubeUrl !== undefined ? String(req.body.youtubeUrl || "").trim() : user.youtubeUrl || "";
     const businessCategoryId =
       req.body?.businessCategoryId !== undefined
         ? String(req.body.businessCategoryId || "").trim()
@@ -833,6 +873,10 @@ router.put("/auth/me", async (req, res) => {
       .filter(Boolean)
       .slice(0, 100);
     const uniqueServiceTags = Array.from(new Set(serviceTags));
+    const shopGallery = shopGalleryInput
+      .map((value) => normalizeMediaValue(value))
+      .filter(Boolean)
+      .slice(0, 12);
 
     if (user.role === "vendor") {
       if (!email || !phone) {
@@ -868,6 +912,35 @@ router.put("/auth/me", async (req, res) => {
 
     if (businessAlternatePhone && !PHONE_REGEX.test(businessAlternatePhone)) {
       return res.status(400).json({ ok: false, message: "Business alternate phone must be exactly 10 digits" });
+    }
+
+    if (websiteInput && !URL_REGEX.test(websiteInput)) {
+      return res.status(400).json({ ok: false, message: "Website must be a valid URL" });
+    }
+
+    if (instagramUrlInput && !URL_REGEX.test(instagramUrlInput)) {
+      return res.status(400).json({ ok: false, message: "Instagram URL must be valid" });
+    }
+
+    if (facebookUrlInput && !URL_REGEX.test(facebookUrlInput)) {
+      return res.status(400).json({ ok: false, message: "Facebook URL must be valid" });
+    }
+
+    if (youtubeUrlInput && !URL_REGEX.test(youtubeUrlInput)) {
+      return res.status(400).json({ ok: false, message: "YouTube URL must be valid" });
+    }
+
+    if (!isValidMediaValue(imageInput)) {
+      return res.status(400).json({ ok: false, message: "Profile image must be a valid URL or image data" });
+    }
+
+    if (!isValidMediaValue(shopBannerImageInput)) {
+      return res.status(400).json({ ok: false, message: "Shop banner must be a valid URL or image data" });
+    }
+
+    const invalidGalleryImage = shopGallery.find((value) => !isValidMediaValue(value));
+    if (invalidGalleryImage) {
+      return res.status(400).json({ ok: false, message: "Each shop gallery image must be a valid URL or image data" });
     }
 
     if (shopOpeningTimeInput && !TIME_REGEX.test(shopOpeningTimeInput)) {
@@ -1038,6 +1111,15 @@ router.put("/auth/me", async (req, res) => {
       user.businessEmail = businessEmail;
       user.businessPhone = businessPhone;
       user.businessAlternatePhone = businessAlternatePhone || undefined;
+      user.businessAddress = businessAddressInput || undefined;
+      user.website = websiteInput || undefined;
+      user.businessDescription = businessDescriptionInput || undefined;
+      user.image = imageInput || undefined;
+      user.shopBannerImage = shopBannerImageInput || undefined;
+      user.shopGallery = shopGallery;
+      user.instagramUrl = instagramUrlInput || undefined;
+      user.facebookUrl = facebookUrlInput || undefined;
+      user.youtubeUrl = youtubeUrlInput || undefined;
       user.businessCategory = category?._id;
       user.businessSubcategory = subcategory?._id;
       if (locationState) {
@@ -1062,7 +1144,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone city sublocality state gstNumber gstDocument shopOpeningTime shopClosingTime establishmentYear serviceTags customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime establishmentYear serviceTags customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
@@ -1084,11 +1166,20 @@ router.put("/auth/me", async (req, res) => {
         businessEmail: updatedUser.businessEmail,
         businessPhone: updatedUser.businessPhone,
         businessAlternatePhone: updatedUser.businessAlternatePhone,
+        businessAddress: updatedUser.businessAddress,
         city: updatedUser.city,
         sublocality: updatedUser.sublocality,
         state: updatedUser.state,
         gstNumber: updatedUser.gstNumber,
         gstDocument: updatedUser.gstDocument,
+        website: updatedUser.website,
+        businessDescription: updatedUser.businessDescription,
+        image: updatedUser.image,
+        shopBannerImage: updatedUser.shopBannerImage,
+        shopGallery: Array.isArray(updatedUser.shopGallery) ? updatedUser.shopGallery : [],
+        instagramUrl: updatedUser.instagramUrl,
+        facebookUrl: updatedUser.facebookUrl,
+        youtubeUrl: updatedUser.youtubeUrl,
         shopOpeningTime: updatedUser.shopOpeningTime,
         shopClosingTime: updatedUser.shopClosingTime,
         establishmentYear: updatedUser.establishmentYear,
