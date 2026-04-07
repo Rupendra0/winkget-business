@@ -29,10 +29,21 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const POSTAL_REGEX = /^[0-9]{5,10}$/;
 const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const MAX_MEDIA_VALUE_LENGTH = 3000000;
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(String(value || ""))}$`, "i");
+const normalizeMediaValue = (value) => String(value || "").trim();
+
+const isValidCategoryBannerValue = (value) => {
+  const normalized = normalizeMediaValue(value);
+  if (!normalized) return true;
+  if (normalized.length > MAX_MEDIA_VALUE_LENGTH) return false;
+  return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
+};
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -77,6 +88,7 @@ const toCategorySummary = (category) => ({
   name: category.name,
   slug: category.slug,
   description: category.description,
+  image: category.image,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
   ...toCustomFormSummary(category),
@@ -1430,7 +1442,7 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
 
     const categories = await Category.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt");
+      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt");
 
     return res.status(200).json({
       ok: true,
@@ -1445,6 +1457,7 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
+    const imageInput = String(req.body?.image || "").trim();
     const sortOrderInput = req.body?.sortOrder;
     const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
@@ -1456,12 +1469,17 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Category name is required" });
     }
 
+    if (imageInput && !isValidCategoryBannerValue(imageInput)) {
+      return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
+    }
+
     const slug = await resolveUniqueSlug(slugify(name));
 
     const category = await Category.create({
       name,
       slug,
       description: description || undefined,
+      image: imageInput || undefined,
       isActive,
       sortOrder,
       customFormEnabled,
@@ -1508,6 +1526,14 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
     if (req.body?.description !== undefined) {
       const description = String(req.body.description || "").trim();
       category.description = description || undefined;
+    }
+
+    if (req.body?.image !== undefined) {
+      const image = String(req.body.image || "").trim();
+      if (image && !isValidCategoryBannerValue(image)) {
+        return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
+      }
+      category.image = image || undefined;
     }
 
     if (req.body?.isActive !== undefined) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import AdminShell from "@/components/admin/AdminShell";
@@ -26,6 +26,33 @@ type ModalIntent = "create" | "edit";
 type NodeRefType = TreeNode["type"];
 
 const ROOT_PARENT_KEY = "root";
+const CATEGORY_BANNER_URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const CATEGORY_BANNER_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const MAX_CATEGORY_BANNER_UPLOAD_BYTES = 2 * 1024 * 1024;
+
+const isValidCategoryBannerValue = (value: string) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return true;
+  return (
+    CATEGORY_BANNER_URL_REGEX.test(normalized) ||
+    CATEGORY_BANNER_IMAGE_DATA_URL_REGEX.test(normalized)
+  );
+};
+
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) {
+        reject(new Error("Could not read file"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 
 const byOrderThenName = <T extends { sortOrder: number; name: string }>(a: T, b: T) => {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -179,6 +206,7 @@ function CategoriesPageContent() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [nameInput, setNameInput] = useState("");
+  const [bannerImageInput, setBannerImageInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("0");
   const [activeInput, setActiveInput] = useState(true);
   const [customFormEnabledInput, setCustomFormEnabledInput] = useState(false);
@@ -247,6 +275,7 @@ function CategoriesPageContent() {
       setEditingNodeRef(null);
       setEditingSubcategoryId(null);
       setNameInput("");
+      setBannerImageInput("");
       setSortOrderInput("0");
       setActiveInput(true);
       setCustomFormEnabledInput(false);
@@ -391,6 +420,7 @@ function CategoriesPageContent() {
         setEditingNodeRef({ type: "category", entityId });
         setEditingSubcategoryId(null);
         setNameInput(category.name || "");
+        setBannerImageInput(String(category.image || ""));
         setSortOrderInput(String(Number.isFinite(Number(category.sortOrder)) ? category.sortOrder : 0));
         setActiveInput(Boolean(category.isActive));
         setCustomFormEnabledInput(Boolean(category.customFormEnabled));
@@ -414,6 +444,7 @@ function CategoriesPageContent() {
         setEditingNodeRef({ type: "subcategory", entityId });
         setEditingSubcategoryId(entityId);
         setNameInput(subcategory.name || "");
+        setBannerImageInput("");
         setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
         setActiveInput(Boolean(subcategory.isActive));
         setCustomFormEnabledInput(Boolean(subcategory.customFormEnabled));
@@ -447,11 +478,17 @@ function CategoriesPageContent() {
       const customFormFields = toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput);
       const customFormEnabled = customFormEnabledInput && customFormFields.length > 0;
       const customFormTitle = customFormTitleInput.trim();
+      const categoryBannerImage = bannerImageInput.trim();
+
+      if (modalMode === "category" && !isValidCategoryBannerValue(categoryBannerImage)) {
+        throw new Error("Category banner must be a valid URL or uploaded image");
+      }
 
       if (modalIntent === "create") {
         if (modalMode === "category") {
           await createCategoryNode({
             name: cleanName,
+            image: categoryBannerImage || undefined,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -492,6 +529,7 @@ function CategoriesPageContent() {
         if (editingNodeRef.type === "category") {
           await updateCategoryNode(editingNodeRef.entityId, {
             name: cleanName,
+            image: categoryBannerImage,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -698,6 +736,7 @@ function CategoriesPageContent() {
         subcategories={subcategories}
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
+        bannerImageInput={bannerImageInput}
         activeInput={activeInput}
         customFormEnabledInput={customFormEnabledInput}
         customFormTitleInput={customFormTitleInput}
@@ -707,6 +746,7 @@ function CategoriesPageContent() {
         editingSubcategoryId={editingSubcategoryId}
         submitting={isSubmitting}
         onNameChange={setNameInput}
+        onBannerImageChange={setBannerImageInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
         onCustomFormEnabledChange={setCustomFormEnabledInput}
@@ -767,6 +807,7 @@ type CreateNodeModalProps = {
   categories: AdminCategory[];
   subcategories: AdminSubcategory[];
   nameInput: string;
+  bannerImageInput: string;
   sortOrderInput: string;
   activeInput: boolean;
   customFormEnabledInput: boolean;
@@ -777,6 +818,7 @@ type CreateNodeModalProps = {
   editingSubcategoryId: string | null;
   submitting: boolean;
   onNameChange: (value: string) => void;
+  onBannerImageChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
   onCustomFormEnabledChange: (value: boolean) => void;
@@ -795,6 +837,7 @@ function CreateNodeModal({
   categories,
   subcategories,
   nameInput,
+  bannerImageInput,
   sortOrderInput,
   activeInput,
   customFormEnabledInput,
@@ -805,6 +848,7 @@ function CreateNodeModal({
   editingSubcategoryId,
   submitting,
   onNameChange,
+  onBannerImageChange,
   onSortOrderChange,
   onActiveChange,
   onCustomFormEnabledChange,
@@ -815,6 +859,14 @@ function CreateNodeModal({
   onClose,
   onSubmit,
 }: CreateNodeModalProps) {
+  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setBannerUploadError(null);
+    }
+  }, [open]);
+
   const parentOptions = useMemo(
     () =>
       buildSubcategoryOptions(
@@ -855,6 +907,31 @@ function CreateNodeModal({
 
   const addCustomField = () => {
     onCustomFormFieldsChange([...customFormFieldsInput, createDraftCustomField(customFormFieldsInput.length)]);
+  };
+
+  const handleBannerFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setBannerUploadError("Please upload an image file only.");
+      return;
+    }
+
+    if (file.size > MAX_CATEGORY_BANNER_UPLOAD_BYTES) {
+      setBannerUploadError("Banner image must be under 2MB.");
+      return;
+    }
+
+    try {
+      const imageData = await fileToDataUrl(file);
+      onBannerImageChange(imageData);
+      setBannerUploadError(null);
+    } catch {
+      setBannerUploadError("Could not read the selected image. Please try again.");
+    }
   };
 
   const updateCustomField = (draftId: string, patch: Partial<DraftCustomFormField>) => {
@@ -957,6 +1034,46 @@ function CreateNodeModal({
           placeholder="Enter name"
         />
       </label>
+
+      {mode === "category" ? (
+        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <label className="block space-y-1 text-sm text-(--text-soft)">
+            Category banner image (URL or upload)
+            <input
+              value={bannerImageInput}
+              onChange={(event) => onBannerImageChange(event.target.value)}
+              className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
+              placeholder="https://cdn.example.com/category-banner.jpg"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+              Upload Banner
+              <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileUpload} />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                onBannerImageChange("");
+                setBannerUploadError(null);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          {bannerUploadError ? <p className="text-xs text-rose-700">{bannerUploadError}</p> : null}
+
+          {bannerImageInput.trim() && isValidCategoryBannerValue(bannerImageInput) ? (
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <img src={bannerImageInput} alt="Category banner preview" className="h-28 w-full object-cover" loading="lazy" />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <label className="block space-y-1 text-sm text-(--text-soft)">
         Sort order

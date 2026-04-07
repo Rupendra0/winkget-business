@@ -100,13 +100,6 @@ const formatReviewDate = (value: string) => {
   });
 };
 
-const SIDEBAR_PLACEHOLDER_PHOTOS = [
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=60",
-  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=600&q=60",
-  "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=60",
-  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=60",
-];
-
 export default function ListingProfilePage({ profile }: { profile: ListingProfile }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -360,16 +353,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   );
   const hiddenServicesCount = Math.max(servicePoints.length - 5, 0);
   const sidebarPhotoTiles = useMemo(() => {
-    const available = profile.gallery.filter(Boolean).slice(0, 4);
-    if (available.length === 0) {
-      return SIDEBAR_PLACEHOLDER_PHOTOS;
-    }
-
-    if (available.length >= 4) {
-      return available;
-    }
-
-    return [...available, ...SIDEBAR_PLACEHOLDER_PHOTOS.slice(0, 4 - available.length)];
+    return profile.gallery.filter(Boolean).slice(0, 4);
   }, [profile.gallery]);
   const mapEmbedUrl = useMemo(
     () => `https://www.google.com/maps?q=${mapQuery}&z=15&output=embed`,
@@ -1136,25 +1120,31 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
             <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-gray-900">Photos</h2>
 
-              <div className="grid grid-cols-2 gap-2">
-                {sidebarPhotoTiles.map((photo, index) => (
-                  <img
-                    key={`${photo}-${index}`}
-                    src={photo}
-                    alt={`${profile.name} gallery ${index + 1}`}
-                    className="h-20 w-full rounded-lg object-cover"
-                    loading="lazy"
-                  />
-                ))}
-              </div>
+              {sidebarPhotoTiles.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    {sidebarPhotoTiles.map((photo, index) => (
+                      <img
+                        key={`${photo}-${index}`}
+                        src={photo}
+                        alt={`${profile.name} gallery ${index + 1}`}
+                        className="h-20 w-full rounded-lg object-cover"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("Photos")}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-700"
-              >
-                View all photos →
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("Photos")}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    View all photos →
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">No shop photos uploaded yet.</p>
+              )}
             </section>
 
             <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">

@@ -164,6 +164,8 @@ const MAX_SHOP_GALLERY_ITEMS = 8;
 const NOTIFICATION_READ_STORAGE_KEY_PREFIX = "winkget_vendor_notification_reads";
 const NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX = "winkget_vendor_notification_dismissed";
 const MAX_NOTIFICATIONS_IN_POPUP = 20;
+const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 const INDIAN_STATES = [
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -303,10 +305,16 @@ function buildSettingsForm(vendor: VendorSession | null): SettingsFormState {
 }
 
 function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormState {
+  const cleanedGallery = Array.isArray(vendor?.shopGallery)
+    ? vendor.shopGallery
+        .map((item) => String(item || "").trim())
+        .filter((item) => MEDIA_URL_REGEX.test(item) || IMAGE_DATA_URL_REGEX.test(item))
+    : [];
+
   return {
     image: String(vendor?.image || "").trim(),
     shopBannerImage: String(vendor?.shopBannerImage || "").trim(),
-    shopGalleryText: Array.isArray(vendor?.shopGallery) ? vendor.shopGallery.join("\n") : "",
+    shopGalleryText: cleanedGallery.join("\n"),
     businessAddress: String(vendor?.businessAddress || "").trim(),
     website: String(vendor?.website || "").trim(),
     businessDescription: String(vendor?.businessDescription || "").trim(),
@@ -317,12 +325,29 @@ function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormStat
 }
 
 function parseShopGalleryInput(value: string): string[] {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+
+  const byLine = raw
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const expanded = byLine.flatMap((item) => {
+    // Keep data URLs intact. They always contain a comma after the mime prefix.
+    if (IMAGE_DATA_URL_REGEX.test(item)) {
+      return [item];
+    }
+
+    return item
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+  });
+
   return Array.from(
     new Set(
-      String(value || "")
-        .split(/\r?\n|,/)
-        .map((item) => item.trim())
-        .filter(Boolean)
+      expanded.filter((item) => MEDIA_URL_REGEX.test(item) || IMAGE_DATA_URL_REGEX.test(item))
     )
   ).slice(0, MAX_SHOP_GALLERY_ITEMS);
 }

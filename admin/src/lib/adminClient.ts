@@ -109,6 +109,7 @@ export type AdminCategory = {
   name: string;
   slug: string;
   description?: string;
+  image?: string;
   isActive: boolean;
   sortOrder: number;
   customFormEnabled?: boolean;
@@ -422,6 +423,7 @@ export async function fetchCities(params?: {
 export async function createCategory(input: {
   name: string;
   description?: string;
+  image?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -441,6 +443,7 @@ export async function updateCategory(
   input: {
     name?: string;
     description?: string;
+    image?: string;
     sortOrder?: number;
     isActive?: boolean;
     customFormEnabled?: boolean;

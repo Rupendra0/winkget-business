@@ -14,6 +14,7 @@ const toCategorySummary = (category) => ({
   name: category.name,
   slug: category.slug,
   description: category.description,
+  image: category.image,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
   customFormEnabled: Boolean(category.customFormEnabled),
@@ -274,7 +275,7 @@ router.get("/categories", async (_req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields");
+      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,

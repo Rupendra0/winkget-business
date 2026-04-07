@@ -321,6 +321,7 @@ export async function fetchCategoryExplorer() {
 
 export async function createCategoryNode(input: {
   name: string;
+  image?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -345,6 +346,7 @@ export async function createSubcategoryNode(input: {
 
 export async function updateCategoryNode(categoryId: string, input: {
   name?: string;
+  image?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;

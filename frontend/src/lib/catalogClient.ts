@@ -9,6 +9,8 @@ const DEFAULT_VENDOR_IMAGE =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=60";
 const DEFAULT_MAP_IMAGE =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=60";
+const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 const DEFAULT_TILE_IMAGES = [
   "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
   "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=400&q=60",
@@ -432,7 +434,16 @@ export function toCategoryPageDataFromCatalog(input: {
     })
   );
 
-  const bannerImage = listings[0]?.imageUrl || DEFAULT_BANNER_IMAGE;
+  const categoryBannerImageRaw = String(input.category.image || "").trim();
+  const categoryBannerImage =
+    MEDIA_URL_REGEX.test(categoryBannerImageRaw) || IMAGE_DATA_URL_REGEX.test(categoryBannerImageRaw)
+      ? categoryBannerImageRaw
+      : "";
+  const vendorBannerImage =
+    uniqueStrings(input.vendors.map((vendor) => String(vendor.shopBannerImage || "").trim())).find(
+      (value) => MEDIA_URL_REGEX.test(value) || IMAGE_DATA_URL_REGEX.test(value)
+    ) || "";
+  const bannerImage = categoryBannerImage || vendorBannerImage || DEFAULT_BANNER_IMAGE;
   const cityLabel = cityValues[0] || "Your City";
 
   return {
@@ -481,7 +492,14 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
   const coverImage = vendor.shopBannerImage || DEFAULT_BANNER_IMAGE;
   const filteredGallery = uniqueStrings(
     (Array.isArray(vendor.shopGallery) ? vendor.shopGallery : []).filter(
-      (url) => String(url || "").trim() && url !== logoImage && url !== coverImage
+      (url) => {
+        const normalized = String(url || "").trim();
+        if (!normalized || normalized === logoImage || normalized === coverImage) {
+          return false;
+        }
+
+        return MEDIA_URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
+      }
     )
   );
 
@@ -508,7 +526,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     services: Array.isArray(vendor.serviceTags) ? vendor.serviceTags : tags,
     amenities: [],
     hours,
-    gallery: filteredGallery.length > 0 ? filteredGallery : [logoImage],
+    gallery: filteredGallery,
     reviewsList: [],
     mapImage: DEFAULT_MAP_IMAGE,
     suggestionTitle: "Suggestions",
