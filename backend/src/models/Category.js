@@ -42,4 +42,6 @@ const categorySchema = new Schema(
   }
 );
 
+categorySchema.index({ isActive: 1, sortOrder: 1, name: 1 });
+
 module.exports = models.Category || model("Category", categorySchema);

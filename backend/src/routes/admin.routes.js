@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
@@ -71,6 +72,15 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+
+const toObjectId = (value) => {
+  const normalized = String(value || "").trim();
+  if (!OBJECT_ID_REGEX.test(normalized)) {
+    return null;
+  }
+
+  return new mongoose.Types.ObjectId(normalized);
+};
 
 const toCustomFormSummary = (entity) => {
   const customFormFields = sanitizeCustomFormFields(entity?.customFormFields);
@@ -182,7 +192,9 @@ const resolveUniqueSlug = async (baseSlug, excludeCategoryId) => {
             _id: { $ne: excludeCategoryId },
           }
         : { slug }
-    ).select("_id");
+    )
+      .select("_id")
+      .lean();
 
     if (!existing) return slug;
     slug = `${sanitizedBase}-${suffix}`;
@@ -208,7 +220,7 @@ const resolveUniqueSubcategorySlug = async (baseSlug, categoryId, parentSubcateg
       query._id = { $ne: excludeSubcategoryId };
     }
 
-    const existing = await Subcategory.findOne(query).select("_id");
+    const existing = await Subcategory.findOne(query).select("_id").lean();
     if (!existing) return slug;
 
     slug = `${sanitizedBase}-${suffix}`;
@@ -230,7 +242,9 @@ const resolveUniqueCitySlug = async (baseSlug, excludeCityId) => {
             _id: { $ne: excludeCityId },
           }
         : { slug }
-    ).select("_id");
+    )
+      .select("_id")
+      .lean();
 
     if (!existing) return slug;
     slug = `${sanitizedBase}-${suffix}`;
@@ -263,46 +277,66 @@ const resolveUniqueLocalitySlug = (city, baseSlug, excludeLocalityId) => {
 const isDescendantSubcategory = async (candidateParentId, subcategoryId) => {
   if (!candidateParentId || !subcategoryId) return false;
 
-  let currentId = String(candidateParentId);
-  const targetId = String(subcategoryId);
-
-  // Walk up the parent chain to detect cycles.
-  while (currentId) {
-    if (currentId === targetId) {
-      return true;
-    }
-
-    const node = await Subcategory.findById(currentId).select("_id parentSubcategory").lean();
-    if (!node?.parentSubcategory) {
-      return false;
-    }
-
-    currentId = String(node.parentSubcategory);
+  const rootObjectId = toObjectId(subcategoryId);
+  if (!rootObjectId) {
+    return false;
   }
 
-  return false;
+  const rows = await Subcategory.aggregate([
+    {
+      $match: {
+        _id: rootObjectId,
+      },
+    },
+    {
+      $graphLookup: {
+        from: Subcategory.collection.name,
+        startWith: "$_id",
+        connectFromField: "_id",
+        connectToField: "parentSubcategory",
+        as: "descendants",
+      },
+    },
+    {
+      $project: {
+        descendantIds: "$descendants._id",
+      },
+    },
+  ]);
+
+  const descendantSet = new Set((rows[0]?.descendantIds || []).map((id) => String(id)));
+  return descendantSet.has(String(candidateParentId));
 };
 
 const collectDescendantSubcategoryIds = async (rootSubcategoryId) => {
-  const collected = [];
-  const queue = [String(rootSubcategoryId)];
-
-  while (queue.length > 0) {
-    const currentBatch = queue.splice(0, queue.length);
-    const childNodes = await Subcategory.find({ parentSubcategory: { $in: currentBatch } })
-      .select("_id")
-      .lean();
-
-    const childIds = childNodes.map((item) => String(item._id));
-    if (childIds.length === 0) {
-      continue;
-    }
-
-    collected.push(...childIds);
-    queue.push(...childIds);
+  const rootObjectId = toObjectId(rootSubcategoryId);
+  if (!rootObjectId) {
+    return [];
   }
 
-  return collected;
+  const rows = await Subcategory.aggregate([
+    {
+      $match: {
+        _id: rootObjectId,
+      },
+    },
+    {
+      $graphLookup: {
+        from: Subcategory.collection.name,
+        startWith: "$_id",
+        connectFromField: "_id",
+        connectToField: "parentSubcategory",
+        as: "descendants",
+      },
+    },
+    {
+      $project: {
+        descendantIds: "$descendants._id",
+      },
+    },
+  ]);
+
+  return (rows[0]?.descendantIds || []).map((id) => String(id));
 };
 
 const toVendorSummary = (vendor) => ({
@@ -407,7 +441,7 @@ const requireAdmin = async (req, res, next) => {
     }
 
     const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select("_id name email phone role");
+    const user = await User.findById(payload.sub).select("_id name email phone role").lean();
 
     if (!user || user.role !== "admin") {
       return res.status(403).json({ ok: false, message: "Admin access required" });
@@ -467,7 +501,8 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
           "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
         )
         .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
-        .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields"),
+        .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
+        .lean(),
     ]);
 
     return res.status(200).json({
@@ -528,7 +563,8 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
         "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
-      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -603,7 +639,8 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
     const users = await User.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select("_id name email phone businessName role vendorStatus createdAt updatedAt");
+      .select("_id name email phone businessName role vendorStatus createdAt updatedAt")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -626,7 +663,8 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
         "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData role vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
-      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ ok: false, message: "User not found" });
@@ -1411,7 +1449,7 @@ router.delete("/admin/users/:id", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "You cannot delete your own account" });
     }
 
-    const user = await User.findById(userId).select("_id role");
+    const user = await User.findById(userId).select("_id role").lean();
     if (!user) {
       return res.status(404).json({ ok: false, message: "User not found" });
     }
@@ -1442,7 +1480,8 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
 
     const categories = await Category.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt");
+      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -1622,7 +1661,8 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
       .sort({ sortOrder: 1, name: 1 })
       .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .populate("category", "_id name")
-      .populate("parentSubcategory", "_id name");
+      .populate("parentSubcategory", "_id name")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -1955,7 +1995,8 @@ router.get("/admin/cities", requireAdmin, async (req, res) => {
 
     const cities = await City.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug state isActive sortOrder localities createdAt updatedAt");
+      .select("_id name slug state isActive sortOrder localities createdAt updatedAt")
+      .lean();
 
     return res.status(200).json({
       ok: true,

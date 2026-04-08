@@ -8,6 +8,7 @@ const router = express.Router();
 const AUTH_COOKIE_NAME = "winkget_auth";
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const BUSINESS_KEY_REGEX = /^[a-zA-Z0-9:_-]{1,120}$/;
+const PUBLIC_GET_MAX_AGE_SECONDS = Math.max(Number(process.env.PUBLIC_GET_MAX_AGE_SECONDS || 300), 1);
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -90,7 +91,7 @@ const resolveAuthenticatedUser = async (req) => {
 
   try {
     const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select("_id role name businessName email phone");
+    const user = await User.findById(payload.sub).select("_id role name businessName email phone").lean();
     return user || null;
   } catch {
     return null;
@@ -109,6 +110,13 @@ const requireAuth = async (req, res, next) => {
 
 router.get("/reviews", async (req, res) => {
   try {
+    const hasAuthContext = Boolean(resolveTokenFromRequest(req));
+    if (hasAuthContext) {
+      res.set("Cache-Control", "private, no-store");
+    } else {
+      res.set("Cache-Control", `public, max-age=${PUBLIC_GET_MAX_AGE_SECONDS}`);
+    }
+
     const businessId = normalizeBusinessId(req.query.businessId);
     const limit = Math.min(Math.max(Number(req.query.limit || 30), 1), 200);
 
@@ -123,7 +131,8 @@ router.get("/reviews", async (req, res) => {
       })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select("_id businessKey reviewer authorName rating comment createdAt"),
+        .select("_id businessKey reviewer authorName rating comment createdAt")
+        .lean(),
       getBusinessSummary(businessId),
       resolveAuthenticatedUser(req),
     ]);
@@ -175,7 +184,9 @@ router.post("/reviews", requireAuth, async (req, res) => {
         _id: businessId,
         role: "vendor",
         vendorStatus: "approved",
-      }).select("_id");
+      })
+        .select("_id")
+        .lean();
 
       if (!vendor) {
         return res.status(404).json({ ok: false, message: "Business not found" });

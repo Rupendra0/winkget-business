@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.get("/health", async (_req, res) => {
   const connection = mongoose.connection;
+  res.set("Cache-Control", `public, max-age=${Math.max(Number(process.env.PUBLIC_GET_MAX_AGE_SECONDS || 300), 1)}`);
 
   return res.status(200).json({
     ok: true,

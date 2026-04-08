@@ -38,7 +38,7 @@ const requireAdmin = async (req, res, next) => {
     }
 
     const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select("_id role");
+    const user = await User.findById(payload.sub).select("_id role").lean();
     if (!user || user.role !== "admin") {
       return res.status(403).json({ ok: false, message: "Admin access required" });
     }
@@ -58,7 +58,9 @@ const requireVendor = async (req, res, next) => {
     }
 
     const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select("_id role vendorStatus businessName businessPhone city state");
+    const user = await User.findById(payload.sub)
+      .select("_id role vendorStatus businessName businessPhone city state")
+      .lean();
     if (!user || user.role !== "vendor") {
       return res.status(403).json({ ok: false, message: "Vendor access required" });
     }
@@ -181,7 +183,9 @@ router.get("/inquiries", requireAdmin, async (req, res) => {
     const inquiries = await Inquiry.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .populate("vendor", "_id businessName businessPhone city state");
+      .select("_id vendor subject name phone email message channel status adminNote createdAt updatedAt")
+      .populate("vendor", "_id businessName businessPhone city state")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -217,7 +221,9 @@ router.get("/inquiries/vendor", requireVendor, async (req, res) => {
     const inquiries = await Inquiry.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .populate("vendor", "_id businessName businessPhone city state");
+      .select("_id vendor subject name phone email message channel status adminNote createdAt updatedAt")
+      .populate("vendor", "_id businessName businessPhone city state")
+      .lean();
 
     const summary = inquiries.reduce(
       (acc, inquiry) => {
@@ -258,7 +264,10 @@ router.patch("/inquiries/vendor/:id", requireVendor, async (req, res) => {
       { _id: inquiryId, vendor: req.vendorUser._id },
       { status: statusInput },
       { new: true }
-    ).populate("vendor", "_id businessName businessPhone city state");
+    )
+      .select("_id vendor subject name phone email message channel status adminNote createdAt updatedAt")
+      .populate("vendor", "_id businessName businessPhone city state")
+      .lean();
 
     if (!inquiry) {
       return res.status(404).json({ ok: false, message: "Inquiry not found" });
@@ -301,7 +310,9 @@ router.patch("/inquiries/:id", requireAdmin, async (req, res) => {
     }
 
     const inquiry = await Inquiry.findByIdAndUpdate(inquiryId, update, { new: true })
-      .populate("vendor", "_id businessName businessPhone city state");
+      .select("_id vendor subject name phone email message channel status adminNote createdAt updatedAt")
+      .populate("vendor", "_id businessName businessPhone city state")
+      .lean();
 
     if (!inquiry) {
       return res.status(404).json({ ok: false, message: "Inquiry not found" });

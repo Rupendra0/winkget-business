@@ -51,5 +51,7 @@ const reviewSchema = new Schema(
 );
 
 reviewSchema.index({ businessKey: 1, reviewer: 1 }, { unique: true });
+reviewSchema.index({ businessKey: 1, isVisible: 1, createdAt: -1 });
+reviewSchema.index({ vendor: 1, isVisible: 1, createdAt: -1 });
 
 module.exports = models.Review || model("Review", reviewSchema);

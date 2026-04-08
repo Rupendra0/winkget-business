@@ -14,4 +14,7 @@ const failureLogSchema = new Schema(
   }
 );
 
+failureLogSchema.index({ createdAt: -1 });
+failureLogSchema.index({ source: 1, createdAt: -1 });
+
 module.exports = models.FailureLog || model("FailureLog", failureLogSchema);

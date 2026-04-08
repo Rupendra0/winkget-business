@@ -167,7 +167,10 @@ router.post("/auth/signup", async (req, res) => {
     if (email) duplicateChecks.push({ email });
     if (phone) duplicateChecks.push({ phone });
 
-    const existing = duplicateChecks.length > 0 ? await User.findOne({ $or: duplicateChecks }) : null;
+    const existing =
+      duplicateChecks.length > 0
+        ? await User.findOne({ $or: duplicateChecks }).select("_id").lean()
+        : null;
     if (existing) {
       return res.status(409).json({ ok: false, message: "Account already exists" });
     }
@@ -225,7 +228,9 @@ router.post("/auth/login", async (req, res) => {
     const normalizedPhone = normalizePhone(identifier);
     const user = await User.findOne({
       $or: [{ email: normalized }, ...(normalizedPhone ? [{ phone: normalizedPhone }] : [])],
-    });
+    })
+      .select("_id name email phone role vendorStatus passwordHash")
+      .lean();
 
     if (!user || !user.passwordHash) {
       await FailureLog.create({
@@ -606,8 +611,12 @@ router.post("/auth/vendor/login", async (req, res) => {
         ...(normalizedPhone ? [{ phone: normalizedPhone }, { businessPhone: normalizedPhone }] : []),
       ],
     })
+      .select(
+        "_id name businessName email phone alternatePhone businessEmail businessPhone businessAlternatePhone city sublocality state shopOpeningTime shopClosingTime customFormData role vendorStatus passwordHash businessCategory businessSubcategory"
+      )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
-      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .lean();
 
     if (!user || !user.passwordHash) {
       await FailureLog.create({
@@ -698,7 +707,8 @@ router.get("/auth/me", async (req, res) => {
         "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
-      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .lean();
 
     if (!user) {
       clearAuthCookie(res);

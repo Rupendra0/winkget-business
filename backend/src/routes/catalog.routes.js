@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const City = require("../models/City");
@@ -8,6 +9,85 @@ const { sanitizeCustomFormFields } = require("../lib/customForm");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const AUTH_COOKIE_NAME = "winkget_auth";
+
+const toPositiveInt = (value, fallback) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+};
+
+const PUBLIC_GET_MAX_AGE_SECONDS = toPositiveInt(process.env.PUBLIC_GET_MAX_AGE_SECONDS, 300);
+const PUBLIC_ROUTE_CACHE_TTL_SECONDS = toPositiveInt(process.env.PUBLIC_ROUTE_CACHE_TTL_SECONDS, 180);
+const PUBLIC_ROUTE_CACHE_MAX_ENTRIES = toPositiveInt(process.env.PUBLIC_ROUTE_CACHE_MAX_ENTRIES, 500);
+const publicRouteCache = new Map();
+
+const getCachedRouteEntry = (key) => {
+  const entry = publicRouteCache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  if (entry.expiresAt <= Date.now()) {
+    publicRouteCache.delete(key);
+    return null;
+  }
+
+  return entry;
+};
+
+const setCachedRouteEntry = (key, statusCode, payload, ttlSeconds = PUBLIC_ROUTE_CACHE_TTL_SECONDS) => {
+  if (ttlSeconds <= 0) {
+    return;
+  }
+
+  if (publicRouteCache.size >= PUBLIC_ROUTE_CACHE_MAX_ENTRIES) {
+    const oldestKey = publicRouteCache.keys().next().value;
+    if (oldestKey) {
+      publicRouteCache.delete(oldestKey);
+    }
+  }
+
+  publicRouteCache.set(key, {
+    statusCode,
+    payload,
+    expiresAt: Date.now() + ttlSeconds * 1000,
+  });
+};
+
+const withPublicGetCache = (handler, ttlSeconds = PUBLIC_ROUTE_CACHE_TTL_SECONDS) => async (req, res, next) => {
+  const hasAuthContext = Boolean(req.headers.authorization || req.cookies?.[AUTH_COOKIE_NAME]);
+  if (hasAuthContext) {
+    res.set("Cache-Control", "private, no-store");
+    return handler(req, res, next);
+  }
+
+  res.set("Cache-Control", `public, max-age=${PUBLIC_GET_MAX_AGE_SECONDS}`);
+
+  const canServeFromCache = req.method === "GET";
+  if (!canServeFromCache) {
+    return handler(req, res, next);
+  }
+
+  const cacheKey = req.originalUrl;
+  const cached = getCachedRouteEntry(cacheKey);
+  if (cached) {
+    return res.status(cached.statusCode).json(cached.payload);
+  }
+
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      setCachedRouteEntry(cacheKey, res.statusCode, payload, ttlSeconds);
+    }
+
+    return originalJson(payload);
+  };
+
+  return handler(req, res, next);
+};
 
 const toCategorySummary = (category) => ({
   id: String(category._id),
@@ -142,32 +222,39 @@ const getVendorReviewSummaryMap = async (vendorIds) => {
 };
 
 const collectDescendantSubcategoryIds = async (rootSubcategoryId) => {
-  if (!rootSubcategoryId) {
+  const rootId = String(rootSubcategoryId || "").trim();
+  if (!OBJECT_ID_REGEX.test(rootId)) {
     return [];
   }
 
-  const descendants = [];
-  const queue = [String(rootSubcategoryId)];
+  const rows = await Subcategory.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(rootId),
+      },
+    },
+    {
+      $graphLookup: {
+        from: Subcategory.collection.name,
+        startWith: "$_id",
+        connectFromField: "_id",
+        connectToField: "parentSubcategory",
+        as: "descendants",
+        restrictSearchWithMatch: { isActive: true },
+      },
+    },
+    {
+      $project: {
+        descendantIds: "$descendants._id",
+      },
+    },
+  ]);
 
-  while (queue.length > 0) {
-    const currentBatch = queue.splice(0, queue.length);
-    const childRows = await Subcategory.find({
-      parentSubcategory: { $in: currentBatch },
-      isActive: true,
-    })
-      .select("_id")
-      .lean();
-
-    const childIds = childRows.map((row) => String(row._id));
-    if (childIds.length === 0) {
-      continue;
-    }
-
-    descendants.push(...childIds);
-    queue.push(...childIds);
+  if (!rows[0]?.descendantIds) {
+    return [];
   }
 
-  return descendants;
+  return rows[0].descendantIds.map((id) => String(id));
 };
 
 const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
@@ -255,7 +342,7 @@ const toSubcategorySummary = (subcategory) => ({
     : undefined,
 });
 
-router.get("/cities", async (_req, res) => {
+router.get("/cities", withPublicGetCache(async (_req, res) => {
   try {
     const cities = await City.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
@@ -269,13 +356,14 @@ router.get("/cities", async (_req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load cities", error: error.message });
   }
-});
+}));
 
-router.get("/categories", async (_req, res) => {
+router.get("/categories", withPublicGetCache(async (_req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields");
+      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -284,9 +372,9 @@ router.get("/categories", async (_req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load categories", error: error.message });
   }
-});
+}));
 
-router.get("/subcategories", async (req, res) => {
+router.get("/subcategories", withPublicGetCache(async (req, res) => {
   try {
     const categoryId = String(req.query.categoryId || "").trim();
     const parentSubcategoryId = String(req.query.parentSubcategoryId || "").trim();
@@ -321,7 +409,8 @@ router.get("/subcategories", async (req, res) => {
       .sort({ sortOrder: 1, name: 1 })
       .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .populate("category", "_id name")
-      .populate("parentSubcategory", "_id name");
+      .populate("parentSubcategory", "_id name")
+      .lean();
 
     return res.status(200).json({
       ok: true,
@@ -330,9 +419,9 @@ router.get("/subcategories", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load subcategories", error: error.message });
   }
-});
+}));
 
-router.get("/vendors", async (req, res) => {
+router.get("/vendors", withPublicGetCache(async (req, res) => {
   try {
     const categoryIdInput = String(req.query.categoryId || "").trim();
     const categorySlug = String(req.query.categorySlug || "").trim().toLowerCase();
@@ -344,7 +433,7 @@ router.get("/vendors", async (req, res) => {
     let resolvedCategoryId = categoryIdInput;
 
     if (categorySlug) {
-      const category = await Category.findOne({ slug: categorySlug, isActive: true }).select("_id");
+      const category = await Category.findOne({ slug: categorySlug, isActive: true }).select("_id").lean();
       if (!category) {
         return res.status(200).json({ ok: true, vendors: [] });
       }
@@ -414,7 +503,8 @@ router.get("/vendors", async (req, res) => {
           "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
-      .populate("businessSubcategory", "_id name slug");
+      .populate("businessSubcategory", "_id name slug")
+      .lean();
 
     const reviewSummaryByVendorId = await getVendorReviewSummaryMap(vendors.map((vendor) => vendor._id));
 
@@ -425,9 +515,9 @@ router.get("/vendors", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendors", error: error.message });
   }
-});
+}));
 
-router.get("/vendors/:id", async (req, res) => {
+router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
   try {
     const vendorId = String(req.params.id || "").trim();
     if (!OBJECT_ID_REGEX.test(vendorId)) {
@@ -443,7 +533,8 @@ router.get("/vendors/:id", async (req, res) => {
         "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
       )
       .populate("businessCategory", "_id name slug")
-      .populate("businessSubcategory", "_id name slug");
+      .populate("businessSubcategory", "_id name slug")
+      .lean();
 
     if (!vendor) {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
@@ -458,6 +549,6 @@ router.get("/vendors/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendor", error: error.message });
   }
-});
+}));
 
 module.exports = router;
