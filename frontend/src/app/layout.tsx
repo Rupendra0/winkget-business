@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackToTop from "@/components/BackToTop";
+import GlobalNavigationLoader from "@/components/GlobalNavigationLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Suspense fallback={null}>
+          <GlobalNavigationLoader />
+        </Suspense>
         <Suspense
           fallback={
             <div className="sticky top-0 z-50 h-16 sm:h-20 border-b border-white/20 bg-white/30 backdrop-blur-xl" />

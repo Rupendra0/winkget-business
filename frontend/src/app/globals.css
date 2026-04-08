@@ -103,6 +103,20 @@ body {
   }
 }
 
+@keyframes global-route-progress {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(380%);
+    opacity: 0.15;
+  }
+}
+
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
