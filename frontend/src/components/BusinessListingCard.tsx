@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, MapPin, MessageSquareText, Phone, Star } from "lucide-react";
@@ -28,6 +28,8 @@ function BusinessListingCardComponent({
   className,
 }: BusinessListingCardProps) {
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const hasPrefetchedRef = useRef(false);
   const extendedListing = listing as CategoryListing & {
     distance?: string;
     distanceKm?: number | string;
@@ -176,19 +178,56 @@ function BusinessListingCardComponent({
     event.stopPropagation();
   }, []);
 
-  const handleCardClick = useCallback(() => {
-    router.push(detailsHref);
+  const prefetchDetails = useCallback(() => {
+    if (hasPrefetchedRef.current) {
+      return;
+    }
+
+    hasPrefetchedRef.current = true;
+    router.prefetch(detailsHref);
   }, [detailsHref, router]);
+
+  const beginNavigation = useCallback(
+    (href: string) => {
+      setIsNavigating(true);
+      router.push(href);
+    },
+    [router]
+  );
+
+  const handleCardClick = useCallback(() => {
+    beginNavigation(detailsHref);
+  }, [beginNavigation, detailsHref]);
 
   const handleCardKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        router.push(detailsHref);
+        beginNavigation(detailsHref);
       }
     },
-    [detailsHref, router]
+    [beginNavigation, detailsHref]
   );
+
+  const handleDetailsLinkClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      stopCardNavigation(event);
+      setIsNavigating(true);
+    },
+    [stopCardNavigation]
+  );
+
+  const handleInquiryLinkClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      stopCardNavigation(event);
+      setIsNavigating(true);
+    },
+    [stopCardNavigation]
+  );
+
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [listing.id]);
 
   return (
     <article
@@ -196,11 +235,29 @@ function BusinessListingCardComponent({
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`group min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+      onMouseEnter={prefetchDetails}
+      onTouchStart={prefetchDetails}
+      onFocus={prefetchDetails}
+      className={`group relative min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+        isNavigating ? "pointer-events-none" : ""
+      } ${
         className || ""
       }`}
       aria-label={`Open listing for ${displayName}`}
+      aria-busy={isNavigating}
     >
+      {isNavigating ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm">
+            <span
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"
+              aria-hidden="true"
+            />
+            Opening profile...
+          </span>
+        </div>
+      ) : null}
+
       <div className="h-12 bg-white" />
 
       <div className="px-4 pb-4">
@@ -218,7 +275,7 @@ function BusinessListingCardComponent({
             <div className="flex items-start gap-2">
               <Link
                 href={detailsHref}
-                onClick={stopCardNavigation}
+                onClick={handleDetailsLinkClick}
                 className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900 hover:text-blue-700"
               >
                 {displayName}
@@ -290,7 +347,7 @@ function BusinessListingCardComponent({
         <div className="mt-3 flex gap-2">
           <Link
             href={inquiryHref}
-            onClick={stopCardNavigation}
+            onClick={handleInquiryLinkClick}
             className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-blue-700"
             aria-label={`Send inquiry to ${displayName}`}
           >
