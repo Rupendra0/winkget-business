@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackToTop from "@/components/BackToTop";
 import GlobalNavigationLoader from "@/components/GlobalNavigationLoader";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -29,14 +33,14 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.className} ${inter.variable} ${poppins.variable} antialiased`}
       >
         <Suspense fallback={null}>
           <GlobalNavigationLoader />
         </Suspense>
         <Suspense
           fallback={
-            <div className="sticky top-0 z-50 h-16 sm:h-20 border-b border-white/20 bg-white/30 backdrop-blur-xl" />
+            <div className="sticky top-0 z-50 h-16 sm:h-20 border-b border-orange-100/80 bg-white/70 backdrop-blur-md" />
           }
         >
           <Navbar />

@@ -5,7 +5,7 @@ import { Suspense, type FormEvent, type ReactNode, useCallback, useEffect, useMe
 import CommandPalette from "@/components/admin/CommandPalette";
 import Navbar from "@/components/admin/Navbar";
 import Sidebar from "@/components/admin/Sidebar";
-import { findSidebarItem, findSidebarSectionByPath, SIDEBAR_SECTIONS, type SidebarSection } from "@/data/adminNavigation";
+import { SIDEBAR_SECTIONS, type SidebarSection } from "@/data/adminNavigation";
 import {
   fetchDashboard,
   fetchAdminSession,
@@ -32,7 +32,7 @@ export default function AdminShell(props: AdminShellProps) {
   );
 }
 
-function AdminShellInner({ title, subtitle, children, showPageIntro = true, sidebarSections }: AdminShellProps) {
+function AdminShellInner({ title: _title, subtitle: _subtitle, children, showPageIntro: _showPageIntro = true, sidebarSections }: AdminShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -233,15 +233,6 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true, side
     router.refresh();
   };
 
-  const activeSection = findSidebarSectionByPath(pathname);
-  const activeItem = findSidebarItem(activeItemId);
-
-  const breadcrumbLabel = useMemo(() => {
-    const sectionLabel = activeSection?.title || "Workspace";
-    const itemLabel = activeItem?.label || title;
-    return `${sectionLabel} / ${itemLabel}`;
-  }, [activeItem?.label, activeSection?.title, title]);
-
   if (booting) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-(--canvas) px-4 py-10">
@@ -353,13 +344,6 @@ function AdminShellInner({ title, subtitle, children, showPageIntro = true, side
 
           <section className="px-3 py-3 sm:px-5 sm:py-4">
             <div className="rounded-xl border border-(--border) bg-(--surface) p-4">
-              <p className="mb-2 text-xs text-(--text-soft)">{breadcrumbLabel}</p>
-              {showPageIntro ? (
-                <header className="mb-4">
-                  <h2 className="text-xl font-semibold text-(--text-strong)">{title}</h2>
-                  {subtitle ? <p className="mt-1 text-sm text-(--text-soft)">{subtitle}</p> : null}
-                </header>
-              ) : null}
               <div className="page-fade">{children}</div>
             </div>
           </section>

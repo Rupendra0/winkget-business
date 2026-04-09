@@ -6,6 +6,7 @@ const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const City = require("../models/City");
+const HomePlacement = require("../models/HomePlacement");
 const {
   GSTIN_REGEX,
   AADHAAR_REGEX,
@@ -33,17 +34,109 @@ const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 const MAX_MEDIA_VALUE_LENGTH = 3000000;
+const HOME_PLACEMENT_KEY = "home-placements";
+const HOME_PROMO_SECTION_KEY = "home-promo-cards";
+const HOME_PROMO_CARD_COUNT = 5;
+const HOME_PROMO_HEADING_MAX_LENGTH = 120;
+const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
+const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(String(value || ""))}$`, "i");
 const normalizeMediaValue = (value) => String(value || "").trim();
 
-const isValidCategoryBannerValue = (value) => {
+const isValidCategoryMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
   if (!normalized) return true;
   if (normalized.length > MAX_MEDIA_VALUE_LENGTH) return false;
   return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
+};
+
+const toHomePlacementSummary = (placement) => {
+  const slots = placement?.slots && typeof placement.slots === "object" ? placement.slots : {};
+
+  return {
+    key: HOME_PLACEMENT_KEY,
+    leftImage: normalizeMediaValue(slots.leftImage) || "",
+    middleImage: normalizeMediaValue(slots.middleImage) || "",
+    rightImage: normalizeMediaValue(slots.rightImage) || "",
+    updatedAt: placement?.updatedAt,
+  };
+};
+
+const toHomePromoSectionSummary = (placement) => {
+  const cards = Array.isArray(placement?.promoCards) ? placement.promoCards : [];
+  const mappedByCardId = new Map();
+
+  cards.forEach((card, index) => {
+    const cardIdInput = String(card?.cardId || "").trim();
+    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
+    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    if (!cardId || mappedByCardId.has(cardId)) {
+      return;
+    }
+
+    const categoryDoc = card?.category && typeof card.category === "object" ? card.category : null;
+    const categoryId = categoryDoc
+      ? String(categoryDoc._id || categoryDoc.id || "").trim()
+      : String(card?.category || "").trim();
+
+    mappedByCardId.set(cardId, {
+      cardId,
+      categoryId,
+      categoryName: String(categoryDoc?.name || "").trim(),
+      categorySlug: String(categoryDoc?.slug || "").trim(),
+      image: normalizeMediaValue(card?.image) || "",
+    });
+  });
+
+  return {
+    key: HOME_PROMO_SECTION_KEY,
+    heading: String(placement?.promoHeading || "").trim() || HOME_PROMO_DEFAULT_HEADING,
+    cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
+      const card = mappedByCardId.get(cardId);
+      return {
+        cardId,
+        order: index + 1,
+        categoryId: card?.categoryId || "",
+        categoryName: card?.categoryName || "",
+        categorySlug: card?.categorySlug || "",
+        image: card?.image || "",
+      };
+    }),
+    updatedAt: placement?.updatedAt,
+  };
+};
+
+const normalizeHomePromoCardsInput = (cardsInput) => {
+  const cards = Array.isArray(cardsInput) ? cardsInput : [];
+  const cardById = new Map();
+
+  cards.forEach((card, index) => {
+    const cardIdInput = String(card?.cardId || "").trim();
+    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
+    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    if (!cardId || cardById.has(cardId)) {
+      return;
+    }
+
+    cardById.set(cardId, {
+      cardId,
+      categoryId: String(card?.categoryId || "").trim(),
+      image: normalizeMediaValue(card?.image) || "",
+    });
+  });
+
+  return HOME_PROMO_CARD_IDS.map((cardId, index) => {
+    const card = cardById.get(cardId);
+    return {
+      cardId,
+      sortOrder: index + 1,
+      categoryId: card?.categoryId || "",
+      image: card?.image || "",
+    };
+  });
 };
 
 const verifyToken = (token) => {
@@ -99,6 +192,7 @@ const toCategorySummary = (category) => ({
   slug: category.slug,
   description: category.description,
   image: category.image,
+  icon: category.icon,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
   ...toCustomFormSummary(category),
@@ -1468,6 +1562,141 @@ router.delete("/admin/users/:id", requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/admin/ads/home-placements", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_PLACEMENT_KEY }).lean();
+
+    return res.status(200).json({
+      ok: true,
+      placements: toHomePlacementSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load home placements", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-placements", requireAdmin, async (req, res) => {
+  try {
+    const leftImage = normalizeMediaValue(req.body?.leftImage);
+    const middleImage = normalizeMediaValue(req.body?.middleImage);
+    const rightImage = normalizeMediaValue(req.body?.rightImage);
+
+    if (leftImage && !isValidCategoryMediaValue(leftImage)) {
+      return res.status(400).json({ ok: false, message: "Left banner image must be a valid URL or image data" });
+    }
+
+    if (middleImage && !isValidCategoryMediaValue(middleImage)) {
+      return res.status(400).json({ ok: false, message: "Middle banner image must be a valid URL or image data" });
+    }
+
+    if (rightImage && !isValidCategoryMediaValue(rightImage)) {
+      return res.status(400).json({ ok: false, message: "Right banner image must be a valid URL or image data" });
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_PLACEMENT_KEY },
+      {
+        $set: {
+          key: HOME_PLACEMENT_KEY,
+          "slots.leftImage": leftImage || undefined,
+          "slots.middleImage": middleImage || undefined,
+          "slots.rightImage": rightImage || undefined,
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    ).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Home placements updated",
+      placements: toHomePlacementSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update home placements", error: error.message });
+  }
+});
+
+router.get("/admin/ads/home-promo-cards", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY })
+      .populate("promoCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomePromoSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load home promo cards", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
+  try {
+    const headingInput = String(req.body?.heading || "").trim();
+    const heading = headingInput.slice(0, HOME_PROMO_HEADING_MAX_LENGTH);
+    const cards = normalizeHomePromoCardsInput(req.body?.cards);
+
+    for (const card of cards) {
+      if (card.image && !isValidCategoryMediaValue(card.image)) {
+        return res.status(400).json({
+          ok: false,
+          message: `Image for ${card.cardId} must be a valid URL or image data`,
+        });
+      }
+
+      if (card.categoryId && !OBJECT_ID_REGEX.test(card.categoryId)) {
+        return res.status(400).json({ ok: false, message: `Category for ${card.cardId} is invalid` });
+      }
+    }
+
+    const categoryIds = Array.from(new Set(cards.map((card) => card.categoryId).filter(Boolean)));
+    if (categoryIds.length > 0) {
+      const categories = await Category.find({ _id: { $in: categoryIds } }).select("_id").lean();
+      if (categories.length !== categoryIds.length) {
+        return res.status(400).json({ ok: false, message: "One or more selected categories do not exist" });
+      }
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_PROMO_SECTION_KEY },
+      {
+        $set: {
+          key: HOME_PROMO_SECTION_KEY,
+          promoHeading: heading || HOME_PROMO_DEFAULT_HEADING,
+          promoCards: cards.map((card) => ({
+            cardId: card.cardId,
+            category: card.categoryId || undefined,
+            image: card.image || undefined,
+            sortOrder: card.sortOrder,
+          })),
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    )
+      .populate("promoCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Home promo cards updated",
+      section: toHomePromoSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update home promo cards", error: error.message });
+  }
+});
+
 router.get("/admin/categories", requireAdmin, async (req, res) => {
   try {
     const includeInactive = String(req.query.includeInactive || "true").toLowerCase() !== "false";
@@ -1480,7 +1709,7 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
 
     const categories = await Category.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
+      .select("_id name slug description image icon isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .lean();
 
     return res.status(200).json({
@@ -1497,6 +1726,7 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
     const imageInput = String(req.body?.image || "").trim();
+    const iconInput = String(req.body?.icon || "").trim();
     const sortOrderInput = req.body?.sortOrder;
     const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
@@ -1508,8 +1738,12 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Category name is required" });
     }
 
-    if (imageInput && !isValidCategoryBannerValue(imageInput)) {
+    if (imageInput && !isValidCategoryMediaValue(imageInput)) {
       return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
+    }
+
+    if (iconInput && !isValidCategoryMediaValue(iconInput)) {
+      return res.status(400).json({ ok: false, message: "Category icon image must be a valid URL or image data" });
     }
 
     const slug = await resolveUniqueSlug(slugify(name));
@@ -1519,6 +1753,7 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       slug,
       description: description || undefined,
       image: imageInput || undefined,
+      icon: iconInput || undefined,
       isActive,
       sortOrder,
       customFormEnabled,
@@ -1569,10 +1804,18 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
 
     if (req.body?.image !== undefined) {
       const image = String(req.body.image || "").trim();
-      if (image && !isValidCategoryBannerValue(image)) {
+      if (image && !isValidCategoryMediaValue(image)) {
         return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
       }
       category.image = image || undefined;
+    }
+
+    if (req.body?.icon !== undefined) {
+      const icon = String(req.body.icon || "").trim();
+      if (icon && !isValidCategoryMediaValue(icon)) {
+        return res.status(400).json({ ok: false, message: "Category icon image must be a valid URL or image data" });
+      }
+      category.icon = icon || undefined;
     }
 
     if (req.body?.isActive !== undefined) {

@@ -1,20 +1,18 @@
 import CategoryGrid from "@/components/CategoryGrid";
-import PromoRow from "@/components/PromoRow";
+import BannerSection from "@/components/BannerSection";
 import CityStrip from "@/components/CityStrip";
 import PromoBanners from "@/components/PromoBanners";
 import PartnersSection from "@/components/PartnersSection";
-import RegisterBusiness from "@/components/RegisterBusiness";
 import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <main className="w-full">
+    <main className="w-full space-y-4 overflow-x-hidden bg-white sm:space-y-5">
+      <BannerSection />
       <CategoryGrid />
-      <PromoRow />
-      <CityStrip />
       <PromoBanners />
+      <CityStrip />
       <PartnersSection />
-      <RegisterBusiness />
       <Footer />
     </main>
   );

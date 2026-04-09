@@ -184,15 +184,15 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/30 border-b border-white/20 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-orange-100/80 shadow-sm font-medium">
+      <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="flex items-center justify-between py-3">
           {/* Logo */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-3">
             {showBack ? (
               <button
                 type="button"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/40 text-blue-900 flex items-center justify-center btn-hover"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white border border-orange-100 text-orange-600 flex items-center justify-center btn-hover"
                 onClick={() => router.back()}
                 aria-label="Go back"
               >
@@ -200,21 +200,21 @@ export default function Navbar() {
               </button>
             ) : null}
             <Link href="/" className="min-w-0 flex items-baseline gap-1 sm:gap-2">
-              <span className="text-lg sm:text-2xl font-bold text-blue-900">Winkget</span>
-              <span className="hidden sm:inline text-lg sm:text-xl font-semibold text-gray-800">Business</span>
+              <span className="brand-wordmark text-lg sm:text-2xl font-bold tracking-[0.4px] text-orange-600">Winkget</span>
+              <span className="brand-wordmark hidden sm:inline text-lg sm:text-xl font-bold tracking-[0.3px] text-gray-800">Business</span>
             </Link>
           </div>
 
           {/* Center - Location and Search */}
-          <div className="hidden md:flex flex-1 mx-8 items-center gap-4">
+          <div className="hidden md:flex flex-1 mx-6 items-center gap-4">
             {/* Location Selector */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 transition-all">
-              <MapPin size={18} className="text-blue-800" />
+            <div className="flex items-center gap-2 rounded-md border border-orange-100 bg-white/80 px-4 py-2 shadow-sm">
+              <MapPin size={18} className="text-orange-500" />
               <select
                 value={selectedCity}
                 onChange={(event) => handleCityChange(event.target.value)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="bg-transparent text-sm font-medium text-gray-800 outline-none"
+                className="bg-transparent text-sm font-medium text-slate-700 outline-none"
               >
                 {loadingCities ? <option value="">Loading city...</option> : null}
                 {!loadingCities && cityOptions.length === 0 ? <option value="">No cities</option> : null}
@@ -228,12 +228,12 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md bg-white/30 border border-white/40 hover:bg-white/40 transition-all focus-within:bg-white/50">
-                <Search size={20} className="text-blue-800" />
+              <div className="flex items-center gap-2 rounded-full border border-orange-100 bg-white px-5 py-2 shadow-sm">
+                <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
                   placeholder="Search across 10 Lakh+ Business"
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-600"
+                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -241,30 +241,30 @@ export default function Navbar() {
 
           {/* Right Navigation */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="px-5 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium text-sm transition-all btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
+            <button className="rounded-md border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-orange-50 btn-hover shadow-sm">
               Explore
             </button>
-            <button className="px-5 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-sm transition-all shadow-lg btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
+            <button className="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
-            <button className="p-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 transition-all btn-hover">
+            <button className="rounded-md border border-orange-100 bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm">
               <ShoppingCart size={18} />
             </button>
             {authLoading ? (
-              <div className="h-10 w-28 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
+              <div className="h-10 w-28 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <div className="relative" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/25 hover:bg-white/35 border border-white/30 text-gray-800 font-medium transition-all btn-hover"
+                  className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
                   <span className="text-sm max-w-[130px] truncate">{displayName}</span>
                 </button>
 
                 {menuOpen ? (
-                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-slate-200 bg-white shadow-2xl p-4">
+                  <div className="absolute right-0 mt-2 w-72 rounded-xl border border-orange-100 bg-white/95 backdrop-blur-md shadow-md p-4">
                     <div className="pb-3 border-b border-slate-100">
                       <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
                       <div className="text-xs text-slate-500 truncate">{user.email || user.phone || "Signed in user"}</div>
@@ -273,7 +273,7 @@ export default function Navbar() {
                     <div className="pt-3 space-y-2">
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/profile");
@@ -283,7 +283,7 @@ export default function Navbar() {
                       </button>
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/orders");
@@ -293,7 +293,7 @@ export default function Navbar() {
                       </button>
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/account-settings");
@@ -313,7 +313,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href="/auth" className="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 font-medium transition-all btn-hover relative after:absolute after:left-3 after:right-3 after:-bottom-1 after:h-0.5 after:bg-current after:scale-x-0 after:origin-left after:transition-transform hover:after:scale-x-100">
+              <Link href="/auth" className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm">
                 <LogIn size={18} />
                 <span className="text-sm">Login</span>
               </Link>
@@ -322,13 +322,13 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden shrink-0 flex items-center gap-1.5">
-            <div className="flex items-center gap-1 px-1.5 py-1.5 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800">
-              <MapPin size={18} />
+            <div className="flex items-center gap-1 rounded-md border border-orange-100 bg-white px-1.5 py-1.5 text-gray-800 shadow-sm">
+              <MapPin size={18} className="text-orange-500" />
               <select
                 value={selectedCity}
                 onChange={(event) => handleCityChange(event.target.value)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="max-w-20 sm:max-w-24 bg-transparent text-xs text-gray-800 outline-none"
+                className="max-w-20 sm:max-w-24 bg-transparent text-xs text-slate-700 outline-none"
                 aria-label="Current location"
               >
                 {loadingCities ? <option value="">City...</option> : null}
@@ -342,17 +342,17 @@ export default function Navbar() {
             </div>
             <button
               type="button"
-              className="p-1.5 rounded-lg backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 btn-hover"
+              className="rounded-md border border-orange-100 bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
             </button>
             {authLoading ? (
-              <div className="h-9 w-9 rounded-lg bg-white/30 border border-white/30 animate-pulse" />
+              <div className="h-9 w-9 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <Link
                 href="/profile"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-900 text-white font-semibold btn-hover px-2.5 sm:px-3"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-orange-500 bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover"
                 aria-label="Profile"
               >
                 <UserRound size={16} />
@@ -361,7 +361,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/auth"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-900 text-white font-semibold btn-hover px-2.5 sm:px-3"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-orange-500 bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover"
                 aria-label="Login"
               >
                 <LogIn size={16} />
@@ -372,12 +372,12 @@ export default function Navbar() {
         </div>
 
         <div className="md:hidden pb-3">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md bg-white/30 border border-white/40 focus-within:bg-white/50">
-            <Search size={18} className="text-blue-800" />
+          <div className="flex items-center gap-2 rounded-full border border-orange-100 bg-white px-5 py-2 shadow-sm">
+            <Search size={18} className="text-orange-500" />
             <input
               type="text"
               placeholder="Search businesses and services"
-              className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-600"
+              className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
             />
           </div>
         </div>

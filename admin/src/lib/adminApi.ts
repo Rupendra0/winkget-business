@@ -3,10 +3,16 @@ import {
   createSubcategory,
   fetchCategories,
   fetchSubcategories,
+  fetchHomePlacements,
+  fetchHomePromoSection,
+  updateHomePlacements,
+  updateHomePromoSection,
   updateCategory,
   updateSubcategory,
   type CustomFormField,
   type EffectiveCustomForm,
+  type AdminHomePlacements,
+  type AdminHomePromoSection,
   type AdminCategory,
   type AdminSubcategory,
   type AdminDirectoryUser,
@@ -319,9 +325,50 @@ export async function fetchCategoryExplorer() {
   return { categories, subcategories };
 }
 
+export async function fetchHomePlacementsConfig(): Promise<AdminHomePlacements> {
+  return fetchHomePlacements();
+}
+
+export async function updateHomePlacementsConfig(input: {
+  leftImage?: string;
+  middleImage?: string;
+  rightImage?: string;
+}): Promise<AdminHomePlacements> {
+  return updateHomePlacements(input);
+}
+
+export async function fetchHomePromoSectionConfig(): Promise<AdminHomePromoSection> {
+  return fetchHomePromoSection();
+}
+
+export async function updateHomePromoSectionConfig(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+  }>;
+}): Promise<AdminHomePromoSection> {
+  return updateHomePromoSection(input);
+}
+
+export async function fetchActiveCategoriesForAds() {
+  const categories = await fetchCategories({ includeInactive: false });
+  return categories.sort((left, right) => {
+    const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+    const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    return String(left.name || "").localeCompare(String(right.name || ""));
+  });
+}
+
 export async function createCategoryNode(input: {
   name: string;
   image?: string;
+  icon?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -347,6 +394,7 @@ export async function createSubcategoryNode(input: {
 export async function updateCategoryNode(categoryId: string, input: {
   name?: string;
   image?: string;
+  icon?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;

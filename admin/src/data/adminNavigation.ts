@@ -27,6 +27,35 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     ],
   },
   {
+    id: "categories-subcategories",
+    title: "Categories",
+    route: "/categories",
+    items: [
+      makeItem("category-explorer", "Category Explorer", "/categories"),
+      makeItem("manage-category", "Manage Category", "/categories"),
+      makeItem("manage-subcategory", "Manage Subcategory", "/categories"),
+      makeItem("manage-secondary-subcategory", "Manage Secondary Subcategory", "/categories"),
+    ],
+  },
+  {
+    id: "advertisement",
+    title: "Homepage Layout",
+    route: "/ads",
+    items: [
+      makeItem("home-placements", "Header Banners", "/ads"),
+      makeItem("partners-promotions", "Category Link Cards", "/ads"),
+      makeItem("product-promotions", "Product Highlight Cards", "/ads"),
+      makeItem("user-dashboard-placements", "User Dashboard Banners", "/ads"),
+      makeItem("partners-dashboard-placements", "Partner Dashboard Banners", "/ads"),
+    ],
+  },
+  {
+    id: "extra",
+    title: "Manage City",
+    route: "/extra",
+    items: [makeItem("manage-cities", "Manage Cities", "/extra")],
+  },
+  {
     id: "orders-management",
     title: "Orders Management",
     route: "/orders",
@@ -34,17 +63,6 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       makeItem("manage-orders", "Manage Orders", "/orders"),
       makeItem("pending-orders", "Pending Orders", "/orders"),
       makeItem("disputed-orders", "Disputed Orders", "/orders"),
-    ],
-  },
-  {
-    id: "categories-subcategories",
-    title: "Categories & Subcategories",
-    route: "/categories",
-    items: [
-      makeItem("category-explorer", "Category Explorer", "/categories"),
-      makeItem("manage-category", "Manage Category", "/categories"),
-      makeItem("manage-subcategory", "Manage Subcategory", "/categories"),
-      makeItem("manage-secondary-subcategory", "Manage Secondary Subcategory", "/categories"),
     ],
   },
   {
@@ -69,18 +87,6 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       makeItem("schedule-sms", "Schedule SMS", "/promotions"),
       makeItem("direct-mails", "Direct Mails", "/promotions"),
       makeItem("mail-inbox", "Mail Inbox", "/promotions"),
-    ],
-  },
-  {
-    id: "advertisement",
-    title: "Advertisement",
-    route: "/ads",
-    items: [
-      makeItem("home-placements", "Home Placements", "/ads"),
-      makeItem("partners-promotions", "Partners Promotions", "/ads"),
-      makeItem("product-promotions", "Product Promotions", "/ads"),
-      makeItem("user-dashboard-placements", "User Dashboard Placements", "/ads"),
-      makeItem("partners-dashboard-placements", "Partners Dashboard Placements", "/ads"),
     ],
   },
   {
@@ -142,12 +148,6 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       makeItem("support-requests", "Support requests", "/feedback"),
       makeItem("feedbacks", "Feedbacks", "/feedback"),
     ],
-  },
-  {
-    id: "extra",
-    title: "Extra",
-    route: "/extra",
-    items: [makeItem("manage-cities", "Manage Cities", "/extra")],
   },
 ];
 

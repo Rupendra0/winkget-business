@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type DragEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import Modal from "@/components/admin/Modal";
 
 export type TreeNode = {
   id: string;
   label: string;
   type: "category" | "subcategory" | "secondary";
+  mediaUrl?: string;
   parentId?: string;
   categoryId?: string;
   parentSubcategoryId?: string;
@@ -37,563 +32,467 @@ type TreeViewProps = {
   onReorder?: (updates: ReorderUpdate[]) => Promise<void> | void;
 };
 
-type TreeRowProps = {
-  node: TreeNode;
-  depth: number;
-  siblingGroupKey: string;
-  siblingNodes: TreeNode[];
-  expandedIds: Set<string>;
-  matchedNodeIds: Set<string>;
-  searchText: string;
-  draggingNodeId: string | null;
-  draggingGroupKey: string | null;
-  dropTargetNodeId: string | null;
-  pendingGroupKey: string | null;
-  onToggleNode: (id: string) => void;
-  onRequestAdd: (node: TreeNode) => void;
-  onRequestEdit: (node: TreeNode) => void;
-  onRequestDelete: (node: TreeNode) => void;
-  onDragStartNode: (event: DragEvent<HTMLButtonElement>, node: TreeNode, groupKey: string) => void;
-  onDragOverNode: (event: DragEvent<HTMLDivElement>, node: TreeNode, groupKey: string) => void;
-  onDropNode: (event: DragEvent<HTMLDivElement>, node: TreeNode, siblingNodes: TreeNode[], groupKey: string) => void;
-  onDragEndNode: () => void;
-  renderChildren: (children: TreeNode[], depth: number, groupKey: string) => ReactNode;
+type CountSummary = {
+  directChildren: number;
+  totalDescendants: number;
+  secondaryCount: number;
 };
-
-type SearchFilterResult = {
-  filteredNodes: TreeNode[];
-  matchedNodeIds: Set<string>;
-  autoExpandedIds: Set<string>;
-};
-
-const ROOT_GROUP_KEY = "__root__";
-const SORT_STEP = 10;
-const EMPTY_NODE_SET = new Set<string>();
-
-function getDepthTone(depth: number) {
-  const hue = (208 + depth * 33) % 360;
-  return `hsl(${hue} 78% 45%)`;
-}
-
-function normalizeSortOrder(value?: number) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 0;
-  return Math.max(0, Math.round(numeric));
-}
-
-function collectAllNodeIds(nodes: TreeNode[]): string[] {
-  const ids: string[] = [];
-  const stack = [...nodes];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-
-    ids.push(current.id);
-    if (current.children?.length) {
-      stack.push(...current.children);
-    }
-  }
-
-  return ids;
-}
-
-function filterNodesBySearch(nodes: TreeNode[], searchText: string): SearchFilterResult {
-  const trimmed = searchText.trim().toLowerCase();
-  if (!trimmed) {
-    return {
-      filteredNodes: nodes,
-      matchedNodeIds: new Set<string>(),
-      autoExpandedIds: new Set<string>(),
-    };
-  }
-
-  const matchedNodeIds = new Set<string>();
-  const autoExpandedIds = new Set<string>();
-
-  const visit = (node: TreeNode, ancestors: string[]): TreeNode | null => {
-    const labelMatch = node.label.toLowerCase().includes(trimmed);
-
-    if (labelMatch) {
-      matchedNodeIds.add(node.id);
-      for (const ancestorId of ancestors) {
-        autoExpandedIds.add(ancestorId);
-      }
-      autoExpandedIds.add(node.id);
-      return node;
-    }
-
-    const nextChildren: TreeNode[] = [];
-    for (const child of node.children ?? []) {
-      const filteredChild = visit(child, [...ancestors, node.id]);
-      if (filteredChild) {
-        nextChildren.push(filteredChild);
-      }
-    }
-
-    if (nextChildren.length === 0) {
-      return null;
-    }
-
-    autoExpandedIds.add(node.id);
-    return {
-      ...node,
-      children: nextChildren,
-    };
-  };
-
-  const filteredNodes: TreeNode[] = [];
-  for (const node of nodes) {
-    const filtered = visit(node, []);
-    if (filtered) filteredNodes.push(filtered);
-  }
-
-  return {
-    filteredNodes,
-    matchedNodeIds,
-    autoExpandedIds,
-  };
-}
-
-function renderLabelWithHighlight(label: string, query: string) {
-  const trimmed = query.trim();
-  if (!trimmed) return label;
-
-  const source = label.toLowerCase();
-  const search = trimmed.toLowerCase();
-  const start = source.indexOf(search);
-  if (start < 0) return label;
-
-  const end = start + trimmed.length;
-
-  return (
-    <>
-      {label.slice(0, start)}
-      <mark className="rounded bg-amber-100 px-1 text-amber-900">{label.slice(start, end)}</mark>
-      {label.slice(end)}
-    </>
-  );
-}
 
 function createNodeIndex(nodes: TreeNode[]) {
   const nodeById = new Map<string, TreeNode>();
 
   const walk = (items: TreeNode[]) => {
-    for (const item of items) {
+    items.forEach((item) => {
       nodeById.set(item.id, item);
-      if (item.children?.length) {
-        walk(item.children);
-      }
-    }
+      if (item.children?.length) walk(item.children);
+    });
   };
 
   walk(nodes);
   return nodeById;
 }
 
-function TreeNodeRow({
-  node,
-  depth,
-  siblingGroupKey,
-  siblingNodes,
-  expandedIds,
-  matchedNodeIds,
-  searchText,
-  draggingNodeId,
-  draggingGroupKey,
-  dropTargetNodeId,
-  pendingGroupKey,
-  onToggleNode,
-  onRequestAdd,
-  onRequestEdit,
-  onRequestDelete,
-  onDragStartNode,
-  onDragOverNode,
-  onDropNode,
-  onDragEndNode,
-  renderChildren,
-}: TreeRowProps) {
-  const hasChildren = Boolean(node.children?.length);
-  const expanded = expandedIds.has(node.id);
-  const isMatched = matchedNodeIds.has(node.id);
-  const depthTone = getDepthTone(depth);
-  const groupBusy = pendingGroupKey === siblingGroupKey;
-  const showDropTarget =
-    dropTargetNodeId === node.id && draggingNodeId !== node.id && draggingGroupKey === siblingGroupKey;
+function countSummary(node: TreeNode): CountSummary {
+  const children = node.children || [];
 
-  const typePillClass: Record<TreeNode["type"], string> = {
-    category: "border-sky-200 bg-sky-50 text-sky-700",
-    subcategory: "border-slate-200 bg-slate-100 text-slate-700",
-    secondary: "border-amber-200 bg-amber-50 text-amber-700",
-  };
-
-  const relationshipLabel =
-    node.type === "category" ? "category" : node.type === "secondary" ? "secondary" : `child L${depth}`;
-
-  const onRowKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowRight" && hasChildren && !expanded) {
-      event.preventDefault();
-      onToggleNode(node.id);
-      return;
+  return children.reduce<CountSummary>(
+    (summary, child) => {
+      const nested = countSummary(child);
+      return {
+        directChildren: summary.directChildren + 1,
+        totalDescendants: summary.totalDescendants + 1 + nested.totalDescendants,
+        secondaryCount:
+          summary.secondaryCount + (child.type === "secondary" ? 1 : 0) + nested.secondaryCount,
+      };
+    },
+    {
+      directChildren: 0,
+      totalDescendants: 0,
+      secondaryCount: 0,
     }
-
-    if (event.key === "ArrowLeft" && hasChildren && expanded) {
-      event.preventDefault();
-      onToggleNode(node.id);
-      return;
-    }
-
-    if (event.key.toLowerCase() === "e") {
-      event.preventDefault();
-      onRequestEdit(node);
-      return;
-    }
-
-    if (event.key === "Delete") {
-      event.preventDefault();
-      onRequestDelete(node);
-    }
-  };
-
-  return (
-    <div className="space-y-1" role="none">
-      <div
-        role="treeitem"
-        aria-level={depth + 1}
-        aria-expanded={hasChildren ? expanded : undefined}
-        aria-selected={false}
-        tabIndex={0}
-        onKeyDown={onRowKeyDown}
-        onDragOver={(event) => onDragOverNode(event, node, siblingGroupKey)}
-        onDrop={(event) => onDropNode(event, node, siblingNodes, siblingGroupKey)}
-        style={{ marginLeft: depth * 8 }}
-        className={`group relative flex items-center justify-between gap-2 rounded-lg border bg-(--surface) px-2.5 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--border) hover:bg-(--surface-hover) ${
-          showDropTarget ? "border-sky-500 ring-2 ring-sky-200" : "border-(--border)"
-        }`}
-      >
-        <span
-          className="absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-sm"
-          style={{ backgroundColor: depthTone }}
-          aria-hidden="true"
-        />
-
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (hasChildren) onToggleNode(node.id);
-            }}
-            className="h-7 w-7 rounded-md border border-(--border) text-sm font-semibold text-(--text-soft) hover:bg-(--surface-hover)"
-            aria-label={hasChildren ? (expanded ? "Collapse branch" : "Expand branch") : "Leaf node"}
-          >
-            {hasChildren ? (expanded ? "-" : "+") : "."}
-          </button>
-
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: depthTone }} aria-hidden="true" />
-
-          <p className="truncate text-sm font-medium text-(--text-strong)">{renderLabelWithHighlight(node.label, searchText)}</p>
-
-          <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] ${typePillClass[node.type]}`}
-          >
-            {relationshipLabel}
-          </span>
-
-          {isMatched ? (
-            <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
-              match
-            </span>
-          ) : null}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestAdd(node);
-            }}
-            disabled={node.type === "secondary" || groupBusy}
-            className="h-8 w-8 rounded-md border border-(--border) text-sm font-bold text-(--text-soft) hover:bg-(--surface-hover) disabled:opacity-40"
-            aria-label="Add child"
-            title="Add child"
-          >
-            +
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestEdit(node);
-            }}
-            disabled={groupBusy}
-            className="rounded-md border border-(--border) px-2 py-1 text-[11px] font-semibold text-(--text-soft) hover:bg-(--surface-hover) disabled:opacity-40"
-            aria-label="Edit node"
-            title="Edit"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestDelete(node);
-            }}
-            disabled={groupBusy}
-            className="h-8 w-8 rounded-md border border-rose-200 bg-rose-50 text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-40"
-            aria-label="Delete node"
-            title="Delete"
-          >
-            X
-          </button>
-
-          <button
-            type="button"
-            draggable={!groupBusy && Boolean(onDropNode)}
-            onDragStart={(event) => onDragStartNode(event, node, siblingGroupKey)}
-            onDragEnd={onDragEndNode}
-            disabled={groupBusy}
-            className="rounded-md border border-(--border) bg-(--surface-muted) px-2 py-1 text-[11px] font-semibold text-(--text-soft) hover:bg-(--surface-hover) disabled:opacity-40"
-            aria-label="Drag to reorder siblings"
-            title="Drag to reorder siblings"
-          >
-            Drag
-          </button>
-        </div>
-
-        {groupBusy ? (
-          <span className="absolute -bottom-2 right-2 rounded-md border border-(--border) bg-(--surface) px-1.5 py-0.5 text-[10px] text-(--text-soft)">
-            syncing order
-          </span>
-        ) : null}
-      </div>
-
-      {hasChildren && expanded ? (
-        <div className="ml-4 border-l border-dashed border-(--border) pl-2" role="group">
-          {renderChildren(node.children || [], depth + 1, node.id)}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
-export default function TreeView({ nodes, onAdd, onEdit, onDelete, onReorder }: TreeViewProps) {
-  const [searchText, setSearchText] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [draggingGroupKey, setDraggingGroupKey] = useState<string | null>(null);
-  const [dropTargetNodeId, setDropTargetNodeId] = useState<string | null>(null);
-  const [pendingGroupKey, setPendingGroupKey] = useState<string | null>(null);
+function nodeMatchesSearch(node: TreeNode, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  if (node.label.toLowerCase().includes(normalized)) return true;
 
-  const nodeById = useMemo(() => createNodeIndex(nodes), [nodes]);
-  const allNodeIds = useMemo(() => collectAllNodeIds(nodes), [nodes]);
+  return (node.children || []).some((child) => nodeMatchesSearch(child, normalized));
+}
 
-  const normalizedExpandedIds = useMemo(() => {
-    if (expandedIds === null) {
-      return new Set(nodes.map((node) => node.id));
-    }
+function flattenChildren(nodes: TreeNode[]): TreeNode[] {
+  const ordered = [...nodes].sort((a, b) => {
+    const sortA = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : 0;
+    const sortB = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : 0;
+    if (sortA !== sortB) return sortA - sortB;
+    return a.label.localeCompare(b.label);
+  });
 
-    const next = new Set<string>();
-    for (const id of expandedIds) {
-      if (nodeById.has(id)) {
-        next.add(id);
-      }
-    }
-    return next;
-  }, [expandedIds, nodeById, nodes]);
+  return ordered;
+}
 
-  const searchResult = useMemo(() => filterNodesBySearch(nodes, searchText), [nodes, searchText]);
-  const isSearching = searchText.trim().length > 0;
+function getTypePill(nodeType: TreeNode["type"]) {
+  if (nodeType === "category") {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
 
-  const displayNodes = isSearching ? searchResult.filteredNodes : nodes;
-  const matchedNodeIds = useMemo(
-    () => (isSearching ? searchResult.matchedNodeIds : EMPTY_NODE_SET),
-    [isSearching, searchResult.matchedNodeIds]
-  );
+  if (nodeType === "secondary") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
 
-  const effectiveExpandedIds = useMemo(() => {
-    if (!isSearching) return normalizedExpandedIds;
-    return new Set([...normalizedExpandedIds, ...searchResult.autoExpandedIds]);
-  }, [isSearching, normalizedExpandedIds, searchResult.autoExpandedIds]);
+  return "border-slate-200 bg-slate-100 text-slate-700";
+}
 
-  const toggleNode = useCallback(
-    (id: string) => {
-      setExpandedIds((previous) => {
-        const next = new Set(previous === null ? normalizedExpandedIds : previous);
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-        }
-        return next;
-      });
-    },
-    [normalizedExpandedIds]
-  );
+function buildNodePath(node: TreeNode, nodeById: Map<string, TreeNode>): TreeNode[] {
+  const path: TreeNode[] = [];
+  let current: TreeNode | undefined = node;
+  let guard = 0;
 
-  const clearDragState = useCallback(() => {
-    setDraggingNodeId(null);
-    setDraggingGroupKey(null);
-    setDropTargetNodeId(null);
-  }, []);
+  while (current && guard < 40) {
+    path.unshift(current);
+    current = current.parentId ? nodeById.get(current.parentId) : undefined;
+    guard += 1;
+  }
 
-  const handleDragStart = useCallback((event: DragEvent<HTMLButtonElement>, node: TreeNode, groupKey: string) => {
-    event.stopPropagation();
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", node.id);
-    setDraggingNodeId(node.id);
-    setDraggingGroupKey(groupKey);
-    setDropTargetNodeId(null);
-  }, []);
+  return path;
+}
 
-  const handleDragOver = useCallback(
-    (event: DragEvent<HTMLDivElement>, node: TreeNode, groupKey: string) => {
-      if (!draggingNodeId || !draggingGroupKey) return;
-      if (draggingGroupKey !== groupKey) return;
-      if (draggingNodeId === node.id) return;
+function NodeGlyph({ type }: { type: TreeNode["type"] }) {
+  if (type === "category") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <path d="M3 10h18" />
+      </svg>
+    );
+  }
 
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-
-      if (dropTargetNodeId !== node.id) {
-        setDropTargetNodeId(node.id);
-      }
-    },
-    [draggingGroupKey, draggingNodeId, dropTargetNodeId]
-  );
-
-  const handleDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>, targetNode: TreeNode, siblingNodes: TreeNode[], groupKey: string) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (!onReorder) {
-        clearDragState();
-        return;
-      }
-
-      if (!draggingNodeId || !draggingGroupKey || draggingGroupKey !== groupKey) {
-        clearDragState();
-        return;
-      }
-
-      const draggedIndex = siblingNodes.findIndex((node) => node.id === draggingNodeId);
-      const targetIndex = siblingNodes.findIndex((node) => node.id === targetNode.id);
-      if (draggedIndex < 0 || targetIndex < 0 || draggedIndex === targetIndex) {
-        clearDragState();
-        return;
-      }
-
-      const reordered = [...siblingNodes];
-      const [draggedNode] = reordered.splice(draggedIndex, 1);
-      if (!draggedNode) {
-        clearDragState();
-        return;
-      }
-
-      const destinationIndex = draggedIndex < targetIndex ? targetIndex : targetIndex + 1;
-      reordered.splice(destinationIndex, 0, draggedNode);
-
-      const updates: ReorderUpdate[] = reordered
-        .map((node, index) => ({
-          node,
-          sortOrder: (index + 1) * SORT_STEP,
-        }))
-        .filter(({ node, sortOrder }) => normalizeSortOrder(node.sortOrder) !== sortOrder);
-
-      clearDragState();
-      if (updates.length === 0) return;
-
-      setPendingGroupKey(groupKey);
-      void Promise.resolve(onReorder(updates)).finally(() => {
-        setPendingGroupKey((current) => (current === groupKey ? null : current));
-      });
-    },
-    [clearDragState, draggingGroupKey, draggingNodeId, onReorder]
-  );
-
-  const renderChildren = (branchNodes: TreeNode[], depth: number, groupKey: string): ReactNode =>
-    branchNodes.map((branchNode) => (
-      <TreeNodeRow
-        key={`${branchNode.id}:${normalizeSortOrder(branchNode.sortOrder)}`}
-        node={branchNode}
-        depth={depth}
-        siblingGroupKey={groupKey}
-        siblingNodes={branchNodes}
-        expandedIds={effectiveExpandedIds}
-        matchedNodeIds={matchedNodeIds}
-        searchText={searchText}
-        draggingNodeId={draggingNodeId}
-        draggingGroupKey={draggingGroupKey}
-        dropTargetNodeId={dropTargetNodeId}
-        pendingGroupKey={pendingGroupKey}
-        onToggleNode={toggleNode}
-        onRequestAdd={onAdd}
-        onRequestEdit={onEdit}
-        onRequestDelete={onDelete}
-        onDragStartNode={handleDragStart}
-        onDragOverNode={handleDragOver}
-        onDropNode={handleDrop}
-        onDragEndNode={clearDragState}
-        renderChildren={renderChildren}
-      />
-    ));
+  if (type === "secondary") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M9 12h6M12 9v6" />
+      </svg>
+    );
+  }
 
   return (
-    <section className="rounded-xl border border-(--border) bg-(--surface) p-3">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-(--text-strong)">Category Explorer Tree</h3>
-        <div className="flex items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setExpandedIds(new Set(allNodeIds))}
-            className="rounded-md border border-(--border) px-2 py-1 text-(--text-soft) hover:bg-(--surface-hover)"
-          >
-            Expand all
-          </button>
-          <button
-            type="button"
-            onClick={() => setExpandedIds(new Set())}
-            className="rounded-md border border-(--border) px-2 py-1 text-(--text-soft) hover:bg-(--surface-hover)"
-          >
-            Collapse all
-          </button>
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M8 10h8M8 14h5" />
+    </svg>
+  );
+}
+
+function NodeAvatar({ node }: { node: TreeNode }) {
+  const [failed, setFailed] = useState(false);
+  const mediaUrl = String(node.mediaUrl || "").trim();
+  const canUseMedia = Boolean(mediaUrl) && !failed;
+
+  if (canUseMedia) {
+    return (
+      <img
+        src={mediaUrl}
+        alt={`${node.label} icon`}
+        className="h-full w-full rounded-[inherit] object-cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return <NodeGlyph type={node.type} />;
+}
+
+function PlusGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function PencilGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 20l4.5-1 9-9a1.8 1.8 0 0 0-2.5-2.5l-9 9L4 20z" />
+      <path d="M13.5 6.5l4 4" />
+    </svg>
+  );
+}
+
+function TrashGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 7h16M9 7V5h6v2M7 7l1 12h8l1-12" />
+      <path d="M10 11v5M14 11v5" />
+    </svg>
+  );
+}
+
+function UploadGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M12 16V6" />
+      <path d="M8.5 9.5L12 6l3.5 3.5" />
+      <path d="M5 18.5A3.5 3.5 0 0 0 8.5 22h7A3.5 3.5 0 0 0 19 18.5" />
+    </svg>
+  );
+}
+
+type ActionButtonProps = {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  tone?: "normal" | "danger";
+  disabled?: boolean;
+};
+
+function ActionButton({ icon, label, onClick, tone = "normal", disabled = false }: ActionButtonProps) {
+  const toneClass =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+      : "border-(--border) bg-(--surface-muted) text-(--text-soft) hover:bg-(--surface-hover)";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${toneClass}`}
+      title={label}
+      aria-label={label}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+export default function TreeView({
+  nodes,
+  onAdd,
+  onEdit,
+  onDelete,
+  onReorder: _onReorder,
+}: TreeViewProps) {
+  const [searchText, setSearchText] = useState("");
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const nodeById = useMemo(() => createNodeIndex(nodes), [nodes]);
+  const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) || null : null;
+
+  const displayCategories = useMemo(() => {
+    const base = [...nodes].sort((a, b) => {
+      const sortA = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : 0;
+      const sortB = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return a.label.localeCompare(b.label);
+    });
+
+    if (!searchText.trim()) return base;
+    return base.filter((node) => nodeMatchesSearch(node, searchText));
+  }, [nodes, searchText]);
+
+  const popupChildren = useMemo(() => flattenChildren(selectedNode?.children || []), [selectedNode]);
+  const selectedPath = useMemo(
+    () => (selectedNode ? buildNodePath(selectedNode, nodeById) : []),
+    [selectedNode, nodeById]
+  );
+  const parentNode = selectedPath.length > 1 ? selectedPath[selectedPath.length - 2] : null;
+
+  const closePopup = () => {
+    setSelectedNodeId(null);
+  };
+
+  const runActionAndClose = (handler: (node: TreeNode) => void, node: TreeNode) => {
+    closePopup();
+    handler(node);
+  };
+
+  return (
+    <>
+      <section className="rounded-xl border border-(--border) bg-(--surface) p-3">
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-(--text-strong)">Category Tiles</h3>
+          <p className="text-xs text-(--text-soft)">Click any tile to open action popup</p>
+        </header>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder="Search categories"
+            className="min-w-[220px] flex-1 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
+          />
+          {searchText.trim() ? (
+            <button
+              type="button"
+              onClick={() => setSearchText("")}
+              className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
-      </header>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <input
-          value={searchText}
-          onChange={(event) => setSearchText(event.target.value)}
-          placeholder="Search categories"
-          className="min-w-[220px] flex-1 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
-        />
-
-        {isSearching ? (
-          <button
-            type="button"
-            onClick={() => setSearchText("")}
-            className="rounded-md border border-(--border) px-2 py-1 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
-          >
-            Clear
-          </button>
+        {displayCategories.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            No categories found.
+          </p>
         ) : null}
-      </div>
 
-      <p className="mt-2 text-[11px] text-(--text-soft)">Drag works only inside the same sibling level.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {displayCategories.map((node) => {
+            const summary = countSummary(node);
+            const active = selectedNodeId === node.id;
 
-      {isSearching && displayNodes.length === 0 ? (
-        <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          No matching nodes found.
-        </p>
-      ) : null}
+            return (
+              <button
+                key={node.id}
+                type="button"
+                onClick={() => setSelectedNodeId(node.id)}
+                className={`rounded-xl border px-3 py-3 text-left transition ${
+                  active
+                    ? "border-(--accent) bg-(--accent-soft)"
+                    : "border-(--border) bg-(--surface-muted)/50 hover:border-(--accent) hover:bg-(--surface-hover)"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-(--border) bg-(--surface)">
+                    <NodeAvatar node={node} />
+                  </span>
+                  <span className="truncate text-base font-semibold text-(--text-strong)">{node.label}</span>
+                </span>
 
-      <div role="tree" className="custom-scrollbar mt-3 max-h-[72vh] space-y-1 overflow-auto pr-1">
-        {renderChildren(displayNodes, 0, ROOT_GROUP_KEY)}
-      </div>
-    </section>
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-sky-700">
+                  {summary.directChildren} Direct
+                </span>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="rounded-full border border-(--border) bg-(--surface) px-2 py-0.5 text-(--text-soft)">
+                    {summary.totalDescendants} Total linked
+                  </span>
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
+                    {summary.secondaryCount} Secondary
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 font-semibold uppercase tracking-[0.07em] ${getTypePill(
+                      node.type
+                    )}`}
+                  >
+                    {node.type}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <Modal
+        open={Boolean(selectedNode)}
+        title={selectedNode ? `${selectedNode.label} Actions` : "Node Actions"}
+        onClose={closePopup}
+        panelClassName="max-w-2xl"
+      >
+        {selectedNode ? (
+          <>
+            <div className="rounded-xl border border-(--border) bg-(--surface) p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (parentNode) {
+                      setSelectedNodeId(parentNode.id);
+                      return;
+                    }
+                    closePopup();
+                  }}
+                  className="rounded-lg border border-(--border) bg-(--surface-muted) px-2.5 py-1.5 text-xs font-semibold text-(--text-soft) hover:bg-(--surface-hover)"
+                >
+                  Back
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-(--text-soft)">
+                    Hierarchy Path
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1 text-sm font-bold">
+                    {selectedPath.map((crumb, index) => {
+                      const isCurrent = index === selectedPath.length - 1;
+                      return (
+                        <span key={crumb.id} className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedNodeId(crumb.id)}
+                            className={`rounded-md px-2 py-0.5 transition ${
+                              isCurrent
+                                ? "bg-(--accent-soft) text-(--accent-strong)"
+                                : "text-(--text-strong) hover:bg-(--surface-hover)"
+                            }`}
+                            title={`Open ${crumb.label}`}
+                          >
+                            {crumb.label}
+                          </button>
+                          {!isCurrent ? <span className="text-(--text-soft)">{">"}</span> : null}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-(--border) bg-(--surface-muted)/50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-(--text-strong)">{selectedNode.label}</p>
+                  <p className="text-xs text-(--text-soft)">Manage this node using icon actions</p>
+                </div>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] ${getTypePill(
+                    selectedNode.type
+                  )}`}
+                >
+                  {selectedNode.type}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <ActionButton
+                  icon={<PlusGlyph />}
+                  label="Add"
+                  onClick={() => runActionAndClose(onAdd, selectedNode)}
+                  disabled={selectedNode.type === "secondary"}
+                />
+                <ActionButton icon={<PencilGlyph />} label="Edit" onClick={() => runActionAndClose(onEdit, selectedNode)} />
+                <ActionButton
+                  icon={<TrashGlyph />}
+                  label="Delete"
+                  tone="danger"
+                  onClick={() => runActionAndClose(onDelete, selectedNode)}
+                />
+                <ActionButton
+                  icon={<UploadGlyph />}
+                  label="Upload"
+                  onClick={() => runActionAndClose(onEdit, selectedNode)}
+                  disabled={selectedNode.type !== "category"}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-(--border) bg-(--surface) p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.07em] text-(--text-soft)">Linked children</p>
+              {popupChildren.length === 0 ? (
+                <p className="mt-2 text-sm text-(--text-soft)">No linked children for this node.</p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {popupChildren.map((child) => (
+                    <div key={child.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-(--border) bg-(--surface-muted)/40 px-2.5 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedNodeId(child.id)}
+                        className="inline-flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-(--surface-hover)"
+                      >
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-(--border) bg-(--surface)">
+                          <NodeAvatar node={child} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-(--text-strong)">{child.label}</span>
+                          <span
+                            className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] ${getTypePill(
+                              child.type
+                            )}`}
+                          >
+                            {child.type}
+                          </span>
+                        </span>
+                      </button>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <ActionButton
+                          icon={<PlusGlyph />}
+                          label="Add"
+                          onClick={() => runActionAndClose(onAdd, child)}
+                          disabled={child.type === "secondary"}
+                        />
+                        <ActionButton icon={<PencilGlyph />} label="Edit" onClick={() => runActionAndClose(onEdit, child)} />
+                        <ActionButton
+                          icon={<TrashGlyph />}
+                          label="Delete"
+                          tone="danger"
+                          onClick={() => runActionAndClose(onDelete, child)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+      </Modal>
+    </>
   );
 }

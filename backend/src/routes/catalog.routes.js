@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const City = require("../models/City");
+const HomePlacement = require("../models/HomePlacement");
 const User = require("../models/User");
 const Review = require("../models/Review");
 const { sanitizeCustomFormFields } = require("../lib/customForm");
@@ -10,6 +11,11 @@ const { sanitizeCustomFormFields } = require("../lib/customForm");
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const AUTH_COOKIE_NAME = "winkget_auth";
+const HOME_PLACEMENT_KEY = "home-placements";
+const HOME_PROMO_SECTION_KEY = "home-promo-cards";
+const HOME_PROMO_CARD_COUNT = 5;
+const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
+const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 
 const toPositiveInt = (value, fallback) => {
   const parsed = Number(value);
@@ -95,6 +101,7 @@ const toCategorySummary = (category) => ({
   slug: category.slug,
   description: category.description,
   image: category.image,
+  icon: category.icon,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
   customFormEnabled: Boolean(category.customFormEnabled),
@@ -342,6 +349,57 @@ const toSubcategorySummary = (subcategory) => ({
     : undefined,
 });
 
+const toHomePlacementSummary = (placement) => {
+  const slots = placement?.slots && typeof placement.slots === "object" ? placement.slots : {};
+
+  return {
+    leftImage: String(slots.leftImage || "").trim(),
+    middleImage: String(slots.middleImage || "").trim(),
+    rightImage: String(slots.rightImage || "").trim(),
+    updatedAt: placement?.updatedAt,
+  };
+};
+
+const toHomePromoSectionSummary = (placement) => {
+  const cards = Array.isArray(placement?.promoCards) ? placement.promoCards : [];
+  const cardById = new Map();
+
+  cards.forEach((card, index) => {
+    const cardIdInput = String(card?.cardId || "").trim();
+    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
+    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    if (!cardId || cardById.has(cardId)) {
+      return;
+    }
+
+    const categoryDoc = card?.category && typeof card.category === "object" ? card.category : null;
+    cardById.set(cardId, {
+      cardId,
+      categoryId: String(categoryDoc?._id || card?.category || "").trim(),
+      categoryName: String(categoryDoc?.name || "").trim(),
+      categorySlug: String(categoryDoc?.slug || "").trim(),
+      image: String(card?.image || "").trim(),
+    });
+  });
+
+  return {
+    key: HOME_PROMO_SECTION_KEY,
+    heading: String(placement?.promoHeading || "").trim() || HOME_PROMO_DEFAULT_HEADING,
+    cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
+      const card = cardById.get(cardId);
+      return {
+        cardId,
+        order: index + 1,
+        categoryId: card?.categoryId || "",
+        categoryName: card?.categoryName || "",
+        categorySlug: card?.categorySlug || "",
+        image: card?.image || "",
+      };
+    }),
+    updatedAt: placement?.updatedAt,
+  };
+};
+
 router.get("/cities", withPublicGetCache(async (_req, res) => {
   try {
     const cities = await City.find({ isActive: true })
@@ -358,11 +416,43 @@ router.get("/cities", withPublicGetCache(async (_req, res) => {
   }
 }));
 
+router.get("/home-placements", async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_PLACEMENT_KEY }).lean();
+
+    res.set("Cache-Control", "private, no-store");
+
+    return res.status(200).json({
+      ok: true,
+      placements: toHomePlacementSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load home placements", error: error.message });
+  }
+});
+
+router.get("/home-promo-cards", async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY })
+      .populate("promoCards.category", "_id name slug isActive")
+      .lean();
+
+    res.set("Cache-Control", "private, no-store");
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomePromoSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load home promo cards", error: error.message });
+  }
+});
+
 router.get("/categories", withPublicGetCache(async (_req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description image isActive sortOrder customFormEnabled customFormTitle customFormFields")
+      .select("_id name slug description image icon isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .lean();
 
     return res.status(200).json({

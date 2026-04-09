@@ -1,132 +1,135 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { promoBanners } from '@/data/homeData';
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { readSelectedCity, subscribeLocationCity } from "@/lib/locationStore";
+
+type PromoCardPayload = {
+  cardId?: string;
+  categoryName?: string;
+  categorySlug?: string;
+  image?: string;
+  order?: number;
+};
+
+type HomePromoSectionPayload = {
+  ok: boolean;
+  section?: {
+    heading?: string;
+    cards?: PromoCardPayload[];
+  };
+};
+
+type PromoCard = {
+  cardId: string;
+  categoryName: string;
+  categorySlug: string;
+  image: string;
+  order: number;
+};
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const DEFAULT_HEADING = "Featured Offers";
+
+const normalizeMedia = (value?: string) => String(value || "").trim();
+
+const normalizeCard = (card: PromoCardPayload, fallbackIndex: number): PromoCard => ({
+  cardId: String(card.cardId || `card-${fallbackIndex + 1}`).trim(),
+  categoryName: String(card.categoryName || "").trim(),
+  categorySlug: String(card.categorySlug || "").trim(),
+  image: normalizeMedia(card.image),
+  order: Number.isFinite(Number(card.order)) ? Number(card.order) : fallbackIndex + 1,
+});
 
 export default function PromoBanners() {
-  const perSlide = 2;
-  const slides = useMemo(() => {
-    const groups = [] as typeof promoBanners[];
-    for (let i = 0; i < promoBanners.length; i += perSlide) {
-      groups.push(promoBanners.slice(i, i + perSlide));
-    }
-    return groups;
-  }, []);
-
-  const extendedSlides = useMemo(() => {
-    if (slides.length === 0) {
-      return [] as typeof slides;
-    }
-    return [...slides, slides[0]];
-  }, [slides]);
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(true);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [heading, setHeading] = useState(DEFAULT_HEADING);
+  const [cards, setCards] = useState<PromoCard[]>([]);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    if (isPaused || slides.length <= 1) {
-      return;
+    setSelectedCity(readSelectedCity());
+    return subscribeLocationCity((city) => setSelectedCity(city));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSection = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/home-promo-cards`, { cache: "no-store" });
+        const payload = (await response.json()) as HomePromoSectionPayload;
+
+        if (!active || !response.ok || !payload.ok || !payload.section) {
+          if (!active) return;
+          setLoadError(true);
+          setCards([]);
+          return;
+        }
+
+        const normalizedHeading = String(payload.section.heading || "").trim() || DEFAULT_HEADING;
+        const normalizedCards = (Array.isArray(payload.section.cards) ? payload.section.cards : [])
+          .map((card, index) => normalizeCard(card, index))
+          .filter((card) => card.image && card.categorySlug)
+          .sort((left, right) => left.order - right.order);
+
+        setHeading(normalizedHeading);
+        setCards(normalizedCards);
+        setLoadError(false);
+      } catch {
+        if (!active) return;
+        setLoadError(true);
+        setCards([]);
+      }
+    };
+
+    void loadSection();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visibleCards = useMemo(() => cards.slice(0, 5), [cards]);
+
+  const buildCategoryHref = (categorySlug: string) => {
+    const city = String(selectedCity || "").trim();
+    if (!city) {
+      return `/category/${categorySlug}`;
     }
-    const timer = window.setInterval(() => {
-      setIsAnimating(true);
-      setActiveIndex((prev) => prev + 1);
-    }, 4500);
-    return () => window.clearInterval(timer);
-  }, [isPaused, slides.length]);
+    return `/category/${categorySlug}?city=${encodeURIComponent(city)}`;
+  };
 
   return (
-    <section className="px-4 sm:px-6 lg:px-8 pb-14">
-      <div className="max-w-7xl mx-auto">
-        <div
-          className="relative overflow-hidden rounded-3xl"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <div
-            className={`flex ${isAnimating ? "transition-transform duration-900 ease-[cubic-bezier(0.22,1,0.36,1)]" : ""}`}
-            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-            onTransitionEnd={() => {
-              if (activeIndex >= slides.length && slides.length > 0) {
-                setIsAnimating(false);
-                setActiveIndex(0);
-                requestAnimationFrame(() => setIsAnimating(true));
-              }
-            }}
-          >
-            {extendedSlides.map((group, slideIndex) => (
-              <div
-                key={`slide-${slideIndex}`}
-                className="min-w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch"
-              >
-                {group.map((item) => (
-                  <div
-                    key={item.title}
-                    className="promo-enter rounded-2xl overflow-hidden bg-white/65 border border-white/70 shadow-lg grid grid-cols-[1.1fr_1fr] h-44 card-hover"
-                  >
-                    <div className="p-6 h-full flex flex-col justify-center">
-                      <div className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">{item.title}</div>
-                      <div className="text-sm text-slate-600 mt-1.5">{item.subtitle}</div>
-                      <button className="mt-4 px-4 py-2 rounded-lg bg-blue-900 text-white text-sm font-semibold hover:bg-blue-800 btn-hover w-fit">
-                        {item.button}
-                      </button>
-                    </div>
-                    <div className="relative h-full">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="h-full w-full object-cover promo-image-drift"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {slides.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/85 shadow-md border border-white/70 flex items-center justify-center btn-hover"
-                onClick={() => {
-                  setIsAnimating(true);
-                  setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
-                }}
-                aria-label="Previous"
-              >
-                <ChevronLeft size={18} className="text-blue-900" />
-              </button>
-              <button
-                type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/85 shadow-md border border-white/70 flex items-center justify-center btn-hover"
-                onClick={() => {
-                  setIsAnimating(true);
-                  setActiveIndex((prev) => (prev + 1) % slides.length);
-                }}
-                aria-label="Next"
-              >
-                <ChevronRight size={18} className="text-blue-900" />
-              </button>
-            </>
-          )}
+    <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        {slides.length > 1 && (
-          <div className="mt-4 flex justify-center gap-2">
-            {slides.map((_, index) => (
-              <button
-                key={`dot-${index}`}
-                type="button"
-                onClick={() => setActiveIndex(index)}
-                className={`h-2.5 w-2.5 rounded-full btn-hover ${
-                  index === activeIndex ? "bg-blue-900" : "bg-blue-200"
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
+        {visibleCards.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+            {visibleCards.map((card) => (
+              <Link
+                key={card.cardId}
+                href={buildCategoryHref(card.categorySlug)}
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              >
+                <img
+                  src={card.image}
+                  alt={card.categoryName || "Promotion"}
+                  className="h-[200px] w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-[215px]"
+                  loading="lazy"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                </div>
+              </Link>
             ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-500">
+            {loadError ? "Promotional cards are not available right now." : "No promotional cards are configured yet."}
           </div>
         )}
       </div>

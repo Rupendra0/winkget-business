@@ -26,16 +26,16 @@ type ModalIntent = "create" | "edit";
 type NodeRefType = TreeNode["type"];
 
 const ROOT_PARENT_KEY = "root";
-const CATEGORY_BANNER_URL_REGEX = /^https?:\/\/[^\s]+$/i;
-const CATEGORY_BANNER_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
-const MAX_CATEGORY_BANNER_UPLOAD_BYTES = 2 * 1024 * 1024;
+const CATEGORY_MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
+const CATEGORY_MEDIA_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const MAX_CATEGORY_MEDIA_UPLOAD_BYTES = 2 * 1024 * 1024;
 
-const isValidCategoryBannerValue = (value: string) => {
+const isValidCategoryMediaValue = (value: string) => {
   const normalized = String(value || "").trim();
   if (!normalized) return true;
   return (
-    CATEGORY_BANNER_URL_REGEX.test(normalized) ||
-    CATEGORY_BANNER_IMAGE_DATA_URL_REGEX.test(normalized)
+    CATEGORY_MEDIA_URL_REGEX.test(normalized) ||
+    CATEGORY_MEDIA_IMAGE_DATA_URL_REGEX.test(normalized)
   );
 };
 
@@ -207,6 +207,7 @@ function CategoriesPageContent() {
 
   const [nameInput, setNameInput] = useState("");
   const [bannerImageInput, setBannerImageInput] = useState("");
+  const [iconImageInput, setIconImageInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("0");
   const [activeInput, setActiveInput] = useState(true);
   const [customFormEnabledInput, setCustomFormEnabledInput] = useState(false);
@@ -276,6 +277,7 @@ function CategoriesPageContent() {
       setEditingSubcategoryId(null);
       setNameInput("");
       setBannerImageInput("");
+      setIconImageInput("");
       setSortOrderInput("0");
       setActiveInput(true);
       setCustomFormEnabledInput(false);
@@ -364,7 +366,7 @@ function CategoriesPageContent() {
         return {
           id: `subcategory:${subcategory.id}`,
           label: subcategory.name,
-          type: "subcategory",
+          type: parentSubcategoryId ? "secondary" : "subcategory",
           parentId: parentSubcategoryId ? `subcategory:${parentSubcategoryId}` : `category:${categoryId}`,
           categoryId,
           parentSubcategoryId: parentSubcategoryId || undefined,
@@ -382,6 +384,7 @@ function CategoriesPageContent() {
       id: `category:${category.id}`,
       label: category.name,
       type: "category",
+      mediaUrl: String(category.icon || category.image || "").trim() || undefined,
       categoryId: category.id,
       sortOrder: category.sortOrder,
       isActive: category.isActive,
@@ -421,6 +424,7 @@ function CategoriesPageContent() {
         setEditingSubcategoryId(null);
         setNameInput(category.name || "");
         setBannerImageInput(String(category.image || ""));
+        setIconImageInput(String(category.icon || ""));
         setSortOrderInput(String(Number.isFinite(Number(category.sortOrder)) ? category.sortOrder : 0));
         setActiveInput(Boolean(category.isActive));
         setCustomFormEnabledInput(Boolean(category.customFormEnabled));
@@ -445,6 +449,7 @@ function CategoriesPageContent() {
         setEditingSubcategoryId(entityId);
         setNameInput(subcategory.name || "");
         setBannerImageInput("");
+        setIconImageInput("");
         setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
         setActiveInput(Boolean(subcategory.isActive));
         setCustomFormEnabledInput(Boolean(subcategory.customFormEnabled));
@@ -479,9 +484,14 @@ function CategoriesPageContent() {
       const customFormEnabled = customFormEnabledInput && customFormFields.length > 0;
       const customFormTitle = customFormTitleInput.trim();
       const categoryBannerImage = bannerImageInput.trim();
+      const categoryIconImage = iconImageInput.trim();
 
-      if (modalMode === "category" && !isValidCategoryBannerValue(categoryBannerImage)) {
+      if (modalMode === "category" && !isValidCategoryMediaValue(categoryBannerImage)) {
         throw new Error("Category banner must be a valid URL or uploaded image");
+      }
+
+      if (modalMode === "category" && !isValidCategoryMediaValue(categoryIconImage)) {
+        throw new Error("Category icon must be a valid URL or uploaded image");
       }
 
       if (modalIntent === "create") {
@@ -489,6 +499,7 @@ function CategoriesPageContent() {
           await createCategoryNode({
             name: cleanName,
             image: categoryBannerImage || undefined,
+            icon: categoryIconImage || undefined,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -530,6 +541,7 @@ function CategoriesPageContent() {
           await updateCategoryNode(editingNodeRef.entityId, {
             name: cleanName,
             image: categoryBannerImage,
+            icon: categoryIconImage,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -665,7 +677,7 @@ function CategoriesPageContent() {
     <AdminShell title="Category Explorer" subtitle="Nested tree editing for category structures.">
       <PageLayout
         title={activeItem?.label || "Category Explorer"}
-        subtitle="Explore hierarchy, manage nested relationships, and reorder siblings with drag and drop."
+        subtitle="Manage category hierarchy through tiles and popup action cards."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -737,6 +749,7 @@ function CategoriesPageContent() {
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
         bannerImageInput={bannerImageInput}
+        iconImageInput={iconImageInput}
         activeInput={activeInput}
         customFormEnabledInput={customFormEnabledInput}
         customFormTitleInput={customFormTitleInput}
@@ -747,6 +760,7 @@ function CategoriesPageContent() {
         submitting={isSubmitting}
         onNameChange={setNameInput}
         onBannerImageChange={setBannerImageInput}
+        onIconImageChange={setIconImageInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
         onCustomFormEnabledChange={setCustomFormEnabledInput}
@@ -808,6 +822,7 @@ type CreateNodeModalProps = {
   subcategories: AdminSubcategory[];
   nameInput: string;
   bannerImageInput: string;
+  iconImageInput: string;
   sortOrderInput: string;
   activeInput: boolean;
   customFormEnabledInput: boolean;
@@ -819,6 +834,7 @@ type CreateNodeModalProps = {
   submitting: boolean;
   onNameChange: (value: string) => void;
   onBannerImageChange: (value: string) => void;
+  onIconImageChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
   onCustomFormEnabledChange: (value: boolean) => void;
@@ -838,6 +854,7 @@ function CreateNodeModal({
   subcategories,
   nameInput,
   bannerImageInput,
+  iconImageInput,
   sortOrderInput,
   activeInput,
   customFormEnabledInput,
@@ -849,6 +866,7 @@ function CreateNodeModal({
   submitting,
   onNameChange,
   onBannerImageChange,
+  onIconImageChange,
   onSortOrderChange,
   onActiveChange,
   onCustomFormEnabledChange,
@@ -860,10 +878,12 @@ function CreateNodeModal({
   onSubmit,
 }: CreateNodeModalProps) {
   const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
+  const [iconUploadError, setIconUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setBannerUploadError(null);
+      setIconUploadError(null);
     }
   }, [open]);
 
@@ -909,29 +929,44 @@ function CreateNodeModal({
     onCustomFormFieldsChange([...customFormFieldsInput, createDraftCustomField(customFormFieldsInput.length)]);
   };
 
-  const handleBannerFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleMediaFileUpload = async (
+    event: ChangeEvent<HTMLInputElement>,
+    target: "banner" | "icon"
+  ) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) return;
 
+    const label = target === "banner" ? "Banner image" : "Icon image";
+    const onMediaChange = target === "banner" ? onBannerImageChange : onIconImageChange;
+    const setMediaError = target === "banner" ? setBannerUploadError : setIconUploadError;
+
     if (!file.type.startsWith("image/")) {
-      setBannerUploadError("Please upload an image file only.");
+      setMediaError("Please upload an image file only.");
       return;
     }
 
-    if (file.size > MAX_CATEGORY_BANNER_UPLOAD_BYTES) {
-      setBannerUploadError("Banner image must be under 2MB.");
+    if (file.size > MAX_CATEGORY_MEDIA_UPLOAD_BYTES) {
+      setMediaError(`${label} must be under 2MB.`);
       return;
     }
 
     try {
       const imageData = await fileToDataUrl(file);
-      onBannerImageChange(imageData);
-      setBannerUploadError(null);
+      onMediaChange(imageData);
+      setMediaError(null);
     } catch {
-      setBannerUploadError("Could not read the selected image. Please try again.");
+      setMediaError("Could not read the selected image. Please try again.");
     }
+  };
+
+  const handleBannerFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    void handleMediaFileUpload(event, "banner");
+  };
+
+  const handleIconFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    void handleMediaFileUpload(event, "icon");
   };
 
   const updateCustomField = (draftId: string, patch: Partial<DraftCustomFormField>) => {
@@ -1036,42 +1071,83 @@ function CreateNodeModal({
       </label>
 
       {mode === "category" ? (
-        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <label className="block space-y-1 text-sm text-(--text-soft)">
-            Category banner image (URL or upload)
-            <input
-              value={bannerImageInput}
-              onChange={(event) => onBannerImageChange(event.target.value)}
-              className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
-              placeholder="https://cdn.example.com/category-banner.jpg"
-            />
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Upload Banner
-              <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileUpload} />
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="space-y-2">
+            <label className="block space-y-1 text-sm text-(--text-soft)">
+              Category banner image (URL or upload)
+              <input
+                value={bannerImageInput}
+                onChange={(event) => onBannerImageChange(event.target.value)}
+                className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
+                placeholder="https://cdn.example.com/category-banner.jpg"
+              />
             </label>
 
-            <button
-              type="button"
-              onClick={() => {
-                onBannerImageChange("");
-                setBannerUploadError(null);
-              }}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Clear
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                Upload Banner
+                <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileUpload} />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onBannerImageChange("");
+                  setBannerUploadError(null);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Clear
+              </button>
+            </div>
+
+            {bannerUploadError ? <p className="text-xs text-rose-700">{bannerUploadError}</p> : null}
+
+            {bannerImageInput.trim() && isValidCategoryMediaValue(bannerImageInput) ? (
+              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <img src={bannerImageInput} alt="Category banner preview" className="h-28 w-full object-cover" loading="lazy" />
+              </div>
+            ) : null}
           </div>
 
-          {bannerUploadError ? <p className="text-xs text-rose-700">{bannerUploadError}</p> : null}
+          <div className="space-y-2 border-t border-slate-200 pt-3">
+            <label className="block space-y-1 text-sm text-(--text-soft)">
+              Category icon image (URL or upload)
+              <input
+                value={iconImageInput}
+                onChange={(event) => onIconImageChange(event.target.value)}
+                className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
+                placeholder="https://cdn.example.com/category-icon.png"
+              />
+            </label>
 
-          {bannerImageInput.trim() && isValidCategoryBannerValue(bannerImageInput) ? (
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <img src={bannerImageInput} alt="Category banner preview" className="h-28 w-full object-cover" loading="lazy" />
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                Upload Icon
+                <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onIconImageChange("");
+                  setIconUploadError(null);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Clear
+              </button>
             </div>
-          ) : null}
+
+            {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
+
+            {iconImageInput.trim() && isValidCategoryMediaValue(iconImageInput) ? (
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
+                <img src={iconImageInput} alt="Category icon preview" className="h-16 w-16 rounded-lg object-cover" loading="lazy" />
+                <p className="text-xs text-slate-500">Home page category tile will prefer this icon.</p>
+              </div>
+            ) : null}
+          </div>
         </section>
       ) : null}
 

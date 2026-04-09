@@ -110,6 +110,7 @@ export type AdminCategory = {
   slug: string;
   description?: string;
   image?: string;
+  icon?: string;
   isActive: boolean;
   sortOrder: number;
   customFormEnabled?: boolean;
@@ -161,6 +162,30 @@ export type AdminCity = {
   updatedAt?: string;
 };
 
+export type AdminHomePlacements = {
+  key: string;
+  leftImage?: string;
+  middleImage?: string;
+  rightImage?: string;
+  updatedAt?: string;
+};
+
+export type AdminHomePromoCard = {
+  cardId: string;
+  order: number;
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
+  image?: string;
+};
+
+export type AdminHomePromoSection = {
+  key: string;
+  heading: string;
+  cards: AdminHomePromoCard[];
+  updatedAt?: string;
+};
+
 type DashboardResponse = {
   ok: true;
   stats: DashboardStats;
@@ -190,6 +215,16 @@ type SubcategoryListResponse = {
 type CityListResponse = {
   ok: true;
   cities: AdminCity[];
+};
+
+type HomePlacementsResponse = {
+  ok: true;
+  placements: AdminHomePlacements;
+};
+
+type HomePromoSectionResponse = {
+  ok: true;
+  section: AdminHomePromoSection;
 };
 
 type ApiResponse<T> = T & {
@@ -420,10 +455,50 @@ export async function fetchCities(params?: {
   return payload.cities || [];
 }
 
+export async function fetchHomePlacements(): Promise<AdminHomePlacements> {
+  const payload = await requestJson<HomePlacementsResponse>("/api/admin/ads/home-placements");
+  return payload.placements || { key: "home-placements" };
+}
+
+export async function updateHomePlacements(input: {
+  leftImage?: string;
+  middleImage?: string;
+  rightImage?: string;
+}): Promise<AdminHomePlacements> {
+  const payload = await requestJson<HomePlacementsResponse>("/api/admin/ads/home-placements", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  return payload.placements;
+}
+
+export async function fetchHomePromoSection(): Promise<AdminHomePromoSection> {
+  const payload = await requestJson<HomePromoSectionResponse>("/api/admin/ads/home-promo-cards");
+  return payload.section || { key: "home-promo-cards", heading: "Featured Offers", cards: [] };
+}
+
+export async function updateHomePromoSection(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+  }>;
+}): Promise<AdminHomePromoSection> {
+  const payload = await requestJson<HomePromoSectionResponse>("/api/admin/ads/home-promo-cards", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  return payload.section;
+}
+
 export async function createCategory(input: {
   name: string;
   description?: string;
   image?: string;
+  icon?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -444,6 +519,7 @@ export async function updateCategory(
     name?: string;
     description?: string;
     image?: string;
+    icon?: string;
     sortOrder?: number;
     isActive?: boolean;
     customFormEnabled?: boolean;

@@ -6,7 +6,6 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { categories } from '@/data/homeData';
 import { readSelectedCity, subscribeLocationCity } from '@/lib/locationStore';
 
 type LiveCategory = {
@@ -14,6 +13,8 @@ type LiveCategory = {
   name: string;
   slug: string;
   sortOrder?: number;
+  image?: string;
+  icon?: string;
 };
 
 type CategoryApiResponse = {
@@ -22,40 +23,50 @@ type CategoryApiResponse = {
 };
 
 type DisplayCategory = {
+  id: string;
   name: string;
-  imageUrl: string;
+  mediaUrl?: string;
   order: number;
-  slug?: string;
+  slug: string;
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-
-const FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=240&q=60',
-  'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=240&q=60',
-  'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=240&q=60',
-  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=240&q=60',
-];
+const MOBILE_COLUMNS = 4;
+const MOBILE_ROWS = 4;
+const MOBILE_TILE_COUNT = MOBILE_COLUMNS * MOBILE_ROWS;
+const MOBILE_CATEGORY_COUNT = MOBILE_TILE_COUNT - 1;
+const DESKTOP_COLUMNS = 10;
+const DESKTOP_ROWS = 2;
+const DESKTOP_TILE_COUNT = DESKTOP_COLUMNS * DESKTOP_ROWS;
+const DESKTOP_CATEGORY_COUNT = DESKTOP_TILE_COUNT - 1;
 
 interface CategoryCardProps {
   name: string;
-  imageUrl: string;
+  mediaUrl?: string;
+  animationDelayMs?: number;
 }
 
-function CategoryCard({ name, imageUrl }: CategoryCardProps) {
+function CategoryCard({ name, mediaUrl, animationDelayMs = 0 }: CategoryCardProps) {
   return (
-    <div className="group cursor-pointer">
-      <div className="h-16 sm:h-18 w-full rounded-xl overflow-hidden border border-slate-200/70 shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md">
-        <img
-          src={imageUrl}
-          alt={name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
+    <div className="flex flex-col items-center justify-center">
+      <div
+        className="category-jump-to-fro flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]"
+        style={{ animationDelay: `${animationDelayMs}ms` }}
+      >
+        {mediaUrl ? (
+          <img
+            src={mediaUrl}
+            alt={name}
+            className="h-12 w-12 object-contain scale-110 md:h-[3.25rem] md:w-[3.25rem] lg:h-16 lg:w-16"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-orange-50 text-orange-500">
+            <span className="text-lg font-bold">{name.slice(0, 1).toUpperCase()}</span>
+          </div>
+        )}
       </div>
-      <h3 className="mt-1.5 text-[11px] sm:text-xs font-medium text-slate-700 text-center leading-tight line-clamp-2 group-hover:text-slate-900 transition-colors">
-        {name}
-      </h3>
+      <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">{name}</h3>
     </div>
   );
 }
@@ -67,30 +78,18 @@ const slugify = (value: string) =>
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
-const pickFallbackImage = (name: string) => {
-  const key = name
-    .split('')
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-  return FALLBACK_IMAGES[key % FALLBACK_IMAGES.length];
+const normalizeMedia = (value?: string) => {
+  const media = String(value || '').trim();
+  return media || undefined;
 };
 
 export default function CategoryGrid() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [liveCategories, setLiveCategories] = useState<DisplayCategory[] | null>(null);
+  const [liveCategories, setLiveCategories] = useState<DisplayCategory[]>([]);
   const [selectedCity, setSelectedCity] = useState('');
-  const visibleCount = 19;
-
-  const staticDisplayCategories = useMemo<DisplayCategory[]>(
-    () => categories.map((item) => ({ name: item.name, imageUrl: item.imageUrl, order: item.order })),
-    []
-  );
-
-  const staticImageByName = useMemo(
-    () => new Map(categories.map((item) => [item.name.toLowerCase(), item.imageUrl])),
-    []
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -101,20 +100,29 @@ export default function CategoryGrid() {
         const payload = (await response.json()) as CategoryApiResponse;
 
         if (!active) return;
-        if (!response.ok || !payload.ok || !Array.isArray(payload.categories)) return;
+        if (!response.ok || !payload.ok || !Array.isArray(payload.categories)) {
+          throw new Error('Failed to load categories');
+        }
 
         const mapped = payload.categories
           .map((item, index) => ({
+            id: String(item.id || `${index}`),
             name: item.name,
-            slug: item.slug,
+            slug: String(item.slug || '').trim() || slugify(item.name),
             order: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
-            imageUrl: staticImageByName.get(item.name.toLowerCase()) || pickFallbackImage(item.name),
+            mediaUrl: normalizeMedia(item.icon) || normalizeMedia(item.image),
           }))
           .sort((a, b) => a.order - b.order);
 
-        setLiveCategories(mapped.length > 0 ? mapped : null);
+        setLiveCategories(mapped);
+        setLoadError(null);
       } catch {
         if (!active) return;
+        setLiveCategories([]);
+        setLoadError('Categories are not available right now.');
+      } finally {
+        if (!active) return;
+        setIsLoading(false);
       }
     };
 
@@ -123,7 +131,7 @@ export default function CategoryGrid() {
     return () => {
       active = false;
     };
-  }, [staticImageByName]);
+  }, []);
 
   useEffect(() => {
     setSelectedCity(readSelectedCity());
@@ -143,14 +151,15 @@ export default function CategoryGrid() {
   };
 
   const sortedCategories = useMemo(
-    () =>
-      liveCategories && liveCategories.length > 0
-        ? [...liveCategories].sort((a, b) => a.order - b.order)
-        : [...staticDisplayCategories].sort((a, b) => a.order - b.order),
-    [liveCategories, staticDisplayCategories]
+    () => [...liveCategories].sort((a, b) => a.order - b.order),
+    [liveCategories]
   );
-  const visibleCategories = useMemo(
-    () => sortedCategories.slice(0, visibleCount),
+  const mobileVisibleCategories = useMemo(
+    () => sortedCategories.slice(0, MOBILE_CATEGORY_COUNT),
+    [sortedCategories]
+  );
+  const desktopExtraCategories = useMemo(
+    () => sortedCategories.slice(MOBILE_CATEGORY_COUNT, DESKTOP_CATEGORY_COUNT),
     [sortedCategories]
   );
   const filteredCategories = useMemo(() => {
@@ -162,58 +171,88 @@ export default function CategoryGrid() {
   }, [searchQuery, sortedCategories]);
 
   return (
-    <section className="pt-6 sm:pt-8 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section className="px-3 pt-1 pb-3 md:px-4 md:pt-2 md:pb-4 lg:px-6 lg:pt-2 lg:pb-6 xl:px-8">
+      <div className="w-full">
         {/* Section header */}
-        <div className="mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Explore categories
-          </h2>
-          <p className="text-gray-600 text-base sm:text-lg">
+        <div className="mb-3">
+          <p className="font-heading text-base font-bold tracking-tight text-slate-900 sm:text-lg">
             Popular services across your city
           </p>
         </div>
 
         {/* Category Grid */}
-        <div className="overflow-x-auto pb-2">
-          <div className="grid grid-flow-col auto-cols-[76px] sm:auto-cols-[84px] gap-x-6 gap-y-6 sm:gap-x-7 sm:gap-y-7 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-[repeat(10,84px)] lg:gap-x-9 lg:gap-y-11 xl:gap-y-12 lg:justify-center min-w-max lg:min-w-0">
-          {visibleCategories.map((category) => {
-            return (
-              <Link key={category.name} href={buildCategoryHref(category.slug || slugify(category.name))}>
-                <CategoryCard
-                  name={category.name}
-                  imageUrl={category.imageUrl}
-                />
-              </Link>
-            );
-          })}
-          <button
-            className="group btn-hover"
-            onClick={() => setIsOpen(true)}
-            type="button"
-          >
-            <div className="h-16 sm:h-18 w-full rounded-xl border border-blue-200 bg-blue-50 flex items-center justify-center shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md">
-              <ChevronRight size={20} className="text-blue-800" />
-            </div>
-            <h3 className="mt-1.5 text-[11px] sm:text-xs font-medium text-blue-800 text-center">View All</h3>
-          </button>
-        </div>
-        </div>
+        <div className="pb-2">
+          {isLoading ? (
+            <p className="px-2 text-sm text-slate-500">Loading categories...</p>
+          ) : null}
 
-        {/* View All Button */}
-        <div className="mt-10" />
+          {!isLoading && loadError && sortedCategories.length === 0 ? (
+            <p className="px-2 text-sm text-slate-500">{loadError}</p>
+          ) : null}
+
+          {!isLoading && sortedCategories.length === 0 ? (
+            <p className="px-2 text-sm text-slate-500">No categories available yet.</p>
+          ) : null}
+
+          {sortedCategories.length > 0 ? (
+          <div className="grid grid-cols-4 justify-items-center gap-4 md:grid-cols-5 lg:grid-cols-10 lg:gap-x-8 lg:gap-y-7">
+            {mobileVisibleCategories.map((category, index) => {
+              return (
+                <Link
+                  key={category.id}
+                  href={buildCategoryHref(category.slug || slugify(category.name))}
+                  className="flex flex-col items-center justify-center"
+                >
+                  <CategoryCard
+                    name={category.name}
+                    mediaUrl={category.mediaUrl}
+                    animationDelayMs={(index % 8) * 90}
+                  />
+                </Link>
+              );
+            })}
+
+            {desktopExtraCategories.map((category, index) => {
+              return (
+                <Link
+                  key={`desktop-${category.id}`}
+                  href={buildCategoryHref(category.slug || slugify(category.name))}
+                  className="hidden lg:flex lg:flex-col lg:items-center lg:justify-center"
+                >
+                  <CategoryCard
+                    name={category.name}
+                    mediaUrl={category.mediaUrl}
+                    animationDelayMs={((index + mobileVisibleCategories.length) % 8) * 90}
+                  />
+                </Link>
+              );
+            })}
+
+            <button
+              className="flex flex-col items-center justify-center"
+              onClick={() => setIsOpen(true)}
+              type="button"
+            >
+              <div className="category-jump-to-fro flex h-14 w-14 items-center justify-center rounded-xl bg-white text-blue-600 md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]">
+                <ChevronRight size={20} />
+              </div>
+              <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">View All</h3>
+            </button>
+          </div>
+          ) : null}
+        </div>
       </div>
 
       {isOpen && (
         <div className="fixed inset-0 z-50">
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="w-full max-w-4xl rounded-2xl glass-panel p-6 relative max-h-[80vh] overflow-y-auto">
+            <div className="w-full max-w-4xl rounded-xl border border-white/40 bg-white/80 p-6 shadow-md relative max-h-[80vh] overflow-y-auto backdrop-blur-md">
               <button
-                className="absolute right-4 top-4 p-2 rounded-lg bg-blue-900 text-white btn-hover"
+                className="absolute right-4 top-4 rounded-md border border-orange-500 bg-orange-500 p-2 text-white btn-hover"
                 onClick={() => setIsOpen(false)}
                 type="button"
               >
@@ -226,24 +265,42 @@ export default function CategoryGrid() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search categories"
-                  className="w-full rounded-xl border border-blue-200 bg-white/70 px-4 py-2 text-sm text-gray-800 outline-none focus:border-blue-400"
+                  className="w-full rounded-full border border-orange-100 bg-white px-4 py-2 text-sm text-gray-800 outline-none focus:border-orange-300"
                 />
               </div>
-              <div className="flex flex-wrap justify-center gap-x-6 gap-y-7 sm:gap-x-7 sm:gap-y-8 lg:gap-x-9 lg:gap-y-10">
+              <div className="space-y-2">
                 {filteredCategories.map((category) => {
                   return (
                     <Link
-                      key={category.name}
+                      key={category.id}
                       href={buildCategoryHref(category.slug || slugify(category.name))}
-                      className="w-19 sm:w-21"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white/80 px-3 py-2 hover:bg-white"
                     >
-                      <CategoryCard
-                        name={category.name}
-                        imageUrl={category.imageUrl}
-                      />
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white">
+                        {category.mediaUrl ? (
+                          <img
+                            src={category.mediaUrl}
+                            alt={category.name}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-orange-50 text-orange-500">
+                            <span className="text-sm font-bold">{category.name.slice(0, 1).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-gray-800">{category.name}</span>
                     </Link>
                   );
                 })}
+
+                {filteredCategories.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-white/80 px-3 py-3 text-sm text-gray-500">
+                    No categories found.
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
