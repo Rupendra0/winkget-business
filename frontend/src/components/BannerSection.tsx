@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type HomePlacementsPayload = {
   ok: boolean;
@@ -35,6 +35,8 @@ export default function BannerSection() {
     middleImage: "",
     rightImage: "",
   });
+  const [mobileIndex, setMobileIndex] = useState(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -74,9 +76,119 @@ export default function BannerSection() {
     [placements]
   );
 
+  const mobileSlides = useMemo(
+    () =>
+      BANNER_LAYOUT.map((tile) => ({
+        ...tile,
+        imageUrl: placementByKey[tile.key],
+      })),
+    [placementByKey]
+  );
+
+  useEffect(() => {
+    if (mobileSlides.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setMobileIndex((previous) => (previous + 1) % mobileSlides.length);
+    }, 3400);
+
+    return () => window.clearInterval(timer);
+  }, [mobileSlides.length]);
+
+  useEffect(() => {
+    if (mobileIndex < mobileSlides.length) return;
+    setMobileIndex(0);
+  }, [mobileIndex, mobileSlides.length]);
+
+  const handleMobileTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+  };
+
+  const handleMobileTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (mobileSlides.length <= 1) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const touch = event.changedTouches[0];
+
+    if (!start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const swipeDistance = Math.abs(deltaX);
+
+    if (swipeDistance < 44 || swipeDistance <= Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      setMobileIndex((previous) => (previous + 1) % mobileSlides.length);
+      return;
+    }
+
+    setMobileIndex((previous) => (previous - 1 + mobileSlides.length) % mobileSlides.length);
+  };
+
   return (
     <section className="mt-4 px-3 py-3 sm:px-4 lg:px-6 xl:px-8">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-10">
+      <div className="md:hidden">
+        <div
+          className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm`}
+          aria-label="Homepage banners carousel"
+          onTouchStart={handleMobileTouchStart}
+          onTouchEnd={handleMobileTouchEnd}
+          onTouchCancel={() => {
+            touchStartRef.current = null;
+          }}
+          style={{ touchAction: "pan-y" }}
+        >
+          <div
+            className="flex h-full w-full transition-transform duration-700 ease-out"
+            style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
+          >
+            {mobileSlides.map((slide) => (
+              <div key={slide.key} className="h-full w-full shrink-0">
+                {slide.imageUrl ? (
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="block h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-500">
+                    {slide.title}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {mobileSlides.length > 1 ? (
+          <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
+            {mobileSlides.map((slide, index) => (
+              <span
+                key={`${slide.key}-dot`}
+                className={`h-1.5 rounded-full transition-all ${
+                  index === mobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
+                }`}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 lg:grid-cols-10">
         {BANNER_LAYOUT.map((tile) => {
           const imageUrl = placementByKey[tile.key];
 
