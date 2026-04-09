@@ -8,6 +8,7 @@ type SectionCardPayload = {
   cardId?: string;
   categoryName?: string;
   categorySlug?: string;
+  title?: string;
   image?: string;
   order?: number;
 };
@@ -24,6 +25,7 @@ type SectionCard = {
   cardId: string;
   categoryName: string;
   categorySlug: string;
+  title: string;
   image: string;
   order: number;
 };
@@ -39,6 +41,7 @@ const normalizeCard = (card: SectionCardPayload, fallbackIndex: number): Section
   cardId: String(card.cardId || `card-${fallbackIndex + 1}`).trim(),
   categoryName: String(card.categoryName || "").trim(),
   categorySlug: String(card.categorySlug || "").trim(),
+  title: String(card.title || "").trim(),
   image: normalizeMedia(card.image),
   order: Number.isFinite(Number(card.order)) ? Number(card.order) : fallbackIndex + 1,
 });
@@ -368,7 +371,7 @@ export default function ExploreWellnessSections() {
                       loading="lazy"
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                      <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                      <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
                     </div>
                   </Link>
                 ))}
@@ -403,7 +406,7 @@ export default function ExploreWellnessSections() {
                   loading="lazy"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
                 </div>
               </Link>
             ))}

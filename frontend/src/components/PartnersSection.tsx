@@ -5,6 +5,7 @@ import { brandPartners } from "@/data/homeData";
 
 type SponsorCardPayload = {
   cardId?: string;
+  title?: string;
   image?: string;
   link?: string;
   order?: number;
@@ -24,7 +25,6 @@ type SponsorCard = {
   link: string;
   order: number;
   name: string;
-  isPlaceholder?: boolean;
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -38,7 +38,7 @@ const normalizeSponsorCard = (card: SponsorCardPayload, fallbackIndex: number): 
   image: normalizeMedia(card.image),
   link: String(card.link || "").trim(),
   order: Number.isFinite(Number(card.order)) ? Number(card.order) : fallbackIndex + 1,
-  name: `Sponsor ${fallbackIndex + 1}`,
+  name: String(card.title || `Sponsor ${fallbackIndex + 1}`).trim() || `Sponsor ${fallbackIndex + 1}`,
 });
 
 const toFallbackCards = (): SponsorCard[] =>
@@ -53,28 +53,9 @@ const toFallbackCards = (): SponsorCard[] =>
     .filter((card) => card.image)
     .slice(0, SPONSOR_LIMIT);
 
-const ensureSponsorSlots = (inputCards: SponsorCard[]): SponsorCard[] => {
-  const cards = inputCards.slice(0, SPONSOR_LIMIT);
-
-  if (cards.length >= SPONSOR_LIMIT) {
-    return cards;
-  }
-
-  const placeholders: SponsorCard[] = Array.from({ length: SPONSOR_LIMIT - cards.length }, (_, index) => ({
-    cardId: `placeholder-${index + 1}`,
-    image: "",
-    link: "",
-    order: cards.length + index + 1,
-    name: `Sponsor slot ${cards.length + index + 1}`,
-    isPlaceholder: true,
-  }));
-
-  return [...cards, ...placeholders];
-};
-
 export default function PartnersSection() {
   const [heading, setHeading] = useState(SPONSOR_DEFAULT_HEADING);
-  const [cards, setCards] = useState<SponsorCard[]>(ensureSponsorSlots(toFallbackCards()));
+  const [cards, setCards] = useState<SponsorCard[]>(toFallbackCards());
   const [mobileIndex, setMobileIndex] = useState(0);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -103,7 +84,7 @@ export default function PartnersSection() {
 
         if (nextCards.length > 0) {
           setHeading(nextHeading);
-          setCards(ensureSponsorSlots(nextCards));
+          setCards(nextCards);
         }
       } catch {
         // Keep fallback cards on fetch failures.
@@ -196,21 +177,13 @@ export default function PartnersSection() {
   };
 
   const renderSponsorCard = (card: SponsorCard, className: string) => {
-    if (!card.image || card.isPlaceholder) {
-      return (
-        <div className={`${className} border-dashed bg-white/50`}>
-          <span className="text-[11px] font-medium text-slate-400">Soon</span>
-        </div>
-      );
-    }
-
     const link = String(card.link || "").trim();
     const content = (
       <div className={className}>
         <img
           src={card.image}
           alt={card.name}
-          className="h-[74%] w-[74%] object-contain"
+          className="h-full w-full object-cover"
           loading="lazy"
         />
       </div>
@@ -262,7 +235,7 @@ export default function PartnersSection() {
                 <div key={`sponsor-mobile-${card.cardId}`} className="w-full shrink-0 p-3">
                   {renderSponsorCard(
                     card,
-                    "mx-auto flex h-[112px] w-[112px] items-center justify-center rounded-full border border-gray-200 bg-white/90 p-2 shadow-sm"
+                    "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/90 shadow-sm"
                   )}
                 </div>
               ))}
@@ -288,7 +261,7 @@ export default function PartnersSection() {
             <div key={`sponsor-desktop-${card.cardId}`}>
               {renderSponsorCard(
                 card,
-                "mx-auto flex h-[112px] w-[112px] items-center justify-center rounded-full border border-gray-200 bg-white/80 p-2 shadow-sm transition hover:shadow-md"
+                "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/80 shadow-sm transition hover:shadow-md"
               )}
             </div>
           ))}

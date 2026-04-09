@@ -355,6 +355,7 @@ export async function updateHomePromoSectionConfig(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -370,6 +371,7 @@ export async function updateHomeSponsorSectionConfig(input: {
   heading?: string;
   cards?: Array<{
     cardId: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -386,6 +388,7 @@ export async function updateHomeExploreSectionConfig(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -402,6 +405,7 @@ export async function updateHomeWellnessSectionConfig(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;

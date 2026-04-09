@@ -40,12 +40,19 @@ const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
 const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
 const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
 const HOME_PROMO_CARD_COUNT = 5;
+const HOME_EXPLORE_CARD_COUNT = 5;
+const HOME_WELLNESS_CARD_COUNT = 5;
+const HOME_SPONSOR_CARD_COUNT = 7;
 const HOME_PROMO_HEADING_MAX_LENGTH = 120;
+const HOME_CARD_TITLE_MAX_LENGTH = 90;
 const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
 const HOME_EXPLORE_DEFAULT_HEADING = "Explore";
 const HOME_WELLNESS_DEFAULT_HEADING = "Health & Wellness";
 const HOME_SPONSOR_DEFAULT_HEADING = "Brand Partners";
 const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_EXPLORE_CARD_IDS = Array.from({ length: HOME_EXPLORE_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_WELLNESS_CARD_IDS = Array.from({ length: HOME_WELLNESS_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_SPONSOR_CARD_IDS = Array.from({ length: HOME_SPONSOR_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
@@ -76,6 +83,7 @@ const toHomeCardSectionSummary = ({
   key,
   heading,
   defaultHeading,
+  cardIds,
   cards,
   updatedAt,
 }) => {
@@ -83,8 +91,8 @@ const toHomeCardSectionSummary = ({
 
   cards.forEach((card, index) => {
     const cardIdInput = String(card?.cardId || "").trim();
-    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
-    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    const fallbackCardId = cardIds[index];
+    const cardId = cardIds.includes(cardIdInput) ? cardIdInput : fallbackCardId;
     if (!cardId || mappedByCardId.has(cardId)) {
       return;
     }
@@ -99,6 +107,7 @@ const toHomeCardSectionSummary = ({
       categoryId,
       categoryName: String(categoryDoc?.name || "").trim(),
       categorySlug: String(categoryDoc?.slug || "").trim(),
+      title: String(card?.title || "").trim(),
       image: normalizeMediaValue(card?.image) || "",
       link: String(card?.link || "").trim(),
     });
@@ -107,7 +116,7 @@ const toHomeCardSectionSummary = ({
   return {
     key,
     heading: String(heading || "").trim() || defaultHeading,
-    cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
+    cards: cardIds.map((cardId, index) => {
       const card = mappedByCardId.get(cardId);
       return {
         cardId,
@@ -115,6 +124,7 @@ const toHomeCardSectionSummary = ({
         categoryId: card?.categoryId || "",
         categoryName: card?.categoryName || "",
         categorySlug: card?.categorySlug || "",
+        title: card?.title || "",
         image: card?.image || "",
         link: card?.link || "",
       };
@@ -128,6 +138,7 @@ const toHomePromoSectionSummary = (placement) =>
     key: HOME_PROMO_SECTION_KEY,
     heading: placement?.promoHeading,
     defaultHeading: HOME_PROMO_DEFAULT_HEADING,
+    cardIds: HOME_PROMO_CARD_IDS,
     cards: Array.isArray(placement?.promoCards) ? placement.promoCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -137,6 +148,7 @@ const toHomeExploreSectionSummary = (placement) =>
     key: HOME_EXPLORE_SECTION_KEY,
     heading: placement?.exploreHeading,
     defaultHeading: HOME_EXPLORE_DEFAULT_HEADING,
+    cardIds: HOME_EXPLORE_CARD_IDS,
     cards: Array.isArray(placement?.exploreCards) ? placement.exploreCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -146,6 +158,7 @@ const toHomeWellnessSectionSummary = (placement) =>
     key: HOME_WELLNESS_SECTION_KEY,
     heading: placement?.wellnessHeading,
     defaultHeading: HOME_WELLNESS_DEFAULT_HEADING,
+    cardIds: HOME_WELLNESS_CARD_IDS,
     cards: Array.isArray(placement?.wellnessCards) ? placement.wellnessCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -155,18 +168,19 @@ const toHomeSponsorSectionSummary = (placement) =>
     key: HOME_SPONSOR_SECTION_KEY,
     heading: placement?.sponsorHeading,
     defaultHeading: HOME_SPONSOR_DEFAULT_HEADING,
+    cardIds: HOME_SPONSOR_CARD_IDS,
     cards: Array.isArray(placement?.sponsorCards) ? placement.sponsorCards : [],
     updatedAt: placement?.updatedAt,
   });
 
-const normalizeHomeCardSectionInput = (cardsInput) => {
+const normalizeHomeCardSectionInput = (cardsInput, cardIds) => {
   const cards = Array.isArray(cardsInput) ? cardsInput : [];
   const cardById = new Map();
 
   cards.forEach((card, index) => {
     const cardIdInput = String(card?.cardId || "").trim();
-    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
-    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    const fallbackCardId = cardIds[index];
+    const cardId = cardIds.includes(cardIdInput) ? cardIdInput : fallbackCardId;
     if (!cardId || cardById.has(cardId)) {
       return;
     }
@@ -174,27 +188,29 @@ const normalizeHomeCardSectionInput = (cardsInput) => {
     cardById.set(cardId, {
       cardId,
       categoryId: String(card?.categoryId || "").trim(),
+      title: String(card?.title || "").trim().slice(0, HOME_CARD_TITLE_MAX_LENGTH),
       image: normalizeMediaValue(card?.image) || "",
       link: String(card?.link || "").trim(),
     });
   });
 
-  return HOME_PROMO_CARD_IDS.map((cardId, index) => {
+  return cardIds.map((cardId, index) => {
     const card = cardById.get(cardId);
     return {
       cardId,
       sortOrder: index + 1,
       categoryId: card?.categoryId || "",
+      title: card?.title || "",
       image: card?.image || "",
       link: card?.link || "",
     };
   });
 };
 
-const normalizeHomePromoCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
-const normalizeHomeExploreCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
-const normalizeHomeWellnessCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
-const normalizeHomeSponsorCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomePromoCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_PROMO_CARD_IDS);
+const normalizeHomeExploreCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_EXPLORE_CARD_IDS);
+const normalizeHomeWellnessCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_WELLNESS_CARD_IDS);
+const normalizeHomeSponsorCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_SPONSOR_CARD_IDS);
 
 const validateHomeSectionCards = async (cards, options = {}) => {
   const {
@@ -887,6 +903,7 @@ router.put("/admin/ads/home-explore-cards", requireAdmin, async (req, res) => {
           exploreCards: cards.map((card) => ({
             cardId: card.cardId,
             category: card.categoryId || undefined,
+            title: card.title || undefined,
             image: card.image || undefined,
             sortOrder: card.sortOrder,
           })),
@@ -947,6 +964,7 @@ router.put("/admin/ads/home-wellness-cards", requireAdmin, async (req, res) => {
           wellnessCards: cards.map((card) => ({
             cardId: card.cardId,
             category: card.categoryId || undefined,
+            title: card.title || undefined,
             image: card.image || undefined,
             sortOrder: card.sortOrder,
           })),
@@ -1009,6 +1027,7 @@ router.put("/admin/ads/home-sponsor-cards", requireAdmin, async (req, res) => {
           sponsorHeading: heading || HOME_SPONSOR_DEFAULT_HEADING,
           sponsorCards: cards.map((card) => ({
             cardId: card.cardId,
+            title: card.title || undefined,
             image: card.image || undefined,
             link: card.link || undefined,
             sortOrder: card.sortOrder,
@@ -1932,25 +1951,9 @@ router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
     const heading = headingInput.slice(0, HOME_PROMO_HEADING_MAX_LENGTH);
     const cards = normalizeHomePromoCardsInput(req.body?.cards);
 
-    for (const card of cards) {
-      if (card.image && !isValidCategoryMediaValue(card.image)) {
-        return res.status(400).json({
-          ok: false,
-          message: `Image for ${card.cardId} must be a valid URL or image data`,
-        });
-      }
-
-      if (card.categoryId && !OBJECT_ID_REGEX.test(card.categoryId)) {
-        return res.status(400).json({ ok: false, message: `Category for ${card.cardId} is invalid` });
-      }
-    }
-
-    const categoryIds = Array.from(new Set(cards.map((card) => card.categoryId).filter(Boolean)));
-    if (categoryIds.length > 0) {
-      const categories = await Category.find({ _id: { $in: categoryIds } }).select("_id").lean();
-      if (categories.length !== categoryIds.length) {
-        return res.status(400).json({ ok: false, message: "One or more selected categories do not exist" });
-      }
+    const validationMessage = await validateHomeSectionCards(cards);
+    if (validationMessage) {
+      return res.status(400).json({ ok: false, message: validationMessage });
     }
 
     const placement = await HomePlacement.findOneAndUpdate(
@@ -1962,6 +1965,7 @@ router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
           promoCards: cards.map((card) => ({
             cardId: card.cardId,
             category: card.categoryId || undefined,
+            title: card.title || undefined,
             image: card.image || undefined,
             sortOrder: card.sortOrder,
           })),

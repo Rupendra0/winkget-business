@@ -6,6 +6,7 @@ const homePromoCardSchema = new Schema(
   {
     cardId: { type: String, required: true, trim: true },
     category: { type: Schema.Types.ObjectId, ref: "Category" },
+    title: { type: String, trim: true },
     image: { type: String, trim: true },
     link: { type: String, trim: true },
     sortOrder: { type: Number, default: 0 },

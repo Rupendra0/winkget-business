@@ -176,6 +176,7 @@ export type AdminHomePromoCard = {
   categoryId?: string;
   categoryName?: string;
   categorySlug?: string;
+  title?: string;
   image?: string;
   link?: string;
 };
@@ -520,6 +521,7 @@ export async function updateHomePromoSection(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -542,6 +544,7 @@ export async function updateHomeExploreSection(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -564,6 +567,7 @@ export async function updateHomeWellnessSection(input: {
   cards?: Array<{
     cardId: string;
     categoryId?: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;
@@ -585,6 +589,7 @@ export async function updateHomeSponsorSection(input: {
   heading?: string;
   cards?: Array<{
     cardId: string;
+    title?: string;
     image?: string;
     link?: string;
   }>;

@@ -17,11 +17,17 @@ const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
 const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
 const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
 const HOME_PROMO_CARD_COUNT = 5;
+const HOME_EXPLORE_CARD_COUNT = 5;
+const HOME_WELLNESS_CARD_COUNT = 5;
+const HOME_SPONSOR_CARD_COUNT = 7;
 const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
 const HOME_EXPLORE_DEFAULT_HEADING = "Explore";
 const HOME_WELLNESS_DEFAULT_HEADING = "Health & Wellness";
 const HOME_SPONSOR_DEFAULT_HEADING = "Brand Partners";
 const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_EXPLORE_CARD_IDS = Array.from({ length: HOME_EXPLORE_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_WELLNESS_CARD_IDS = Array.from({ length: HOME_WELLNESS_CARD_COUNT }, (_, index) => `card-${index + 1}`);
+const HOME_SPONSOR_CARD_IDS = Array.from({ length: HOME_SPONSOR_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 
 const toPositiveInt = (value, fallback) => {
   const parsed = Number(value);
@@ -370,6 +376,7 @@ const toHomeCardSectionSummary = ({
   key,
   heading,
   defaultHeading,
+  cardIds,
   cards,
   updatedAt,
 }) => {
@@ -377,8 +384,8 @@ const toHomeCardSectionSummary = ({
 
   cards.forEach((card, index) => {
     const cardIdInput = String(card?.cardId || "").trim();
-    const fallbackCardId = HOME_PROMO_CARD_IDS[index];
-    const cardId = HOME_PROMO_CARD_IDS.includes(cardIdInput) ? cardIdInput : fallbackCardId;
+    const fallbackCardId = cardIds[index];
+    const cardId = cardIds.includes(cardIdInput) ? cardIdInput : fallbackCardId;
     if (!cardId || cardById.has(cardId)) {
       return;
     }
@@ -389,6 +396,7 @@ const toHomeCardSectionSummary = ({
       categoryId: String(categoryDoc?._id || card?.category || "").trim(),
       categoryName: String(categoryDoc?.name || "").trim(),
       categorySlug: String(categoryDoc?.slug || "").trim(),
+      title: String(card?.title || "").trim(),
       image: String(card?.image || "").trim(),
       link: String(card?.link || "").trim(),
     });
@@ -397,7 +405,7 @@ const toHomeCardSectionSummary = ({
   return {
     key,
     heading: String(heading || "").trim() || defaultHeading,
-    cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
+    cards: cardIds.map((cardId, index) => {
       const card = cardById.get(cardId);
       return {
         cardId,
@@ -405,6 +413,7 @@ const toHomeCardSectionSummary = ({
         categoryId: card?.categoryId || "",
         categoryName: card?.categoryName || "",
         categorySlug: card?.categorySlug || "",
+        title: card?.title || "",
         image: card?.image || "",
         link: card?.link || "",
       };
@@ -418,6 +427,7 @@ const toHomePromoSectionSummary = (placement) =>
     key: HOME_PROMO_SECTION_KEY,
     heading: placement?.promoHeading,
     defaultHeading: HOME_PROMO_DEFAULT_HEADING,
+    cardIds: HOME_PROMO_CARD_IDS,
     cards: Array.isArray(placement?.promoCards) ? placement.promoCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -427,6 +437,7 @@ const toHomeExploreSectionSummary = (placement) =>
     key: HOME_EXPLORE_SECTION_KEY,
     heading: placement?.exploreHeading,
     defaultHeading: HOME_EXPLORE_DEFAULT_HEADING,
+    cardIds: HOME_EXPLORE_CARD_IDS,
     cards: Array.isArray(placement?.exploreCards) ? placement.exploreCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -436,6 +447,7 @@ const toHomeWellnessSectionSummary = (placement) =>
     key: HOME_WELLNESS_SECTION_KEY,
     heading: placement?.wellnessHeading,
     defaultHeading: HOME_WELLNESS_DEFAULT_HEADING,
+    cardIds: HOME_WELLNESS_CARD_IDS,
     cards: Array.isArray(placement?.wellnessCards) ? placement.wellnessCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -445,6 +457,7 @@ const toHomeSponsorSectionSummary = (placement) =>
     key: HOME_SPONSOR_SECTION_KEY,
     heading: placement?.sponsorHeading,
     defaultHeading: HOME_SPONSOR_DEFAULT_HEADING,
+    cardIds: HOME_SPONSOR_CARD_IDS,
     cards: Array.isArray(placement?.sponsorCards) ? placement.sponsorCards : [],
     updatedAt: placement?.updatedAt,
   });

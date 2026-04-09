@@ -58,13 +58,16 @@ const SPONSOR_CARD_SPECS = [
 	{ cardId: "card-3", title: "Sponsor Card 3", width: 1200, height: 640, ratio: "15:8" },
 	{ cardId: "card-4", title: "Sponsor Card 4", width: 1200, height: 640, ratio: "15:8" },
 	{ cardId: "card-5", title: "Sponsor Card 5", width: 1200, height: 640, ratio: "15:8" },
+	{ cardId: "card-6", title: "Sponsor Card 6", width: 1200, height: 640, ratio: "15:8" },
+	{ cardId: "card-7", title: "Sponsor Card 7", width: 1200, height: 640, ratio: "15:8" },
 ] as const;
 
-type PromoCardId = (typeof PROMO_CARD_SPECS)[number]["cardId"];
+type HomeCardId = (typeof SPONSOR_CARD_SPECS)[number]["cardId"];
 
 type PromoCardForm = {
-	cardId: PromoCardId;
+	cardId: HomeCardId;
 	categoryId: string;
+	title: string;
 	image: string;
 	link: string;
 };
@@ -85,6 +88,7 @@ type PromoSectionApiShape = {
 	cards?: Array<{
 		cardId?: string;
 		categoryId?: string;
+		title?: string;
 		image?: string;
 		link?: string;
 	}>;
@@ -141,7 +145,6 @@ const BANNER_HEIGHT_CLASS = "h-[170px] sm:h-[190px] lg:h-[200px]";
 const PROMO_CARD_HEIGHT_CLASS = "h-[210px] sm:h-[220px]";
 const EXPLORE_CARD_HEIGHT_CLASS = "h-[130px] sm:h-[145px]";
 const WELLNESS_CARD_HEIGHT_CLASS = "h-[245px] sm:h-[275px]";
-const SPONSOR_CARD_HEIGHT_CLASS = "h-[120px] sm:h-[132px]";
 
 const EMPTY_FORM: HomePlacementsForm = {
 	leftImage: "",
@@ -180,7 +183,7 @@ const fileToDataUrl = (file: File): Promise<string> =>
 
 const normalizeSectionForm = (
 	section: PromoSectionApiShape | undefined,
-	specs: ReadonlyArray<{ cardId: PromoCardId }>,
+	specs: ReadonlyArray<{ cardId: HomeCardId }>,
 	defaultHeading: string
 ): PromoSectionForm => {
 	const cardsInput = Array.isArray(section?.cards) ? section.cards : [];
@@ -189,6 +192,7 @@ const normalizeSectionForm = (
 			.map((card) => ({
 				cardId: String(card?.cardId || "").trim(),
 				categoryId: String(card?.categoryId || "").trim(),
+				title: String(card?.title || "").trim(),
 				image: normalizeMedia(String(card?.image || "")),
 				link: String(card?.link || "").trim(),
 			}))
@@ -203,6 +207,7 @@ const normalizeSectionForm = (
 			return {
 				cardId: spec.cardId,
 				categoryId: card?.categoryId || "",
+				title: card?.title || "",
 				image: card?.image || "",
 				link: card?.link || "",
 			};
@@ -215,6 +220,7 @@ const toPromoUpdatePayload = (form: PromoSectionForm) => ({
 	cards: form.cards.map((card) => ({
 		cardId: card.cardId,
 		categoryId: String(card.categoryId || "").trim() || undefined,
+		title: String(card.title || "").trim() || undefined,
 		image: normalizeMedia(card.image) || undefined,
 		link: String(card.link || "").trim() || undefined,
 	})),
@@ -257,22 +263,22 @@ function AdsPageContent() {
 	const [exploreSaving, setExploreSaving] = useState(false);
 	const [uploadingKey, setUploadingKey] = useState<BannerKey | null>(null);
 	const [deletingKey, setDeletingKey] = useState<BannerKey | null>(null);
-	const [promoUploadingCardId, setPromoUploadingCardId] = useState<PromoCardId | null>(null);
-	const [promoDeletingCardId, setPromoDeletingCardId] = useState<PromoCardId | null>(null);
-	const [exploreUploadingCardId, setExploreUploadingCardId] = useState<PromoCardId | null>(null);
-	const [exploreDeletingCardId, setExploreDeletingCardId] = useState<PromoCardId | null>(null);
-	const [wellnessUploadingCardId, setWellnessUploadingCardId] = useState<PromoCardId | null>(null);
-	const [wellnessDeletingCardId, setWellnessDeletingCardId] = useState<PromoCardId | null>(null);
-	const [sponsorUploadingCardId, setSponsorUploadingCardId] = useState<PromoCardId | null>(null);
-	const [sponsorDeletingCardId, setSponsorDeletingCardId] = useState<PromoCardId | null>(null);
+	const [promoUploadingCardId, setPromoUploadingCardId] = useState<HomeCardId | null>(null);
+	const [promoDeletingCardId, setPromoDeletingCardId] = useState<HomeCardId | null>(null);
+	const [exploreUploadingCardId, setExploreUploadingCardId] = useState<HomeCardId | null>(null);
+	const [exploreDeletingCardId, setExploreDeletingCardId] = useState<HomeCardId | null>(null);
+	const [wellnessUploadingCardId, setWellnessUploadingCardId] = useState<HomeCardId | null>(null);
+	const [wellnessDeletingCardId, setWellnessDeletingCardId] = useState<HomeCardId | null>(null);
+	const [sponsorUploadingCardId, setSponsorUploadingCardId] = useState<HomeCardId | null>(null);
+	const [sponsorDeletingCardId, setSponsorDeletingCardId] = useState<HomeCardId | null>(null);
 
 	const [message, setMessage] = useState<string | null>(null);
 	const [errorText, setErrorText] = useState<string | null>(null);
 	const [uploadErrors, setUploadErrors] = useState<Partial<Record<BannerKey, string>>>({});
-	const [promoUploadErrors, setPromoUploadErrors] = useState<Partial<Record<PromoCardId, string>>>({});
-	const [exploreUploadErrors, setExploreUploadErrors] = useState<Partial<Record<PromoCardId, string>>>({});
-	const [wellnessUploadErrors, setWellnessUploadErrors] = useState<Partial<Record<PromoCardId, string>>>({});
-	const [sponsorUploadErrors, setSponsorUploadErrors] = useState<Partial<Record<PromoCardId, string>>>({});
+	const [promoUploadErrors, setPromoUploadErrors] = useState<Partial<Record<HomeCardId, string>>>({});
+	const [exploreUploadErrors, setExploreUploadErrors] = useState<Partial<Record<HomeCardId, string>>>({});
+	const [wellnessUploadErrors, setWellnessUploadErrors] = useState<Partial<Record<HomeCardId, string>>>({});
+	const [sponsorUploadErrors, setSponsorUploadErrors] = useState<Partial<Record<HomeCardId, string>>>({});
 
 	useEffect(() => {
 		if (!isHomePlacementsView) return;
@@ -431,7 +437,7 @@ function AdsPageContent() {
 		setErrorText(null);
 	};
 
-	const setPromoCardField = (cardId: PromoCardId, patch: Partial<PromoCardForm>) => {
+	const setPromoCardField = (cardId: HomeCardId, patch: Partial<PromoCardForm>) => {
 		setPromoForm((prev) => ({
 			...prev,
 			cards: prev.cards.map((card) => (card.cardId === cardId ? { ...card, ...patch } : card)),
@@ -441,7 +447,7 @@ function AdsPageContent() {
 		setErrorText(null);
 	};
 
-	const setExploreCardField = (cardId: PromoCardId, patch: Partial<PromoCardForm>) => {
+	const setExploreCardField = (cardId: HomeCardId, patch: Partial<PromoCardForm>) => {
 		setExploreForm((prev) => ({
 			...prev,
 			cards: prev.cards.map((card) => (card.cardId === cardId ? { ...card, ...patch } : card)),
@@ -451,7 +457,7 @@ function AdsPageContent() {
 		setErrorText(null);
 	};
 
-	const setWellnessCardField = (cardId: PromoCardId, patch: Partial<PromoCardForm>) => {
+	const setWellnessCardField = (cardId: HomeCardId, patch: Partial<PromoCardForm>) => {
 		setWellnessForm((prev) => ({
 			...prev,
 			cards: prev.cards.map((card) => (card.cardId === cardId ? { ...card, ...patch } : card)),
@@ -461,7 +467,7 @@ function AdsPageContent() {
 		setErrorText(null);
 	};
 
-	const setSponsorCardField = (cardId: PromoCardId, patch: Partial<PromoCardForm>) => {
+	const setSponsorCardField = (cardId: HomeCardId, patch: Partial<PromoCardForm>) => {
 		setSponsorForm((prev) => ({
 			...prev,
 			cards: prev.cards.map((card) => (card.cardId === cardId ? { ...card, ...patch } : card)),
@@ -614,7 +620,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handlePromoUpload = async (cardId: PromoCardId, event: ChangeEvent<HTMLInputElement>) => {
+	const handlePromoUpload = async (cardId: HomeCardId, event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 
@@ -666,7 +672,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleExploreUpload = async (cardId: PromoCardId, event: ChangeEvent<HTMLInputElement>) => {
+	const handleExploreUpload = async (cardId: HomeCardId, event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 
@@ -718,7 +724,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleWellnessUpload = async (cardId: PromoCardId, event: ChangeEvent<HTMLInputElement>) => {
+	const handleWellnessUpload = async (cardId: HomeCardId, event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 
@@ -770,7 +776,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleSponsorUpload = async (cardId: PromoCardId, event: ChangeEvent<HTMLInputElement>) => {
+	const handleSponsorUpload = async (cardId: HomeCardId, event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 
@@ -856,7 +862,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handlePromoDelete = async (cardId: PromoCardId) => {
+	const handlePromoDelete = async (cardId: HomeCardId) => {
 		const card = promoForm.cards.find((item) => item.cardId === cardId);
 		if (!card || !normalizeMedia(card.image) || promoDeletingCardId || promoUploadingCardId) return;
 
@@ -892,7 +898,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleExploreDelete = async (cardId: PromoCardId) => {
+	const handleExploreDelete = async (cardId: HomeCardId) => {
 		const card = exploreForm.cards.find((item) => item.cardId === cardId);
 		if (!card || !normalizeMedia(card.image) || exploreDeletingCardId || exploreUploadingCardId) return;
 
@@ -928,7 +934,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleWellnessDelete = async (cardId: PromoCardId) => {
+	const handleWellnessDelete = async (cardId: HomeCardId) => {
 		const card = wellnessForm.cards.find((item) => item.cardId === cardId);
 		if (!card || !normalizeMedia(card.image) || wellnessDeletingCardId || wellnessUploadingCardId) return;
 
@@ -964,7 +970,7 @@ function AdsPageContent() {
 		}
 	};
 
-	const handleSponsorDelete = async (cardId: PromoCardId) => {
+	const handleSponsorDelete = async (cardId: HomeCardId) => {
 		const card = sponsorForm.cards.find((item) => item.cardId === cardId);
 		if (!card || !normalizeMedia(card.image) || sponsorDeletingCardId || sponsorUploadingCardId) return;
 
@@ -1175,6 +1181,7 @@ function AdsPageContent() {
 										const card = promoForm.cards.find((item) => item.cardId === spec.cardId) || {
 											cardId: spec.cardId,
 											categoryId: "",
+											title: "",
 											image: "",
 										};
 										const image = normalizeMedia(card.image);
@@ -1201,8 +1208,16 @@ function AdsPageContent() {
 													)}
 												</div>
 
-												<div className="mt-2 space-y-0.5 text-xs text-slate-500">
-												</div>
+												<label className="mt-2 block text-xs text-slate-600">
+													Card title
+													<input
+														value={card.title}
+														onChange={(event) => setPromoCardField(spec.cardId, { title: event.target.value })}
+														disabled={loading || isUploadingCurrent || isDeletingCurrent}
+														placeholder="Featured card title"
+														className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus:border-(--accent)"
+													/>
+												</label>
 
 												<label className="mt-2 block text-xs text-slate-600">
 													Link category
@@ -1294,6 +1309,7 @@ function AdsPageContent() {
 											const card = exploreForm.cards.find((item) => item.cardId === spec.cardId) || {
 												cardId: spec.cardId,
 												categoryId: "",
+												title: "",
 												image: "",
 											};
 											const image = normalizeMedia(card.image);
@@ -1400,6 +1416,7 @@ function AdsPageContent() {
 											const card = wellnessForm.cards.find((item) => item.cardId === spec.cardId) || {
 												cardId: spec.cardId,
 												categoryId: "",
+												title: "",
 												image: "",
 											};
 											const image = normalizeMedia(card.image);
@@ -1425,6 +1442,17 @@ function AdsPageContent() {
 															</div>
 														)}
 													</div>
+
+													<label className="mt-2 block text-xs text-slate-600">
+														Card title
+														<input
+															value={card.title}
+															onChange={(event) => setWellnessCardField(spec.cardId, { title: event.target.value })}
+															disabled={loading || isUploadingCurrent || isDeletingCurrent}
+															placeholder="Wellness card title"
+															className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus:border-(--accent)"
+														/>
+													</label>
 
 													<label className="mt-2 block text-xs text-slate-600">
 														Link category
@@ -1501,11 +1529,12 @@ function AdsPageContent() {
 										/>
 									</label>
 
-									<div className="mt-3 grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
+									<div className="mt-3 flex gap-3 overflow-x-auto pb-2">
 										{SPONSOR_CARD_SPECS.map((spec) => {
 											const card = sponsorForm.cards.find((item) => item.cardId === spec.cardId) || {
 												cardId: spec.cardId,
 												categoryId: "",
+												title: "",
 												image: "",
 												link: "",
 											};
@@ -1518,21 +1547,34 @@ function AdsPageContent() {
 											const isDeletingCurrent = sponsorDeletingCardId === spec.cardId;
 
 											return (
-												<article key={`sponsor-${spec.cardId}`} className="rounded-lg border border-slate-200 bg-white p-3">
+												<article key={`sponsor-${spec.cardId}`} className="w-[220px] shrink-0 rounded-lg border border-slate-200 bg-white p-3">
 													<p className="text-sm font-semibold text-slate-900">{spec.title}</p>
 
-													<div className={`${SPONSOR_CARD_HEIGHT_CLASS} mt-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-100`}>
+													<div className="mt-2 flex items-center justify-center">
 														{image ? (
-															<img src={image} alt={`${spec.title} preview`} className="block h-full w-full object-contain" loading="lazy" />
+															<div className="h-[118px] w-[118px] overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+																<img src={image} alt={`${spec.title} preview`} className="block h-full w-full object-cover" loading="lazy" />
+															</div>
 														) : (
-															<div className="flex h-full w-full flex-col items-center justify-center px-3 text-center">
-																<span className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-cyan-600 text-xl font-semibold leading-none text-white">^</span>
-																<p className="text-xs font-semibold tracking-wide text-slate-800">
-																	RECOMMENDED SIZE : {spec.width} X {spec.height}
+															<div className="flex h-[118px] w-[118px] flex-col items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-3 text-center">
+																<span className="mb-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-600 text-lg font-semibold leading-none text-white">^</span>
+																<p className="text-[10px] font-semibold tracking-wide text-slate-800">
+																	{spec.width} X {spec.height}
 																</p>
 															</div>
 														)}
 													</div>
+
+													<label className="mt-2 block text-xs text-slate-600">
+														Sponsor name
+														<input
+															value={card.title}
+															onChange={(event) => setSponsorCardField(spec.cardId, { title: event.target.value })}
+															disabled={loading || isUploadingCurrent || isDeletingCurrent}
+															placeholder="Sponsor name"
+															className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus:border-(--accent)"
+														/>
+													</label>
 
 													<label className="mt-2 block text-xs text-slate-600">
 														Sponsor link
