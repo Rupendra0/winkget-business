@@ -13,8 +13,14 @@ const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const AUTH_COOKIE_NAME = "winkget_auth";
 const HOME_PLACEMENT_KEY = "home-placements";
 const HOME_PROMO_SECTION_KEY = "home-promo-cards";
+const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
+const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
+const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
 const HOME_PROMO_CARD_COUNT = 5;
 const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
+const HOME_EXPLORE_DEFAULT_HEADING = "Explore";
+const HOME_WELLNESS_DEFAULT_HEADING = "Health & Wellness";
+const HOME_SPONSOR_DEFAULT_HEADING = "Brand Partners";
 const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 
 const toPositiveInt = (value, fallback) => {
@@ -360,8 +366,13 @@ const toHomePlacementSummary = (placement) => {
   };
 };
 
-const toHomePromoSectionSummary = (placement) => {
-  const cards = Array.isArray(placement?.promoCards) ? placement.promoCards : [];
+const toHomeCardSectionSummary = ({
+  key,
+  heading,
+  defaultHeading,
+  cards,
+  updatedAt,
+}) => {
   const cardById = new Map();
 
   cards.forEach((card, index) => {
@@ -379,12 +390,13 @@ const toHomePromoSectionSummary = (placement) => {
       categoryName: String(categoryDoc?.name || "").trim(),
       categorySlug: String(categoryDoc?.slug || "").trim(),
       image: String(card?.image || "").trim(),
+      link: String(card?.link || "").trim(),
     });
   });
 
   return {
-    key: HOME_PROMO_SECTION_KEY,
-    heading: String(placement?.promoHeading || "").trim() || HOME_PROMO_DEFAULT_HEADING,
+    key,
+    heading: String(heading || "").trim() || defaultHeading,
     cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
       const card = cardById.get(cardId);
       return {
@@ -394,11 +406,48 @@ const toHomePromoSectionSummary = (placement) => {
         categoryName: card?.categoryName || "",
         categorySlug: card?.categorySlug || "",
         image: card?.image || "",
+        link: card?.link || "",
       };
     }),
-    updatedAt: placement?.updatedAt,
+    updatedAt,
   };
 };
+
+const toHomePromoSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_PROMO_SECTION_KEY,
+    heading: placement?.promoHeading,
+    defaultHeading: HOME_PROMO_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.promoCards) ? placement.promoCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeExploreSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_EXPLORE_SECTION_KEY,
+    heading: placement?.exploreHeading,
+    defaultHeading: HOME_EXPLORE_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.exploreCards) ? placement.exploreCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeWellnessSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_WELLNESS_SECTION_KEY,
+    heading: placement?.wellnessHeading,
+    defaultHeading: HOME_WELLNESS_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.wellnessCards) ? placement.wellnessCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeSponsorSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_SPONSOR_SECTION_KEY,
+    heading: placement?.sponsorHeading,
+    defaultHeading: HOME_SPONSOR_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.sponsorCards) ? placement.sponsorCards : [],
+    updatedAt: placement?.updatedAt,
+  });
 
 router.get("/cities", withPublicGetCache(async (_req, res) => {
   try {
@@ -445,6 +494,55 @@ router.get("/home-promo-cards", async (_req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load home promo cards", error: error.message });
+  }
+});
+
+router.get("/home-explore-cards", async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY })
+      .populate("exploreCards.category", "_id name slug isActive")
+      .lean();
+
+    res.set("Cache-Control", "private, no-store");
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeExploreSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load explore cards", error: error.message });
+  }
+});
+
+router.get("/home-wellness-cards", async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY })
+      .populate("wellnessCards.category", "_id name slug isActive")
+      .lean();
+
+    res.set("Cache-Control", "private, no-store");
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeWellnessSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load health and wellness cards", error: error.message });
+  }
+});
+
+router.get("/home-sponsor-cards", async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_SPONSOR_SECTION_KEY }).lean();
+
+    res.set("Cache-Control", "private, no-store");
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeSponsorSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load sponsor cards", error: error.message });
   }
 });
 

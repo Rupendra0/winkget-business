@@ -7,6 +7,7 @@ const homePromoCardSchema = new Schema(
     cardId: { type: String, required: true, trim: true },
     category: { type: Schema.Types.ObjectId, ref: "Category" },
     image: { type: String, trim: true },
+    link: { type: String, trim: true },
     sortOrder: { type: Number, default: 0 },
   },
   {
@@ -24,6 +25,12 @@ const homePlacementSchema = new Schema(
     },
     promoHeading: { type: String, trim: true },
     promoCards: [homePromoCardSchema],
+    exploreHeading: { type: String, trim: true },
+    exploreCards: [homePromoCardSchema],
+    wellnessHeading: { type: String, trim: true },
+    wellnessCards: [homePromoCardSchema],
+    sponsorHeading: { type: String, trim: true },
+    sponsorCards: [homePromoCardSchema],
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {

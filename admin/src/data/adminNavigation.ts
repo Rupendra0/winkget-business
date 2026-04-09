@@ -44,7 +44,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       makeItem("home-placements", "Header Banners", "/ads"),
       makeItem("partners-promotions", "Category Link Cards", "/ads"),
-      makeItem("product-promotions", "Product Highlight Cards", "/ads"),
+      makeItem("product-promotions", "Explore", "/ads"),
       makeItem("user-dashboard-placements", "User Dashboard Banners", "/ads"),
       makeItem("partners-dashboard-placements", "Partner Dashboard Banners", "/ads"),
     ],

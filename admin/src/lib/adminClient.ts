@@ -177,9 +177,31 @@ export type AdminHomePromoCard = {
   categoryName?: string;
   categorySlug?: string;
   image?: string;
+  link?: string;
 };
 
 export type AdminHomePromoSection = {
+  key: string;
+  heading: string;
+  cards: AdminHomePromoCard[];
+  updatedAt?: string;
+};
+
+export type AdminHomeExploreSection = {
+  key: string;
+  heading: string;
+  cards: AdminHomePromoCard[];
+  updatedAt?: string;
+};
+
+export type AdminHomeWellnessSection = {
+  key: string;
+  heading: string;
+  cards: AdminHomePromoCard[];
+  updatedAt?: string;
+};
+
+export type AdminHomeSponsorSection = {
   key: string;
   heading: string;
   cards: AdminHomePromoCard[];
@@ -225,6 +247,21 @@ type HomePlacementsResponse = {
 type HomePromoSectionResponse = {
   ok: true;
   section: AdminHomePromoSection;
+};
+
+type HomeExploreSectionResponse = {
+  ok: true;
+  section: AdminHomeExploreSection;
+};
+
+type HomeWellnessSectionResponse = {
+  ok: true;
+  section: AdminHomeWellnessSection;
+};
+
+type HomeSponsorSectionResponse = {
+  ok: true;
+  section: AdminHomeSponsorSection;
 };
 
 type ApiResponse<T> = T & {
@@ -484,9 +521,75 @@ export async function updateHomePromoSection(input: {
     cardId: string;
     categoryId?: string;
     image?: string;
+    link?: string;
   }>;
 }): Promise<AdminHomePromoSection> {
   const payload = await requestJson<HomePromoSectionResponse>("/api/admin/ads/home-promo-cards", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  return payload.section;
+}
+
+export async function fetchHomeExploreSection(): Promise<AdminHomeExploreSection> {
+  const payload = await requestJson<HomeExploreSectionResponse>("/api/admin/ads/home-explore-cards");
+  return payload.section || { key: "home-explore-cards", heading: "Explore", cards: [] };
+}
+
+export async function updateHomeExploreSection(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeExploreSection> {
+  const payload = await requestJson<HomeExploreSectionResponse>("/api/admin/ads/home-explore-cards", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  return payload.section;
+}
+
+export async function fetchHomeWellnessSection(): Promise<AdminHomeWellnessSection> {
+  const payload = await requestJson<HomeWellnessSectionResponse>("/api/admin/ads/home-wellness-cards");
+  return payload.section || { key: "home-wellness-cards", heading: "Health & Wellness", cards: [] };
+}
+
+export async function updateHomeWellnessSection(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeWellnessSection> {
+  const payload = await requestJson<HomeWellnessSectionResponse>("/api/admin/ads/home-wellness-cards", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  return payload.section;
+}
+
+export async function fetchHomeSponsorSection(): Promise<AdminHomeSponsorSection> {
+  const payload = await requestJson<HomeSponsorSectionResponse>("/api/admin/ads/home-sponsor-cards");
+  return payload.section || { key: "home-sponsor-cards", heading: "Brand Partners", cards: [] };
+}
+
+export async function updateHomeSponsorSection(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeSponsorSection> {
+  const payload = await requestJson<HomeSponsorSectionResponse>("/api/admin/ads/home-sponsor-cards", {
     method: "PUT",
     body: JSON.stringify(input),
   });

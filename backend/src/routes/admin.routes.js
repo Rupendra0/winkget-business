@@ -36,15 +36,22 @@ const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\
 const MAX_MEDIA_VALUE_LENGTH = 3000000;
 const HOME_PLACEMENT_KEY = "home-placements";
 const HOME_PROMO_SECTION_KEY = "home-promo-cards";
+const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
+const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
+const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
 const HOME_PROMO_CARD_COUNT = 5;
 const HOME_PROMO_HEADING_MAX_LENGTH = 120;
 const HOME_PROMO_DEFAULT_HEADING = "Featured Offers";
+const HOME_EXPLORE_DEFAULT_HEADING = "Explore";
+const HOME_WELLNESS_DEFAULT_HEADING = "Health & Wellness";
+const HOME_SPONSOR_DEFAULT_HEADING = "Brand Partners";
 const HOME_PROMO_CARD_IDS = Array.from({ length: HOME_PROMO_CARD_COUNT }, (_, index) => `card-${index + 1}`);
 const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport", "voter_id", "other"]);
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(String(value || ""))}$`, "i");
 const normalizeMediaValue = (value) => String(value || "").trim();
+const SPONSOR_LINK_REGEX = /^(https?:\/\/[^\s]+|\/[^\s]*)$/i;
 
 const isValidCategoryMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
@@ -65,8 +72,13 @@ const toHomePlacementSummary = (placement) => {
   };
 };
 
-const toHomePromoSectionSummary = (placement) => {
-  const cards = Array.isArray(placement?.promoCards) ? placement.promoCards : [];
+const toHomeCardSectionSummary = ({
+  key,
+  heading,
+  defaultHeading,
+  cards,
+  updatedAt,
+}) => {
   const mappedByCardId = new Map();
 
   cards.forEach((card, index) => {
@@ -88,12 +100,13 @@ const toHomePromoSectionSummary = (placement) => {
       categoryName: String(categoryDoc?.name || "").trim(),
       categorySlug: String(categoryDoc?.slug || "").trim(),
       image: normalizeMediaValue(card?.image) || "",
+      link: String(card?.link || "").trim(),
     });
   });
 
   return {
-    key: HOME_PROMO_SECTION_KEY,
-    heading: String(placement?.promoHeading || "").trim() || HOME_PROMO_DEFAULT_HEADING,
+    key,
+    heading: String(heading || "").trim() || defaultHeading,
     cards: HOME_PROMO_CARD_IDS.map((cardId, index) => {
       const card = mappedByCardId.get(cardId);
       return {
@@ -103,13 +116,50 @@ const toHomePromoSectionSummary = (placement) => {
         categoryName: card?.categoryName || "",
         categorySlug: card?.categorySlug || "",
         image: card?.image || "",
+        link: card?.link || "",
       };
     }),
-    updatedAt: placement?.updatedAt,
+    updatedAt,
   };
 };
 
-const normalizeHomePromoCardsInput = (cardsInput) => {
+const toHomePromoSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_PROMO_SECTION_KEY,
+    heading: placement?.promoHeading,
+    defaultHeading: HOME_PROMO_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.promoCards) ? placement.promoCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeExploreSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_EXPLORE_SECTION_KEY,
+    heading: placement?.exploreHeading,
+    defaultHeading: HOME_EXPLORE_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.exploreCards) ? placement.exploreCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeWellnessSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_WELLNESS_SECTION_KEY,
+    heading: placement?.wellnessHeading,
+    defaultHeading: HOME_WELLNESS_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.wellnessCards) ? placement.wellnessCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const toHomeSponsorSectionSummary = (placement) =>
+  toHomeCardSectionSummary({
+    key: HOME_SPONSOR_SECTION_KEY,
+    heading: placement?.sponsorHeading,
+    defaultHeading: HOME_SPONSOR_DEFAULT_HEADING,
+    cards: Array.isArray(placement?.sponsorCards) ? placement.sponsorCards : [],
+    updatedAt: placement?.updatedAt,
+  });
+
+const normalizeHomeCardSectionInput = (cardsInput) => {
   const cards = Array.isArray(cardsInput) ? cardsInput : [];
   const cardById = new Map();
 
@@ -125,6 +175,7 @@ const normalizeHomePromoCardsInput = (cardsInput) => {
       cardId,
       categoryId: String(card?.categoryId || "").trim(),
       image: normalizeMediaValue(card?.image) || "",
+      link: String(card?.link || "").trim(),
     });
   });
 
@@ -135,8 +186,54 @@ const normalizeHomePromoCardsInput = (cardsInput) => {
       sortOrder: index + 1,
       categoryId: card?.categoryId || "",
       image: card?.image || "",
+      link: card?.link || "",
     };
   });
+};
+
+const normalizeHomePromoCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeExploreCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeWellnessCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeSponsorCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+
+const validateHomeSectionCards = async (cards, options = {}) => {
+  const {
+    supportsCategory = true,
+    validateLink = false,
+  } = options;
+
+  for (const card of cards) {
+    if (card.image && !isValidCategoryMediaValue(card.image)) {
+      return `Image for ${card.cardId} must be a valid URL or image data`;
+    }
+
+    if (supportsCategory && card.categoryId && !OBJECT_ID_REGEX.test(card.categoryId)) {
+      return `Category for ${card.cardId} is invalid`;
+    }
+
+    if (!supportsCategory && card.categoryId) {
+      return `Category for ${card.cardId} is not supported`;
+    }
+
+    if (validateLink) {
+      const link = String(card.link || "").trim();
+      if (link && !SPONSOR_LINK_REGEX.test(link)) {
+        return `Link for ${card.cardId} must be an absolute URL or start with /`;
+      }
+    }
+  }
+
+  const categoryIds = supportsCategory
+    ? Array.from(new Set(cards.map((card) => card.categoryId).filter(Boolean)))
+    : [];
+  if (supportsCategory && categoryIds.length > 0) {
+    const categories = await Category.find({ _id: { $in: categoryIds } }).select("_id").lean();
+    if (categories.length !== categoryIds.length) {
+      return "One or more selected categories do not exist";
+    }
+  }
+
+  return "";
 };
 
 const verifyToken = (token) => {
@@ -675,33 +772,40 @@ router.patch("/admin/vendors/:id/status", requireAdmin, async (req, res) => {
     const nextStatus = String(req.body?.status || "").toLowerCase();
     const reviewNoteInput = req.body?.note;
 
+    if (!OBJECT_ID_REGEX.test(vendorId)) {
+      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
+    }
+
     if (!VENDOR_STATUS_VALUES.has(nextStatus)) {
       return res.status(400).json({ ok: false, message: "Invalid vendor status" });
     }
 
-    const reviewNote = typeof reviewNoteInput === "string" ? reviewNoteInput.trim() : "";
+    const vendor = await User.findOne({ _id: vendorId, role: "vendor" })
+      .select(
+        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
+      )
+      .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
+      .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
-    const vendor = await User.findOne({ _id: vendorId, role: "vendor" });
     if (!vendor) {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
     }
 
     vendor.vendorStatus = nextStatus;
-    vendor.vendorReviewNote = reviewNote || undefined;
+
+    if (reviewNoteInput !== undefined) {
+      const note = String(reviewNoteInput || "").trim();
+      vendor.vendorReviewNote = note || undefined;
+    }
+
     await vendor.save();
-    await vendor.populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields");
-    await vendor.populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
     return res.status(200).json({
       ok: true,
-      message: `Vendor marked as ${nextStatus}`,
+      message: "Vendor status updated",
       vendor: toVendorSummary(vendor),
     });
   } catch (error) {
-    if (error?.name === "CastError") {
-      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
-    }
-
     return res.status(500).json({ ok: false, message: "Failed to update vendor status", error: error.message });
   }
 });
@@ -710,23 +814,26 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
   try {
     const role = String(req.query.role || "all").toLowerCase();
     const search = String(req.query.search || "").trim();
-    const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 300);
+    const limitInput = Number(req.query.limit);
+    const limit = Number.isFinite(limitInput) ? Math.min(Math.max(Math.floor(limitInput), 1), 500) : 200;
 
     if (!USER_LIST_ROLE_VALUES.has(role)) {
       return res.status(400).json({ ok: false, message: "Invalid role filter" });
     }
 
-    const query = role === "all" ? {} : { role };
+    const query = {};
+
+    if (role !== "all") {
+      query.role = role;
+    }
 
     if (search) {
       const regex = new RegExp(escapeRegex(search), "i");
       query.$or = [
         { name: regex },
+        { businessName: regex },
         { email: regex },
         { phone: regex },
-        { businessName: regex },
-        { businessEmail: regex },
-        { businessPhone: regex },
       ];
     }
 
@@ -742,6 +849,189 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load users", error: error.message });
+  }
+});
+
+router.get("/admin/ads/home-explore-cards", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY })
+      .populate("exploreCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeExploreSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load explore cards", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-explore-cards", requireAdmin, async (req, res) => {
+  try {
+    const headingInput = String(req.body?.heading || "").trim();
+    const heading = headingInput.slice(0, HOME_PROMO_HEADING_MAX_LENGTH);
+    const cards = normalizeHomeExploreCardsInput(req.body?.cards);
+
+    const validationMessage = await validateHomeSectionCards(cards);
+    if (validationMessage) {
+      return res.status(400).json({ ok: false, message: validationMessage });
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_EXPLORE_SECTION_KEY },
+      {
+        $set: {
+          key: HOME_EXPLORE_SECTION_KEY,
+          exploreHeading: heading || HOME_EXPLORE_DEFAULT_HEADING,
+          exploreCards: cards.map((card) => ({
+            cardId: card.cardId,
+            category: card.categoryId || undefined,
+            image: card.image || undefined,
+            sortOrder: card.sortOrder,
+          })),
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    )
+      .populate("exploreCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Explore cards updated",
+      section: toHomeExploreSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update explore cards", error: error.message });
+  }
+});
+
+router.get("/admin/ads/home-wellness-cards", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY })
+      .populate("wellnessCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeWellnessSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load health and wellness cards", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-wellness-cards", requireAdmin, async (req, res) => {
+  try {
+    const headingInput = String(req.body?.heading || "").trim();
+    const heading = headingInput.slice(0, HOME_PROMO_HEADING_MAX_LENGTH);
+    const cards = normalizeHomeWellnessCardsInput(req.body?.cards);
+
+    const validationMessage = await validateHomeSectionCards(cards);
+    if (validationMessage) {
+      return res.status(400).json({ ok: false, message: validationMessage });
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_WELLNESS_SECTION_KEY },
+      {
+        $set: {
+          key: HOME_WELLNESS_SECTION_KEY,
+          wellnessHeading: heading || HOME_WELLNESS_DEFAULT_HEADING,
+          wellnessCards: cards.map((card) => ({
+            cardId: card.cardId,
+            category: card.categoryId || undefined,
+            image: card.image || undefined,
+            sortOrder: card.sortOrder,
+          })),
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    )
+      .populate("wellnessCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Health and wellness cards updated",
+      section: toHomeWellnessSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update health and wellness cards", error: error.message });
+  }
+});
+
+router.get("/admin/ads/home-sponsor-cards", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_SPONSOR_SECTION_KEY })
+      .populate("sponsorCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      section: toHomeSponsorSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load sponsor cards", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-sponsor-cards", requireAdmin, async (req, res) => {
+  try {
+    const headingInput = String(req.body?.heading || "").trim();
+    const heading = headingInput.slice(0, HOME_PROMO_HEADING_MAX_LENGTH);
+    const cards = normalizeHomeSponsorCardsInput(req.body?.cards);
+
+    const validationMessage = await validateHomeSectionCards(cards, {
+      supportsCategory: false,
+      validateLink: true,
+    });
+    if (validationMessage) {
+      return res.status(400).json({ ok: false, message: validationMessage });
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_SPONSOR_SECTION_KEY },
+      {
+        $set: {
+          key: HOME_SPONSOR_SECTION_KEY,
+          sponsorHeading: heading || HOME_SPONSOR_DEFAULT_HEADING,
+          sponsorCards: cards.map((card) => ({
+            cardId: card.cardId,
+            image: card.image || undefined,
+            link: card.link || undefined,
+            sortOrder: card.sortOrder,
+          })),
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    )
+      .populate("sponsorCards.category", "_id name slug isActive")
+      .lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Sponsor cards updated",
+      section: toHomeSponsorSectionSummary(placement),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update sponsor cards", error: error.message });
   }
 });
 

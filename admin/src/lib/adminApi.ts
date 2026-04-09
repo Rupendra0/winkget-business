@@ -5,14 +5,23 @@ import {
   fetchSubcategories,
   fetchHomePlacements,
   fetchHomePromoSection,
+  fetchHomeSponsorSection,
+  fetchHomeExploreSection,
+  fetchHomeWellnessSection,
   updateHomePlacements,
   updateHomePromoSection,
+  updateHomeSponsorSection,
+  updateHomeExploreSection,
+  updateHomeWellnessSection,
   updateCategory,
   updateSubcategory,
   type CustomFormField,
   type EffectiveCustomForm,
   type AdminHomePlacements,
   type AdminHomePromoSection,
+  type AdminHomeSponsorSection,
+  type AdminHomeExploreSection,
+  type AdminHomeWellnessSection,
   type AdminCategory,
   type AdminSubcategory,
   type AdminDirectoryUser,
@@ -347,9 +356,57 @@ export async function updateHomePromoSectionConfig(input: {
     cardId: string;
     categoryId?: string;
     image?: string;
+    link?: string;
   }>;
 }): Promise<AdminHomePromoSection> {
   return updateHomePromoSection(input);
+}
+
+export async function fetchHomeSponsorSectionConfig(): Promise<AdminHomeSponsorSection> {
+  return fetchHomeSponsorSection();
+}
+
+export async function updateHomeSponsorSectionConfig(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeSponsorSection> {
+  return updateHomeSponsorSection(input);
+}
+
+export async function fetchHomeExploreSectionConfig(): Promise<AdminHomeExploreSection> {
+  return fetchHomeExploreSection();
+}
+
+export async function updateHomeExploreSectionConfig(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeExploreSection> {
+  return updateHomeExploreSection(input);
+}
+
+export async function fetchHomeWellnessSectionConfig(): Promise<AdminHomeWellnessSection> {
+  return fetchHomeWellnessSection();
+}
+
+export async function updateHomeWellnessSectionConfig(input: {
+  heading?: string;
+  cards?: Array<{
+    cardId: string;
+    categoryId?: string;
+    image?: string;
+    link?: string;
+  }>;
+}): Promise<AdminHomeWellnessSection> {
+  return updateHomeWellnessSection(input);
 }
 
 export async function fetchActiveCategoriesForAds() {
