@@ -54,6 +54,7 @@ import {
   type VendorReviewSnapshot,
   type VendorSession,
 } from "@/lib/vendorApi";
+import VendorAddProductForm from "@/components/vendor/VendorAddProductForm";
 
 type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Shop" | "Products" | "Settings";
 
@@ -1581,8 +1582,10 @@ function ShopProfileSection({
 
 function VendorProductsSection({
   form,
+  sellerName,
   categories,
   products,
+  editingProduct,
   productsLoading,
   productsError,
   actionMessage,
@@ -1600,10 +1603,13 @@ function VendorProductsSection({
   onCancelEdit,
   onDelete,
   onRefresh,
+  onQuickUpsert,
 }: {
   form: VendorProductFormState;
+  sellerName: string;
   categories: VendorCatalogCategory[];
   products: VendorProductRecord[];
+  editingProduct: VendorProductRecord | null;
   productsLoading: boolean;
   productsError: string | null;
   actionMessage: string | null;
@@ -1621,6 +1627,7 @@ function VendorProductsSection({
   onCancelEdit: () => void;
   onDelete: (productId: string) => void;
   onRefresh: () => void;
+  onQuickUpsert: (payload: VendorProductUpsertInput, productId?: string | null) => Promise<void>;
 }) {
   const [showProductForm, setShowProductForm] = useState(false);
   const isProductFormVisible = showProductForm || Boolean(editingProductId);
@@ -1687,7 +1694,7 @@ function VendorProductsSection({
           ))}
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4">
           {productsLoading ? (
             <p className="text-sm text-gray-600">Loading products...</p>
           ) : productsError ? (
@@ -1695,64 +1702,98 @@ function VendorProductsSection({
           ) : products.length === 0 ? (
             <EmptyState title="No products found" body="Click Add Product to create your first item." />
           ) : (
-            products.map((product) => (
-              <div key={product.id} className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900">{product.productName}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">
-                      {product.categoryLabel || product.categorySlug} / {product.subcategoryName || product.subcategorySlug}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">Updated {formatDateTime(product.updatedAt)}</p>
-                  </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {products.map((product) => {
+                const thumbnail = product.image || product.heroImage || product.subcategoryImage || product.gallery?.[0] || "";
+                const price = Number(product.price || 0);
+                const mrp = Number(product.oldPrice || 0);
+                const hasDiscount = Number.isFinite(price) && Number.isFinite(mrp) && mrp > 0 && price > 0 && mrp > price;
+                const discountPercent = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
 
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    {product.storePlacement ? (
-                      <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                        {product.storePlacement}
-                      </span>
-                    ) : null}
-                    <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700">
-                      {product.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-700 sm:grid-cols-4">
-                  <p>Price: {product.price}</p>
-                  <p>MRP: {product.oldPrice}</p>
-                  <p>Stock: {product.inventory}</p>
-                  <p>MOQ: {product.moq}</p>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onEdit(product);
-                      setShowProductForm(true);
-                    }}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                return (
+                  <div
+                    key={product.id}
+                    className="group overflow-hidden rounded-xl border border-[#dbe1ea] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(30,64,175,0.12)]"
                   >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(product.id)}
-                    disabled={deletingProductId === product.id}
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                  >
-                    {deletingProductId === product.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </div>
-            ))
+                    <div className="relative h-28 border-b border-[#e6ebf2] bg-[linear-gradient(160deg,#f8fbff,#eef4ff)] p-2.5">
+                      {thumbnail ? (
+                        <img src={thumbnail} alt={product.productName} className="h-full w-full object-contain" loading="lazy" />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center rounded-xl border border-dashed border-[#cbd5e1] text-xs text-gray-400">
+                          No image
+                        </div>
+                      )}
+
+                      <div className="absolute right-2.5 top-2.5 flex flex-wrap items-center justify-end gap-1">
+                        {product.storePlacement ? (
+                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                            {product.storePlacement}
+                          </span>
+                        ) : null}
+                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700">
+                          {product.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xl font-semibold leading-tight text-gray-900">{product.productName}</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {product.categoryLabel || product.categorySlug} / {product.subcategoryName || product.subcategorySlug}
+                        </p>
+                        <p className="mt-1 text-[11px] text-gray-500">Updated {formatDateTime(product.updatedAt)}</p>
+                      </div>
+
+                      <div className="mt-2.5 flex flex-wrap items-end gap-2">
+                        <p className="text-2xl font-bold leading-none text-blue-700">₹{Math.max(0, price).toLocaleString("en-IN")}</p>
+                        {hasDiscount ? <p className="text-xs text-gray-400 line-through">₹{mrp.toLocaleString("en-IN")}</p> : null}
+                        {hasDiscount ? <span className="text-xs font-semibold text-emerald-600">{discountPercent}% off</span> : null}
+                      </div>
+
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs">
+                        <p className="rounded-lg bg-slate-50 px-2 py-1 text-slate-700">
+                          Stock: <span className="font-semibold">{product.inventory}</span>
+                        </p>
+                        <p className="rounded-lg bg-slate-50 px-2 py-1 text-slate-700">
+                          MOQ: <span className="font-semibold">{product.moq}</span>
+                        </p>
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onEdit(product);
+                            setShowProductForm(true);
+                          }}
+                          className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(product.id)}
+                          disabled={deletingProductId === product.id}
+                          className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                        >
+                          {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </article>
 
       {isProductFormVisible ? (
-        <section className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" aria-label="Product form popup">
+        <section
+          className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-gray-900/40 p-0"
+          aria-label="Product form popup"
+        >
           <button
             type="button"
             onClick={handleCloseProductForm}
@@ -1760,6 +1801,7 @@ function VendorProductsSection({
             aria-label="Close product form popup"
           />
 
+          {false ? (
           <form
             onSubmit={onSubmit}
             className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl"
@@ -2140,6 +2182,20 @@ function VendorProductsSection({
             {actionError ? <p className="text-xs font-medium text-red-700">{actionError}</p> : null}
           </div>
           </form>
+          ) : (
+            <VendorAddProductForm
+              key={editingProduct?.id ? `edit-${editingProduct.id}` : "create-product"}
+              mode={editingProduct ? "edit" : "create"}
+              initialProduct={editingProduct}
+              categories={categories}
+              sellerName={sellerName}
+              saving={saving}
+              actionMessage={actionMessage}
+              actionError={actionError}
+              onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
+              onClose={handleCloseProductForm}
+            />
+          )}
         </section>
       ) : null}
     </section>
@@ -3370,6 +3426,50 @@ export default function VendorDashboard() {
     }
   };
 
+  const handleVendorProductQuickUpsert = async (payload: VendorProductUpsertInput, productId?: string | null) => {
+    if (!vendor || productFormSaving) {
+      throw new Error("Unable to save product right now");
+    }
+
+    if (!payload.categorySlug || !payload.subcategorySlug || !payload.productName || !payload.image) {
+      setProductFormError("Category, subcategory, product name, and image are required.");
+      setProductFormMessage(null);
+      throw new Error("Validation failed");
+    }
+
+    if (!Number.isFinite(payload.price) || payload.price <= 0) {
+      setProductFormError("Price must be greater than 0.");
+      setProductFormMessage(null);
+      throw new Error("Validation failed");
+    }
+
+    setProductFormSaving(true);
+    setProductFormMessage(null);
+    setProductFormError(null);
+
+    try {
+      if (productId) {
+        const updated = await updateVendorProduct(productId, payload);
+        setVendorProducts((current) => current.map((product) => (product.id === updated.id ? updated : product)));
+        setProductFormMessage("Product updated successfully.");
+      } else {
+        const created = await createVendorProduct(payload);
+        setVendorProducts((current) => [created, ...current]);
+        setProductFormMessage("Product added successfully.");
+      }
+
+      setEditingProductId(null);
+      setProductForm(getDefaultProductForm(vendor));
+      await loadVendorProducts(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save product";
+      setProductFormError(message);
+      throw error;
+    } finally {
+      setProductFormSaving(false);
+    }
+  };
+
   const handleVendorProductEdit = (product: VendorProductRecord) => {
     setEditingProductId(product.id);
     setProductForm(toProductFormState(product, vendor));
@@ -3508,11 +3608,17 @@ export default function VendorDashboard() {
     }
 
     if (activeNav === "Products") {
+      const editingProduct = editingProductId
+        ? vendorProducts.find((product) => product.id === editingProductId) || null
+        : null;
+
       return (
         <VendorProductsSection
           form={productForm}
+          sellerName={String(vendor.businessName || vendor.name || "").trim()}
           categories={vendorCategories}
           products={filteredVendorProducts}
+          editingProduct={editingProduct}
           productsLoading={vendorProductsLoading}
           productsError={vendorProductsError}
           actionMessage={productFormMessage}
@@ -3530,6 +3636,7 @@ export default function VendorDashboard() {
           onCancelEdit={handleVendorProductCancelEdit}
           onDelete={handleVendorProductDelete}
           onRefresh={handleVendorProductsRefresh}
+          onQuickUpsert={handleVendorProductQuickUpsert}
         />
       );
     }

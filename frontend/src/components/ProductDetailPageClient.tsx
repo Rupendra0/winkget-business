@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { buildProductSlug } from "@/data/productSlug";
 import type { ProductDetailModel, RelatedProductModel } from "@/lib/storeCatalog";
 import { addToCart, isWishlisted, makeStoreProduct, toggleWishlist } from "@/lib/shopStorage";
@@ -25,18 +25,12 @@ export default function ProductDetailPageClient({
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [wishlisted, setWishlisted] = useState(() => isWishlisted(product?.id));
 
-  useEffect(() => {
-    setActiveImage(galleryImages[0] || product.image || "");
-    setQuantity(1);
-    setWishlisted(isWishlisted(product?.id));
-  }, [galleryImages, product.id, product.image]);
-
   const productHref = `/product/${encodeURIComponent(buildProductSlug(product))}`;
   const storeProduct = useMemo(() => makeStoreProduct(product, productHref), [product, productHref]);
 
   const discountText = useMemo(() => {
     const discount = Number(product.discount) || 0;
-    return discount > 0 ? `${discount}% OFF` : "Best Price";
+    return discount > 0 ? `${discount}% OFF` : "";
   }, [product.discount]);
 
   const shortDescription = useMemo(() => {
@@ -49,6 +43,7 @@ export default function ProductDetailPageClient({
   }, [product.description]);
 
   const currentPrice = Number(product.price) || 0;
+  const hasPrice = currentPrice > 0;
   const oldPrice = Number(product.oldPrice) || currentPrice;
   const totalPrice = currentPrice * quantity;
 
@@ -103,9 +98,11 @@ export default function ProductDetailPageClient({
                 <div className="h-[400px] w-full">
                   <img src={activeImage} alt={product.name} className="h-full w-full object-contain" />
                 </div>
-                <span className="absolute left-3 top-3 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
-                  {discountText}
-                </span>
+                {discountText ? (
+                  <span className="absolute left-3 top-3 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                    {discountText}
+                  </span>
+                ) : null}
                 <div className="absolute right-3 top-3 flex flex-col gap-2">
                   <button
                     type="button"
@@ -141,7 +138,11 @@ export default function ProductDetailPageClient({
                 </p>
 
                 <div className="border-t border-slate-200 pt-3 text-[17px] leading-8 text-slate-700">
-                  {showFullDescription ? product.description : shortDescription}
+                  {product.description
+                    ? showFullDescription
+                      ? product.description
+                      : shortDescription
+                    : "Description not provided by seller yet."}
                   {String(product.description || "").length > 250 ? (
                     <button
                       type="button"
@@ -157,17 +158,25 @@ export default function ProductDetailPageClient({
                   <div className="border-b border-slate-200 px-3 py-2 text-lg font-semibold text-slate-900">
                     Key Attributes
                   </div>
-                  <div className="grid grid-cols-[170px_1fr] gap-x-3 gap-y-2 px-3 py-3 text-[15px]">
-                    {product.keyAttributes.slice(0, 5).map(([label, value], index) => (
-                      <div key={`${label}-${index}`} className="contents">
-                        <p className="font-semibold text-slate-700">{label}</p>
-                        <p className="text-slate-700">{value}</p>
+                  {product.keyAttributes.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-[170px_1fr] gap-x-3 gap-y-2 px-3 py-3 text-[15px]">
+                        {product.keyAttributes.slice(0, 5).map(([label, value], index) => (
+                          <div key={`${label}-${index}`} className="contents">
+                            <p className="font-semibold text-slate-700">{label}</p>
+                            <p className="text-slate-700">{value}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <button type="button" className="px-3 pb-3 text-sm font-semibold text-blue-700">
-                    View full attributes
-                  </button>
+                      {product.keyAttributes.length > 5 ? (
+                        <button type="button" className="px-3 pb-3 text-sm font-semibold text-blue-700">
+                          View full attributes
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="px-3 py-3 text-sm text-slate-500">No key attributes provided yet.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -176,19 +185,23 @@ export default function ProductDetailPageClient({
           <aside className="order-3">
             <div className="sticky top-24 space-y-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="flex items-end gap-2">
-                <p className="whitespace-nowrap text-2xl font-bold leading-none text-slate-900">{product.priceText}</p>
+                <p className="whitespace-nowrap text-2xl font-bold leading-none text-slate-900">{hasPrice ? product.priceText : "Price on request"}</p>
                 {oldPrice > currentPrice ? (
                   <p className="whitespace-nowrap pb-0.5 text-base text-slate-400 line-through">{product.oldPriceText}</p>
                 ) : null}
-                <span className="mb-0.5 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white">
-                  {discountText}
-                </span>
+                {discountText ? (
+                  <span className="mb-0.5 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white">
+                    {discountText}
+                  </span>
+                ) : null}
               </div>
 
-              <p className="text-xs font-medium text-emerald-700">{product.shippingLabel || "Free Shipping"}</p>
-              <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 text-sm text-slate-800">
-                Delivery by <span className="font-semibold">{product.deliveryByText || "Tuesday, 07 Apr"}</span>
-              </div>
+              <p className="text-xs font-medium text-emerald-700">{product.shippingLabel || "Shipping details not provided"}</p>
+              {product.deliveryByText ? (
+                <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 text-sm text-slate-800">
+                  Delivery by <span className="font-semibold">{product.deliveryByText}</span>
+                </div>
+              ) : null}
 
               <div className="flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 p-1">
                 <button
@@ -209,6 +222,7 @@ export default function ProductDetailPageClient({
                 <button
                   type="button"
                   onClick={onAddToCart}
+                  disabled={!hasPrice}
                   className="rounded-full bg-indigo-800 px-4 py-1 text-[11px] font-semibold tracking-wide text-white transition hover:bg-indigo-900"
                 >
                   ADD TO CART
@@ -225,7 +239,11 @@ export default function ProductDetailPageClient({
                 </button>
                 <Link
                   href="/checkout"
-                  className="rounded-lg bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 px-5 py-2 text-center text-sm font-extrabold tracking-wide text-white ring-1 ring-cyan-300/70 shadow-[0_8px_18px_rgba(37,99,235,0.35)] transition hover:scale-[1.01] hover:from-blue-800 hover:via-blue-700 hover:to-cyan-600"
+                  className={`rounded-lg px-5 py-2 text-center text-sm font-extrabold tracking-wide transition ${
+                    hasPrice
+                      ? "bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 text-white ring-1 ring-cyan-300/70 shadow-[0_8px_18px_rgba(37,99,235,0.35)] hover:scale-[1.01] hover:from-blue-800 hover:via-blue-700 hover:to-cyan-600"
+                      : "pointer-events-none bg-slate-200 text-slate-500"
+                  }`}
                 >
                   BUY NOW
                 </Link>
@@ -235,21 +253,41 @@ export default function ProductDetailPageClient({
                 <p>
                   Sold By: <span className="font-semibold text-[#d41158]">{product.sellerName}</span>
                 </p>
-                <p className="mt-0.5">
-                  Vendor Source: <span className="text-blue-700">{product.vendorSource || "Mystore"}</span>
-                </p>
+                {product.vendorSource ? (
+                  <p className="mt-0.5">
+                    Vendor Source: <span className="text-blue-700">{product.vendorSource}</span>
+                  </p>
+                ) : null}
                 <p className="mt-0.5 text-amber-500">
                   {Number(product.rating || 0).toFixed(1)} / 5 ({Number(product.reviews || 0)} reviews)
                 </p>
               </div>
 
               <div className="rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm text-slate-700">
-                <p>{product.isCancellable ? "Cancellable" : "Not Cancellable"}</p>
-                <p>{product.isReturnable ? "Returnable" : "Not Returnable"}</p>
+                <p>
+                  {typeof product.isCancellable === "boolean"
+                    ? product.isCancellable
+                      ? "Cancellable"
+                      : "Not Cancellable"
+                    : "Cancellation policy not specified"}
+                </p>
+                <p>
+                  {typeof product.isReturnable === "boolean"
+                    ? product.isReturnable
+                      ? "Returnable"
+                      : "Not Returnable"
+                    : "Return policy not specified"}
+                </p>
               </div>
 
               <p className="text-xs text-slate-600">
-                Total: <span className="font-semibold text-slate-900">Rs. {totalPrice.toLocaleString("en-IN")}</span>
+                {hasPrice ? (
+                  <>
+                    Total: <span className="font-semibold text-slate-900">Rs. {totalPrice.toLocaleString("en-IN")}</span>
+                  </>
+                ) : (
+                  <span className="font-semibold text-slate-700">Contact seller for pricing</span>
+                )}
               </p>
             </div>
           </aside>
@@ -259,28 +297,40 @@ export default function ProductDetailPageClient({
       <section className="grid gap-4 lg:grid-cols-2">
         <article className="rounded-2xl border border-slate-200 bg-white p-4">
           <h2 className="text-lg font-bold text-slate-900">About Product</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{product.description}</p>
+          {product.description ? (
+            <p className="mt-2 text-sm leading-6 text-slate-700">{product.description}</p>
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-slate-500">Description not provided by seller yet.</p>
+          )}
 
-          <ul className="mt-4 space-y-2 text-sm text-slate-700">
-            {product.highlights.map((item, index) => (
-              <li key={`${product.id}-h-${index}`} className="flex items-start gap-2">
-                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-blue-700" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+          {product.highlights.length > 0 ? (
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              {product.highlights.map((item, index) => (
+                <li key={`${product.id}-h-${index}`} className="flex items-start gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-blue-700" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">No highlights provided yet.</p>
+          )}
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4">
           <h2 className="text-lg font-bold text-slate-900">Product Details</h2>
-          <div className="mt-3 overflow-hidden rounded-xl border border-slate-300">
-            {product.keyAttributes.map(([label, value], index) => (
-              <div key={`${product.id}-${label}-${index}`} className="grid grid-cols-2 border-b border-slate-200 last:border-b-0">
-                <p className="bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{label}</p>
-                <p className="px-3 py-2 text-sm text-slate-700">{value}</p>
-              </div>
-            ))}
-          </div>
+          {product.keyAttributes.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-300">
+              {product.keyAttributes.map(([label, value], index) => (
+                <div key={`${product.id}-${label}-${index}`} className="grid grid-cols-2 border-b border-slate-200 last:border-b-0">
+                  <p className="bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{label}</p>
+                  <p className="px-3 py-2 text-sm text-slate-700">{value}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">No product details provided yet.</p>
+          )}
         </article>
 
         {product.specifications && product.specifications.length > 0 ? (

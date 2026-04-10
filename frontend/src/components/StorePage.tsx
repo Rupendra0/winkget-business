@@ -159,6 +159,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
+            {featuredProducts.length > 0 ? (
             <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div>
@@ -228,7 +229,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 })}
               </div>
             </section>
+            ) : null}
 
+            {trendingProducts.length > 0 ? (
             <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
                 <div className="flex items-center justify-between">
                 <div>
@@ -298,6 +301,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 })}
               </div>
             </section>
+            ) : null}
 
             <section className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 card-hover">
               <div className="flex items-center justify-between">

@@ -34,13 +34,13 @@ export type ProductDetailModel = {
   categoryLabel: string;
   subcategoryName: string;
   sellerName: string;
-  vendorSource: string;
+  vendorSource?: string;
   rating: number;
   reviews: number;
-  shippingLabel: string;
-  deliveryByText: string;
-  isCancellable: boolean;
-  isReturnable: boolean;
+  shippingLabel?: string;
+  deliveryByText?: string;
+  isCancellable?: boolean;
+  isReturnable?: boolean;
 };
 
 export type RelatedProductModel = {
@@ -84,17 +84,6 @@ const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
-const buildDeliveryText = () => {
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + 3);
-
-  const weekday = nextDate.toLocaleDateString("en-IN", { weekday: "long" });
-  const day = nextDate.toLocaleDateString("en-IN", { day: "2-digit" });
-  const month = nextDate.toLocaleDateString("en-IN", { month: "short" });
-
-  return `${weekday}, ${day} ${month}`;
-};
-
 const uniqueStrings = (values: Array<string | undefined>) => {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -112,7 +101,7 @@ const uniqueStrings = (values: Array<string | undefined>) => {
   return result;
 };
 
-const deriveDiscount = (product: StoreProduct, productIndex: number) => {
+const deriveDiscount = (product: StoreProduct) => {
   const badge = normalizeString(product.badge);
   const badgeDiscountMatch = badge.match(/(\d{1,2})\s*%/);
   if (badgeDiscountMatch) {
@@ -122,7 +111,7 @@ const deriveDiscount = (product: StoreProduct, productIndex: number) => {
     }
   }
 
-  return productIndex % 2 === 0 ? 14 : 10;
+  return 0;
 };
 
 const toCategorySlug = (value: string) => {
@@ -142,8 +131,7 @@ const toStoreProductsFromVendorProducts = (
     const productName = normalizeString(product.productName) || `Product ${index + 1}`;
 
     const priceValue = parsePriceValue(product.price, 0);
-    const safePriceValue = priceValue > 0 ? priceValue : 499 + index * 150;
-    const oldPriceValue = parsePriceValue(product.oldPrice, safePriceValue);
+    const oldPriceValue = parsePriceValue(product.oldPrice, 0);
 
     const image =
       normalizeString(product.image) ||
@@ -160,7 +148,7 @@ const toStoreProductsFromVendorProducts = (
     return {
       id,
       name: productName,
-      price: formatPriceText(safePriceValue),
+      price: formatPriceText(priceValue),
       category,
       imageUrl: image,
       badge: normalizeString(product.badge) || undefined,
@@ -174,7 +162,7 @@ const toStoreProductsFromVendorProducts = (
       inventory: Number.isFinite(Number(product.inventory)) ? Number(product.inventory) : undefined,
       moq: Number.isFinite(Number(product.moq)) ? Number(product.moq) : undefined,
       sellerName: normalizeString(product.sellerName || profile.name) || profile.name,
-      vendorSource: normalizeString(product.vendorSource) || "Winkget Marketplace",
+      vendorSource: normalizeString(product.vendorSource) || undefined,
       rating: Number.isFinite(Number(product.rating)) ? Number(product.rating) : undefined,
       reviews: Number.isFinite(Number(product.reviews)) ? Number(product.reviews) : undefined,
       shippingLabel: normalizeString(product.shippingLabel) || undefined,
@@ -207,19 +195,13 @@ const toStoreProductsFromVendorProducts = (
   });
 };
 
-const toProductGallery = (product: StoreProduct, storeData: StorePageData) => {
+const toProductGallery = (product: StoreProduct) => {
   const productGallery = Array.isArray(product.gallery) ? product.gallery : [];
 
-  return uniqueStrings([
-    ...productGallery,
-    product.imageUrl,
-    ...storeData.products.map((item) => item.imageUrl),
-    storeData.bannerImage,
-    storeData.logoImage,
-  ]).slice(0, 5);
+  return uniqueStrings([...productGallery, product.imageUrl]).slice(0, 8);
 };
 
-const toHighlights = (product: StoreProduct, storeData: StorePageData) => {
+const toHighlights = (product: StoreProduct) => {
   const explicitHighlights = Array.isArray(product.highlights)
     ? product.highlights.map((item) => normalizeString(item)).filter(Boolean)
     : [];
@@ -228,12 +210,7 @@ const toHighlights = (product: StoreProduct, storeData: StorePageData) => {
     return uniqueStrings(explicitHighlights).slice(0, 6);
   }
 
-  return uniqueStrings([
-    `${storeData.storeName} verified seller guarantee`,
-    "Quality checked before dispatch",
-    "Secure payments and doorstep delivery",
-    product.badge,
-  ]).slice(0, 5);
+  return [];
 };
 
 const toKeyAttributes = (product: StoreProduct, storeData: StorePageData) => {
@@ -247,16 +224,28 @@ const toKeyAttributes = (product: StoreProduct, storeData: StorePageData) => {
     }
   }
 
-  return [
+  const derived: Array<[string, string]> = [
     ["Product ID", normalizeString(product.id)],
-    ["Category", normalizeString(product.category) || "Products"],
-    ["Seller", normalizeString(storeData.storeName)],
-    ["Availability", "In Stock"],
-    ["Dispatch", "Within 24 Hours"],
-  ] as Array<[string, string]>;
+    ["Category", normalizeString(product.categoryLabel || product.category)],
+    ["Seller", normalizeString(product.sellerName || storeData.storeName)],
+  ];
+
+  if (Number.isFinite(Number(product.inventory))) {
+    derived.push(["Stock", String(Number(product.inventory))]);
+  }
+
+  if (Number.isFinite(Number(product.moq))) {
+    derived.push(["MOQ", String(Number(product.moq))]);
+  }
+
+  if (normalizeString(product.shippingTimeline)) {
+    derived.push(["Shipping Timeline", normalizeString(product.shippingTimeline)]);
+  }
+
+  return derived.filter((item) => Boolean(item[1]));
 };
 
-const toSpecifications = (product: StoreProduct, storeData: StorePageData) => {
+const toSpecifications = (product: StoreProduct) => {
   if (Array.isArray(product.specifications) && product.specifications.length > 0) {
     const mapped = product.specifications
       .map((item) => [normalizeString(item.label), normalizeString(item.value)] as [string, string])
@@ -267,49 +256,43 @@ const toSpecifications = (product: StoreProduct, storeData: StorePageData) => {
     }
   }
 
-  return [
-    ["Brand", normalizeString(storeData.storeName)],
-    ["Model", normalizeString(product.name)],
-    ["Category", normalizeString(product.category) || "Products"],
-    ["Shipping", "Standard + Express"],
-    ["Warranty", "Manufacturer warranty where applicable"],
-  ] as Array<[string, string]>;
+  const derived: Array<[string, string]> = [
+    ["Category", normalizeString(product.categoryLabel || product.category)],
+    ["Subcategory", normalizeString(product.subcategoryName)],
+    ["Shipping", normalizeString(product.shippingLabel)],
+    ["Delivery", normalizeString(product.deliveryByText)],
+  ];
+
+  return derived.filter((item) => Boolean(item[1]));
 };
 
-const toProductDescription = (product: StoreProduct, storeData: StorePageData) => {
+const toProductDescription = (product: StoreProduct) => {
   const explicitDescription = normalizeString(product.description || product.shortDescription);
   if (explicitDescription) {
     return explicitDescription;
   }
 
-  const productName = normalizeString(product.name) || "This product";
-  const storeName = normalizeString(storeData.storeName) || "our seller";
-  const category = normalizeString(product.category) || "daily-use category";
-
-  return `${productName} is offered by ${storeName} with verified quality checks and competitive pricing. This item belongs to the ${category} category and is curated for reliable performance, easy ordering, and quick delivery through Winkget.`;
+  return "";
 };
 
 const toProductModel = (
   product: StoreProduct,
-  storeData: StorePageData,
-  productIndex: number
+  storeData: StorePageData
 ): ProductDetailModel => {
-  const parsedPrice = parsePriceValue(product.price, 0);
-  const fallbackPrice = 999 + productIndex * 250;
-  const price = parsedPrice > 0 ? parsedPrice : fallbackPrice;
+  const price = parsePriceValue(product.price, 0);
   const parsedOldPrice = parsePriceValue(product.oldPriceValue, 0);
-  const derivedDiscount = deriveDiscount(product, productIndex);
-  const derivedOldPrice = derivedDiscount > 0 ? Math.max(price, Math.round(price / (1 - derivedDiscount / 100))) : price;
-  const oldPrice = parsedOldPrice > 0 ? Math.max(parsedOldPrice, price) : derivedOldPrice;
+  const oldPrice = parsedOldPrice > price ? parsedOldPrice : 0;
   const discount = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
-  const categoryLabel = normalizeString(product.categoryLabel || product.category) || "Products";
+  const categoryLabel = normalizeString(product.categoryLabel || product.category);
   const categorySlug = normalizeString(product.categorySlug) || toCategorySlug(categoryLabel);
-  const gallery = toProductGallery(product, storeData);
-  const image = gallery[0] || storeData.logoImage || storeData.bannerImage;
-  const sellerName = normalizeString(product.sellerName || storeData.storeName) || "Winkget Seller";
-  const rating = Number.isFinite(Number(product.rating)) ? Number(product.rating) : Number(storeData.rating || 0);
-  const reviews = Number.isFinite(Number(product.reviews)) ? Number(product.reviews) : Number(storeData.reviews || 0);
+  const gallery = toProductGallery(product);
+  const image = gallery[0] || normalizeString(product.imageUrl) || storeData.logoImage;
+  const sellerName = normalizeString(product.sellerName || storeData.storeName);
+  const rating = Number.isFinite(Number(product.rating)) ? Number(product.rating) : 0;
+  const reviews = Number.isFinite(Number(product.reviews)) ? Number(product.reviews) : 0;
+  const badgeDiscount = deriveDiscount(product);
+  const effectiveDiscount = discount > 0 ? discount : badgeDiscount;
 
   return {
     id: normalizeString(product.id),
@@ -319,33 +302,32 @@ const toProductModel = (
     gallery,
     price,
     oldPrice,
-    discount,
+    discount: effectiveDiscount,
     priceText: formatPriceText(price),
-    oldPriceText: formatPriceText(oldPrice),
-    description: toProductDescription(product, storeData),
+    oldPriceText: formatPriceText(oldPrice > 0 ? oldPrice : price),
+    description: toProductDescription(product),
     keyAttributes: toKeyAttributes(product, storeData),
-    highlights: toHighlights(product, storeData),
-    specifications: toSpecifications(product, storeData),
+    highlights: toHighlights(product),
+    specifications: toSpecifications(product),
     categorySlug,
     categoryLabel,
-    subcategoryName: normalizeString(product.subcategoryName || product.category) || categoryLabel,
+    subcategoryName: normalizeString(product.subcategoryName || product.category),
     sellerName,
-    vendorSource: normalizeString(product.vendorSource) || "Winkget Marketplace",
+    vendorSource: normalizeString(product.vendorSource) || undefined,
     rating,
     reviews,
-    shippingLabel: normalizeString(product.shippingLabel) || "Free Shipping",
-    deliveryByText: normalizeString(product.deliveryByText) || buildDeliveryText(),
-    isCancellable: typeof product.isCancellable === "boolean" ? product.isCancellable : true,
-    isReturnable: typeof product.isReturnable === "boolean" ? product.isReturnable : true,
+    shippingLabel: normalizeString(product.shippingLabel) || undefined,
+    deliveryByText: normalizeString(product.deliveryByText) || undefined,
+    isCancellable: typeof product.isCancellable === "boolean" ? product.isCancellable : undefined,
+    isReturnable: typeof product.isReturnable === "boolean" ? product.isReturnable : undefined,
   };
 };
 
 const toRelatedProductModel = (
   product: StoreProduct,
-  storeData: StorePageData,
-  productIndex: number
+  storeData: StorePageData
 ): RelatedProductModel => {
-  const mapped = toProductModel(product, storeData, productIndex);
+  const mapped = toProductModel(product, storeData);
 
   return {
     id: mapped.id,
@@ -374,12 +356,12 @@ const findProductInStore = (storeData: StorePageData, productToken: string) => {
   }
 
   const product = storeData.products[productIndex];
-  const mappedProduct = toProductModel(product, storeData, productIndex);
+  const mappedProduct = toProductModel(product, storeData);
 
   const relatedProducts = storeData.products
     .filter((candidate) => candidate.id !== product.id)
     .slice(0, 6)
-    .map((candidate, index) => toRelatedProductModel(candidate, storeData, index));
+    .map((candidate) => toRelatedProductModel(candidate, storeData));
 
   return {
     product: mappedProduct,
@@ -390,7 +372,10 @@ const findProductInStore = (storeData: StorePageData, productToken: string) => {
 export const toStoreDataFromProfile = (
   profile: ListingProfile,
   idFallback: string,
-  vendorProducts: CatalogVendorProduct[] = []
+  vendorProducts: CatalogVendorProduct[] = [],
+  options?: {
+    includeMockFallbackProducts?: boolean;
+  }
 ): StorePageData => {
   const fallbackId = normalizeString(idFallback);
   const profileId = normalizeString(profile.id);
@@ -405,6 +390,7 @@ export const toStoreDataFromProfile = (
   const imageUrl = normalizeString(profile.coverImage) || normalizeString(profile.logoImage);
   const addressLabel = [profile.address, profile.city].filter(Boolean).join(", ") || "Address unavailable";
   const mappedProducts = toStoreProductsFromVendorProducts(vendorProducts, profile, storeId);
+  const includeMockFallbackProducts = options?.includeMockFallbackProducts ?? true;
 
   const fallbackProducts: StoreProduct[] = [
     {
@@ -423,13 +409,10 @@ export const toStoreDataFromProfile = (
     },
   ];
 
-  const products = mappedProducts.length > 0 ? mappedProducts : fallbackProducts;
+  const products = mappedProducts.length > 0 ? mappedProducts : includeMockFallbackProducts ? fallbackProducts : [];
   const categories = uniqueStrings([
     ...products.map((product) => normalizeString(product.categoryLabel || product.category)),
     categoryLabel,
-    "Deals",
-    "Top Rated",
-    "New",
   ]).slice(0, 12);
 
   const featuredFromPlacement = products
@@ -439,17 +422,22 @@ export const toStoreDataFromProfile = (
     .filter((item) => item.storePlacement === "trending")
     .map((item) => item.id);
 
-  const featuredProductIds =
-    featuredFromPlacement.length > 0
-      ? featuredFromPlacement.slice(0, 6)
-      : products.slice(0, Math.min(6, products.length)).map((item) => item.id);
+  const allProductIds = products.map((item) => item.id);
+  const explicitFeaturedIds = Array.from(new Set(featuredFromPlacement));
+  const explicitTrendingIds = Array.from(new Set(trendingFromPlacement));
 
+  const featuredFallbackPool = allProductIds.filter((id) => !explicitTrendingIds.includes(id));
+  const featuredProductIds =
+    explicitFeaturedIds.length > 0
+      ? explicitFeaturedIds.slice(0, 6)
+      : featuredFallbackPool.slice(0, 6);
+
+  const featuredIdSet = new Set(featuredProductIds);
+  const trendingFallbackPool = allProductIds.filter((id) => !featuredIdSet.has(id));
   const trendingProductIds =
-    trendingFromPlacement.length > 0
-      ? trendingFromPlacement.slice(0, 6)
-      : products.length > 1
-        ? products.slice(1, Math.min(7, products.length)).map((item) => item.id)
-        : featuredProductIds;
+    explicitTrendingIds.length > 0
+      ? explicitTrendingIds.filter((id) => !featuredIdSet.has(id)).slice(0, 6)
+      : trendingFallbackPool.slice(0, 6);
 
   return {
     id: storeId,
@@ -507,14 +495,13 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
       logoImage: normalizeString(liveVendor.myStoreImage) || baseProfile.logoImage,
       coverImage: normalizeString(liveVendor.myStoreBannerImage) || baseProfile.coverImage,
     };
-    return toStoreDataFromProfile(profile, resolvedId, liveProducts);
+    return toStoreDataFromProfile(profile, resolvedId, liveProducts, {
+      includeMockFallbackProducts: false,
+    });
   };
 
   if (shouldPreferLiveVendor) {
-    const liveStore = await resolveLiveVendorStore();
-    if (liveStore) {
-      return liveStore;
-    }
+    return resolveLiveVendorStore();
   }
 
   const staticStore = storePages[resolvedId];
@@ -563,6 +550,10 @@ export async function resolveProductBySlug(
       if (result) {
         return result;
       }
+    }
+
+    if (OBJECT_ID_REGEX.test(storeToken)) {
+      return null;
     }
   }
 
