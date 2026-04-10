@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
-import { brandPartners } from "@/data/homeData";
 
 type SponsorCardPayload = {
   cardId?: string;
@@ -41,21 +40,10 @@ const normalizeSponsorCard = (card: SponsorCardPayload, fallbackIndex: number): 
   name: String(card.title || `Sponsor ${fallbackIndex + 1}`).trim() || `Sponsor ${fallbackIndex + 1}`,
 });
 
-const toFallbackCards = (): SponsorCard[] =>
-  brandPartners
-    .map((partner, index) => ({
-      cardId: `fallback-${index + 1}`,
-      image: normalizeMedia(partner.logoUrl),
-      link: "",
-      order: index + 1,
-      name: String(partner.name || `Sponsor ${index + 1}`).trim() || `Sponsor ${index + 1}`,
-    }))
-    .filter((card) => card.image)
-    .slice(0, SPONSOR_LIMIT);
-
 export default function PartnersSection() {
-  const [heading, setHeading] = useState(SPONSOR_DEFAULT_HEADING);
-  const [cards, setCards] = useState<SponsorCard[]>(toFallbackCards());
+  const [heading, setHeading] = useState("");
+  const [cards, setCards] = useState<SponsorCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [mobileIndex, setMobileIndex] = useState(0);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -65,6 +53,7 @@ export default function PartnersSection() {
     let active = true;
 
     const loadSponsors = async () => {
+      setIsLoading(true);
       try {
         const response = await fetch(`${BACKEND_URL}/api/home-sponsor-cards`, { cache: "no-store" });
         const payload = (await response.json()) as HomeSponsorPayload;
@@ -72,6 +61,8 @@ export default function PartnersSection() {
         if (!active) return;
 
         if (!response.ok || !payload.ok) {
+          setHeading("");
+          setCards([]);
           return;
         }
 
@@ -85,9 +76,17 @@ export default function PartnersSection() {
         if (nextCards.length > 0) {
           setHeading(nextHeading);
           setCards(nextCards);
+        } else {
+          setHeading("");
+          setCards([]);
         }
       } catch {
-        // Keep fallback cards on fetch failures.
+        if (!active) return;
+        setHeading("");
+        setCards([]);
+      } finally {
+        if (!active) return;
+        setIsLoading(false);
       }
     };
 
@@ -112,6 +111,25 @@ export default function PartnersSection() {
     if (mobileIndex < cards.length) return;
     setMobileIndex(0);
   }, [cards.length, mobileIndex]);
+
+  if (isLoading) {
+    return (
+      <section className="px-3 py-6 sm:px-4 lg:px-6 xl:px-8">
+        <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+          <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {Array.from({ length: SPONSOR_LIMIT }).map((_, index) => (
+              <div key={`sponsor-skeleton-${index}`} className="h-[112px] w-[112px] shrink-0 rounded-full bg-slate-200/70" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (cards.length === 0) {
+    return null;
+  }
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];

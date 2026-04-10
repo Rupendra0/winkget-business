@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { localPartners } from "@/data/homeData";
 import { fetchVendors } from "@/lib/catalogClient";
 import { readSelectedCity, subscribeLocationCity } from "@/lib/locationStore";
 
@@ -52,27 +51,7 @@ export default function CityStrip() {
         if (!active) return;
 
         if (liveVendors.length === 0) {
-          if (cityFilter) {
-            setPartners([]);
-            setIsLoading(false);
-            return;
-          }
-
-          setPartners(
-            localPartners.map((partner, index) => ({
-              id: `fallback-${index}`,
-              name: partner.name,
-              category: "Recently joined",
-              city: "Any city",
-              rating: 4.5,
-              reviews: 0,
-              address: "Verified partner on Winkget",
-              imageUrl: partner.logoUrl,
-              href: "#",
-              isNew: index < 3,
-            }))
-          );
-          setIsLoading(false);
+          setPartners([]);
           return;
         }
 
@@ -125,32 +104,41 @@ export default function CityStrip() {
     return `Recently added vendors in ${city}`;
   }, [selectedCity]);
 
-  const visiblePartners = useMemo(
-    () =>
-      partners.length > 0
-        ? partners
-        : selectedCity
-          ? []
-          : localPartners.map((partner, index) => ({
-            id: `fallback-initial-${index}`,
-            name: partner.name,
-            category: "Recently joined",
-            city: "Any city",
-            rating: 4.5,
-            reviews: 0,
-            address: "Verified partner on Winkget",
-            imageUrl: partner.logoUrl,
-            href: "#",
-            isNew: index < 3,
-          })),
-    [partners, selectedCity]
-  );
-
   const formatRating = (value: number) => {
     const safe = Number.isFinite(value) ? value : 0;
     if (safe <= 0) return "New";
     return `${safe.toFixed(1)} / 5`;
   };
+
+  if (isLoading) {
+    return (
+      <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+        <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+          <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
+          <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
+          <div className="flex gap-6 overflow-x-auto pb-2">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`city-partner-skeleton-${index}`}
+                className="shrink-0 basis-[76%] overflow-hidden rounded-xl border border-slate-200 bg-white sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)]"
+              >
+                <div className="h-32 w-full bg-slate-200/70" />
+                <div className="space-y-2 p-3">
+                  <div className="h-4 w-2/3 rounded bg-slate-200/70" />
+                  <div className="h-3 w-1/2 rounded bg-slate-200/70" />
+                  <div className="h-3 w-3/4 rounded bg-slate-200/70" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (loadError || partners.length === 0) {
+    return null;
+  }
 
   return (
     <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
@@ -160,14 +148,8 @@ export default function CityStrip() {
           <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>
         </div>
 
-        {isLoading ? <p className="text-sm text-gray-500">Loading recent vendors...</p> : null}
-        {!isLoading && loadError ? <p className="text-sm text-gray-500">{loadError}</p> : null}
-        {!isLoading && !loadError && visiblePartners.length === 0 ? (
-          <p className="text-sm text-gray-500">No recent vendors found for the selected city yet.</p>
-        ) : null}
-
         <div className="flex gap-6 overflow-x-auto pb-2 no-scrollbar">
-          {visiblePartners.map((partner) => (
+          {partners.map((partner) => (
             <Link
               key={partner.id}
               href={partner.href}

@@ -173,17 +173,10 @@ export default function CategoryGrid() {
   return (
     <section className="px-3 pt-1 pb-3 md:px-4 md:pt-2 md:pb-4 lg:px-6 lg:pt-2 lg:pb-6 xl:px-8">
       <div className="w-full">
-        {/* Section header */}
-        <div className="mb-3">
-          <p className="font-heading text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-            Popular services across your city
-          </p>
-        </div>
-
         {/* Category Grid */}
         <div className="pb-2">
           {isLoading ? (
-            <p className="px-2 text-sm text-slate-500">Loading categories...</p>
+            <p className="px-2 text-sm text-slate-500"></p>
           ) : null}
 
           {!isLoading && loadError && sortedCategories.length === 0 ? (

@@ -165,9 +165,7 @@ export default function BannerSection() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-500">
-                    {slide.title}
-                  </div>
+                  <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
                 )}
               </div>
             ))}
@@ -205,9 +203,7 @@ export default function BannerSection() {
                   loading="lazy"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-500">
-                  {tile.title}
-                </div>
+                <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
               )}
             </div>
           );

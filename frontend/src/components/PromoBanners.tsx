@@ -46,8 +46,9 @@ const normalizeCard = (card: PromoCardPayload, fallbackIndex: number): PromoCard
 
 export default function PromoBanners() {
   const [selectedCity, setSelectedCity] = useState("");
-  const [heading, setHeading] = useState(DEFAULT_HEADING);
+  const [heading, setHeading] = useState("");
   const [cards, setCards] = useState<PromoCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [mobileIndex, setMobileIndex] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -62,6 +63,7 @@ export default function PromoBanners() {
     let active = true;
 
     const loadSection = async () => {
+      setIsLoading(true);
       try {
         const response = await fetch(`${BACKEND_URL}/api/home-promo-cards`, { cache: "no-store" });
         const payload = (await response.json()) as HomePromoSectionPayload;
@@ -69,6 +71,7 @@ export default function PromoBanners() {
         if (!active || !response.ok || !payload.ok || !payload.section) {
           if (!active) return;
           setLoadError(true);
+          setHeading("");
           setCards([]);
           return;
         }
@@ -85,7 +88,11 @@ export default function PromoBanners() {
       } catch {
         if (!active) return;
         setLoadError(true);
+        setHeading("");
         setCards([]);
+      } finally {
+        if (!active) return;
+        setIsLoading(false);
       }
     };
 
@@ -177,6 +184,30 @@ export default function PromoBanners() {
     return `/category/${categorySlug}?city=${encodeURIComponent(city)}`;
   };
 
+  if (isLoading) {
+    return (
+      <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+        <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+          <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={`promo-skeleton-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div className="h-[200px] w-full bg-slate-200/70 sm:h-[215px]" />
+                <div className="p-3">
+                  <div className="h-4 w-2/3 rounded bg-slate-200/70" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (loadError || visibleCards.length === 0) {
+    return null;
+  }
+
   return (
     <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
@@ -184,8 +215,7 @@ export default function PromoBanners() {
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        {visibleCards.length > 0 ? (
-          <>
+        <>
             <div className="md:hidden">
               <div
                 className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
@@ -263,11 +293,6 @@ export default function PromoBanners() {
               ))}
             </div>
           </>
-        ) : (
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-500">
-            {loadError ? "Promotional cards are not available right now." : "No promotional cards are configured yet."}
-          </div>
-        )}
       </div>
     </section>
   );
