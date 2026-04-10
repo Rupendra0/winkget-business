@@ -42,6 +42,7 @@ import {
   updateVendorProduct,
   updateVendorInquiryStatus,
   updateVendorProfile,
+  updateVendorStoreStatus,
   type InquiryStatus,
   type VendorCatalogCategory,
   type VendorCity,
@@ -93,6 +94,13 @@ type VendorNotification = {
   title: string;
   detail: string;
   createdAt: string;
+};
+
+type VendorBusinessStatus = {
+  isOpen: boolean | null;
+  source: "manual" | "schedule" | "unknown" | "vendor-status";
+  mode: "auto" | "manual";
+  manualStatus: "open" | "closed" | null;
 };
 
 type ShopProfileFormState = {
@@ -289,26 +297,88 @@ function parseTimeToMinutes(value: string) {
   return hour * 60 + minute;
 }
 
-function isBusinessOpenNow(vendor: VendorSession) {
+function resolveBusinessStatus(vendor: VendorSession): VendorBusinessStatus {
+  const mode = vendor.storeStatusMode === "manual" ? "manual" : "auto";
+  const manualStatus =
+    vendor.manualStoreStatus === "open" || vendor.manualStoreStatus === "closed"
+      ? vendor.manualStoreStatus
+      : null;
+
   if (vendor.vendorStatus !== "approved") {
-    return false;
+    return {
+      isOpen: false,
+      source: "vendor-status",
+      mode,
+      manualStatus,
+    };
+  }
+
+  if (typeof vendor.isStoreOpen === "boolean") {
+    const source =
+      vendor.storeStatusSource === "manual" ||
+      vendor.storeStatusSource === "schedule" ||
+      vendor.storeStatusSource === "unknown" ||
+      vendor.storeStatusSource === "vendor-status"
+        ? vendor.storeStatusSource
+        : mode === "manual" && manualStatus
+          ? "manual"
+          : "schedule";
+
+    return {
+      isOpen: vendor.isStoreOpen,
+      source,
+      mode,
+      manualStatus,
+    };
+  }
+
+  if (mode === "manual" && manualStatus) {
+    return {
+      isOpen: manualStatus === "open",
+      source: "manual",
+      mode,
+      manualStatus,
+    };
   }
 
   const opening = parseTimeToMinutes(String(vendor.shopOpeningTime || ""));
   const closing = parseTimeToMinutes(String(vendor.shopClosingTime || ""));
   if (opening === null || closing === null) {
-    return true;
+    return {
+      isOpen: null,
+      source: "unknown",
+      mode,
+      manualStatus,
+    };
   }
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  if (opening === closing) return true;
-  if (opening < closing) {
-    return nowMinutes >= opening && nowMinutes < closing;
+  if (opening === closing) {
+    return {
+      isOpen: true,
+      source: "schedule",
+      mode,
+      manualStatus,
+    };
   }
 
-  return nowMinutes >= opening || nowMinutes < closing;
+  if (opening < closing) {
+    return {
+      isOpen: nowMinutes >= opening && nowMinutes < closing,
+      source: "schedule",
+      mode,
+      manualStatus,
+    };
+  }
+
+  return {
+    isOpen: nowMinutes >= opening || nowMinutes < closing,
+    source: "schedule",
+    mode,
+    manualStatus,
+  };
 }
 
 function formatRating(value: number) {
@@ -2290,6 +2360,9 @@ export default function VendorDashboard() {
   const [shopProfileSaving, setShopProfileSaving] = useState(false);
   const [shopProfileMessage, setShopProfileMessage] = useState<string | null>(null);
   const [shopProfileError, setShopProfileError] = useState<string | null>(null);
+  const [storeStatusSaving, setStoreStatusSaving] = useState(false);
+  const [storeStatusMessage, setStoreStatusMessage] = useState<string | null>(null);
+  const [storeStatusError, setStoreStatusError] = useState<string | null>(null);
   const [shopTabMode, setShopTabMode] = useState<"Shop" | "MyStore">("Shop");
   const [cityOptions, setCityOptions] = useState<VendorCity[]>([]);
   const [cityOptionsError, setCityOptionsError] = useState<string | null>(null);
@@ -2578,7 +2651,33 @@ export default function VendorDashboard() {
     ];
   }, [callLeads.length, enquiryItems.length, enquirySummary.open, reviews.summary.rating, reviews.summary.reviews]);
 
-  const isOpen = useMemo(() => (vendor ? isBusinessOpenNow(vendor) : false), [vendor]);
+  const currentStoreStatus = useMemo<VendorBusinessStatus>(() => {
+    if (!vendor) {
+      return {
+        isOpen: null,
+        source: "unknown",
+        mode: "auto",
+        manualStatus: null,
+      };
+    }
+
+    return resolveBusinessStatus(vendor);
+  }, [vendor]);
+
+  const storeStatusLabel =
+    currentStoreStatus.isOpen === true
+      ? "Open"
+      : currentStoreStatus.isOpen === false
+        ? "Closed"
+        : "Hours unavailable";
+  const storeStatusSourceLabel =
+    currentStoreStatus.source === "manual"
+      ? "Manual"
+      : currentStoreStatus.source === "schedule"
+        ? "Schedule"
+        : currentStoreStatus.source === "vendor-status"
+          ? "Vendor status"
+          : "Unknown";
 
   const leadSources = useMemo(() => {
     const total = inquiryData.inquiries.length;
@@ -2740,8 +2839,8 @@ export default function VendorDashboard() {
 
   const sectionMeta = SECTION_META[activeNav];
   const shouldShowQuickAnalytics = activeNav !== "Products";
-  const greetingName = String(vendor?.name || vendor?.businessName || "Partner").trim() || "Partner";
   const businessName = String(vendor?.businessName || "Your Business").trim() || "Your Business";
+  const vendorName = String(vendor?.name || "Vendor").trim() || "Vendor";
   const location = [vendor?.city, vendor?.state].filter(Boolean).join(", ") || "Location not set";
   const sidebarAvatar = String(vendor?.image || DEFAULT_VENDOR_AVATAR).trim() || DEFAULT_VENDOR_AVATAR;
 
@@ -3107,6 +3206,44 @@ export default function VendorDashboard() {
     });
 
     await persistMyStoreMedia(field, nextImage, nextBannerImage);
+  };
+
+  const handleVendorStoreStatusChange = async (
+    nextMode: "auto" | "manual",
+    nextManualStatus?: "open" | "closed"
+  ) => {
+    if (!vendor || storeStatusSaving) return;
+
+    setStoreStatusSaving(true);
+    setStoreStatusMessage(null);
+    setStoreStatusError(null);
+
+    try {
+      const updatedStatus = await updateVendorStoreStatus({
+        storeStatusMode: nextMode,
+        manualStoreStatus: nextMode === "manual" ? nextManualStatus : undefined,
+      });
+
+      setVendor((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          ...updatedStatus,
+        };
+      });
+
+      if (nextMode === "auto") {
+        setStoreStatusMessage("Store status now follows shop schedule.");
+      } else {
+        setStoreStatusMessage(nextManualStatus === "open" ? "Store marked as open." : "Store marked as closed.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update store status";
+      setStoreStatusError(message);
+    } finally {
+      setStoreStatusSaving(false);
+    }
   };
 
   const handlePostSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -3511,74 +3648,120 @@ export default function VendorDashboard() {
           </aside>
 
           <section className="min-w-0 space-y-5">
-            <header className="rounded-3xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-md">
-              <div className="flex flex-wrap items-center justify-end gap-2 border-b border-white/80 pb-4">
-                <button
-                  type="button"
-                  onClick={() => setActiveNav("Shop")}
-                  className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm"
-                  aria-label="Open shop profile"
-                >
-                  <img src={sidebarAvatar} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
-                </button>
-                <button
-                  type="button"
-                  onClick={refreshDashboardData}
-                  disabled={refreshing}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
-                >
-                  <RefreshCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
-                  {refreshing ? "Refreshing" : "Refresh"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAlertsOpen((current) => !current)}
-                  className="relative inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                >
-                  <Bell className="h-4 w-4" aria-hidden="true" />
-                  Alerts
-                  {unreadAlertsCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">
-                      {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
-                    </span>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  {loggingOut ? "Signing out" : "Logout"}
-                </button>
+            <header className="rounded-2xl border border-white/20 bg-white/70 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/80 pb-3">
+                <div className="min-w-0 pr-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700/80">Shop</p>
+                  <h1 className="mt-0.5 truncate font-display text-xl font-semibold text-gray-900 sm:text-2xl">{businessName}</h1>
+                  <p className="mt-0.5 text-xs text-gray-500">Vendor: {vendorName}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNav("Shop")}
+                    className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm"
+                    aria-label="Open shop profile"
+                  >
+                    <img src={sidebarAvatar} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={refreshDashboardData}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    <RefreshCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
+                    {refreshing ? "Refreshing" : "Refresh"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAlertsOpen((current) => !current)}
+                    className="relative inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    <Bell className="h-4 w-4" aria-hidden="true" />
+                    Alerts
+                    {unreadAlertsCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">
+                        {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    {loggingOut ? "Signing out" : "Logout"}
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700/80">{sectionMeta.title}</p>
-                  <p className="mt-1 text-sm text-gray-600">Good to see you,</p>
-                  <h1 className="font-display text-2xl font-semibold text-gray-900 sm:text-3xl">{greetingName}</h1>
-                  <p className="mt-1 max-w-3xl text-sm text-gray-600">{sectionMeta.subtitle}</p>
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <p className="text-sm text-gray-600">{location}</p>
+                  <p className="text-[11px] text-gray-500">Status Source: {storeStatusSourceLabel}</p>
+                </div>
 
-                  <div className="mt-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Business Summary</p>
-                    <h2 className="mt-1 font-display text-2xl font-semibold text-gray-900">{businessName}</h2>
-                    <p className="mt-1 text-sm text-gray-600">{location}</p>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
+                      currentStoreStatus.isOpen === true
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : currentStoreStatus.isOpen === false
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-gray-300 bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
+                    {storeStatusLabel}
+                  </div>
+
+                  <div className="inline-flex items-center rounded-xl border border-gray-200 bg-white p-1">
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("auto")}
+                      disabled={storeStatusSaving}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "auto"
+                          ? "bg-blue-100 text-blue-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Auto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("manual", "open")}
+                      disabled={storeStatusSaving}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "open"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("manual", "closed")}
+                      disabled={storeStatusSaving}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "closed"
+                          ? "bg-rose-100 text-rose-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Close
+                    </button>
                   </div>
                 </div>
-
-                <div
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    isOpen
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-rose-200 bg-rose-50 text-rose-700"
-                  }`}
-                >
-                  <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
-                  {isOpen ? "Open" : "Closed"}
-                </div>
               </div>
+
+              {storeStatusMessage ? <p className="mt-1.5 text-xs text-emerald-700">{storeStatusMessage}</p> : null}
+              {storeStatusError ? <p className="mt-1.5 text-xs text-red-700">{storeStatusError}</p> : null}
             </header>
 
             <div className="min-w-0">{renderActiveSection()}</div>

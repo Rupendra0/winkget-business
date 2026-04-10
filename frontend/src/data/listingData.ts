@@ -33,6 +33,10 @@ export type ListingProfile = {
   yearsInBusiness?: number;
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  storeStatusMode?: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
+  isStoreOpen?: boolean | null;
+  storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
   ctaLabel: string;
   description: string;
   highlights: string[];

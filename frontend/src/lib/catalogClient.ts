@@ -102,6 +102,11 @@ export type CatalogVendorSummary = {
   yearsInBusiness?: number;
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  storeStatusMode?: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed" | null;
+  manualStoreStatusUpdatedAt?: string | null;
+  isStoreOpen?: boolean | null;
+  storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
   serviceTags?: string[];
   businessCategory?: CatalogReference;
   businessSubcategory?: CatalogReference;
@@ -428,6 +433,13 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
     businessPhone: vendor.businessPhone,
     shopOpeningTime: vendor.shopOpeningTime,
     shopClosingTime: vendor.shopClosingTime,
+    storeStatusMode: vendor.storeStatusMode,
+    manualStoreStatus:
+      vendor.manualStoreStatus === "open" || vendor.manualStoreStatus === "closed"
+        ? vendor.manualStoreStatus
+        : undefined,
+    isStoreOpen: typeof vendor.isStoreOpen === "boolean" ? vendor.isStoreOpen : vendor.isStoreOpen === null ? null : undefined,
+    storeStatusSource: vendor.storeStatusSource,
     establishmentYear: vendor.establishmentYear,
     imageUrl: vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
     ctaLabel: vendor.ctaLabel || "Inquiry",
@@ -642,6 +654,13 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     yearsInBusiness: vendor.yearsInBusiness,
     shopOpeningTime: vendor.shopOpeningTime,
     shopClosingTime: vendor.shopClosingTime,
+    storeStatusMode: vendor.storeStatusMode,
+    manualStoreStatus:
+      vendor.manualStoreStatus === "open" || vendor.manualStoreStatus === "closed"
+        ? vendor.manualStoreStatus
+        : undefined,
+    isStoreOpen: typeof vendor.isStoreOpen === "boolean" ? vendor.isStoreOpen : vendor.isStoreOpen === null ? null : undefined,
+    storeStatusSource: vendor.storeStatusSource,
   };
 }
 

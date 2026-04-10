@@ -36,6 +36,11 @@ export type VendorSession = {
   vendorStatus?: "pending" | "approved" | "rejected";
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  storeStatusMode?: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
+  manualStoreStatusUpdatedAt?: string | null;
+  isStoreOpen?: boolean | null;
+  storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
   serviceTags?: string[];
 };
 
@@ -105,7 +110,22 @@ export type VendorProfileUpdateInput = {
   state?: string;
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  storeStatusMode?: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
   serviceTags?: string[];
+};
+
+export type VendorStoreStatusUpdateInput = {
+  storeStatusMode: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
+};
+
+export type VendorStoreStatus = {
+  storeStatusMode: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
+  manualStoreStatusUpdatedAt?: string | null;
+  isStoreOpen?: boolean | null;
+  storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
 };
 
 export type VendorReviewSummary = {
@@ -241,8 +261,34 @@ function normalizeVendorSession(user: VendorSession | null | undefined): VendorS
     return null;
   }
 
+  const normalizedStoreStatusMode = user.storeStatusMode === "manual" ? "manual" : "auto";
+  const normalizedManualStoreStatus =
+    user.manualStoreStatus === "open" || user.manualStoreStatus === "closed"
+      ? user.manualStoreStatus
+      : undefined;
+  const normalizedStoreStatusSource =
+    user.storeStatusSource === "manual" ||
+    user.storeStatusSource === "schedule" ||
+    user.storeStatusSource === "unknown" ||
+    user.storeStatusSource === "vendor-status"
+      ? user.storeStatusSource
+      : undefined;
+
   return {
     ...user,
+    storeStatusMode: normalizedStoreStatusMode,
+    manualStoreStatus: normalizedManualStoreStatus,
+    storeStatusSource: normalizedStoreStatusSource,
+    isStoreOpen:
+      typeof user.isStoreOpen === "boolean"
+        ? user.isStoreOpen
+        : user.isStoreOpen === null
+          ? null
+          : undefined,
+    manualStoreStatusUpdatedAt:
+      user.manualStoreStatusUpdatedAt !== undefined && user.manualStoreStatusUpdatedAt !== null
+        ? String(user.manualStoreStatusUpdatedAt)
+        : undefined,
     serviceTags: Array.isArray(user.serviceTags)
       ? user.serviceTags.map((tag) => String(tag || "").trim()).filter(Boolean)
       : [],
@@ -317,6 +363,45 @@ export async function updateVendorProfile(input: VendorProfileUpdateInput): Prom
   }
 
   return normalizedUser;
+}
+
+export async function updateVendorStoreStatus(input: VendorStoreStatusUpdateInput): Promise<VendorStoreStatus> {
+  const payload = await requestJson<{
+    storeStatus?: Partial<VendorStoreStatus>;
+  }>("/api/vendor/store-status", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  const status = payload.storeStatus || {};
+  const storeStatusMode = status.storeStatusMode === "manual" ? "manual" : "auto";
+  const manualStoreStatus =
+    status.manualStoreStatus === "open" || status.manualStoreStatus === "closed"
+      ? status.manualStoreStatus
+      : undefined;
+  const storeStatusSource =
+    status.storeStatusSource === "manual" ||
+    status.storeStatusSource === "schedule" ||
+    status.storeStatusSource === "unknown" ||
+    status.storeStatusSource === "vendor-status"
+      ? status.storeStatusSource
+      : undefined;
+
+  return {
+    storeStatusMode,
+    manualStoreStatus,
+    manualStoreStatusUpdatedAt:
+      status.manualStoreStatusUpdatedAt !== undefined && status.manualStoreStatusUpdatedAt !== null
+        ? String(status.manualStoreStatusUpdatedAt)
+        : undefined,
+    isStoreOpen:
+      typeof status.isStoreOpen === "boolean"
+        ? status.isStoreOpen
+        : status.isStoreOpen === null
+          ? null
+          : undefined,
+    storeStatusSource,
+  };
 }
 
 export async function fetchVendorInquiries(

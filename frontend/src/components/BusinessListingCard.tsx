@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, MapPin, MessageSquareText, Phone, Star } from "lucide-react";
 import type { CategoryListing } from "@/data/categoryData";
 import { getBusinessOpenStatus, normalizePhoneDigits } from "@/lib/listingCardTheme";
+import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
 const DEFAULT_VENDOR_IMAGE =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=60";
@@ -29,6 +30,7 @@ function BusinessListingCardComponent({
 }: BusinessListingCardProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
   const hasPrefetchedRef = useRef(false);
   const extendedListing = listing as CategoryListing & {
     distance?: string;
@@ -47,10 +49,31 @@ function BusinessListingCardComponent({
     "Business Profile";
   const isVerified = listing.vendorStatus === "approved" || listing.verified;
 
-  const openStatus = useMemo(
-    () => getBusinessOpenStatus(listing.shopOpeningTime, listing.shopClosingTime),
-    [listing.shopClosingTime, listing.shopOpeningTime]
-  );
+  useEffect(() => {
+    return subscribeVendorStoreStatus(listing.id, (payload) => {
+      setLiveStoreStatus(payload);
+    });
+  }, [listing.id]);
+
+  const openStatus = useMemo(() => {
+    const effectiveIsStoreOpen =
+      typeof liveStoreStatus?.isStoreOpen === "boolean"
+        ? liveStoreStatus.isStoreOpen
+        : typeof listing.isStoreOpen === "boolean"
+          ? listing.isStoreOpen
+          : null;
+
+    if (typeof effectiveIsStoreOpen === "boolean") {
+      const scheduleStatus = getBusinessOpenStatus(listing.shopOpeningTime, listing.shopClosingTime);
+      return {
+        ...scheduleStatus,
+        isOpen: effectiveIsStoreOpen,
+        label: effectiveIsStoreOpen ? "Open Now" : "Closed",
+      };
+    }
+
+    return getBusinessOpenStatus(listing.shopOpeningTime, listing.shopClosingTime);
+  }, [listing.shopClosingTime, listing.shopOpeningTime, listing.isStoreOpen, liveStoreStatus?.isStoreOpen]);
 
   const callDigits = useMemo(() => normalizePhoneDigits(listing.businessPhone), [listing.businessPhone]);
   const callHref = callDigits ? `tel:${callDigits}` : "";

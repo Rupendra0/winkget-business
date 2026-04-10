@@ -18,6 +18,12 @@ const {
   resolveEffectiveCustomForm,
   validateCustomFormData,
 } = require("../lib/customForm");
+const {
+  MANUAL_STORE_STATUS_VALUES,
+  STORE_STATUS_MODE_VALUES,
+  toStoreStatusSummary,
+} = require("../lib/storeStatus");
+const { emitVendorStoreStatus } = require("../lib/realtime");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -612,7 +618,7 @@ router.post("/auth/vendor/login", async (req, res) => {
       ],
     })
       .select(
-        "_id name businessName email phone alternatePhone businessEmail businessPhone businessAlternatePhone city sublocality state shopOpeningTime shopClosingTime customFormData role vendorStatus passwordHash businessCategory businessSubcategory"
+        "_id name businessName email phone alternatePhone businessEmail businessPhone businessAlternatePhone city sublocality state shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt customFormData role vendorStatus passwordHash businessCategory businessSubcategory"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -670,6 +676,7 @@ router.post("/auth/vendor/login", async (req, res) => {
         state: user.state,
         shopOpeningTime: user.shopOpeningTime,
         shopClosingTime: user.shopClosingTime,
+        ...toStoreStatusSummary(user),
         customFormData: user.customFormData && typeof user.customFormData === "object" ? user.customFormData : {},
         effectiveCustomForm: resolveEffectiveCustomForm({
           category: user.businessCategory,
@@ -704,7 +711,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -741,6 +748,7 @@ router.get("/auth/me", async (req, res) => {
         website: user.website,
         shopOpeningTime: user.shopOpeningTime,
         shopClosingTime: user.shopClosingTime,
+        ...(user.role === "vendor" ? toStoreStatusSummary(user) : {}),
         establishmentYear: user.establishmentYear,
         yearsInBusiness: user.yearsInBusiness,
         serviceTags: user.serviceTags || [],
@@ -866,6 +874,14 @@ router.put("/auth/me", async (req, res) => {
       req.body?.shopOpeningTime !== undefined ? String(req.body.shopOpeningTime || "").trim() : user.shopOpeningTime || "";
     const shopClosingTimeInput =
       req.body?.shopClosingTime !== undefined ? String(req.body.shopClosingTime || "").trim() : user.shopClosingTime || "";
+    const storeStatusModeInput =
+      req.body?.storeStatusMode !== undefined
+        ? String(req.body.storeStatusMode || "").trim().toLowerCase()
+        : String(user.storeStatusMode || "auto").trim().toLowerCase();
+    const manualStoreStatusInput =
+      req.body?.manualStoreStatus !== undefined
+        ? String(req.body.manualStoreStatus || "").trim().toLowerCase()
+        : String(user.manualStoreStatus || "").trim().toLowerCase();
     const establishmentYearInput = req.body?.establishmentYear !== undefined ? req.body.establishmentYear : user.establishmentYear;
     const serviceTagsInput = Array.isArray(req.body?.serviceTags)
       ? req.body.serviceTags
@@ -977,6 +993,18 @@ router.put("/auth/me", async (req, res) => {
 
     if (shopClosingTimeInput && !TIME_REGEX.test(shopClosingTimeInput)) {
       return res.status(400).json({ ok: false, message: "Shop closing time must be in HH:MM format" });
+    }
+
+    if (!STORE_STATUS_MODE_VALUES.has(storeStatusModeInput)) {
+      return res.status(400).json({ ok: false, message: "Store status mode must be either auto or manual" });
+    }
+
+    if (manualStoreStatusInput && !MANUAL_STORE_STATUS_VALUES.has(manualStoreStatusInput)) {
+      return res.status(400).json({ ok: false, message: "Manual store status must be either open or closed" });
+    }
+
+    if (storeStatusModeInput === "manual" && !manualStoreStatusInput) {
+      return res.status(400).json({ ok: false, message: "Manual store status is required when mode is manual" });
     }
 
     if (businessCategoryId && !OBJECT_ID_REGEX.test(businessCategoryId)) {
@@ -1163,6 +1191,19 @@ router.put("/auth/me", async (req, res) => {
       user.gstDocument = gstDocumentInput || undefined;
       user.shopOpeningTime = shopOpeningTimeInput || undefined;
       user.shopClosingTime = shopClosingTimeInput || undefined;
+      const nextStoreStatusMode = storeStatusModeInput;
+      const nextManualStoreStatus = nextStoreStatusMode === "manual" ? manualStoreStatusInput : undefined;
+      const previousStoreStatusMode = String(user.storeStatusMode || "auto").trim().toLowerCase();
+      const previousManualStoreStatus = String(user.manualStoreStatus || "").trim().toLowerCase();
+
+      user.storeStatusMode = nextStoreStatusMode;
+      user.manualStoreStatus = nextManualStoreStatus;
+      if (
+        previousStoreStatusMode !== nextStoreStatusMode ||
+        previousManualStoreStatus !== String(nextManualStoreStatus || "")
+      ) {
+        user.manualStoreStatusUpdatedAt = new Date();
+      }
       user.establishmentYear = establishmentYear;
       user.serviceTags = uniqueServiceTags;
       user.idProofType = idProofTypeInput || user.idProofType;
@@ -1174,10 +1215,14 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime establishmentYear serviceTags customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
+
+    if (updatedUser?.role === "vendor") {
+      emitVendorStoreStatus(updatedUser);
+    }
 
     return res.status(200).json({
       ok: true,
@@ -1214,6 +1259,7 @@ router.put("/auth/me", async (req, res) => {
         youtubeUrl: updatedUser.youtubeUrl,
         shopOpeningTime: updatedUser.shopOpeningTime,
         shopClosingTime: updatedUser.shopClosingTime,
+        ...(updatedUser.role === "vendor" ? toStoreStatusSummary(updatedUser) : {}),
         establishmentYear: updatedUser.establishmentYear,
         serviceTags: updatedUser.serviceTags || [],
         customFormData:
@@ -1231,6 +1277,75 @@ router.put("/auth/me", async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to update profile", error: error.message });
+  }
+});
+
+router.patch("/vendor/store-status", async (req, res) => {
+  try {
+    const token = resolveTokenFromRequest(req);
+    if (!token) {
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub).select(
+      "_id role vendorStatus shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
+    );
+
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    if (user.role !== "vendor") {
+      return res.status(403).json({ ok: false, message: "Vendor account required" });
+    }
+
+    const storeStatusModeInput =
+      req.body?.storeStatusMode !== undefined
+        ? String(req.body.storeStatusMode || "").trim().toLowerCase()
+        : String(user.storeStatusMode || "auto").trim().toLowerCase();
+    const manualStoreStatusInput =
+      req.body?.manualStoreStatus !== undefined
+        ? String(req.body.manualStoreStatus || "").trim().toLowerCase()
+        : String(user.manualStoreStatus || "").trim().toLowerCase();
+
+    if (!STORE_STATUS_MODE_VALUES.has(storeStatusModeInput)) {
+      return res.status(400).json({ ok: false, message: "Store status mode must be either auto or manual" });
+    }
+
+    if (manualStoreStatusInput && !MANUAL_STORE_STATUS_VALUES.has(manualStoreStatusInput)) {
+      return res.status(400).json({ ok: false, message: "Manual store status must be either open or closed" });
+    }
+
+    if (storeStatusModeInput === "manual" && !manualStoreStatusInput) {
+      return res.status(400).json({ ok: false, message: "Manual store status is required when mode is manual" });
+    }
+
+    const nextManualStoreStatus = storeStatusModeInput === "manual" ? manualStoreStatusInput : undefined;
+    const previousStoreStatusMode = String(user.storeStatusMode || "auto").trim().toLowerCase();
+    const previousManualStoreStatus = String(user.manualStoreStatus || "").trim().toLowerCase();
+
+    user.storeStatusMode = storeStatusModeInput;
+    user.manualStoreStatus = nextManualStoreStatus;
+
+    if (
+      previousStoreStatusMode !== storeStatusModeInput ||
+      previousManualStoreStatus !== String(nextManualStoreStatus || "")
+    ) {
+      user.manualStoreStatusUpdatedAt = new Date();
+    }
+
+    await user.save();
+    emitVendorStoreStatus(user);
+
+    return res.status(200).json({
+      ok: true,
+      message: "Store status updated",
+      storeStatus: toStoreStatusSummary(user),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update store status", error: error.message });
   }
 });
 

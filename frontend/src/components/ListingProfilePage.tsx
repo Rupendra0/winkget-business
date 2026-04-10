@@ -20,6 +20,7 @@ import Footer from "@/components/Footer";
 import ActionButtonsBottom from "@/components/listing-profile/ActionButtonsBottom";
 import ActionButtonsTop from "@/components/listing-profile/ActionButtonsTop";
 import { submitVendorCallRequest, submitVendorInquiry } from "@/lib/catalogClient";
+import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 import {
   fetchBusinessReviews,
   getBusinessReviewAggregate,
@@ -117,6 +118,7 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
+  const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
   const [businessReviews, setBusinessReviews] = useState<BusinessReview[]>([]);
   const [serverSummary, setServerSummary] = useState<BusinessReviewSummary>({
     rating: Number(profile.rating || 0),
@@ -423,6 +425,12 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
 
   const isReviewLocked = isAuthLoading || !currentUser || hasAlreadyReviewed;
 
+  useEffect(() => {
+    return subscribeVendorStoreStatus(profile.id, (payload) => {
+      setLiveStoreStatus(payload);
+    });
+  }, [profile.id]);
+
   const isVerified = useMemo(
     () =>
       extendedProfile.vendorStatus === "approved" ||
@@ -431,15 +439,39 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
   );
 
   const openStatus = useMemo(() => {
+    const effectiveIsStoreOpen =
+      typeof liveStoreStatus?.isStoreOpen === "boolean"
+        ? liveStoreStatus.isStoreOpen
+        : typeof profile.isStoreOpen === "boolean"
+          ? profile.isStoreOpen
+          : null;
+
     const openingMinutes = toMinutes(profile.shopOpeningTime);
     const closingMinutes = toMinutes(profile.shopClosingTime);
+    const openingText =
+      openingMinutes === null || closingMinutes === null
+        ? "Opens at --"
+        : `Opens at ${toDisplayTime(profile.shopOpeningTime)}`;
+    const closingText =
+      openingMinutes === null || closingMinutes === null
+        ? "Closes at --"
+        : `Closes at ${toDisplayTime(profile.shopClosingTime)}`;
+
+    if (typeof effectiveIsStoreOpen === "boolean") {
+      return {
+        isOpen: effectiveIsStoreOpen,
+        badgeText: effectiveIsStoreOpen ? "Open now" : "Closed",
+        openingText,
+        closingText,
+      };
+    }
 
     if (openingMinutes === null || closingMinutes === null) {
       return {
         isOpen: null,
         badgeText: "Hours unavailable",
-        openingText: "Opens at --",
-        closingText: "Closes at --",
+        openingText,
+        closingText,
       };
     }
 
@@ -453,10 +485,10 @@ export default function ListingProfilePage({ profile }: { profile: ListingProfil
     return {
       isOpen,
       badgeText: isOpen ? "Open now" : "Closed",
-      openingText: `Opens at ${toDisplayTime(profile.shopOpeningTime)}`,
-      closingText: `Closes at ${toDisplayTime(profile.shopClosingTime)}`,
+      openingText,
+      closingText,
     };
-  }, [profile.shopClosingTime, profile.shopOpeningTime]);
+  }, [profile.shopClosingTime, profile.shopOpeningTime, profile.isStoreOpen, liveStoreStatus?.isStoreOpen]);
 
   const tagline = useMemo(
     () => String(profile.description || "").replace(/\s+/g, " ").trim(),

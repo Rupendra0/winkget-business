@@ -1,6 +1,8 @@
 require("dotenv").config();
+const http = require("http");
 const app = require("./app");
 const { connectDatabase } = require("./config/db");
+const { attachRealtimeServer } = require("./lib/realtime");
 const User = require("./models/User");
 const Category = require("./models/Category");
 const Subcategory = require("./models/Subcategory");
@@ -37,7 +39,20 @@ async function startServer() {
     await FailureLog.syncIndexes();
     await VendorProduct.syncIndexes();
 
-    app.listen(PORT, () => {
+    const envOrigins = String(process.env.CORS_ORIGIN || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    const devOrigins =
+      process.env.NODE_ENV === "development"
+        ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+        : [];
+    const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
+
+    const httpServer = http.createServer(app);
+    attachRealtimeServer(httpServer, { allowedOrigins });
+
+    httpServer.listen(PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on http://localhost:${PORT}`);
     });

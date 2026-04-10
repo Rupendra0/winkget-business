@@ -293,6 +293,18 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
         businessPhone: vendor.businessPhone,
         shopOpeningTime: vendor.shopOpeningTime,
         shopClosingTime: vendor.shopClosingTime,
+        storeStatusMode: vendor.storeStatusMode,
+        manualStoreStatus:
+          vendor.manualStoreStatus === "open" || vendor.manualStoreStatus === "closed"
+            ? vendor.manualStoreStatus
+            : undefined,
+        isStoreOpen:
+          typeof vendor.isStoreOpen === "boolean"
+            ? vendor.isStoreOpen
+            : vendor.isStoreOpen === null
+              ? null
+              : undefined,
+        storeStatusSource: vendor.storeStatusSource,
         establishmentYear: vendor.establishmentYear,
         imageUrl: vendor.imageUrl || "",
         ctaLabel: vendor.ctaLabel || "Inquiry",

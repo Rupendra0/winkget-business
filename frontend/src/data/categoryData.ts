@@ -15,6 +15,10 @@ export type CategoryListing = {
   businessPhone?: string;
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  storeStatusMode?: "auto" | "manual";
+  manualStoreStatus?: "open" | "closed";
+  isStoreOpen?: boolean | null;
+  storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
   establishmentYear?: number;
   imageUrl: string;
   ctaLabel?: string;

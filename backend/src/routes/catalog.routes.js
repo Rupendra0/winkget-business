@@ -7,6 +7,7 @@ const HomePlacement = require("../models/HomePlacement");
 const User = require("../models/User");
 const Review = require("../models/Review");
 const { sanitizeCustomFormFields } = require("../lib/customForm");
+const { toStoreStatusSummary } = require("../lib/storeStatus");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
@@ -315,6 +316,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     yearsInBusiness: vendor.yearsInBusiness,
     shopOpeningTime: vendor.shopOpeningTime,
     shopClosingTime: vendor.shopClosingTime,
+    ...toStoreStatusSummary(vendor),
     businessCategory: toCategoryReference(vendor.businessCategory),
     businessSubcategory: toSubcategoryReference(vendor.businessSubcategory),
   };
@@ -703,7 +705,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     const vendors = await User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
-          "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+          "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")
@@ -733,7 +735,7 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime"
+        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")
