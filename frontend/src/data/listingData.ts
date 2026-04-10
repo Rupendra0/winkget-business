@@ -62,6 +62,29 @@ export type StoreProduct = {
   category: string;
   imageUrl: string;
   badge?: string;
+  categorySlug?: string;
+  categoryLabel?: string;
+  subcategoryName?: string;
+  shortDescription?: string;
+  description?: string;
+  gallery?: string[];
+  oldPriceValue?: number;
+  inventory?: number;
+  moq?: number;
+  sellerName?: string;
+  vendorSource?: string;
+  rating?: number;
+  reviews?: number;
+  shippingLabel?: string;
+  deliveryByText?: string;
+  shippingTimeline?: string;
+  isCancellable?: boolean;
+  isReturnable?: boolean;
+  highlights?: string[];
+  keyAttributes?: Array<{ label: string; value: string }>;
+  specifications?: Array<{ label: string; value: string }>;
+  tags?: string[];
+  storePlacement?: "featured" | "trending";
 };
 
 export type StoreSection = {

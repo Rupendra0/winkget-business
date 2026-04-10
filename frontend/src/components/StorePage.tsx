@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Star, Filter, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import Footer from "@/components/Footer";
-import type { StorePageData } from "@/data/listingData";
+import { buildProductSlug } from "@/data/productSlug";
+import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
+import { addToCart, makeStoreProduct } from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -32,6 +35,39 @@ export default function StorePage({ data }: { data: StorePageData }) {
   );
 
   const productMap = buildProductMap(data.products);
+
+  const buildProductHref = useCallback(
+    (product: StoreProduct) =>
+      `/product/${encodeURIComponent(
+        buildProductSlug({
+          id: product.id,
+          name: product.name,
+          storeId: data.id,
+          sellerName: data.storeName,
+        })
+      )}`,
+    [data.id, data.storeName]
+  );
+
+  const handleAddToCart = useCallback(
+    (product: StoreProduct) => {
+      const href = buildProductHref(product);
+      const storeProduct = makeStoreProduct(
+        {
+          ...product,
+          storeId: data.id,
+          sellerName: product.sellerName || data.storeName,
+          image: product.imageUrl,
+          oldPrice: product.oldPriceValue,
+          categoryLabel: product.categoryLabel || product.category,
+        },
+        href
+      );
+
+      addToCart(storeProduct, 1);
+    },
+    [buildProductHref, data.id, data.storeName]
+  );
 
   const featuredProducts = data.featured.productIds
     .map((id) => productMap.get(id))
@@ -153,31 +189,43 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 </div>
               </div>
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {pagedFeatured.map((product) => (
-                  <div
-                    key={product?.id}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
-                  >
-                    <div className="h-32 bg-slate-50 shrink-0">
-                      <img
-                        src={product?.imageUrl}
-                        alt={product?.name}
-                        className="h-full w-full object-contain p-3"
-                      />
-                    </div>
-                    <div className="p-3 flex flex-1 flex-col gap-2">
-                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
-                        {product?.name}
+                {pagedFeatured.map((product) => {
+                  if (!product) {
+                    return null;
+                  }
+
+                  const productHref = buildProductHref(product);
+
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
+                    >
+                      <Link href={productHref} className="h-32 bg-slate-50 shrink-0 block">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-contain p-3"
+                        />
+                      </Link>
+                      <div className="p-3 flex flex-1 flex-col gap-2">
+                        <Link href={productHref} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
+                          {product.name}
+                        </Link>
+                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>
+                        <div className="text-xs text-slate-500">{product.category}</div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(product)}
+                          className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover"
+                        >
+                          <ShoppingCart size={14} />
+                          Add to Cart
+                        </button>
                       </div>
-                      <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
-                      <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover">
-                        <ShoppingCart size={14} />
-                        Add to Cart
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -211,31 +259,43 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </div>
               </div>
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {pagedTrending.map((product) => (
-                  <div
-                    key={product?.id}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
-                  >
-                    <div className="h-32 bg-slate-50 shrink-0">
-                      <img
-                        src={product?.imageUrl}
-                        alt={product?.name}
-                        className="h-full w-full object-contain p-3"
-                      />
-                    </div>
-                    <div className="p-3 flex flex-1 flex-col gap-2">
-                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
-                        {product?.name}
+                {pagedTrending.map((product) => {
+                  if (!product) {
+                    return null;
+                  }
+
+                  const productHref = buildProductHref(product);
+
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
+                    >
+                      <Link href={productHref} className="h-32 bg-slate-50 shrink-0 block">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-contain p-3"
+                        />
+                      </Link>
+                      <div className="p-3 flex flex-1 flex-col gap-2">
+                        <Link href={productHref} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
+                          {product.name}
+                        </Link>
+                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>
+                        <div className="text-xs text-slate-500">{product.category}</div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(product)}
+                          className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover"
+                        >
+                          <ShoppingCart size={14} />
+                          Add to Cart
+                        </button>
                       </div>
-                      <div className="text-sm font-semibold text-blue-700">{product?.price}</div>
-                      <div className="text-xs text-slate-500">{product?.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover">
-                        <ShoppingCart size={14} />
-                        Add to Cart
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -254,20 +314,24 @@ export default function StorePage({ data }: { data: StorePageData }) {
                     key={product.id}
                     className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex h-full flex-col card-hover"
                   >
-                    <div className="h-40 bg-slate-50 shrink-0">
+                    <Link href={buildProductHref(product)} className="h-40 bg-slate-50 shrink-0 block">
                       <img
                         src={product.imageUrl}
                         alt={product.name}
                         className="h-full w-full object-contain p-4"
                       />
-                    </div>
+                    </Link>
                     <div className="p-4 flex flex-1 flex-col gap-2">
-                      <div className="text-sm font-semibold text-slate-800 line-clamp-2">
+                      <Link href={buildProductHref(product)} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
                         {product.name}
-                      </div>
+                      </Link>
                       <div className="text-sm font-semibold text-blue-700">{product.price}</div>
                       <div className="text-xs text-slate-500">{product.category}</div>
-                      <button className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2 btn-hover">
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCart(product)}
+                        className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2 btn-hover"
+                      >
                         <ShoppingCart size={14} />
                         Add to Cart
                       </button>

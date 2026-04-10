@@ -30,23 +30,31 @@ import {
   Youtube,
 } from "lucide-react";
 import {
+  createVendorProduct,
+  deleteVendorProduct,
+  fetchVendorCategories,
   fetchVendorCities,
   fetchVendorInquiries,
+  fetchVendorProducts,
   fetchVendorReviewSnapshot,
   fetchVendorSession,
   logoutVendor,
+  updateVendorProduct,
   updateVendorInquiryStatus,
   updateVendorProfile,
   type InquiryStatus,
+  type VendorCatalogCategory,
   type VendorCity,
   type VendorInquiry,
   type VendorInquirySnapshot,
+  type VendorProductRecord,
+  type VendorProductUpsertInput,
   type VendorReview,
   type VendorReviewSnapshot,
   type VendorSession,
 } from "@/lib/vendorApi";
 
-type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Shop" | "Settings";
+type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Shop" | "Products" | "Settings";
 
 type SidebarItem = {
   label: SidebarLabel;
@@ -99,22 +107,66 @@ type ShopProfileFormState = {
   youtubeUrl: string;
 };
 
+type MyStoreMediaFormState = {
+  image: string;
+  bannerImage: string;
+};
+
+type VendorProductFormState = {
+  categorySlug: string;
+  subcategorySlug: string;
+  productName: string;
+  shortDescription: string;
+  description: string;
+  image: string;
+  heroImage: string;
+  subcategoryImage: string;
+  galleryText: string;
+  price: string;
+  oldPrice: string;
+  inventory: string;
+  moq: string;
+  badge: string;
+  brand: string;
+  sellerName: string;
+  vendorSource: string;
+  rating: string;
+  reviews: string;
+  deliveryByText: string;
+  shippingLabel: string;
+  shippingTimeline: string;
+  isCancellable: boolean;
+  isReturnable: boolean;
+  highlightsText: string;
+  keyAttributesText: string;
+  specificationsText: string;
+  tagsText: string;
+  variantDataText: string;
+  status: VendorProductRecord["status"];
+  storePlacement: "none" | "featured" | "trending";
+};
+
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Overview", icon: LayoutDashboard },
-  { label: "Enquiries", icon: MessageSquare },
+  { label: "Products", icon: ClipboardList },
   { label: "Calls", icon: PhoneCall },
-  { label: "Reviews", icon: Star },
   { label: "Orders", icon: ShoppingBag },
-  { label: "Posts", icon: Megaphone },
   { label: "Shop", icon: ImagePlus },
+  { label: "Enquiries", icon: MessageSquare },
+  { label: "Reviews", icon: Star },
+  { label: "Posts", icon: Megaphone },
   { label: "Settings", icon: Settings },
 ];
 
-const MOBILE_BAR_ITEMS: Array<{ label: "Overview" | "Enquiries" | "Calls" | "Shop" | "Settings"; icon: SidebarItem["icon"] }> = [
+const MOBILE_BAR_ITEMS: Array<{
+  label: "Overview" | "Enquiries" | "Calls" | "Shop" | "Products" | "Settings";
+  icon: SidebarItem["icon"];
+}> = [
   { label: "Overview", icon: LayoutDashboard },
   { label: "Enquiries", icon: MessageSquare },
   { label: "Calls", icon: PhoneCall },
   { label: "Shop", icon: ImagePlus },
+  { label: "Products", icon: ClipboardList },
   { label: "Settings", icon: Settings },
 ];
 
@@ -147,6 +199,10 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
     title: "Shop Profile",
     subtitle: "",
   },
+  Products: {
+    title: "Products",
+    subtitle: "",
+  },
   Settings: {
     title: "Settings",
     subtitle: "",
@@ -166,6 +222,13 @@ const NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX = "winkget_vendor_notification_dis
 const MAX_NOTIFICATIONS_IN_POPUP = 20;
 const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const VENDOR_PRODUCT_STATUSES: VendorProductRecord["status"][] = ["draft", "pending", "live", "rejected", "archived"];
+const PRODUCT_VARIANT_LINE_HINT = "size|color|mrp|sellingPrice|stock|image";
+const STORE_PLACEMENT_OPTIONS: Array<{ value: VendorProductFormState["storePlacement"]; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "featured", label: "Featured Product" },
+  { value: "trending", label: "Trending Product" },
+];
 const INDIAN_STATES = [
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -324,6 +387,13 @@ function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormStat
   };
 }
 
+function buildMyStoreMediaForm(vendor: VendorSession | null): MyStoreMediaFormState {
+  return {
+    image: String(vendor?.myStoreImage || "").trim(),
+    bannerImage: String(vendor?.myStoreBannerImage || "").trim(),
+  };
+}
+
 function parseShopGalleryInput(value: string): string[] {
   const raw = String(value || "").trim();
   if (!raw) return [];
@@ -428,6 +498,163 @@ function EmptyState({ title, body }: { title: string; body: string }) {
       <p className="mt-2 text-sm font-semibold text-gray-700">{title}</p>
       <p className="mt-1 text-xs text-gray-500">{body}</p>
     </div>
+  );
+}
+
+function ShopStoreSwitch({
+  active,
+  onChange,
+}: {
+  active: "Shop" | "MyStore";
+  onChange: (value: "Shop" | "MyStore") => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1">
+      <button
+        type="button"
+        onClick={() => onChange("Shop")}
+        className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+          active === "Shop" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
+        }`}
+      >
+        Shop
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("MyStore")}
+        className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+          active === "MyStore" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
+        }`}
+      >
+        MyStore
+      </button>
+    </div>
+  );
+}
+
+function MyStorePreviewSection({
+  businessName,
+  profileImage,
+  bannerImage,
+  address,
+  description,
+  savingField,
+  message,
+  error,
+  onUpload,
+  onRemove,
+}: {
+  businessName: string;
+  profileImage: string;
+  bannerImage: string;
+  address: string;
+  description: string;
+  savingField: "image" | "banner" | null;
+  message: string | null;
+  error: string | null;
+  onUpload: (field: "image" | "banner", files: FileList | null) => void;
+  onRemove: (field: "image" | "banner") => void;
+}) {
+  const displayBanner = String(bannerImage || "").trim() || DEFAULT_VENDOR_BANNER;
+  const displayAvatar = String(profileImage || "").trim() || DEFAULT_VENDOR_AVATAR;
+  const hasCustomProfileImage = Boolean(String(profileImage || "").trim());
+  const hasCustomBannerImage = Boolean(String(bannerImage || "").trim());
+
+  return (
+    <section className="space-y-4">
+      <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="relative h-40 sm:h-48">
+          <img src={displayBanner} alt={`${businessName} banner`} className="h-full w-full object-cover" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/60 via-gray-900/25 to-transparent" />
+
+          <div className="absolute bottom-4 left-4 flex items-center gap-3">
+            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white bg-white shadow">
+              <img src={displayAvatar} alt={`${businessName} dp`} className="h-full w-full object-cover" loading="lazy" />
+            </div>
+
+            <div className="text-white">
+              <p className="text-lg font-semibold leading-tight">{businessName}</p>
+              <p className="text-xs text-white/90">{address || "Address not updated yet"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3">
+          <p className="text-xs text-gray-600">{description || "Add a business description in Shop to improve MyStore profile."}</p>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+              <p className="text-[11px] font-semibold text-gray-600">MyStore DP</p>
+              <div className="mt-2 flex items-center gap-2">
+                <label
+                  className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
+                    savingField === "image" ? "pointer-events-none opacity-60" : ""
+                  }`}
+                >
+                  <Upload className="h-3 w-3" aria-hidden="true" />
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      onUpload("image", event.currentTarget.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => onRemove("image")}
+                  disabled={savingField === "image" || !hasCustomProfileImage}
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                  {savingField === "image" ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+              <p className="text-[11px] font-semibold text-gray-600">MyStore Banner</p>
+              <div className="mt-2 flex items-center gap-2">
+                <label
+                  className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
+                    savingField === "banner" ? "pointer-events-none opacity-60" : ""
+                  }`}
+                >
+                  <Upload className="h-3 w-3" aria-hidden="true" />
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      onUpload("banner", event.currentTarget.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => onRemove("banner")}
+                  disabled={savingField === "banner" || !hasCustomBannerImage}
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                  {savingField === "banner" ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {message ? <p className="text-xs font-medium text-emerald-700">{message}</p> : null}
+          {error ? <p className="text-xs font-medium text-red-700">{error}</p> : null}
+        </div>
+      </article>
+    </section>
   );
 }
 
@@ -776,7 +1003,7 @@ function EnquiriesSection({
 
 function CallsSection({ callLeads }: { callLeads: VendorInquiry[] }) {
   return (
-    <section className="space-y-4">
+    <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <p className="text-sm text-gray-600">
           Only user-generated call requests are listed here, including contact details and callback context.
@@ -1282,6 +1509,573 @@ function ShopProfileSection({
   );
 }
 
+function VendorProductsSection({
+  form,
+  categories,
+  products,
+  productsLoading,
+  productsError,
+  actionMessage,
+  actionError,
+  saving,
+  editingProductId,
+  deletingProductId,
+  search,
+  statusFilter,
+  onSearchChange,
+  onStatusFilterChange,
+  onFormChange,
+  onSubmit,
+  onEdit,
+  onCancelEdit,
+  onDelete,
+  onRefresh,
+}: {
+  form: VendorProductFormState;
+  categories: VendorCatalogCategory[];
+  products: VendorProductRecord[];
+  productsLoading: boolean;
+  productsError: string | null;
+  actionMessage: string | null;
+  actionError: string | null;
+  saving: boolean;
+  editingProductId: string | null;
+  deletingProductId: string | null;
+  search: string;
+  statusFilter: VendorProductRecord["status"] | "all";
+  onSearchChange: (value: string) => void;
+  onStatusFilterChange: (value: VendorProductRecord["status"] | "all") => void;
+  onFormChange: (field: keyof VendorProductFormState, value: string | boolean) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onEdit: (product: VendorProductRecord) => void;
+  onCancelEdit: () => void;
+  onDelete: (productId: string) => void;
+  onRefresh: () => void;
+}) {
+  const [showProductForm, setShowProductForm] = useState(false);
+  const isProductFormVisible = showProductForm || Boolean(editingProductId);
+
+  const handleOpenCreateForm = () => {
+    onCancelEdit();
+    setShowProductForm(true);
+  };
+
+  const handleCloseProductForm = () => {
+    onCancelEdit();
+    setShowProductForm(false);
+  };
+
+  const selectedCategory = categories.find((category) => category.slug === form.categorySlug) || null;
+  const subcategories = selectedCategory ? selectedCategory.subcategories : [];
+
+  return (
+    <section className="space-y-4">
+      <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-lg font-semibold text-gray-900">My Products</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={isProductFormVisible ? handleCloseProductForm : handleOpenCreateForm}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+            >
+              {isProductFormVisible ? "Close Add Product" : "Add Product"}
+            </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              Reload
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search products"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 sm:w-72"
+          />
+
+          {(["all", ...VENDOR_PRODUCT_STATUSES] as Array<VendorProductRecord["status"] | "all">).map((status) => (
+            <button
+              key={`status-filter-${status}`}
+              type="button"
+              onClick={() => onStatusFilterChange(status)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                statusFilter === status
+                  ? "bg-blue-100 text-blue-700"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {productsLoading ? (
+            <p className="text-sm text-gray-600">Loading products...</p>
+          ) : productsError ? (
+            <p className="text-sm text-red-700">{productsError}</p>
+          ) : products.length === 0 ? (
+            <EmptyState title="No products found" body="Click Add Product to create your first item." />
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-900">{product.productName}</p>
+                    <p className="mt-0.5 text-xs text-gray-600">
+                      {product.categoryLabel || product.categorySlug} / {product.subcategoryName || product.subcategorySlug}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">Updated {formatDateTime(product.updatedAt)}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    {product.storePlacement ? (
+                      <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                        {product.storePlacement}
+                      </span>
+                    ) : null}
+                    <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                      {product.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-700 sm:grid-cols-4">
+                  <p>Price: {product.price}</p>
+                  <p>MRP: {product.oldPrice}</p>
+                  <p>Stock: {product.inventory}</p>
+                  <p>MOQ: {product.moq}</p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEdit(product);
+                      setShowProductForm(true);
+                    }}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(product.id)}
+                    disabled={deletingProductId === product.id}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                  >
+                    {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </article>
+
+      {isProductFormVisible ? (
+        <section className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" aria-label="Product form popup">
+          <button
+            type="button"
+            onClick={handleCloseProductForm}
+            className="absolute inset-0"
+            aria-label="Close product form popup"
+          />
+
+          <form
+            onSubmit={onSubmit}
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl"
+          >
+            <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-3 border-b border-gray-100 bg-white px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-gray-900">{editingProductId ? "Edit Product" : "Add Product"}</h3>
+                  <p className="mt-1 text-xs text-gray-500">Schema-aligned product payload for future multi-platform sync.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCloseProductForm}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  {editingProductId ? "Cancel Edit" : "Close"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Category</span>
+            <select
+              value={form.categorySlug}
+              onChange={(event) => onFormChange("categorySlug", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Subcategory</span>
+            <select
+              value={form.subcategorySlug}
+              onChange={(event) => onFormChange("subcategorySlug", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              disabled={!selectedCategory}
+            >
+              <option value="">Select subcategory</option>
+              {subcategories.map((subcategory) => (
+                <option key={subcategory.id} value={subcategory.slug}>
+                  {subcategory.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Status</span>
+            <select
+              value={form.status}
+              onChange={(event) => onFormChange("status", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              {VENDOR_PRODUCT_STATUSES.map((status) => (
+                <option key={`form-status-${status}`} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">MyStore Placement (optional)</span>
+            <select
+              value={form.storePlacement}
+              onChange={(event) => onFormChange("storePlacement", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            >
+              {STORE_PLACEMENT_OPTIONS.map((option) => (
+                <option key={`placement-${option.value}`} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Product Name</span>
+            <input
+              type="text"
+              value={form.productName}
+              onChange={(event) => onFormChange("productName", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Vitamin C Face Wash"
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Short Description</span>
+            <input
+              type="text"
+              value={form.shortDescription}
+              onChange={(event) => onFormChange("shortDescription", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Quick one-line summary"
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Description</span>
+            <textarea
+              value={form.description}
+              onChange={(event) => onFormChange("description", event.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Detailed product description"
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Primary Image URL</span>
+            <input
+              type="url"
+              value={form.image}
+              onChange={(event) => onFormChange("image", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Price</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.price}
+              onChange={(event) => onFormChange("price", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Old Price</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.oldPrice}
+              onChange={(event) => onFormChange("oldPrice", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Inventory</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={form.inventory}
+              onChange={(event) => onFormChange("inventory", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">MOQ</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.moq}
+              onChange={(event) => onFormChange("moq", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Brand</span>
+            <input
+              type="text"
+              value={form.brand}
+              onChange={(event) => onFormChange("brand", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Seller Name</span>
+            <input
+              type="text"
+              value={form.sellerName}
+              onChange={(event) => onFormChange("sellerName", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Badge</span>
+            <input
+              type="text"
+              value={form.badge}
+              onChange={(event) => onFormChange("badge", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Delivery By</span>
+            <input
+              type="text"
+              value={form.deliveryByText}
+              onChange={(event) => onFormChange("deliveryByText", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Mon, 18 March"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Shipping Label</span>
+            <input
+              type="text"
+              value={form.shippingLabel}
+              onChange={(event) => onFormChange("shippingLabel", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Shipping Timeline</span>
+            <input
+              type="text"
+              value={form.shippingTimeline}
+              onChange={(event) => onFormChange("shippingTimeline", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Hero Image URL</span>
+            <input
+              type="url"
+              value={form.heroImage}
+              onChange={(event) => onFormChange("heroImage", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Subcategory Image URL</span>
+            <input
+              type="url"
+              value={form.subcategoryImage}
+              onChange={(event) => onFormChange("subcategoryImage", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Rating (0-5)</span>
+            <input
+              type="number"
+              min="0"
+              max="5"
+              step="0.1"
+              value={form.rating}
+              onChange={(event) => onFormChange("rating", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Review Count</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={form.reviews}
+              onChange={(event) => onFormChange("reviews", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Gallery URLs (one per line)</span>
+            <textarea
+              value={form.galleryText}
+              onChange={(event) => onFormChange("galleryText", event.target.value)}
+              className="min-h-[80px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Highlights (one per line)</span>
+            <textarea
+              value={form.highlightsText}
+              onChange={(event) => onFormChange("highlightsText", event.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Cruelty free"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Key Attributes (Label: Value)</span>
+            <textarea
+              value={form.keyAttributesText}
+              onChange={(event) => onFormChange("keyAttributesText", event.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Skin Type: All"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Specifications (Label: Value)</span>
+            <textarea
+              value={form.specificationsText}
+              onChange={(event) => onFormChange("specificationsText", event.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="Weight: 100ml"
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Variant Data (one per line)</span>
+            <textarea
+              value={form.variantDataText}
+              onChange={(event) => onFormChange("variantDataText", event.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder={PRODUCT_VARIANT_LINE_HINT}
+            />
+          </label>
+
+          <label className="block md:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">Tags (comma separated)</span>
+            <input
+              type="text"
+              value={form.tagsText}
+              onChange={(event) => onFormChange("tagsText", event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              placeholder="skincare, facewash"
+            />
+          </label>
+
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.isCancellable}
+              onChange={(event) => onFormChange("isCancellable", event.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            Cancellable
+          </label>
+
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.isReturnable}
+              onChange={(event) => onFormChange("isReturnable", event.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            Returnable
+          </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--vendor-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" aria-hidden="true" />
+              {saving ? "Saving..." : editingProductId ? "Update Product" : "Add Product"}
+            </button>
+
+            {actionMessage ? <p className="text-xs font-medium text-emerald-700">{actionMessage}</p> : null}
+            {actionError ? <p className="text-xs font-medium text-red-700">{actionError}</p> : null}
+          </div>
+          </form>
+        </section>
+      ) : null}
+    </section>
+  );
+}
+
 function SettingsSection({
   form,
   cities,
@@ -1489,9 +2283,14 @@ export default function VendorDashboard() {
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [shopProfileForm, setShopProfileForm] = useState<ShopProfileFormState>(() => buildShopProfileForm(null));
+  const [myStoreMediaForm, setMyStoreMediaForm] = useState<MyStoreMediaFormState>(() => buildMyStoreMediaForm(null));
+  const [myStoreMediaSavingField, setMyStoreMediaSavingField] = useState<"image" | "banner" | null>(null);
+  const [myStoreMediaMessage, setMyStoreMediaMessage] = useState<string | null>(null);
+  const [myStoreMediaError, setMyStoreMediaError] = useState<string | null>(null);
   const [shopProfileSaving, setShopProfileSaving] = useState(false);
   const [shopProfileMessage, setShopProfileMessage] = useState<string | null>(null);
   const [shopProfileError, setShopProfileError] = useState<string | null>(null);
+  const [shopTabMode, setShopTabMode] = useState<"Shop" | "MyStore">("Shop");
   const [cityOptions, setCityOptions] = useState<VendorCity[]>([]);
   const [cityOptionsError, setCityOptionsError] = useState<string | null>(null);
   const [inquiryStatusDraftById, setInquiryStatusDraftById] = useState<Record<string, InquiryStatus>>({});
@@ -1506,6 +2305,19 @@ export default function VendorDashboard() {
   const [postMessage, setPostMessage] = useState("");
   const [postCta, setPostCta] = useState("Contact Now");
   const [postNotice, setPostNotice] = useState<string | null>(null);
+  const [vendorCategories, setVendorCategories] = useState<VendorCatalogCategory[]>([]);
+  const [vendorProducts, setVendorProducts] = useState<VendorProductRecord[]>([]);
+  const [vendorProductsLoading, setVendorProductsLoading] = useState(false);
+  const [vendorProductsLoaded, setVendorProductsLoaded] = useState(false);
+  const [vendorProductsError, setVendorProductsError] = useState<string | null>(null);
+  const [productForm, setProductForm] = useState<VendorProductFormState>(() => getDefaultProductForm(null));
+  const [productFormSaving, setProductFormSaving] = useState(false);
+  const [productFormMessage, setProductFormMessage] = useState<string | null>(null);
+  const [productFormError, setProductFormError] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+  const [productStatusFilter, setProductStatusFilter] = useState<VendorProductRecord["status"] | "all">("all");
 
   useEffect(() => {
     let active = true;
@@ -1520,22 +2332,33 @@ export default function VendorDashboard() {
       setVendor(session);
       setSettingsForm(buildSettingsForm(session));
       setShopProfileForm(buildShopProfileForm(session));
+      setMyStoreMediaForm(buildMyStoreMediaForm(session));
+      setProductForm(getDefaultProductForm(session));
 
       if (!session?.id) {
         setReviews(EMPTY_REVIEW_SNAPSHOT);
         setInquiryData(EMPTY_INQUIRY_SNAPSHOT);
+        setVendorCategories([]);
+        setVendorProducts([]);
+        setVendorProductsLoaded(false);
         setLoading(false);
         return;
       }
 
-      const [reviewSnapshot, inquiriesSnapshot] = await Promise.all([
+      const [reviewSnapshot, inquiriesSnapshot, categoriesSnapshot, productsSnapshot] = await Promise.all([
         fetchVendorReviewSnapshot(session.id),
         fetchVendorInquiries({ limit: 200 }),
+        fetchVendorCategories(),
+        fetchVendorProducts({ limit: 300 }),
       ]);
 
       if (!active) return;
       setReviews(reviewSnapshot);
       setInquiryData(inquiriesSnapshot);
+      setVendorCategories(categoriesSnapshot);
+      setVendorProducts(productsSnapshot);
+      setVendorProductsLoaded(true);
+      setVendorProductsError(null);
       setLoading(false);
     };
 
@@ -1611,15 +2434,63 @@ export default function VendorDashboard() {
     if (!vendor?.id || refreshing) return;
 
     setRefreshing(true);
-    const [reviewSnapshot, inquiriesSnapshot] = await Promise.all([
-      fetchVendorReviewSnapshot(vendor.id),
-      fetchVendorInquiries({ limit: 200 }),
-    ]);
+    try {
+      const [reviewSnapshot, inquiriesSnapshot, productsSnapshot] = await Promise.all([
+        fetchVendorReviewSnapshot(vendor.id),
+        fetchVendorInquiries({ limit: 200 }),
+        fetchVendorProducts({ limit: 300 }),
+      ]);
 
-    setReviews(reviewSnapshot);
-    setInquiryData(inquiriesSnapshot);
-    setRefreshing(false);
+      setReviews(reviewSnapshot);
+      setInquiryData(inquiriesSnapshot);
+      setVendorProducts(productsSnapshot);
+      setVendorProductsLoaded(true);
+      setVendorProductsError(null);
+    } catch {
+      setVendorProductsError("Could not refresh products right now.");
+    } finally {
+      setRefreshing(false);
+    }
   };
+
+  const loadVendorProducts = async (includeCategories = false) => {
+    if (!vendor?.id) return;
+
+    setVendorProductsLoading(true);
+    setVendorProductsError(null);
+
+    try {
+      const [productsSnapshot, categoriesSnapshot] = await Promise.all([
+        fetchVendorProducts({ limit: 300 }),
+        includeCategories ? fetchVendorCategories() : Promise.resolve([] as VendorCatalogCategory[]),
+      ]);
+
+      setVendorProducts(productsSnapshot);
+      if (includeCategories && categoriesSnapshot.length > 0) {
+        setVendorCategories(categoriesSnapshot);
+      }
+    } catch {
+      setVendorProductsError("Failed to load vendor products.");
+    } finally {
+      setVendorProductsLoading(false);
+      setVendorProductsLoaded(true);
+    }
+  };
+
+  useEffect(() => {
+    if (activeNav !== "Products" || !vendor?.id || vendorProductsLoading || vendorProductsLoaded) {
+      return;
+    }
+
+    void loadVendorProducts(vendorCategories.length === 0);
+  }, [
+    activeNav,
+    loadVendorProducts,
+    vendor?.id,
+    vendorCategories.length,
+    vendorProductsLoaded,
+    vendorProductsLoading,
+  ]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -1855,6 +2726,7 @@ export default function VendorDashboard() {
       Orders: 0,
       Posts: 0,
       Shop: 0,
+      Products: 0,
       Settings: 0,
     };
 
@@ -1867,6 +2739,7 @@ export default function VendorDashboard() {
   }, [notificationsWithRead]);
 
   const sectionMeta = SECTION_META[activeNav];
+  const shouldShowQuickAnalytics = activeNav !== "Products";
   const greetingName = String(vendor?.name || vendor?.businessName || "Partner").trim() || "Partner";
   const businessName = String(vendor?.businessName || "Your Business").trim() || "Your Business";
   const location = [vendor?.city, vendor?.state].filter(Boolean).join(", ") || "Location not set";
@@ -1930,6 +2803,7 @@ export default function VendorDashboard() {
       setVendor(updatedVendor);
       setSettingsForm(buildSettingsForm(updatedVendor));
       setShopProfileForm(buildShopProfileForm(updatedVendor));
+      setMyStoreMediaForm(buildMyStoreMediaForm(updatedVendor));
       setSettingsMessage("Settings updated successfully");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update settings";
@@ -2145,6 +3019,7 @@ export default function VendorDashboard() {
 
       setVendor(updatedVendor);
       setShopProfileForm(buildShopProfileForm(updatedVendor));
+      setMyStoreMediaForm(buildMyStoreMediaForm(updatedVendor));
       setSettingsForm(buildSettingsForm(updatedVendor));
       setShopProfileMessage("Shop profile updated successfully");
     } catch (error) {
@@ -2153,6 +3028,85 @@ export default function VendorDashboard() {
     } finally {
       setShopProfileSaving(false);
     }
+  };
+
+  const persistMyStoreMedia = async (field: "image" | "banner", nextImage: string, nextBannerImage: string) => {
+    if (!vendor) return;
+
+    setMyStoreMediaSavingField(field);
+    setMyStoreMediaMessage(null);
+    setMyStoreMediaError(null);
+
+    try {
+      const updatedVendor = await updateVendorProfile({
+        myStoreImage: nextImage,
+        myStoreBannerImage: nextBannerImage,
+      });
+
+      setVendor(updatedVendor);
+      setMyStoreMediaForm(buildMyStoreMediaForm(updatedVendor));
+      setShopProfileForm(buildShopProfileForm(updatedVendor));
+      setSettingsForm(buildSettingsForm(updatedVendor));
+      const wasRemoved = field === "image" ? !nextImage : !nextBannerImage;
+      if (field === "image") {
+        setMyStoreMediaMessage(wasRemoved ? "MyStore DP removed successfully." : "MyStore DP updated successfully.");
+      } else {
+        setMyStoreMediaMessage(wasRemoved ? "MyStore banner removed successfully." : "MyStore banner updated successfully.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update MyStore media";
+      setMyStoreMediaForm(buildMyStoreMediaForm(vendor));
+      setMyStoreMediaError(message);
+    } finally {
+      setMyStoreMediaSavingField(null);
+    }
+  };
+
+  const handleMyStoreMediaUpload = async (field: "image" | "banner", files: FileList | null) => {
+    if (!vendor || !files?.length || myStoreMediaSavingField) return;
+
+    const file = files[0];
+    if (!file.type.startsWith("image/")) {
+      setMyStoreMediaMessage(null);
+      setMyStoreMediaError("Please upload an image file only.");
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      setMyStoreMediaMessage(null);
+      setMyStoreMediaError("Image is too large. Please keep each upload under 2MB.");
+      return;
+    }
+
+    try {
+      const imageData = await fileToDataUrl(file);
+      const nextImage = field === "image" ? imageData : String(myStoreMediaForm.image || "").trim();
+      const nextBannerImage = field === "banner" ? imageData : String(myStoreMediaForm.bannerImage || "").trim();
+
+      setMyStoreMediaForm({
+        image: nextImage,
+        bannerImage: nextBannerImage,
+      });
+
+      await persistMyStoreMedia(field, nextImage, nextBannerImage);
+    } catch {
+      setMyStoreMediaMessage(null);
+      setMyStoreMediaError("Could not process image file. Please try again.");
+    }
+  };
+
+  const handleMyStoreMediaRemove = async (field: "image" | "banner") => {
+    if (!vendor || myStoreMediaSavingField) return;
+
+    const nextImage = field === "image" ? "" : String(myStoreMediaForm.image || "").trim();
+    const nextBannerImage = field === "banner" ? "" : String(myStoreMediaForm.bannerImage || "").trim();
+
+    setMyStoreMediaForm({
+      image: nextImage,
+      bannerImage: nextBannerImage,
+    });
+
+    await persistMyStoreMedia(field, nextImage, nextBannerImage);
   };
 
   const handlePostSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -2183,6 +3137,135 @@ export default function VendorDashboard() {
     if (label === "Orders") {
       setActiveNav("Orders");
     }
+  };
+
+  const filteredVendorProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+
+    return vendorProducts.filter((product) => {
+      if (productStatusFilter !== "all" && product.status !== productStatusFilter) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [
+        product.productName,
+        product.categoryLabel,
+        product.categorySlug,
+        product.subcategoryName,
+        product.subcategorySlug,
+        product.brand || "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [productSearch, productStatusFilter, vendorProducts]);
+
+  const handleProductFormChange = (field: keyof VendorProductFormState, value: string | boolean) => {
+    setProductForm((current) => {
+      const next = {
+        ...current,
+        [field]: value,
+      };
+
+      if (field === "categorySlug") {
+        return {
+          ...next,
+          subcategorySlug: "",
+        };
+      }
+
+      return next;
+    });
+  };
+
+  const handleVendorProductCancelEdit = () => {
+    setEditingProductId(null);
+    setProductForm(getDefaultProductForm(vendor));
+    setProductFormMessage(null);
+    setProductFormError(null);
+  };
+
+  const handleVendorProductSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!vendor || productFormSaving) return;
+
+    const payload = buildVendorProductPayload(productForm, vendorCategories, vendor);
+    if (!payload.categorySlug || !payload.subcategorySlug || !payload.productName || !payload.image) {
+      setProductFormError("Category, subcategory, product name, and image are required.");
+      setProductFormMessage(null);
+      return;
+    }
+
+    if (!Number.isFinite(payload.price) || payload.price <= 0) {
+      setProductFormError("Price must be greater than 0.");
+      setProductFormMessage(null);
+      return;
+    }
+
+    setProductFormSaving(true);
+    setProductFormMessage(null);
+    setProductFormError(null);
+
+    try {
+      if (editingProductId) {
+        const updated = await updateVendorProduct(editingProductId, payload);
+        setVendorProducts((current) => current.map((product) => (product.id === updated.id ? updated : product)));
+        setProductFormMessage("Product updated successfully.");
+      } else {
+        const created = await createVendorProduct(payload);
+        setVendorProducts((current) => [created, ...current]);
+        setProductFormMessage("Product added successfully.");
+      }
+
+      setEditingProductId(null);
+      setProductForm(getDefaultProductForm(vendor));
+      await loadVendorProducts(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save product";
+      setProductFormError(message);
+    } finally {
+      setProductFormSaving(false);
+    }
+  };
+
+  const handleVendorProductEdit = (product: VendorProductRecord) => {
+    setEditingProductId(product.id);
+    setProductForm(toProductFormState(product, vendor));
+    setProductFormMessage(null);
+    setProductFormError(null);
+  };
+
+  const handleVendorProductDelete = async (productId: string) => {
+    const normalizedId = String(productId || "").trim();
+    if (!normalizedId || deletingProductId) return;
+
+    setDeletingProductId(normalizedId);
+    setProductFormMessage(null);
+    setProductFormError(null);
+
+    try {
+      await deleteVendorProduct(normalizedId);
+      setVendorProducts((current) => current.filter((product) => product.id !== normalizedId));
+      if (editingProductId === normalizedId) {
+        setEditingProductId(null);
+        setProductForm(getDefaultProductForm(vendor));
+      }
+      setProductFormMessage("Product deleted successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete product";
+      setProductFormError(message);
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
+
+  const handleVendorProductsRefresh = () => {
+    void loadVendorProducts(vendorCategories.length === 0);
   };
 
   const renderActiveSection = () => {
@@ -2249,18 +3332,67 @@ export default function VendorDashboard() {
 
     if (activeNav === "Shop") {
       return (
-        <ShopProfileSection
-          form={shopProfileForm}
-          businessName={businessName}
-          onChange={handleShopProfileChange}
-          onSubmit={handleShopProfileSubmit}
-          onUploadSingle={handleShopProfileSingleUpload}
-          onUploadGallery={handleShopProfileGalleryUpload}
-          onRemoveImage={handleShopProfileRemoveImage}
-          onRemoveGalleryItem={handleShopProfileRemoveGalleryItem}
-          saving={shopProfileSaving}
-          message={shopProfileMessage}
-          error={shopProfileError}
+        <section className="space-y-4">
+          <ShopStoreSwitch
+            active={shopTabMode}
+            onChange={setShopTabMode}
+          />
+
+          {shopTabMode === "Shop" ? (
+            <ShopProfileSection
+              form={shopProfileForm}
+              businessName={businessName}
+              onChange={handleShopProfileChange}
+              onSubmit={handleShopProfileSubmit}
+              onUploadSingle={handleShopProfileSingleUpload}
+              onUploadGallery={handleShopProfileGalleryUpload}
+              onRemoveImage={handleShopProfileRemoveImage}
+              onRemoveGalleryItem={handleShopProfileRemoveGalleryItem}
+              saving={shopProfileSaving}
+              message={shopProfileMessage}
+              error={shopProfileError}
+            />
+          ) : (
+            <MyStorePreviewSection
+              businessName={businessName}
+              profileImage={myStoreMediaForm.image}
+              bannerImage={myStoreMediaForm.bannerImage}
+              address={shopProfileForm.businessAddress}
+              description={shopProfileForm.businessDescription}
+              savingField={myStoreMediaSavingField}
+              message={myStoreMediaMessage}
+              error={myStoreMediaError}
+              onUpload={handleMyStoreMediaUpload}
+              onRemove={handleMyStoreMediaRemove}
+            />
+          )}
+        </section>
+      );
+    }
+
+    if (activeNav === "Products") {
+      return (
+        <VendorProductsSection
+          form={productForm}
+          categories={vendorCategories}
+          products={filteredVendorProducts}
+          productsLoading={vendorProductsLoading}
+          productsError={vendorProductsError}
+          actionMessage={productFormMessage}
+          actionError={productFormError}
+          saving={productFormSaving}
+          editingProductId={editingProductId}
+          deletingProductId={deletingProductId}
+          search={productSearch}
+          statusFilter={productStatusFilter}
+          onSearchChange={setProductSearch}
+          onStatusFilterChange={setProductStatusFilter}
+          onFormChange={handleProductFormChange}
+          onSubmit={handleVendorProductSubmit}
+          onEdit={handleVendorProductEdit}
+          onCancelEdit={handleVendorProductCancelEdit}
+          onDelete={handleVendorProductDelete}
+          onRefresh={handleVendorProductsRefresh}
         />
       );
     }
@@ -2317,7 +3449,11 @@ export default function VendorDashboard() {
     <main className="relative min-h-screen overflow-x-hidden bg-[var(--vendor-canvas)] text-[var(--vendor-text-primary)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.17),transparent_54%),radial-gradient(ellipse_at_bottom_left,rgba(59,130,246,0.16),transparent_56%)]" />
       <div className="relative mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_320px]">
+        <div
+          className={`grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] ${
+            shouldShowQuickAnalytics ? "xl:grid-cols-[248px_minmax(0,1fr)_320px]" : ""
+          }`}
+        >
           <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border-r border-gray-200 bg-white/60 p-4 backdrop-blur-md lg:flex">
             <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
               <div className="flex items-center gap-3">
@@ -2448,31 +3584,33 @@ export default function VendorDashboard() {
             <div className="min-w-0">{renderActiveSection()}</div>
           </section>
 
-          <aside className="hidden space-y-4 xl:block">
-            <article className="rounded-2xl bg-white/60 p-5 backdrop-blur-md">
-              <h3 className="font-display text-lg font-semibold text-gray-900">Quick Analytics</h3>
-              <p className="mt-1 text-xs text-gray-500">Current backend-fed status summary.</p>
+          {shouldShowQuickAnalytics ? (
+            <aside className="hidden space-y-4 xl:block">
+              <article className="rounded-2xl bg-white/60 p-5 backdrop-blur-md">
+                <h3 className="font-display text-lg font-semibold text-gray-900">Quick Analytics</h3>
+                <p className="mt-1 text-xs text-gray-500">Current backend-fed status summary.</p>
 
-              <div className="mt-4 space-y-3">
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3">
-                  <p className="text-xs text-gray-500">Enquiries</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">{enquirySummary.total}</p>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                    <p className="text-xs text-gray-500">Enquiries</p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">{enquirySummary.total}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                    <p className="text-xs text-gray-500">Call Leads</p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">{callLeads.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                    <p className="text-xs text-gray-500">Average rating</p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">{formatRating(reviews.summary.rating)} / 5</p>
+                  </div>
+                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                    <p className="text-xs text-gray-500">Section</p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">{sectionMeta.title}</p>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3">
-                  <p className="text-xs text-gray-500">Call Leads</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">{callLeads.length}</p>
-                </div>
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3">
-                  <p className="text-xs text-gray-500">Average rating</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">{formatRating(reviews.summary.rating)} / 5</p>
-                </div>
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3">
-                  <p className="text-xs text-gray-500">Section</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">{sectionMeta.title}</p>
-                </div>
-              </div>
-            </article>
-          </aside>
+              </article>
+            </aside>
+          ) : null}
         </div>
       </div>
 
@@ -2480,7 +3618,7 @@ export default function VendorDashboard() {
         aria-label="Mobile quick actions"
         className="fixed inset-x-4 bottom-3 z-40 rounded-2xl border border-white/70 bg-white/90 p-2 shadow-lg backdrop-blur lg:hidden"
       >
-        <ul className="grid grid-cols-5 gap-1">
+        <ul className="grid grid-cols-6 gap-1">
           {MOBILE_BAR_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.label;
@@ -2622,4 +3760,196 @@ export default function VendorDashboard() {
       ) : null}
     </main>
   );
+}
+
+function splitLineItems(value: string): string[] {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseAttributeLines(value: string): Array<{ label: string; value: string }> {
+  return splitLineItems(value)
+    .map((line) => {
+      const dividerIndex = line.indexOf(":");
+      if (dividerIndex < 1) {
+        return null;
+      }
+
+      const label = line.slice(0, dividerIndex).trim();
+      const attrValue = line.slice(dividerIndex + 1).trim();
+      if (!label || !attrValue) {
+        return null;
+      }
+
+      return { label, value: attrValue };
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item));
+}
+
+function parseVariantLines(value: string): VendorProductUpsertInput["variantData"] {
+  return splitLineItems(value)
+    .map((line) => {
+      const [size, color, mrpToken, sellingToken, stockToken, image] = line.split("|").map((part) => part.trim());
+      if (!size || !color) {
+        return null;
+      }
+
+      const mrp = Number(mrpToken);
+      const sellingPrice = Number(sellingToken);
+      const stock = Number(stockToken);
+
+      return {
+        size,
+        color,
+        mrp: Number.isFinite(mrp) ? mrp : 0,
+        sellingPrice: Number.isFinite(sellingPrice) ? sellingPrice : 0,
+        stock: Number.isFinite(stock) ? stock : 0,
+        image: String(image || "").trim(),
+      };
+    })
+    .filter((item): item is NonNullable<VendorProductUpsertInput["variantData"]>[number] => Boolean(item));
+}
+
+function getDefaultProductForm(vendor: VendorSession | null): VendorProductFormState {
+  return {
+    categorySlug: "",
+    subcategorySlug: "",
+    productName: "",
+    shortDescription: "",
+    description: "",
+    image: "",
+    heroImage: "",
+    subcategoryImage: "",
+    galleryText: "",
+    price: "",
+    oldPrice: "",
+    inventory: "",
+    moq: "1",
+    badge: "",
+    brand: "",
+    sellerName: String(vendor?.businessName || "").trim(),
+    vendorSource: "vendor_panel",
+    rating: "0",
+    reviews: "0",
+    deliveryByText: "",
+    shippingLabel: "",
+    shippingTimeline: "",
+    isCancellable: true,
+    isReturnable: true,
+    highlightsText: "",
+    keyAttributesText: "",
+    specificationsText: "",
+    tagsText: "",
+    variantDataText: "",
+    status: "draft",
+    storePlacement: "none",
+  };
+}
+
+function toProductFormState(product: VendorProductRecord, vendor: VendorSession | null): VendorProductFormState {
+  const placementInput = String(product.storePlacement || "").trim().toLowerCase();
+  const storePlacement =
+    placementInput === "featured" || placementInput === "trending" ? placementInput : "none";
+
+  return {
+    categorySlug: product.categorySlug,
+    subcategorySlug: product.subcategorySlug,
+    productName: product.productName,
+    shortDescription: product.shortDescription || "",
+    description: product.description || "",
+    image: product.image || "",
+    heroImage: product.heroImage || "",
+    subcategoryImage: product.subcategoryImage || "",
+    galleryText: Array.isArray(product.gallery) ? product.gallery.join("\n") : "",
+    price: String(product.price || ""),
+    oldPrice: String(product.oldPrice || ""),
+    inventory: String(product.inventory || ""),
+    moq: String(product.moq || "1"),
+    badge: product.badge || "",
+    brand: product.brand || "",
+    sellerName: product.sellerName || String(vendor?.businessName || "").trim(),
+    vendorSource: product.vendorSource || "vendor_panel",
+    rating: String(product.rating || 0),
+    reviews: String(product.reviews || 0),
+    deliveryByText: product.deliveryByText || "",
+    shippingLabel: product.shippingLabel || "",
+    shippingTimeline: product.shippingTimeline || "",
+    isCancellable: Boolean(product.isCancellable),
+    isReturnable: Boolean(product.isReturnable),
+    highlightsText: Array.isArray(product.highlights) ? product.highlights.join("\n") : "",
+    keyAttributesText: Array.isArray(product.keyAttributes)
+      ? product.keyAttributes.map((item) => `${item.label}: ${item.value}`).join("\n")
+      : "",
+    specificationsText: Array.isArray(product.specifications)
+      ? product.specifications.map((item) => `${item.label}: ${item.value}`).join("\n")
+      : "",
+    tagsText: Array.isArray(product.tags) ? product.tags.join(", ") : "",
+    variantDataText: Array.isArray(product.variantData)
+      ? product.variantData
+          .map((variant) => `${variant.size}|${variant.color}|${variant.mrp}|${variant.sellingPrice}|${variant.stock}|${variant.image || ""}`)
+          .join("\n")
+      : "",
+    status: product.status,
+    storePlacement,
+  };
+}
+
+function buildVendorProductPayload(
+  form: VendorProductFormState,
+  categories: VendorCatalogCategory[],
+  vendor: VendorSession | null
+): VendorProductUpsertInput {
+  const selectedCategory = categories.find((category) => category.slug === form.categorySlug) || null;
+  const selectedSubcategory = selectedCategory?.subcategories.find((item) => item.slug === form.subcategorySlug) || null;
+
+  const price = Number(form.price);
+  const oldPrice = Number(form.oldPrice);
+  const inventory = Number(form.inventory);
+  const moq = Number(form.moq);
+  const rating = Number(form.rating);
+  const reviews = Number(form.reviews);
+  const placementInput = String(form.storePlacement || "").trim().toLowerCase();
+  const storePlacement = placementInput === "featured" || placementInput === "trending" ? placementInput : undefined;
+
+  return {
+    categorySlug: form.categorySlug,
+    categoryLabel: selectedCategory?.name || form.categorySlug,
+    subcategorySlug: form.subcategorySlug,
+    subcategoryName: selectedSubcategory?.name || form.subcategorySlug,
+    productName: form.productName,
+    shortDescription: String(form.shortDescription || "").trim(),
+    description: String(form.description || "").trim(),
+    image: String(form.image || "").trim(),
+    heroImage: String(form.heroImage || "").trim(),
+    subcategoryImage: String(form.subcategoryImage || "").trim(),
+    gallery: splitLineItems(form.galleryText),
+    price: Number.isFinite(price) ? Math.max(0, price) : 0,
+    oldPrice: Number.isFinite(oldPrice) ? Math.max(0, oldPrice) : 0,
+    inventory: Number.isFinite(inventory) ? Math.max(0, inventory) : 0,
+    moq: Number.isFinite(moq) ? Math.max(1, moq) : 1,
+    badge: String(form.badge || "").trim(),
+    brand: String(form.brand || "").trim(),
+    sellerName: String(form.sellerName || vendor?.businessName || "").trim(),
+    vendorSource: String(form.vendorSource || "vendor_panel").trim() || "vendor_panel",
+    rating: Number.isFinite(rating) ? Math.max(0, Math.min(5, rating)) : 0,
+    reviews: Number.isFinite(reviews) ? Math.max(0, Math.floor(reviews)) : 0,
+    deliveryByText: String(form.deliveryByText || "").trim(),
+    shippingLabel: String(form.shippingLabel || "").trim(),
+    shippingTimeline: String(form.shippingTimeline || "").trim(),
+    isCancellable: Boolean(form.isCancellable),
+    isReturnable: Boolean(form.isReturnable),
+    highlights: splitLineItems(form.highlightsText),
+    keyAttributes: parseAttributeLines(form.keyAttributesText),
+    specifications: parseAttributeLines(form.specificationsText),
+    tags: String(form.tagsText || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    variantData: parseVariantLines(form.variantDataText),
+    status: form.status,
+    storePlacement,
+    sourcePlatform: "winkget_vendor",
+  };
 }

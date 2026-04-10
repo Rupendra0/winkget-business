@@ -8,6 +8,7 @@ const Inquiry = require("./models/Inquiry");
 const Review = require("./models/Review");
 const City = require("./models/City");
 const FailureLog = require("./models/FailureLog");
+const VendorProduct = require("./models/VendorProduct");
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -34,6 +35,7 @@ async function startServer() {
     await Review.syncIndexes();
     await City.syncIndexes();
     await FailureLog.syncIndexes();
+    await VendorProduct.syncIndexes();
 
     app.listen(PORT, () => {
       // eslint-disable-next-line no-console

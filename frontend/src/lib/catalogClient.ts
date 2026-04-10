@@ -89,6 +89,8 @@ export type CatalogVendorSummary = {
   subcategory?: string;
   imageUrl?: string;
   shopBannerImage?: string;
+  myStoreImage?: string;
+  myStoreBannerImage?: string;
   shopGallery?: string[];
   ctaLabel?: string;
   badges?: string[];
@@ -109,6 +111,64 @@ export type CatalogVendorDetail = CatalogVendorSummary & {
   businessAddress?: string;
 };
 
+export type CatalogVendorProductAttribute = {
+  label: string;
+  value: string;
+};
+
+export type CatalogVendorProductVariant = {
+  size?: string;
+  color?: string;
+  mrp?: number;
+  sellingPrice?: number;
+  stock?: number;
+  image?: string;
+};
+
+export type CatalogVendorProduct = {
+  id: string;
+  vendorId: string;
+  slug: string;
+  categorySlug: string;
+  categoryLabel?: string;
+  subcategorySlug: string;
+  subcategoryName?: string;
+  productName: string;
+  shortDescription?: string;
+  description?: string;
+  image?: string;
+  heroImage?: string;
+  subcategoryImage?: string;
+  gallery?: string[];
+  price?: number;
+  oldPrice?: number;
+  inventory?: number;
+  moq?: number;
+  badge?: string;
+  brand?: string;
+  sellerName?: string;
+  vendorSource?: string;
+  rating?: number;
+  reviews?: number;
+  deliveryByText?: string;
+  shippingLabel?: string;
+  shippingTimeline?: string;
+  isCancellable?: boolean;
+  isReturnable?: boolean;
+  highlights?: string[];
+  keyAttributes?: CatalogVendorProductAttribute[];
+  specifications?: CatalogVendorProductAttribute[];
+  tags?: string[];
+  variantData?: CatalogVendorProductVariant[];
+  status?: "draft" | "pending" | "live" | "rejected" | "archived";
+  storePlacement?: "featured" | "trending";
+  sourcePlatform?: string;
+  sourceRecordId?: string;
+  publishedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type CategoryListResponse = CatalogResponse & {
   categories?: CatalogCategory[];
 };
@@ -127,6 +187,10 @@ type VendorListResponse = CatalogResponse & {
 
 type VendorDetailResponse = CatalogResponse & {
   vendor?: CatalogVendorDetail;
+};
+
+type VendorProductsResponse = CatalogResponse & {
+  products?: CatalogVendorProduct[];
 };
 
 type InquiryCreateResponse = CatalogResponse & {
@@ -300,6 +364,45 @@ export async function fetchVendorById(id: string): Promise<CatalogVendorDetail |
     return payload.vendor;
   } catch {
     return null;
+  }
+}
+
+export async function fetchVendorStoreProducts(
+  vendorId: string,
+  filters?: {
+    status?: "draft" | "pending" | "live" | "rejected" | "archived";
+    search?: string;
+    limit?: number;
+  }
+): Promise<CatalogVendorProduct[]> {
+  const normalizedVendorId = String(vendorId || "").trim();
+  if (!normalizedVendorId) {
+    return [];
+  }
+
+  try {
+    const query = toQueryString({
+      status: filters?.status,
+      search: filters?.search,
+      limit: Number.isFinite(Number(filters?.limit)) ? String(filters?.limit) : undefined,
+    });
+
+    const response = await fetch(`${BACKEND_URL}/api/vendors/${normalizedVendorId}/products${query}`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as VendorProductsResponse;
+    if (!payload.ok || !Array.isArray(payload.products)) {
+      return [];
+    }
+
+    return payload.products;
+  } catch {
+    return [];
   }
 }
 

@@ -25,6 +25,8 @@ export type VendorSession = {
   businessDescription?: string;
   image?: string;
   shopBannerImage?: string;
+  myStoreImage?: string;
+  myStoreBannerImage?: string;
   shopGallery?: string[];
   instagramUrl?: string;
   facebookUrl?: string;
@@ -92,6 +94,8 @@ export type VendorProfileUpdateInput = {
   businessDescription?: string;
   image?: string;
   shopBannerImage?: string;
+  myStoreImage?: string;
+  myStoreBannerImage?: string;
   shopGallery?: string[];
   instagramUrl?: string;
   facebookUrl?: string;
@@ -120,6 +124,116 @@ export type VendorReview = {
 export type VendorReviewSnapshot = {
   summary: VendorReviewSummary;
   reviews: VendorReview[];
+};
+
+export type VendorCatalogSubcategory = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type VendorCatalogCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  subcategories: VendorCatalogSubcategory[];
+};
+
+export type VendorProductAttribute = {
+  label: string;
+  value: string;
+};
+
+export type VendorProductVariant = {
+  size: string;
+  color: string;
+  mrp: number;
+  sellingPrice: number;
+  stock: number;
+  image: string;
+};
+
+export type VendorProductRecord = {
+  id: string;
+  vendorId: string;
+  slug: string;
+  categorySlug: string;
+  categoryLabel: string;
+  subcategorySlug: string;
+  subcategoryName: string;
+  productName: string;
+  shortDescription?: string;
+  description?: string;
+  image: string;
+  heroImage?: string;
+  subcategoryImage?: string;
+  gallery: string[];
+  price: number;
+  oldPrice: number;
+  inventory: number;
+  moq: number;
+  badge?: string;
+  brand?: string;
+  sellerName?: string;
+  vendorSource?: string;
+  rating: number;
+  reviews: number;
+  deliveryByText?: string;
+  shippingLabel?: string;
+  shippingTimeline?: string;
+  isCancellable: boolean;
+  isReturnable: boolean;
+  highlights: string[];
+  keyAttributes: VendorProductAttribute[];
+  specifications: VendorProductAttribute[];
+  tags: string[];
+  variantData: VendorProductVariant[];
+  status: "draft" | "pending" | "live" | "rejected" | "archived";
+  storePlacement?: "featured" | "trending";
+  sourcePlatform?: string;
+  sourceRecordId?: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VendorProductUpsertInput = {
+  slug?: string;
+  categorySlug: string;
+  categoryLabel?: string;
+  subcategorySlug: string;
+  subcategoryName?: string;
+  productName: string;
+  shortDescription?: string;
+  description?: string;
+  image: string;
+  heroImage?: string;
+  subcategoryImage?: string;
+  gallery?: string[];
+  price: number;
+  oldPrice?: number;
+  inventory?: number;
+  moq?: number;
+  badge?: string;
+  brand?: string;
+  sellerName?: string;
+  vendorSource?: string;
+  rating?: number;
+  reviews?: number;
+  deliveryByText?: string;
+  shippingLabel?: string;
+  shippingTimeline?: string;
+  isCancellable?: boolean;
+  isReturnable?: boolean;
+  highlights?: string[];
+  keyAttributes?: VendorProductAttribute[];
+  specifications?: VendorProductAttribute[];
+  tags?: string[];
+  variantData?: VendorProductVariant[];
+  status?: "draft" | "pending" | "live" | "rejected" | "archived";
+  storePlacement?: "featured" | "trending";
+  sourcePlatform?: string;
+  sourceRecordId?: string;
 };
 
 function normalizeVendorSession(user: VendorSession | null | undefined): VendorSession | null {
@@ -428,4 +542,250 @@ export async function fetchVendorReviewSnapshot(businessId: string): Promise<Ven
   } catch {
     return fallback;
   }
+}
+
+const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: number): VendorProductRecord => {
+  const keyAttributes = Array.isArray(input.keyAttributes)
+    ? input.keyAttributes
+        .map((item) => ({
+          label: String(item?.label || "").trim(),
+          value: String(item?.value || "").trim(),
+        }))
+        .filter((item) => item.label && item.value)
+    : [];
+
+  const specifications = Array.isArray(input.specifications)
+    ? input.specifications
+        .map((item) => ({
+          label: String(item?.label || "").trim(),
+          value: String(item?.value || "").trim(),
+        }))
+        .filter((item) => item.label && item.value)
+    : [];
+
+  const variantData = Array.isArray(input.variantData)
+    ? input.variantData.map((variant) => ({
+        size: String(variant?.size || "").trim(),
+        color: String(variant?.color || "").trim(),
+        mrp: Number.isFinite(Number(variant?.mrp)) ? Number(variant?.mrp) : 0,
+        sellingPrice: Number.isFinite(Number(variant?.sellingPrice)) ? Number(variant?.sellingPrice) : 0,
+        stock: Number.isFinite(Number(variant?.stock)) ? Number(variant?.stock) : 0,
+        image: String(variant?.image || "").trim(),
+      }))
+    : [];
+
+  const statusInput = String(input.status || "draft").trim().toLowerCase();
+  const status =
+    statusInput === "pending" ||
+    statusInput === "live" ||
+    statusInput === "rejected" ||
+    statusInput === "archived"
+      ? statusInput
+      : "draft";
+
+  const storePlacementInput = String(input.storePlacement || "").trim().toLowerCase();
+  const storePlacement =
+    storePlacementInput === "featured" || storePlacementInput === "trending" ? storePlacementInput : undefined;
+
+  return {
+    id: String(input.id || `product-${index}`),
+    vendorId: String(input.vendorId || "").trim(),
+    slug: String(input.slug || "").trim(),
+    categorySlug: String(input.categorySlug || "").trim(),
+    categoryLabel: String(input.categoryLabel || "").trim(),
+    subcategorySlug: String(input.subcategorySlug || "").trim(),
+    subcategoryName: String(input.subcategoryName || "").trim(),
+    productName: String(input.productName || "").trim(),
+    shortDescription: String(input.shortDescription || "").trim() || undefined,
+    description: String(input.description || "").trim() || undefined,
+    image: String(input.image || "").trim(),
+    heroImage: String(input.heroImage || "").trim() || undefined,
+    subcategoryImage: String(input.subcategoryImage || "").trim() || undefined,
+    gallery: Array.isArray(input.gallery)
+      ? input.gallery.map((value) => String(value || "").trim()).filter(Boolean)
+      : [],
+    price: Number.isFinite(Number(input.price)) ? Number(input.price) : 0,
+    oldPrice: Number.isFinite(Number(input.oldPrice)) ? Number(input.oldPrice) : 0,
+    inventory: Number.isFinite(Number(input.inventory)) ? Number(input.inventory) : 0,
+    moq: Number.isFinite(Number(input.moq)) ? Number(input.moq) : 0,
+    badge: String(input.badge || "").trim() || undefined,
+    brand: String(input.brand || "").trim() || undefined,
+    sellerName: String(input.sellerName || "").trim() || undefined,
+    vendorSource: String(input.vendorSource || "").trim() || undefined,
+    rating: Number.isFinite(Number(input.rating)) ? Number(input.rating) : 0,
+    reviews: Number.isFinite(Number(input.reviews)) ? Number(input.reviews) : 0,
+    deliveryByText: String(input.deliveryByText || "").trim() || undefined,
+    shippingLabel: String(input.shippingLabel || "").trim() || undefined,
+    shippingTimeline: String(input.shippingTimeline || "").trim() || undefined,
+    isCancellable: Boolean(input.isCancellable),
+    isReturnable: Boolean(input.isReturnable),
+    highlights: Array.isArray(input.highlights)
+      ? input.highlights.map((value) => String(value || "").trim()).filter(Boolean)
+      : [],
+    keyAttributes,
+    specifications,
+    tags: Array.isArray(input.tags) ? input.tags.map((value) => String(value || "").trim()).filter(Boolean) : [],
+    variantData,
+    status,
+    storePlacement,
+    sourcePlatform: String(input.sourcePlatform || "").trim() || undefined,
+    sourceRecordId: String(input.sourceRecordId || "").trim() || undefined,
+    publishedAt: String(input.publishedAt || "").trim() || undefined,
+    createdAt: String(input.createdAt || "").trim(),
+    updatedAt: String(input.updatedAt || "").trim(),
+  };
+};
+
+export async function fetchVendorCategories(): Promise<VendorCatalogCategory[]> {
+  try {
+    const [categoryPayload, subcategoryPayload] = await Promise.all([
+      requestJson<{
+        categories?: Array<{ id?: string; name?: string; slug?: string }>;
+      }>("/api/categories"),
+      requestJson<{
+        subcategories?: Array<{
+          id?: string;
+          name?: string;
+          slug?: string;
+          category?: { id?: string; name?: string; slug?: string };
+        }>;
+      }>("/api/subcategories"),
+    ]);
+
+    const categories = Array.isArray(categoryPayload.categories) ? categoryPayload.categories : [];
+    const subcategories = Array.isArray(subcategoryPayload.subcategories) ? subcategoryPayload.subcategories : [];
+
+    const map = new Map<string, VendorCatalogCategory>();
+
+    categories.forEach((item, index) => {
+      const id = String(item.id || `category-${index}`).trim();
+      const name = String(item.name || "").trim();
+      const slug = String(item.slug || "").trim();
+      if (!id || !name || !slug) return;
+
+      map.set(id, {
+        id,
+        name,
+        slug,
+        subcategories: [],
+      });
+    });
+
+    subcategories.forEach((item, index) => {
+      const id = String(item.id || `subcategory-${index}`).trim();
+      const name = String(item.name || "").trim();
+      const slug = String(item.slug || "").trim();
+      const categoryId = String(item.category?.id || "").trim();
+      if (!id || !name || !slug || !categoryId) return;
+
+      const category = map.get(categoryId);
+      if (!category) return;
+
+      if (category.subcategories.some((subcategory) => subcategory.id === id)) {
+        return;
+      }
+
+      category.subcategories.push({ id, name, slug });
+    });
+
+    return Array.from(map.values()).map((category) => ({
+      ...category,
+      subcategories: [...category.subcategories].sort((left, right) => left.name.localeCompare(right.name)),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchVendorProducts(options?: {
+  status?: VendorProductRecord["status"] | "all";
+  categorySlug?: string;
+  subcategorySlug?: string;
+  search?: string;
+  limit?: number;
+}): Promise<VendorProductRecord[]> {
+  try {
+    const query = new URLSearchParams();
+
+    const status = String(options?.status || "").trim().toLowerCase();
+    if (status && status !== "all") {
+      query.set("status", status);
+    }
+
+    const categorySlug = String(options?.categorySlug || "").trim();
+    if (categorySlug) query.set("categorySlug", categorySlug);
+
+    const subcategorySlug = String(options?.subcategorySlug || "").trim();
+    if (subcategorySlug) query.set("subcategorySlug", subcategorySlug);
+
+    const search = String(options?.search || "").trim();
+    if (search) query.set("search", search);
+
+    const limit = Number(options?.limit || 120);
+    if (Number.isFinite(limit) && limit > 0) {
+      query.set("limit", String(Math.max(1, Math.min(300, Math.floor(limit)))));
+    }
+
+    const queryString = query.toString();
+    const payload = await requestJson<{
+      products?: Array<Partial<VendorProductRecord>>;
+    }>(`/api/vendor/products${queryString ? `?${queryString}` : ""}`);
+
+    if (!Array.isArray(payload.products)) {
+      return [];
+    }
+
+    return payload.products.map((item, index) => normalizeVendorProduct(item, index));
+  } catch {
+    return [];
+  }
+}
+
+export async function createVendorProduct(input: VendorProductUpsertInput): Promise<VendorProductRecord> {
+  const payload = await requestJson<{
+    product?: Partial<VendorProductRecord>;
+  }>("/api/vendor/products", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  if (!payload.product) {
+    throw new Error("Failed to create vendor product");
+  }
+
+  return normalizeVendorProduct(payload.product, 0);
+}
+
+export async function updateVendorProduct(
+  productId: string,
+  input: Partial<VendorProductUpsertInput>
+): Promise<VendorProductRecord> {
+  const normalizedId = String(productId || "").trim();
+  if (!normalizedId) {
+    throw new Error("Product id is required");
+  }
+
+  const payload = await requestJson<{
+    product?: Partial<VendorProductRecord>;
+  }>(`/api/vendor/products/${encodeURIComponent(normalizedId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  if (!payload.product) {
+    throw new Error("Failed to update vendor product");
+  }
+
+  return normalizeVendorProduct(payload.product, 0);
+}
+
+export async function deleteVendorProduct(productId: string): Promise<void> {
+  const normalizedId = String(productId || "").trim();
+  if (!normalizedId) {
+    throw new Error("Product id is required");
+  }
+
+  await requestJson<Record<string, never>>(`/api/vendor/products/${encodeURIComponent(normalizedId)}`, {
+    method: "DELETE",
+  });
 }
