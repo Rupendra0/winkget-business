@@ -9,7 +9,6 @@ type PartnerCard = {
   id: string;
   name: string;
   category: string;
-  city: string;
   rating: number;
   reviews: number;
   address: string;
@@ -24,6 +23,28 @@ const FALLBACK_VENDOR_IMAGES = [
   "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=60",
   "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=60",
 ];
+
+const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+
+const toObjectIdTimestamp = (id: string) => {
+  const normalizedId = String(id || "").trim();
+  if (!OBJECT_ID_REGEX.test(normalizedId)) {
+    return 0;
+  }
+
+  const seconds = Number.parseInt(normalizedId.slice(0, 8), 16);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 0;
+  }
+
+  return seconds * 1000;
+};
+
+const toInlineRatingWithReviews = (rating: number, reviews: number) => {
+  const safeRating = Number.isFinite(rating) ? Math.max(0, rating) : 0;
+  const safeReviews = Number.isFinite(reviews) ? Math.max(0, Math.round(reviews)) : 0;
+  return `⭐ ${safeRating.toFixed(1)}/5(${safeReviews})`;
+};
 
 export default function CityStrip() {
   const [partners, setPartners] = useState<PartnerCard[]>([]);
@@ -55,9 +76,21 @@ export default function CityStrip() {
           return;
         }
 
-        const mappedPartners = liveVendors.slice(0, 12).map((vendor, index) => {
+        const createdOrderVendors = [...liveVendors].sort((left, right) => {
+          const leftCreatedAt = toObjectIdTimestamp(left.id);
+          const rightCreatedAt = toObjectIdTimestamp(right.id);
+
+          if (leftCreatedAt !== rightCreatedAt) {
+            return rightCreatedAt - leftCreatedAt;
+          }
+
+          return String(left.businessName || left.name || "").localeCompare(
+            String(right.businessName || right.name || "")
+          );
+        });
+
+        const mappedPartners = createdOrderVendors.slice(0, 12).map((vendor, index) => {
           const category = vendor.subcategory || vendor.businessSubcategory?.name || vendor.businessCategory?.name || "Business service";
-          const city = String(vendor.city || "").trim() || "Unknown city";
           const imageUrl =
             String(vendor.shopBannerImage || "").trim() ||
             String(vendor.imageUrl || "").trim() ||
@@ -68,7 +101,6 @@ export default function CityStrip() {
             id: vendor.id,
             name: vendor.businessName || vendor.name || "Business profile",
             category,
-            city,
             rating: Number(vendor.rating || 0),
             reviews: Number(vendor.reviews || 0),
             address: vendor.address || vendor.businessDescription || "Address not available",
@@ -103,12 +135,6 @@ export default function CityStrip() {
     }
     return `Recently added vendors in ${city}`;
   }, [selectedCity]);
-
-  const formatRating = (value: number) => {
-    const safe = Number.isFinite(value) ? value : 0;
-    if (safe <= 0) return "New";
-    return `${safe.toFixed(1)} / 5`;
-  };
 
   if (isLoading) {
     return (
@@ -153,23 +179,21 @@ export default function CityStrip() {
             <Link
               key={partner.id}
               href={partner.href}
-              className="relative shrink-0 basis-[76%] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-xl border border-gray-200 bg-white/70 backdrop-blur-md shadow-sm hover:shadow-md transition"
+              className="relative shrink-0 basis-[76%] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,23,42,0.12)]"
             >
               {partner.isNew ? (
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>
               ) : null}
 
-              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full object-cover" loading="lazy" />
+              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full border-b border-slate-100 object-cover" loading="lazy" />
 
-              <div className="p-3">
-                <div className="text-sm font-semibold text-gray-900 line-clamp-1">{partner.name}</div>
-                <div className="mt-1 text-xs text-gray-500 line-clamp-1">{partner.category}</div>
-                <div className="mt-1 flex items-center justify-between gap-2 text-xs text-gray-500">
-                  <span className="line-clamp-1">{partner.city}</span>
-                  <span className="shrink-0 font-semibold text-amber-600">{formatRating(partner.rating)}</span>
+              <div className="p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 text-sm font-semibold text-gray-900 line-clamp-1">{partner.name}</div>
+                  <div className="shrink-0 text-xs font-semibold text-amber-600">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
-                <div className="mt-1 text-[11px] text-gray-500">{partner.reviews > 0 ? `${partner.reviews} reviews` : "No reviews yet"}</div>
-                <div className="mt-1 text-xs text-gray-500 line-clamp-2">{partner.address}</div>
+                <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
+                <div className="mt-1.5 text-xs text-gray-500 line-clamp-2">{partner.address}</div>
               </div>
             </Link>
           ))}
