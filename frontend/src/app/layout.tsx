@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackToTop from "@/components/BackToTop";
 import GlobalNavigationLoader from "@/components/GlobalNavigationLoader";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -45,7 +46,8 @@ export default function RootLayout({
         >
           <Navbar />
         </Suspense>
-        {children}
+        <div className="pb-[calc(74px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        <MobileBottomNav />
         <BackToTop />
       </body>
     </html>

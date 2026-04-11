@@ -585,8 +585,8 @@ export function toCategoryPageDataFromCatalog(input: {
 }
 
 export function toListingProfileFromVendor(vendor: CatalogVendorDetail): ListingProfile {
-  const displayName = vendor.businessName || vendor.name || "Business Profile";
-  const categoryLabel = vendor.businessSubcategory?.name || vendor.businessCategory?.name || vendor.subcategory || "Business";
+  const displayName = vendor.businessName || vendor.name || vendor.id;
+  const categoryLabel = vendor.businessSubcategory?.name || vendor.businessCategory?.name || vendor.subcategory || "";
   const phone = vendor.businessPhone || "";
   const email = vendor.businessEmail || "";
   const tags = uniqueStrings([...(vendor.tags || []), ...(vendor.serviceTags || [])]);
@@ -603,8 +603,8 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
       ? [{ day: "Mon - Sun", time: `${vendor.shopOpeningTime} - ${vendor.shopClosingTime}` }]
       : [];
 
-  const logoImage = vendor.imageUrl || DEFAULT_VENDOR_IMAGE;
-  const coverImage = vendor.shopBannerImage || DEFAULT_BANNER_IMAGE;
+  const logoImage = String(vendor.imageUrl || "").trim();
+  const coverImage = String(vendor.shopBannerImage || "").trim();
   const filteredGallery = uniqueStrings(
     (Array.isArray(vendor.shopGallery) ? vendor.shopGallery : []).filter(
       (url) => {
@@ -630,15 +630,15 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     priceRange: vendor.priceRange || "",
     badges: Array.isArray(vendor.badges) && vendor.badges.length > 0 ? vendor.badges : vendor.verified ? ["Verified"] : [],
     tags,
-    address: vendor.businessAddress || vendor.address || "Address unavailable",
+    address: vendor.businessAddress || vendor.address || "",
     city: vendor.city || "",
-    phone: phone || "Not provided",
-    email: email || "Not provided",
+    phone,
+    email,
     whatsapp: phone,
-    ctaLabel: vendor.ctaLabel || "Send enquiry",
+    ctaLabel: vendor.ctaLabel || "",
     description: vendor.businessDescription || "",
     highlights,
-    services: Array.isArray(vendor.serviceTags) ? vendor.serviceTags : tags,
+    services: Array.isArray(vendor.serviceTags) ? uniqueStrings(vendor.serviceTags.map((item) => String(item || ""))) : [],
     amenities: [],
     hours,
     gallery: filteredGallery,

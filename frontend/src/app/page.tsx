@@ -10,8 +10,12 @@ export default function Home() {
   return (
     <main className="w-full space-y-4 overflow-x-hidden bg-white sm:space-y-5">
       <BannerSection />
-      <CategoryGrid />
-      <PromoBanners />
+      <section id="mobile-home-categories">
+        <CategoryGrid />
+      </section>
+      <section id="mobile-home-shop">
+        <PromoBanners />
+      </section>
       <CityStrip />
       <ExploreWellnessSections />
       <PartnersSection />
