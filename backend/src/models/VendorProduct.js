@@ -36,8 +36,8 @@ const vendorProductSchema = new Schema(
 
     categorySlug: { type: String, required: true, trim: true, lowercase: true },
     categoryLabel: { type: String, trim: true },
-    subcategorySlug: { type: String, required: true, trim: true, lowercase: true },
-    subcategoryName: { type: String, trim: true },
+    subcategorySlug: { type: String, trim: true, lowercase: true, default: "" },
+    subcategoryName: { type: String, trim: true, default: "" },
 
     productName: { type: String, required: true, trim: true },
     shortDescription: { type: String, trim: true },

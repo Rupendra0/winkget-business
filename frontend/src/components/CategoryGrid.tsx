@@ -43,15 +43,13 @@ const DESKTOP_CATEGORY_COUNT = DESKTOP_TILE_COUNT - 1;
 interface CategoryCardProps {
   name: string;
   mediaUrl?: string;
-  animationDelayMs?: number;
 }
 
-function CategoryCard({ name, mediaUrl, animationDelayMs = 0 }: CategoryCardProps) {
+function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
   return (
     <div className="flex flex-col items-center justify-center">
       <div
-        className="category-jump-to-fro flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]"
-        style={{ animationDelay: `${animationDelayMs}ms` }}
+        className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-300 bg-white md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]"
       >
         {mediaUrl ? (
           <img
@@ -199,7 +197,6 @@ export default function CategoryGrid() {
                   <CategoryCard
                     name={category.name}
                     mediaUrl={category.mediaUrl}
-                    animationDelayMs={(index % 8) * 90}
                   />
                 </Link>
               );
@@ -215,7 +212,6 @@ export default function CategoryGrid() {
                   <CategoryCard
                     name={category.name}
                     mediaUrl={category.mediaUrl}
-                    animationDelayMs={((index + mobileVisibleCategories.length) % 8) * 90}
                   />
                 </Link>
               );
@@ -226,7 +222,7 @@ export default function CategoryGrid() {
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="category-jump-to-fro flex h-14 w-14 items-center justify-center rounded-xl bg-white text-blue-600 md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-300 bg-white text-blue-600 md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]">
                 <ChevronRight size={20} />
               </div>
               <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">View All</h3>

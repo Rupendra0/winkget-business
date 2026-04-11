@@ -83,6 +83,8 @@ const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
 
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const RESTAURANT_CATEGORY_REGEX =
+  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|biryani|pizza|burger|coffee|tea)/i;
 
 const uniqueStrings = (values: Array<string | undefined>) => {
   const seen = new Set<string>();
@@ -99,6 +101,85 @@ const uniqueStrings = (values: Array<string | undefined>) => {
   });
 
   return result;
+};
+
+const isRestaurantMarketplaceProfile = (profile: ListingProfile, categoryLabel: string) => {
+  const candidates = [
+    categoryLabel,
+    profile.category,
+    ...(Array.isArray(profile.tags) ? profile.tags : []),
+    ...(Array.isArray(profile.services) ? profile.services : []),
+  ];
+
+  return candidates.some((value) => RESTAURANT_CATEGORY_REGEX.test(normalizeString(value)));
+};
+
+const toPriceForTwoLabel = (profile: ListingProfile) => {
+  const rawRange = normalizeString(profile.priceRange);
+  if (!rawRange) {
+    return "₹300 for two";
+  }
+
+  if (/for\s*two/i.test(rawRange)) {
+    return rawRange;
+  }
+
+  const rupeeMatch = rawRange.match(/₹\s*[\d,]+/i);
+  if (rupeeMatch?.[0]) {
+    return `${rupeeMatch[0]} for two`;
+  }
+
+  return "₹300 for two";
+};
+
+const toDeliveryTimeLabel = (profile: ListingProfile) => {
+  const serviceHints = [
+    ...(Array.isArray(profile.tags) ? profile.tags : []),
+    ...(Array.isArray(profile.services) ? profile.services : []),
+  ];
+
+  const matchedHint = serviceHints.find((item) => /\d+\s*(?:-|to)\s*\d+\s*min|\d+\s*min/i.test(String(item || "")));
+  if (matchedHint) {
+    return normalizeString(matchedHint);
+  }
+
+  return "20-45 min";
+};
+
+const toCuisineLabel = (profile: ListingProfile, fallback: string) => {
+  const cuisineTokens = uniqueStrings([
+    ...(Array.isArray(profile.tags) ? profile.tags : []),
+    ...(Array.isArray(profile.services) ? profile.services : []),
+  ])
+    .filter((item) => item.length <= 32)
+    .slice(0, 2);
+
+  if (cuisineTokens.length > 0) {
+    return cuisineTokens.join(" • ");
+  }
+
+  return fallback || "Multi-cuisine";
+};
+
+const toQuickFilterChips = (profile: ListingProfile, categories: string[]) => {
+  return uniqueStrings([
+    ...(Array.isArray(profile.tags) ? profile.tags : []),
+    ...(Array.isArray(profile.services) ? profile.services : []),
+    ...categories,
+  ]).slice(0, 10);
+};
+
+const toRestaurantHeroSubtitle = (profile: ListingProfile) => {
+  const rawDescription = normalizeString(profile.description);
+  if (!rawDescription) {
+    return "Freshly cooked favourites delivered with fast and reliable service.";
+  }
+
+  if (rawDescription.length <= 140) {
+    return rawDescription;
+  }
+
+  return `${rawDescription.slice(0, 137).trimEnd()}...`;
 };
 
 const deriveDiscount = (product: StoreProduct) => {
@@ -141,7 +222,7 @@ const toStoreProductsFromVendorProducts = (
 
     const subcategoryName = normalizeString(product.subcategoryName);
     const categoryLabel = normalizeString(product.categoryLabel || product.categorySlug || profile.category || "Products");
-    const category = subcategoryName || categoryLabel;
+    const category = categoryLabel;
     const placementInput = normalizeString(product.storePlacement).toLowerCase();
     const storePlacement = placementInput === "featured" || placementInput === "trending" ? placementInput : undefined;
 
@@ -154,7 +235,7 @@ const toStoreProductsFromVendorProducts = (
       badge: normalizeString(product.badge) || undefined,
       categorySlug: normalizeString(product.categorySlug) || toCategorySlug(categoryLabel),
       categoryLabel,
-      subcategoryName: category,
+      subcategoryName: subcategoryName || undefined,
       shortDescription: normalizeString(product.shortDescription) || undefined,
       description: normalizeString(product.description) || undefined,
       gallery: Array.isArray(product.gallery) ? uniqueStrings(product.gallery.map((value) => normalizeString(value))) : [],
@@ -389,6 +470,11 @@ export const toStoreDataFromProfile = (
   const categoryLabel = normalizeString(profile.category) || "Business";
   const imageUrl = normalizeString(profile.coverImage) || normalizeString(profile.logoImage);
   const addressLabel = [profile.address, profile.city].filter(Boolean).join(", ") || "Address unavailable";
+  const addressParts = normalizeString(profile.address)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const sublocalityLabel = normalizeString(profile.sublocality) || addressParts[0] || "";
   const mappedProducts = toStoreProductsFromVendorProducts(vendorProducts, profile, storeId);
   const includeMockFallbackProducts = options?.includeMockFallbackProducts ?? true;
 
@@ -414,6 +500,10 @@ export const toStoreDataFromProfile = (
     ...products.map((product) => normalizeString(product.categoryLabel || product.category)),
     categoryLabel,
   ]).slice(0, 12);
+  const isRestaurantMarketplace = isRestaurantMarketplaceProfile(profile, categoryLabel);
+  const quickFilterChips = toQuickFilterChips(profile, categories);
+  const contactPhone = normalizeString(profile.businessAlternatePhone || profile.phone);
+  const whatsappPhone = normalizeString(profile.whatsapp || profile.phone || profile.businessAlternatePhone);
 
   const featuredFromPlacement = products
     .filter((item) => item.storePlacement === "featured")
@@ -445,9 +535,22 @@ export const toStoreDataFromProfile = (
     tagline: "Shop by category",
     bannerImage: imageUrl,
     logoImage: normalizeString(profile.logoImage) || imageUrl,
+    storeCategory: categoryLabel,
+    isRestaurantMarketplace,
+    isStoreOpen: typeof profile.isStoreOpen === "boolean" ? profile.isStoreOpen : null,
+    contactPhone: contactPhone || undefined,
+    whatsappPhone: whatsappPhone || undefined,
+    deliveryTimeLabel: isRestaurantMarketplace ? toDeliveryTimeLabel(profile) : undefined,
+    priceForTwoLabel: isRestaurantMarketplace ? toPriceForTwoLabel(profile) : undefined,
+    deliveryFeeLabel: isRestaurantMarketplace ? "FREE above ₹299" : undefined,
+    quickFilterChips: quickFilterChips.length > 0 ? quickFilterChips : undefined,
+    heroTitle: isRestaurantMarketplace ? "Super Delicious Food Menu" : undefined,
+    heroSubtitle: isRestaurantMarketplace ? toRestaurantHeroSubtitle(profile) : undefined,
+    cuisineLabel: isRestaurantMarketplace ? toCuisineLabel(profile, categoryLabel) : undefined,
     rating: Number(profile.rating || 0),
     reviews: Number(profile.reviews || 0),
     address: addressLabel,
+    sublocality: sublocalityLabel || undefined,
     categories,
     filters: [
       { label: "Price", options: ["Under ₹1,000", "₹1,000 - ₹10,000", "₹10,000+"] },
@@ -467,6 +570,7 @@ export const toStoreDataFromProfile = (
     },
     aboutTitle: "About",
     aboutBody:
+      normalizeString(profile.description) ||
       "Explore verified products with trusted delivery and support from our marketplace.",
   };
 };

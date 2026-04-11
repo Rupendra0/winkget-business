@@ -49,6 +49,7 @@ import {
   type VendorInquiry,
   type VendorInquirySnapshot,
   type VendorProductRecord,
+  type VendorProfileUpdateInput,
   type VendorProductUpsertInput,
   type VendorReview,
   type VendorReviewSnapshot,
@@ -216,6 +217,14 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
     title: "Settings",
     subtitle: "",
   },
+};
+
+const getNavLabel = (label: SidebarLabel, isRestaurantVendor: boolean): string => {
+  if (label === "Products" && isRestaurantVendor) {
+    return "Menu";
+  }
+
+  return label;
 };
 
 const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_MAIN_WEBSITE_URL || "http://localhost:3000";
@@ -407,6 +416,24 @@ function formatDateTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function isRestaurantVendorProfile(vendor: VendorSession | null): boolean {
+  if (!vendor) {
+    return false;
+  }
+
+  const categoryTokens = [
+    String(vendor.businessCategory?.name || "").trim(),
+    String(vendor.businessSubcategory?.name || "").trim(),
+    ...(Array.isArray(vendor.serviceTags) ? vendor.serviceTags : []),
+  ];
+
+  return categoryTokens.some((token) =>
+    /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|biryani|pizza|burger|coffee|tea)/i.test(
+      String(token || "")
+    )
+  );
 }
 
 function buildInquirySummary(inquiries: VendorInquiry[]): VendorInquirySnapshot["summary"] {
@@ -1583,6 +1610,11 @@ function ShopProfileSection({
 function VendorProductsSection({
   form,
   sellerName,
+  isRestaurantVendor,
+  vendorCategoryId,
+  vendorCategoryName,
+  vendorSubcategoryId,
+  vendorSubcategoryName,
   categories,
   products,
   editingProduct,
@@ -1607,6 +1639,11 @@ function VendorProductsSection({
 }: {
   form: VendorProductFormState;
   sellerName: string;
+  isRestaurantVendor: boolean;
+  vendorCategoryId?: string;
+  vendorCategoryName?: string;
+  vendorSubcategoryId?: string;
+  vendorSubcategoryName?: string;
   categories: VendorCatalogCategory[];
   products: VendorProductRecord[];
   editingProduct: VendorProductRecord | null;
@@ -1631,6 +1668,64 @@ function VendorProductsSection({
 }) {
   const [showProductForm, setShowProductForm] = useState(false);
   const isProductFormVisible = showProductForm || Boolean(editingProductId);
+  const productEntityLabel = isRestaurantVendor ? "Menu" : "Products";
+  const addActionLabel = isRestaurantVendor ? "Add Menu Item" : "Add Product";
+
+  const lockedCategory = useMemo(() => {
+    if (!isRestaurantVendor || !Array.isArray(categories) || categories.length === 0) {
+      return null;
+    }
+
+    const normalizedCategoryId = String(vendorCategoryId || "").trim();
+    const normalizedCategoryName = String(vendorCategoryName || "").trim().toLowerCase();
+    const normalizedSubcategoryId = String(vendorSubcategoryId || "").trim();
+    const normalizedSubcategoryName = String(vendorSubcategoryName || "").trim().toLowerCase();
+
+    const categoryById = normalizedCategoryId
+      ? categories.find((category) => String(category.id || "").trim() === normalizedCategoryId)
+      : null;
+    const categoryByName = !categoryById && normalizedCategoryName
+      ? categories.find((category) => String(category.name || "").trim().toLowerCase() === normalizedCategoryName)
+      : null;
+    const resolvedCategory = categoryById || categoryByName || null;
+
+    if (!resolvedCategory) {
+      return null;
+    }
+
+    const queue = [...(resolvedCategory.subcategories || [])];
+    let resolvedSubcategory: VendorCatalogCategory["subcategories"][number] | null = null;
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) {
+        continue;
+      }
+
+      const matchesById = normalizedSubcategoryId
+        ? String(current.id || "").trim() === normalizedSubcategoryId
+        : false;
+      const matchesByName = !matchesById && normalizedSubcategoryName
+        ? String(current.name || "").trim().toLowerCase() === normalizedSubcategoryName
+        : false;
+
+      if (matchesById || matchesByName) {
+        resolvedSubcategory = current;
+        break;
+      }
+
+      if (Array.isArray(current.childSubcategories) && current.childSubcategories.length > 0) {
+        queue.push(...current.childSubcategories);
+      }
+    }
+
+    return {
+      categorySlug: String(resolvedCategory.slug || "").trim(),
+      categoryLabel: String(resolvedCategory.name || "").trim(),
+      subcategorySlug: String(resolvedSubcategory?.slug || "").trim(),
+      subcategoryLabel: String(resolvedSubcategory?.name || "").trim(),
+    };
+  }, [categories, isRestaurantVendor, vendorCategoryId, vendorCategoryName, vendorSubcategoryId, vendorSubcategoryName]);
 
   const handleOpenCreateForm = () => {
     onCancelEdit();
@@ -1649,14 +1744,14 @@ function VendorProductsSection({
     <section className="space-y-4">
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-lg font-semibold text-gray-900">My Products</h3>
+          <h3 className="font-display text-lg font-semibold text-gray-900">{`My ${productEntityLabel}`}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={isProductFormVisible ? handleCloseProductForm : handleOpenCreateForm}
               className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
             >
-              {isProductFormVisible ? "Close Add Product" : "Add Product"}
+              {isProductFormVisible ? `Close ${addActionLabel}` : addActionLabel}
             </button>
             <button
               type="button"
@@ -1674,7 +1769,7 @@ function VendorProductsSection({
             type="text"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search products"
+            placeholder={isRestaurantVendor ? "Search menu items" : "Search products"}
             className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 sm:w-72"
           />
 
@@ -1700,7 +1795,10 @@ function VendorProductsSection({
           ) : productsError ? (
             <p className="text-sm text-red-700">{productsError}</p>
           ) : products.length === 0 ? (
-            <EmptyState title="No products found" body="Click Add Product to create your first item." />
+            <EmptyState
+              title={isRestaurantVendor ? "No menu items found" : "No products found"}
+              body={isRestaurantVendor ? "Click Add Menu Item to create your first dish." : "Click Add Product to create your first item."}
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {products.map((product) => {
@@ -2188,7 +2286,9 @@ function VendorProductsSection({
               mode={editingProduct ? "edit" : "create"}
               initialProduct={editingProduct}
               categories={categories}
+              lockedCategory={lockedCategory}
               sellerName={sellerName}
+              compactMode={isRestaurantVendor}
               saving={saving}
               actionMessage={actionMessage}
               actionError={actionError}
@@ -2775,6 +2875,8 @@ export default function VendorDashboard() {
     }));
   }, [reviews.summary.rating, vendor?.serviceTags]);
 
+  const isRestaurantVendor = useMemo(() => isRestaurantVendorProfile(vendor), [vendor]);
+
   const notifications = useMemo<VendorNotification[]>(() => {
     const inquiryNotifications = inquiryData.inquiries.map((inquiry) => ({
       id: `inquiry-${inquiry.id}`,
@@ -2924,6 +3026,47 @@ export default function VendorDashboard() {
         state: selectedCity?.state || current.state,
       };
     });
+  };
+
+  const buildVendorBaselineProfilePayload = (): VendorProfileUpdateInput => {
+    const pickFirstNonEmpty = (...values: Array<string | null | undefined>) => {
+      for (const value of values) {
+        const normalized = String(value || "").trim();
+        if (normalized) {
+          return normalized;
+        }
+      }
+
+      return undefined;
+    };
+
+    const settingsServiceTags = settingsForm.serviceTagsText
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    const vendorServiceTags = Array.isArray(vendor?.serviceTags)
+      ? vendor.serviceTags.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const resolvedServiceTags = settingsServiceTags.length > 0 ? settingsServiceTags : vendorServiceTags;
+
+    return {
+      name: pickFirstNonEmpty(settingsForm.name, vendor?.name),
+      email: pickFirstNonEmpty(settingsForm.email, vendor?.email),
+      phone: pickFirstNonEmpty(settingsForm.phone, vendor?.phone),
+      businessEmail: pickFirstNonEmpty(settingsForm.businessEmail, vendor?.businessEmail),
+      businessPhone: pickFirstNonEmpty(settingsForm.businessPhone, vendor?.businessPhone),
+      city: pickFirstNonEmpty(settingsForm.city, vendor?.city),
+      sublocality: pickFirstNonEmpty(settingsForm.sublocality, vendor?.sublocality),
+      state: pickFirstNonEmpty(settingsForm.state, vendor?.state),
+      shopOpeningTime: pickFirstNonEmpty(settingsForm.shopOpeningTime, vendor?.shopOpeningTime),
+      shopClosingTime: pickFirstNonEmpty(settingsForm.shopClosingTime, vendor?.shopClosingTime),
+      businessCategoryId: pickFirstNonEmpty(vendor?.businessCategory?.id),
+      businessSubcategoryId: pickFirstNonEmpty(vendor?.businessSubcategory?.id),
+      gstNumber: pickFirstNonEmpty(vendor?.gstNumber),
+      gstDocument: pickFirstNonEmpty(vendor?.gstDocument),
+      serviceTags: resolvedServiceTags.length > 0 ? resolvedServiceTags : undefined,
+    };
   };
 
   const handleSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -3156,7 +3299,15 @@ export default function VendorDashboard() {
     setShopProfileSaving(true);
 
     try {
+      const baselinePayload = buildVendorBaselineProfilePayload();
+      if (!baselinePayload.city || !baselinePayload.sublocality) {
+        setShopProfileError("Please set city and sublocality in Settings before saving Shop Profile.");
+        setShopProfileSaving(false);
+        return;
+      }
+
       const updatedVendor = await updateVendorProfile({
+        ...baselinePayload,
         image: shopProfileForm.image,
         shopBannerImage: shopProfileForm.shopBannerImage,
         shopGallery: filterShopGalleryItems(
@@ -3193,7 +3344,14 @@ export default function VendorDashboard() {
     setMyStoreMediaError(null);
 
     try {
+      const baselinePayload = buildVendorBaselineProfilePayload();
+      if (!baselinePayload.city || !baselinePayload.sublocality) {
+        setMyStoreMediaError("Please set city and sublocality in Settings before updating MyStore media.");
+        return;
+      }
+
       const updatedVendor = await updateVendorProfile({
+        ...baselinePayload,
         myStoreImage: nextImage,
         myStoreBannerImage: nextBannerImage,
       });
@@ -3388,8 +3546,8 @@ export default function VendorDashboard() {
     if (!vendor || productFormSaving) return;
 
     const payload = buildVendorProductPayload(productForm, vendorCategories, vendor);
-    if (!payload.categorySlug || !payload.subcategorySlug || !payload.productName || !payload.image) {
-      setProductFormError("Category, subcategory, product name, and image are required.");
+    if (!payload.categorySlug || !payload.productName || !payload.image) {
+      setProductFormError("Category, product name, and image are required.");
       setProductFormMessage(null);
       return;
     }
@@ -3428,11 +3586,11 @@ export default function VendorDashboard() {
 
   const handleVendorProductQuickUpsert = async (payload: VendorProductUpsertInput, productId?: string | null) => {
     if (!vendor || productFormSaving) {
-      throw new Error("Unable to save product right now");
+      throw new Error(isRestaurantVendor ? "Unable to save menu item right now" : "Unable to save product right now");
     }
 
-    if (!payload.categorySlug || !payload.subcategorySlug || !payload.productName || !payload.image) {
-      setProductFormError("Category, subcategory, product name, and image are required.");
+    if (!payload.categorySlug || !payload.productName || !payload.image) {
+      setProductFormError("Category, product name, and image are required.");
       setProductFormMessage(null);
       throw new Error("Validation failed");
     }
@@ -3451,18 +3609,18 @@ export default function VendorDashboard() {
       if (productId) {
         const updated = await updateVendorProduct(productId, payload);
         setVendorProducts((current) => current.map((product) => (product.id === updated.id ? updated : product)));
-        setProductFormMessage("Product updated successfully.");
+        setProductFormMessage(isRestaurantVendor ? "Menu item updated successfully." : "Product updated successfully.");
       } else {
         const created = await createVendorProduct(payload);
         setVendorProducts((current) => [created, ...current]);
-        setProductFormMessage("Product added successfully.");
+        setProductFormMessage(isRestaurantVendor ? "Menu item added successfully." : "Product added successfully.");
       }
 
       setEditingProductId(null);
       setProductForm(getDefaultProductForm(vendor));
       await loadVendorProducts(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save product";
+      const message = error instanceof Error ? error.message : isRestaurantVendor ? "Failed to save menu item" : "Failed to save product";
       setProductFormError(message);
       throw error;
     } finally {
@@ -3492,9 +3650,9 @@ export default function VendorDashboard() {
         setEditingProductId(null);
         setProductForm(getDefaultProductForm(vendor));
       }
-      setProductFormMessage("Product deleted successfully.");
+      setProductFormMessage(isRestaurantVendor ? "Menu item deleted successfully." : "Product deleted successfully.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete product";
+      const message = error instanceof Error ? error.message : isRestaurantVendor ? "Failed to delete menu item" : "Failed to delete product";
       setProductFormError(message);
     } finally {
       setDeletingProductId(null);
@@ -3616,6 +3774,11 @@ export default function VendorDashboard() {
         <VendorProductsSection
           form={productForm}
           sellerName={String(vendor.businessName || vendor.name || "").trim()}
+          isRestaurantVendor={isRestaurantVendor}
+          vendorCategoryId={vendor.businessCategory?.id}
+          vendorCategoryName={vendor.businessCategory?.name}
+          vendorSubcategoryId={vendor.businessSubcategory?.id}
+          vendorSubcategoryName={vendor.businessSubcategory?.name}
           categories={vendorCategories}
           products={filteredVendorProducts}
           editingProduct={editingProduct}
@@ -3726,6 +3889,7 @@ export default function VendorDashboard() {
                 const Icon = item.icon;
                 const isActive = activeNav === item.label;
                 const unreadCount = navUnreadCounts[item.label] || 0;
+                const navLabel = getNavLabel(item.label, isRestaurantVendor);
                 return (
                   <button
                     key={item.label}
@@ -3737,7 +3901,7 @@ export default function VendorDashboard() {
                     aria-current={isActive ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
-                    <span>{item.label}</span>
+                    <span>{navLabel}</span>
                     {unreadCount > 0 ? (
                       <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
@@ -3913,6 +4077,7 @@ export default function VendorDashboard() {
             const Icon = item.icon;
             const isActive = activeNav === item.label;
             const unreadCount = navUnreadCounts[item.label] || 0;
+            const navLabel = getNavLabel(item.label, isRestaurantVendor);
 
             return (
               <li key={`mobile-${item.label}`}>
@@ -3926,7 +4091,7 @@ export default function VendorDashboard() {
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   <span className="inline-flex items-center gap-1">
-                    {item.label}
+                    {navLabel}
                     {unreadCount > 0 ? (
                       <span className="inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                         {unreadCount > 9 ? "9+" : unreadCount}

@@ -200,17 +200,13 @@ const toProductSummary = (product) => ({
 
 const buildProductDocumentInput = (body, existingProduct = null) => {
   const categorySlug = slugify(body?.categorySlug || existingProduct?.categorySlug);
-  const subcategorySlug = slugify(body?.subcategorySlug || existingProduct?.subcategorySlug);
+  const subcategorySlug = slugify(body?.subcategorySlug || existingProduct?.subcategorySlug || "");
   const productName = normalizeString(body?.productName || existingProduct?.productName);
   const categoryLabel = normalizeString(body?.categoryLabel || existingProduct?.categoryLabel);
-  const subcategoryName = normalizeString(body?.subcategoryName || existingProduct?.subcategoryName);
+  const subcategoryName = normalizeString(body?.subcategoryName || existingProduct?.subcategoryName || "");
 
   if (!categorySlug) {
     return { error: "Category slug is required" };
-  }
-
-  if (!subcategorySlug) {
-    return { error: "Subcategory slug is required" };
   }
 
   if (!productName) {
@@ -253,7 +249,7 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     categorySlug,
     categoryLabel: categoryLabel || categorySlug,
     subcategorySlug,
-    subcategoryName: subcategoryName || subcategorySlug,
+    subcategoryName: subcategoryName || subcategorySlug || "",
     productName,
     shortDescription: normalizeString(body?.shortDescription ?? existingProduct?.shortDescription),
     description: normalizeString(body?.description ?? existingProduct?.description),

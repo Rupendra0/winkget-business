@@ -632,6 +632,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     tags,
     address: vendor.businessAddress || vendor.address || "",
     city: vendor.city || "",
+    sublocality: vendor.sublocality || "",
     phone,
     email,
     whatsapp: phone,

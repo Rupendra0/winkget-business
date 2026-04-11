@@ -5,6 +5,19 @@ type ApiEnvelope<T> = {
   message?: string;
 } & T;
 
+export type VendorBusinessReference = {
+  id: string;
+  name?: string;
+  customFormEnabled?: boolean;
+  customFormTitle?: string;
+  customFormFields?: Array<{
+    key?: string;
+    label?: string;
+    type?: string;
+    required?: boolean;
+  }>;
+};
+
 export type VendorSession = {
   id: string;
   role: string;
@@ -21,6 +34,8 @@ export type VendorSession = {
   sublocality?: string;
   state?: string;
   postalCode?: string;
+  gstNumber?: string;
+  gstDocument?: string;
   website?: string;
   businessDescription?: string;
   image?: string;
@@ -34,6 +49,8 @@ export type VendorSession = {
   establishmentYear?: number;
   yearsInBusiness?: number;
   vendorStatus?: "pending" | "approved" | "rejected";
+  businessCategory?: VendorBusinessReference;
+  businessSubcategory?: VendorBusinessReference;
   shopOpeningTime?: string;
   shopClosingTime?: string;
   storeStatusMode?: "auto" | "manual";
@@ -108,6 +125,10 @@ export type VendorProfileUpdateInput = {
   city?: string;
   sublocality?: string;
   state?: string;
+  businessCategoryId?: string;
+  businessSubcategoryId?: string;
+  gstNumber?: string;
+  gstDocument?: string;
   shopOpeningTime?: string;
   shopClosingTime?: string;
   storeStatusMode?: "auto" | "manual";
@@ -150,6 +171,8 @@ export type VendorCatalogSubcategory = {
   id: string;
   name: string;
   slug: string;
+  parentSubcategoryId?: string;
+  childSubcategories?: VendorCatalogSubcategory[];
 };
 
 export type VendorCatalogCategory = {
@@ -733,6 +756,7 @@ export async function fetchVendorCategories(): Promise<VendorCatalogCategory[]> 
           name?: string;
           slug?: string;
           category?: { id?: string; name?: string; slug?: string };
+          parentSubcategory?: { id?: string; name?: string };
         }>;
       }>("/api/subcategories"),
     ]);
@@ -756,26 +780,96 @@ export async function fetchVendorCategories(): Promise<VendorCatalogCategory[]> 
       });
     });
 
+    const subcategoryById = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        slug: string;
+        categoryId: string;
+        parentSubcategoryId: string | null;
+      }
+    >();
+
     subcategories.forEach((item, index) => {
       const id = String(item.id || `subcategory-${index}`).trim();
       const name = String(item.name || "").trim();
       const slug = String(item.slug || "").trim();
       const categoryId = String(item.category?.id || "").trim();
+      const parentSubcategoryId = String(item.parentSubcategory?.id || "").trim() || null;
       if (!id || !name || !slug || !categoryId) return;
+      if (!map.has(categoryId)) return;
 
-      const category = map.get(categoryId);
-      if (!category) return;
+      subcategoryById.set(id, {
+        id,
+        name,
+        slug,
+        categoryId,
+        parentSubcategoryId,
+      });
+    });
 
-      if (category.subcategories.some((subcategory) => subcategory.id === id)) {
+    const childMap = new Map<string, Array<{ id: string; name: string; slug: string; categoryId: string; parentSubcategoryId: string | null }>>();
+    const rootMap = new Map<string, Array<{ id: string; name: string; slug: string; categoryId: string; parentSubcategoryId: string | null }>>();
+
+    subcategoryById.forEach((subcategory) => {
+      const parentId = subcategory.parentSubcategoryId;
+      if (parentId && subcategoryById.has(parentId)) {
+        const siblings = childMap.get(parentId);
+        if (siblings) {
+          siblings.push(subcategory);
+        } else {
+          childMap.set(parentId, [subcategory]);
+        }
         return;
       }
 
-      category.subcategories.push({ id, name, slug });
+      const roots = rootMap.get(subcategory.categoryId);
+      if (roots) {
+        roots.push(subcategory);
+      } else {
+        rootMap.set(subcategory.categoryId, [subcategory]);
+      }
     });
+
+    const byName = (
+      left: { name: string },
+      right: { name: string }
+    ) => left.name.localeCompare(right.name);
+
+    const buildSubcategoryNode = (
+      entry: { id: string; name: string; slug: string; categoryId: string; parentSubcategoryId: string | null },
+      lineage = new Set<string>()
+    ): VendorCatalogSubcategory => {
+      const nextLineage = new Set(lineage);
+      if (nextLineage.has(entry.id)) {
+        return {
+          id: entry.id,
+          name: entry.name,
+          slug: entry.slug,
+          parentSubcategoryId: entry.parentSubcategoryId || undefined,
+          childSubcategories: [],
+        };
+      }
+
+      nextLineage.add(entry.id);
+
+      const childSubcategories = [...(childMap.get(entry.id) || [])]
+        .sort(byName)
+        .map((child) => buildSubcategoryNode(child, nextLineage));
+
+      return {
+        id: entry.id,
+        name: entry.name,
+        slug: entry.slug,
+        parentSubcategoryId: entry.parentSubcategoryId || undefined,
+        childSubcategories,
+      };
+    };
 
     return Array.from(map.values()).map((category) => ({
       ...category,
-      subcategories: [...category.subcategories].sort((left, right) => left.name.localeCompare(right.name)),
+      subcategories: [...(rootMap.get(category.id) || [])].sort(byName).map((subcategory) => buildSubcategoryNode(subcategory)),
     }));
   } catch {
     return [];

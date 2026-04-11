@@ -1,11 +1,23 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import type { VendorCatalogCategory, VendorProductRecord, VendorProductUpsertInput } from "@/lib/vendorApi";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  VendorCatalogCategory,
+  VendorCatalogSubcategory,
+  VendorProductRecord,
+  VendorProductUpsertInput,
+} from "@/lib/vendorApi";
 
 type VendorAddProductFormProps = {
   categories: VendorCatalogCategory[];
+  lockedCategory?: {
+    categorySlug: string;
+    categoryLabel: string;
+    subcategorySlug: string;
+    subcategoryLabel: string;
+  } | null;
   sellerName: string;
+  compactMode?: boolean;
   mode?: "create" | "edit";
   initialProduct?: VendorProductRecord | null;
   saving: boolean;
@@ -173,9 +185,113 @@ function parseLabelValueLines(value: string): Array<{ label: string; value: stri
     .filter((item): item is { label: string; value: string } => Boolean(item));
 }
 
+type CategorySelection = {
+  categorySlug: string;
+  subcategorySlug: string;
+};
+
+const findNestedSubcategoryMatch = (
+  categoryOptions: VendorCatalogSubcategory[],
+  nestedSlug: string
+): { parent: VendorCatalogSubcategory; child: VendorCatalogSubcategory } | null => {
+  const normalizedSlug = String(nestedSlug || "").trim();
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  for (const category of categoryOptions) {
+    const nestedChild = (category.childSubcategories || []).find((item) => item.slug === normalizedSlug);
+    if (nestedChild) {
+      return {
+        parent: category,
+        child: nestedChild,
+      };
+    }
+  }
+
+  return null;
+};
+
+const resolveRestaurantCategorySelection = (
+  child2Options: VendorCatalogSubcategory[],
+  initialCategorySlug: string,
+  initialSubcategorySlug: string,
+  preferredSubcategorySlug: string
+): CategorySelection => {
+  const normalizedCategorySlug = String(initialCategorySlug || "").trim();
+  const normalizedSubcategorySlug = String(initialSubcategorySlug || "").trim();
+  const normalizedPreferredSubcategorySlug = String(preferredSubcategorySlug || "").trim();
+
+  let resolvedCategory =
+    child2Options.find((item) => item.slug === normalizedCategorySlug) ||
+    child2Options.find((item) => item.slug === normalizedSubcategorySlug) ||
+    null;
+  let resolvedSubcategory: VendorCatalogSubcategory | null = null;
+
+  if (!resolvedCategory && normalizedSubcategorySlug) {
+    const nestedInitial = findNestedSubcategoryMatch(child2Options, normalizedSubcategorySlug);
+    if (nestedInitial) {
+      resolvedCategory = nestedInitial.parent;
+      resolvedSubcategory = nestedInitial.child;
+    }
+  }
+
+  if (!resolvedCategory && normalizedPreferredSubcategorySlug) {
+    const preferredCategory = child2Options.find((item) => item.slug === normalizedPreferredSubcategorySlug) || null;
+    if (preferredCategory) {
+      resolvedCategory = preferredCategory;
+    } else {
+      const nestedPreferred = findNestedSubcategoryMatch(child2Options, normalizedPreferredSubcategorySlug);
+      if (nestedPreferred) {
+        resolvedCategory = nestedPreferred.parent;
+        resolvedSubcategory = nestedPreferred.child;
+      }
+    }
+  }
+
+  if (!resolvedCategory) {
+    resolvedCategory = child2Options[0] || null;
+  }
+
+  if (!resolvedSubcategory) {
+    const child3Options = Array.isArray(resolvedCategory?.childSubcategories)
+      ? resolvedCategory.childSubcategories
+      : [];
+    resolvedSubcategory =
+      child3Options.find((item) => item.slug === normalizedSubcategorySlug) || child3Options[0] || null;
+  }
+
+  return {
+    categorySlug: String(resolvedCategory?.slug || "").trim(),
+    subcategorySlug: String(resolvedSubcategory?.slug || "").trim(),
+  };
+};
+
+const resolveStandardCategorySelection = (
+  categoryOptions: VendorCatalogSubcategory[],
+  initialCategorySlug: string,
+  initialSubcategorySlug: string
+): CategorySelection => {
+  const normalizedCategorySlug = String(initialCategorySlug || "").trim();
+  const normalizedSubcategorySlug = String(initialSubcategorySlug || "").trim();
+
+  const resolvedCategory = categoryOptions.find((item) => item.slug === normalizedCategorySlug) || categoryOptions[0] || null;
+  const child2Options = Array.isArray(resolvedCategory?.childSubcategories)
+    ? resolvedCategory.childSubcategories
+    : [];
+  const resolvedSubcategory = child2Options.find((item) => item.slug === normalizedSubcategorySlug) || child2Options[0] || null;
+
+  return {
+    categorySlug: String(resolvedCategory?.slug || "").trim(),
+    subcategorySlug: String(resolvedSubcategory?.slug || "").trim(),
+  };
+};
+
 export default function VendorAddProductForm({
   categories,
+  lockedCategory,
   sellerName,
+  compactMode = false,
   mode = "create",
   initialProduct,
   saving,
@@ -187,24 +303,92 @@ export default function VendorAddProductForm({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const mainImageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [categorySlug, setCategorySlug] = useState(() => String(initialProduct?.categorySlug || categories[0]?.slug || "").trim());
+  const isRestaurantFlow = compactMode;
+  const lockedCategorySlug = String(lockedCategory?.categorySlug || "").trim();
+  const lockedSubcategorySlug = String(lockedCategory?.subcategorySlug || "").trim();
+  const restaurantRootCategory = useMemo(() => {
+    if (!isRestaurantFlow) {
+      return null;
+    }
+
+    return categories.find((category) => category.slug === lockedCategorySlug) || categories[0] || null;
+  }, [categories, isRestaurantFlow, lockedCategorySlug]);
+
+  const categoryOptions = useMemo<VendorCatalogSubcategory[]>(() => {
+    if (isRestaurantFlow) {
+      return Array.isArray(restaurantRootCategory?.subcategories)
+        ? restaurantRootCategory.subcategories
+        : [];
+    }
+
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      childSubcategories: Array.isArray(category.subcategories) ? category.subcategories : [],
+    }));
+  }, [categories, isRestaurantFlow, restaurantRootCategory]);
+
+  const resolveCategorySelection = useCallback(
+    (product?: VendorProductRecord | null): CategorySelection => {
+      const initialCategorySlug = String(product?.categorySlug || "").trim();
+      const initialSubcategorySlug = String(product?.subcategorySlug || "").trim();
+
+      if (isRestaurantFlow) {
+        return resolveRestaurantCategorySelection(
+          categoryOptions,
+          initialCategorySlug,
+          initialSubcategorySlug,
+          lockedSubcategorySlug
+        );
+      }
+
+      return resolveStandardCategorySelection(categoryOptions, initialCategorySlug, initialSubcategorySlug);
+    },
+    [categoryOptions, isRestaurantFlow, lockedSubcategorySlug]
+  );
+
+  const [categorySlug, setCategorySlug] = useState(() => resolveCategorySelection(initialProduct).categorySlug);
+  const [subcategorySlug, setSubcategorySlug] = useState(() => resolveCategorySelection(initialProduct).subcategorySlug);
+
+  useEffect(() => {
+    const nextSelection = resolveCategorySelection(initialProduct);
+    setCategorySlug(nextSelection.categorySlug);
+    setSubcategorySlug(nextSelection.subcategorySlug);
+  }, [initialProduct, resolveCategorySelection]);
+
   const selectedCategory = useMemo(
-    () => categories.find((category) => category.slug === categorySlug) || categories[0] || null,
-    [categories, categorySlug]
+    () => categoryOptions.find((category) => category.slug === categorySlug) || null,
+    [categoryOptions, categorySlug]
   );
   const selectedCategorySlug = selectedCategory?.slug || "";
 
-  const [subcategorySlug, setSubcategorySlug] = useState(
-    () => String(initialProduct?.subcategorySlug || selectedCategory?.subcategories?.[0]?.slug || "").trim()
+  const subcategoryOptions = useMemo(
+    () => (Array.isArray(selectedCategory?.childSubcategories) ? selectedCategory.childSubcategories : []),
+    [selectedCategory]
   );
   const selectedSubcategory = useMemo(
-    () =>
-      selectedCategory?.subcategories.find((subcategory) => subcategory.slug === subcategorySlug) ||
-      selectedCategory?.subcategories?.[0] ||
-      null,
-    [selectedCategory, subcategorySlug]
+    () => subcategoryOptions.find((subcategory) => subcategory.slug === subcategorySlug) || null,
+    [subcategoryOptions, subcategorySlug]
   );
   const selectedSubcategorySlug = selectedSubcategory?.slug || "";
+  const selectedCategoryLabel = selectedCategory?.name || selectedCategorySlug;
+  const selectedSubcategoryLabel = selectedSubcategory?.name || selectedSubcategorySlug;
+
+  useEffect(() => {
+    if (!selectedCategory) {
+      if (subcategorySlug) {
+        setSubcategorySlug("");
+      }
+      return;
+    }
+
+    if (subcategoryOptions.some((subcategory) => subcategory.slug === subcategorySlug)) {
+      return;
+    }
+
+    setSubcategorySlug(subcategoryOptions[0]?.slug || "");
+  }, [selectedCategory, subcategoryOptions, subcategorySlug]);
 
   const [fieldValues, setFieldValues] = useState<FieldValues>(() => createDefaultFieldValues(initialProduct));
   const [variants, setVariants] = useState<VariantDraft[]>(() => createInitialVariants(initialProduct));
@@ -274,8 +458,8 @@ export default function VendorAddProductForm({
   };
 
   const handleCategoryChange = (value: string) => {
-    const nextCategory = categories.find((category) => category.slug === value) || null;
-    const nextSubcategory = nextCategory?.subcategories?.[0] || null;
+    const nextCategory = categoryOptions.find((category) => category.slug === value) || null;
+    const nextSubcategory = (nextCategory?.childSubcategories || [])[0] || null;
 
     setCategorySlug(nextCategory?.slug || "");
     setSubcategorySlug(nextSubcategory?.slug || "");
@@ -387,10 +571,11 @@ export default function VendorAddProductForm({
   };
 
   const resetForm = () => {
-    const firstCategory = categories[0] || null;
+    const nextSelection = resolveCategorySelection(mode === "edit" ? initialProduct : null);
+
     if (mode === "edit" && initialProduct) {
-      setCategorySlug(String(initialProduct.categorySlug || firstCategory?.slug || "").trim());
-      setSubcategorySlug(String(initialProduct.subcategorySlug || firstCategory?.subcategories?.[0]?.slug || "").trim());
+      setCategorySlug(nextSelection.categorySlug);
+      setSubcategorySlug(nextSelection.subcategorySlug);
       setFieldValues(createDefaultFieldValues(initialProduct));
       setVariants(createInitialVariants(initialProduct));
       setExistingMainImageUrl(String(initialProduct.image || "").trim());
@@ -400,8 +585,8 @@ export default function VendorAddProductForm({
           : []
       );
     } else {
-      setCategorySlug(firstCategory?.slug || "");
-      setSubcategorySlug(firstCategory?.subcategories?.[0]?.slug || "");
+      setCategorySlug(nextSelection.categorySlug);
+      setSubcategorySlug(nextSelection.subcategorySlug);
       setFieldValues(createDefaultFieldValues());
       setVariants([createVariant()]);
       setExistingMainImageUrl("");
@@ -418,7 +603,8 @@ export default function VendorAddProductForm({
       errors.categorySlug = "Category is required.";
     }
 
-    if (!String(selectedSubcategorySlug || "").trim()) {
+    const hasSelectableSubcategories = Array.isArray(subcategoryOptions) && subcategoryOptions.length > 0;
+    if (hasSelectableSubcategories && !String(selectedSubcategorySlug || "").trim()) {
       errors.subcategorySlug = "Subcategory is required.";
     }
 
@@ -454,11 +640,13 @@ export default function VendorAddProductForm({
       const mainImageDataUrl =
         mainImageFile instanceof File ? await readFileAsDataUrl(mainImageFile) : String(existingMainImageUrl || "").trim();
       const imageDataUrls = await Promise.all(fieldValues.images.map((file) => readFileAsDataUrl(file)));
-      const orderedGallery = Array.from(
-        new Set([mainImageDataUrl, ...existingGalleryUrls, ...imageDataUrls].map((item) => String(item || "").trim()).filter(Boolean))
-      );
+      const orderedGallery = compactMode
+        ? [String(mainImageDataUrl || "").trim()].filter(Boolean)
+        : Array.from(
+            new Set([mainImageDataUrl, ...existingGalleryUrls, ...imageDataUrls].map((item) => String(item || "").trim()).filter(Boolean))
+          );
 
-      const serializedVariants = await Promise.all(
+      const serializedVariantsRaw = await Promise.all(
         variants.map(async (variant) => ({
           size: String(variant.variantSize || "").trim(),
           color: String(variant.variantColor || "").trim(),
@@ -468,56 +656,87 @@ export default function VendorAddProductForm({
           image: variant.variantImage ? await readFileAsDataUrl(variant.variantImage) : String(variant.variantExistingImage || "").trim(),
         }))
       );
+      const serializedVariants = compactMode
+        ? []
+        : serializedVariantsRaw.filter(
+            (variant) => variant.size || variant.color || variant.mrp > 0 || variant.sellingPrice > 0 || variant.stock > 0 || variant.image
+          );
 
-      const keyAttributes = parseLabelValueLines(fieldValues.attributesText);
-      const customSpecifications = parseLabelValueLines(fieldValues.specificationsText);
-      const specifications = [
-        { label: "Purchase Price", value: String(fieldValues.purchasePrice || "").trim() },
-        { label: "Discount (%)", value: String(fieldValues.discount || "").trim() },
-        ...customSpecifications,
-      ].filter((item) => item.value);
+      const keyAttributes = compactMode ? undefined : parseLabelValueLines(fieldValues.attributesText);
+      const customSpecifications = compactMode ? undefined : parseLabelValueLines(fieldValues.specificationsText);
+      const specifications = compactMode
+        ? undefined
+        : [
+            { label: "Purchase Price", value: String(fieldValues.purchasePrice || "").trim() },
+            { label: "Discount (%)", value: String(fieldValues.discount || "").trim() },
+            ...(customSpecifications || []),
+          ].filter((item) => item.value);
 
-      const placement = fieldValues.storePlacement === "featured" || fieldValues.storePlacement === "trending" ? fieldValues.storePlacement : undefined;
+      const compactDescription = String(fieldValues.longDescription || fieldValues.shortDescription || "").trim();
+      const compactShortDescription = compactDescription ? compactDescription.slice(0, 120).trim() : "";
+
+      const placement =
+        !compactMode && (fieldValues.storePlacement === "featured" || fieldValues.storePlacement === "trending")
+          ? fieldValues.storePlacement
+          : undefined;
 
       const payload: VendorProductUpsertInput = {
         categorySlug: selectedCategorySlug,
-        categoryLabel: selectedCategory?.name || selectedCategorySlug,
+        categoryLabel: selectedCategoryLabel,
         subcategorySlug: selectedSubcategorySlug,
-        subcategoryName: selectedSubcategory?.name || selectedSubcategorySlug,
+        subcategoryName: selectedSubcategoryLabel,
         productName: String(fieldValues.productName || "").trim(),
         image: orderedGallery[0] || "",
         gallery: orderedGallery,
         price: Number(fieldValues.sellingPrice) || 0,
         oldPrice: Number(fieldValues.mrp) || 0,
-        inventory: Number(fieldValues.stock) || 0,
-        badge: String(fieldValues.badge || "").trim(),
-        brand: String(fieldValues.brand || "").trim(),
-        shortDescription: String(fieldValues.shortDescription || "").trim(),
-        description: String(fieldValues.longDescription || "").trim(),
-        tags: parseTagList(fieldValues.tagsText),
+        inventory: compactMode ? 0 : Number(fieldValues.stock) || 0,
+        badge: compactMode ? undefined : String(fieldValues.badge || "").trim() || undefined,
+        brand: compactMode ? undefined : String(fieldValues.brand || "").trim() || undefined,
+        shortDescription: compactMode
+          ? compactShortDescription || undefined
+          : String(fieldValues.shortDescription || "").trim() || undefined,
+        description: compactMode
+          ? compactDescription || undefined
+          : String(fieldValues.longDescription || "").trim() || undefined,
+        tags: compactMode ? undefined : parseTagList(fieldValues.tagsText),
         keyAttributes,
         specifications,
-        highlights: serializedVariants
-          .filter((variant) => variant.size || variant.color)
-          .map((variant) => `${variant.size || "Size"} ${variant.color || "Color"}`),
-        variantData: serializedVariants,
-        moq: Number.isFinite(Number(initialProduct?.moq)) && Number(initialProduct?.moq) > 0 ? Number(initialProduct?.moq) : 1,
+        highlights: compactMode
+          ? undefined
+          : serializedVariants
+              .filter((variant) => variant.size || variant.color)
+              .map((variant) => `${variant.size || "Size"} ${variant.color || "Color"}`),
+        variantData: compactMode ? undefined : serializedVariants,
+        moq: compactMode
+          ? 1
+          : Number.isFinite(Number(initialProduct?.moq)) && Number(initialProduct?.moq) > 0
+            ? Number(initialProduct?.moq)
+            : 1,
         status: mode === "edit" ? initialProduct?.status || "live" : "live",
         sellerName: String(sellerName || "").trim() || "Vendor",
         vendorSource: "vendor-panel",
         sourcePlatform: "winkget_vendor",
         storePlacement: placement,
-        isCancellable: true,
-        isReturnable: true,
+        isCancellable: compactMode ? undefined : true,
+        isReturnable: compactMode ? undefined : true,
       };
 
       await onSubmitProduct(payload);
 
-      setSubmitNotice(mode === "edit" ? "Product updated successfully." : "Product published successfully.");
+      setSubmitNotice(
+        mode === "edit"
+          ? compactMode
+            ? "Menu item updated successfully."
+            : "Product updated successfully."
+          : compactMode
+          ? "Menu item published successfully."
+          : "Product published successfully."
+      );
       resetForm();
       onClose();
     } catch {
-      setSubmitNotice("Failed to publish product. Please try again.");
+      setSubmitNotice(compactMode ? "Failed to publish menu item. Please try again." : "Failed to publish product. Please try again.");
     }
   };
 
@@ -532,85 +751,110 @@ export default function VendorAddProductForm({
       </button>
 
       <form onSubmit={submitProduct} className="mt-2 space-y-5">
-        <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-          <div className="space-y-5">
+        <div className="rounded-2xl border border-[#ece4d6] bg-[#fffdfa] px-4 py-3">
+          <p className="text-sm font-semibold text-slate-900">
+            {compactMode ? "Restaurant menu mode" : "Product catalog mode"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {compactMode
+              ? "A smaller form focused on menu essentials to publish dishes quickly."
+              : "Use the full schema form when you need advanced product details."}
+          </p>
+        </div>
+
+        <div className={`grid gap-5 ${compactMode ? "xl:grid-cols-[1.2fr_0.8fr]" : "xl:grid-cols-[1.45fr_1fr]"}`}>
+          <div className="space-y-5 xl:sticky xl:top-5 self-start">
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">General Information</h3>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {compactMode ? "Menu Item Information" : "General Information"}
+              </h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <label className="block text-sm text-slate-700">
-                  Product Name<span className="ml-1 text-rose-500">*</span>
+                  {compactMode ? "Menu Item Name" : "Product Name"}<span className="ml-1 text-rose-500">*</span>
                   <input
                     type="text"
                     value={fieldValues.productName}
                     onChange={(event) => updateField("productName", event.target.value)}
                     className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Enter product name"
+                    placeholder={compactMode ? "Chicken Zinger Combo" : "Enter product name"}
                   />
                   {fieldErrors.productName ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p> : null}
                 </label>
 
-                <label className="block text-sm text-slate-700">
-                  Category<span className="ml-1 text-rose-500">*</span>
-                  <select
-                    value={selectedCategorySlug}
-                    onChange={(event) => handleCategoryChange(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.slug}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.categorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.categorySlug}</p> : null}
-                </label>
+                <>
+                  <label className="block text-sm text-slate-700">
+                    {compactMode ? "Category (Child2)" : "Category"}
+                    <span className="ml-1 text-rose-500">*</span>
+                    <select
+                      value={selectedCategorySlug}
+                      onChange={(event) => handleCategoryChange(event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    >
+                      <option value="">Select category</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category.id} value={category.slug}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.categorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.categorySlug}</p> : null}
+                  </label>
 
-                <label className="block text-sm text-slate-700">
-                  Subcategory<span className="ml-1 text-rose-500">*</span>
-                  <select
-                    value={selectedSubcategorySlug}
-                    onChange={(event) => handleSubcategoryChange(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    disabled={!selectedCategory}
-                  >
-                    <option value="">Select subcategory</option>
-                    {(selectedCategory?.subcategories || []).map((subcategory) => (
-                      <option key={subcategory.id} value={subcategory.slug}>
-                        {subcategory.name}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.subcategorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.subcategorySlug}</p> : null}
-                </label>
+                  <label className="block text-sm text-slate-700">
+                    {compactMode ? "Subcategory (Child3)" : "Subcategory"}
+                    {subcategoryOptions.length > 0 ? <span className="ml-1 text-rose-500">*</span> : null}
+                    <select
+                      value={selectedSubcategorySlug}
+                      onChange={(event) => handleSubcategoryChange(event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      disabled={!selectedCategory || subcategoryOptions.length === 0}
+                    >
+                      <option value="">Select subcategory</option>
+                      {subcategoryOptions.map((subcategory) => (
+                        <option key={subcategory.id} value={subcategory.slug}>
+                          {subcategory.name}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.subcategorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.subcategorySlug}</p> : null}
+                  </label>
+                </>
 
-                <label className="block text-sm text-slate-700">
-                  Short Description
-                  <textarea
-                    value={fieldValues.shortDescription}
-                    onChange={(event) => updateField("shortDescription", event.target.value)}
-                    className="mt-1 min-h-[62px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Quick one-line summary"
-                  />
-                </label>
+                {compactMode && restaurantRootCategory ? (
+                  <p className="text-[11px] text-slate-500 md:col-span-2 md:-mt-2">
+                    Menu hierarchy source: Child1 {restaurantRootCategory.name} -&gt; Category (Child2) -&gt; Subcategory (Child3).
+                  </p>
+                ) : null}
+
+                {!compactMode ? (
+                  <label className="block text-sm text-slate-700">
+                    Short Description
+                    <textarea
+                      value={fieldValues.shortDescription}
+                      onChange={(event) => updateField("shortDescription", event.target.value)}
+                      className="mt-1 min-h-[62px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Quick one-line summary"
+                    />
+                  </label>
+                ) : null}
 
                 <label className="block text-sm text-slate-700 md:col-span-2 md:-mt-1">
-                  Description
+                  {compactMode ? "Menu Description" : "Description"}
                   <textarea
                     value={fieldValues.longDescription}
                     onChange={(event) => updateField("longDescription", event.target.value)}
                     className="mt-1 min-h-[92px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Detailed product description"
+                    placeholder={compactMode ? "Describe this menu item" : "Detailed product description"}
                   />
                 </label>
               </div>
             </section>
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Pricing & Stock</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{compactMode ? "Pricing & Availability" : "Pricing & Stock"}</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <label className="block text-sm text-slate-700">
-                  MRP
+                  {compactMode ? "Original Price (optional)" : "MRP"}
                   <input
                     type="number"
                     min="0"
@@ -634,164 +878,172 @@ export default function VendorAddProductForm({
                   {fieldErrors.sellingPrice ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.sellingPrice}</p> : null}
                 </label>
 
-                <label className="block text-sm text-slate-700">
-                  Stock
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={fieldValues.stock}
-                    onChange={(event) => updateField("stock", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  />
-                </label>
+                {!compactMode ? (
+                  <>
+                    <label className="block text-sm text-slate-700">
+                      Stock
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={fieldValues.stock}
+                        onChange={(event) => updateField("stock", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </label>
 
-                <label className="block text-sm text-slate-700">
-                  Store Placement
-                  <select
-                    value={fieldValues.storePlacement}
-                    onChange={(event) => updateField("storePlacement", event.target.value as FieldValues["storePlacement"])}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    <label className="block text-sm text-slate-700">
+                      Store Placement
+                      <select
+                        value={fieldValues.storePlacement}
+                        onChange={(event) => updateField("storePlacement", event.target.value as FieldValues["storePlacement"])}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      >
+                        <option value="none">None</option>
+                        <option value="featured">Featured Product</option>
+                        <option value="trending">Trending Product</option>
+                      </select>
+                    </label>
+                  </>
+                ) : null}
+              </div>
+            </section>
+
+            {!compactMode ? (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">Brand & Tags</h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <label className="block text-sm text-slate-700">
+                    Brand
+                    <input
+                      type="text"
+                      value={fieldValues.brand}
+                      onChange={(event) => updateField("brand", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Brand name"
+                    />
+                  </label>
+
+                  <label className="block text-sm text-slate-700">
+                    Badge
+                    <input
+                      type="text"
+                      value={fieldValues.badge}
+                      onChange={(event) => updateField("badge", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Top Seller, 20% OFF"
+                    />
+                  </label>
+
+                  <label className="block text-sm text-slate-700 md:col-span-2">
+                    Tags (comma separated)
+                    <input
+                      type="text"
+                      value={fieldValues.tagsText}
+                      onChange={(event) => updateField("tagsText", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="skincare, facewash"
+                    />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            {!compactMode ? (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-lg font-semibold text-slate-900">Variants</h3>
+                  <button
+                    type="button"
+                    onClick={() => setVariants((current) => [...current, createVariant()])}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
                   >
-                    <option value="none">None</option>
-                    <option value="featured">Featured Product</option>
-                    <option value="trending">Trending Product</option>
-                  </select>
-                </label>
-              </div>
-            </section>
+                    + Add Variant
+                  </button>
+                </div>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Brand & Tags</h3>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <label className="block text-sm text-slate-700">
-                  Brand
-                  <input
-                    type="text"
-                    value={fieldValues.brand}
-                    onChange={(event) => updateField("brand", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Brand name"
-                  />
-                </label>
+                <div className="mt-3 space-y-3">
+                  {variants.map((variant) => (
+                    <div key={variant.id} className="rounded-xl border-2 border-[#d9ccb7] bg-[#fff8ef] p-3">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <label className="block text-sm text-slate-700">
+                          Size
+                          <input
+                            type="text"
+                            value={variant.variantSize}
+                            onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          />
+                        </label>
 
-                <label className="block text-sm text-slate-700">
-                  Badge
-                  <input
-                    type="text"
-                    value={fieldValues.badge}
-                    onChange={(event) => updateField("badge", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Top Seller, 20% OFF"
-                  />
-                </label>
+                        <label className="block text-sm text-slate-700">
+                          Color
+                          <input
+                            type="text"
+                            value={variant.variantColor}
+                            onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          />
+                        </label>
 
-                <label className="block text-sm text-slate-700 md:col-span-2">
-                  Tags (comma separated)
-                  <input
-                    type="text"
-                    value={fieldValues.tagsText}
-                    onChange={(event) => updateField("tagsText", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="skincare, facewash"
-                  />
-                </label>
-              </div>
-            </section>
+                        <label className="block text-sm text-slate-700">
+                          MRP
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={variant.variantMrp}
+                            onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          />
+                        </label>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-slate-900">Variants</h3>
-                <button
-                  type="button"
-                  onClick={() => setVariants((current) => [...current, createVariant()])}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
-                >
-                  + Add Variant
-                </button>
-              </div>
+                        <label className="block text-sm text-slate-700">
+                          Selling Price
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={variant.variantSellingPrice}
+                            onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          />
+                        </label>
 
-              <div className="mt-3 space-y-3">
-                {variants.map((variant) => (
-                  <div key={variant.id} className="rounded-xl border-2 border-[#d9ccb7] bg-[#fff8ef] p-3">
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <label className="block text-sm text-slate-700">
-                        Size
-                        <input
-                          type="text"
-                          value={variant.variantSize}
-                          onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
-                        />
-                      </label>
+                        <label className="block text-sm text-slate-700">
+                          Stock
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.variantStock}
+                            onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                          />
+                        </label>
 
-                      <label className="block text-sm text-slate-700">
-                        Color
-                        <input
-                          type="text"
-                          value={variant.variantColor}
-                          onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
-                        />
-                      </label>
-
-                      <label className="block text-sm text-slate-700">
-                        MRP
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={variant.variantMrp}
-                          onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
-                        />
-                      </label>
-
-                      <label className="block text-sm text-slate-700">
-                        Selling Price
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={variant.variantSellingPrice}
-                          onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
-                        />
-                      </label>
-
-                      <label className="block text-sm text-slate-700">
-                        Stock
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={variant.variantStock}
-                          onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
-                        />
-                      </label>
-
-                      <label className="block text-sm text-slate-700 md:col-span-3">
-                        Variant Image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(event) => onVariantChange(variant.id, "variantImage", event.target.files?.[0] || null)}
-                          className="mt-1 block w-full text-sm"
-                        />
-                      </label>
+                        <label className="block text-sm text-slate-700 md:col-span-3">
+                          Variant Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => onVariantChange(variant.id, "variantImage", event.target.files?.[0] || null)}
+                            className="mt-1 block w-full text-sm"
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVariants((current) => (current.length > 1 ? current.filter((item) => item.id !== variant.id) : current))}
+                        className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-600"
+                      >
+                        Remove Variant
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setVariants((current) => (current.length > 1 ? current.filter((item) => item.id !== variant.id) : current))}
-                      className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-600"
-                    >
-                      Remove Variant
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
 
           <div className="space-y-5">
@@ -853,127 +1105,133 @@ export default function VendorAddProductForm({
                   </div>
                 </label>
 
-                <label className="block text-sm text-slate-700">
-                  Gallery Images
-                  <div className="mt-1 rounded-xl border border-dashed border-[#d9ccb7] bg-[#fffaf2] p-3">
-                    <div
-                      className={`rounded-xl border-2 border-dashed p-4 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
-                      onDragEnter={handleGalleryDragOver}
-                      onDragOver={handleGalleryDragOver}
-                      onDragLeave={handleGalleryDragLeave}
-                      onDrop={handleGalleryDrop}
-                    >
-                      <input
-                        ref={galleryInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(event) => handleGalleryFiles(event.target.files)}
-                        className="sr-only"
-                      />
+                {!compactMode ? (
+                  <label className="block text-sm text-slate-700">
+                    Gallery Images
+                    <div className="mt-1 rounded-xl border border-dashed border-[#d9ccb7] bg-[#fffaf2] p-3">
+                      <div
+                        className={`rounded-xl border-2 border-dashed p-4 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
+                        onDragEnter={handleGalleryDragOver}
+                        onDragOver={handleGalleryDragOver}
+                        onDragLeave={handleGalleryDragLeave}
+                        onDrop={handleGalleryDrop}
+                      >
+                        <input
+                          ref={galleryInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(event) => handleGalleryFiles(event.target.files)}
+                          className="sr-only"
+                        />
 
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700">Gallery images</p>
-                          <p className="mt-1 text-xs text-slate-500">Drop images here or add from the tile below. Up to 10 images.</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-700">Gallery images</p>
+                            <p className="mt-1 text-xs text-slate-500">Drop images here or add from the tile below. Up to 10 images.</p>
+                          </div>
+                          {imagePreviews.length > 0 ? (
+                            <button type="button" onClick={clearGalleryImages} className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                              Clear gallery
+                            </button>
+                          ) : null}
                         </div>
-                        {imagePreviews.length > 0 ? (
-                          <button type="button" onClick={clearGalleryImages} className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700">
-                            Clear gallery
+
+                        <div className="mt-4 grid grid-cols-2 justify-items-start gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {imagePreviews.map((image) => (
+                            <div key={image.id} className="group w-full max-w-[220px] overflow-hidden rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] shadow-sm">
+                              <div className="relative h-40 overflow-hidden bg-white p-2">
+                                <img src={image.url} alt={image.name} className="h-full w-full object-contain" />
+                                <button
+                                  type="button"
+                                  onClick={() => removeGalleryImage(image.id)}
+                                  className="absolute right-2 top-2 rounded-md bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-rose-600 shadow-sm"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                                <p className="truncate text-xs text-slate-500">{image.name}</p>
+                                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Image</span>
+                              </div>
+                            </div>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={openGalleryPicker}
+                            className="flex h-[200px] w-full max-w-[220px] items-center justify-center rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                          >
+                            <div className="flex flex-col items-center gap-2 text-slate-600">
+                              <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-2xl text-slate-700">+</div>
+                              <span className="text-sm font-medium">Add Image</span>
+                              <span className="text-xs text-slate-400">Browse or drop</span>
+                            </div>
                           </button>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 justify-items-start gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {imagePreviews.map((image) => (
-                          <div key={image.id} className="group w-full max-w-[220px] overflow-hidden rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] shadow-sm">
-                            <div className="relative h-40 overflow-hidden bg-white p-2">
-                              <img src={image.url} alt={image.name} className="h-full w-full object-contain" />
-                              <button
-                                type="button"
-                                onClick={() => removeGalleryImage(image.id)}
-                                className="absolute right-2 top-2 rounded-md bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-rose-600 shadow-sm"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between gap-2 px-3 py-2">
-                              <p className="truncate text-xs text-slate-500">{image.name}</p>
-                              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Image</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        <button
-                          type="button"
-                          onClick={openGalleryPicker}
-                          className="flex h-[200px] w-full max-w-[220px] items-center justify-center rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                        >
-                          <div className="flex flex-col items-center gap-2 text-slate-600">
-                            <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-2xl text-slate-700">+</div>
-                            <span className="text-sm font-medium">Add Image</span>
-                            <span className="text-xs text-slate-400">Browse or drop</span>
-                          </div>
-                        </button>
+                        </div>
                       </div>
                     </div>
+                  </label>
+                ) : null}
+              </div>
+            </section>
+
+            {!compactMode ? (
+              <>
+                <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                  <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
+                  <label className="mt-3 block text-sm text-slate-700">
+                    Key Attributes (Label: Value, one per line)
+                    <textarea
+                      value={fieldValues.attributesText}
+                      onChange={(event) => updateField("attributesText", event.target.value)}
+                      className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Material: Cotton"
+                    />
+                  </label>
+                </section>
+
+                <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                  <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
+                  <div className="mt-3 grid gap-4 md:grid-cols-2">
+                    <label className="block text-sm text-slate-700">
+                      Purchase Price
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={fieldValues.purchasePrice}
+                        onChange={(event) => updateField("purchasePrice", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </label>
+
+                    <label className="block text-sm text-slate-700">
+                      Discount (%)
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={fieldValues.discount}
+                        onChange={(event) => updateField("discount", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </label>
+
+                    <label className="block text-sm text-slate-700 md:col-span-2">
+                      Additional Specifications (Label: Value, one per line)
+                      <textarea
+                        value={fieldValues.specificationsText}
+                        onChange={(event) => updateField("specificationsText", event.target.value)}
+                        className="mt-1 min-h-[90px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
+                        placeholder="Weight: 250g"
+                      />
+                    </label>
                   </div>
-                </label>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
-              <label className="mt-3 block text-sm text-slate-700">
-                Key Attributes (Label: Value, one per line)
-                <textarea
-                  value={fieldValues.attributesText}
-                  onChange={(event) => updateField("attributesText", event.target.value)}
-                  className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                  placeholder="Material: Cotton"
-                />
-              </label>
-            </section>
-
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <label className="block text-sm text-slate-700">
-                  Purchase Price
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={fieldValues.purchasePrice}
-                    onChange={(event) => updateField("purchasePrice", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  />
-                </label>
-
-                <label className="block text-sm text-slate-700">
-                  Discount (%)
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={fieldValues.discount}
-                    onChange={(event) => updateField("discount", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  />
-                </label>
-
-                <label className="block text-sm text-slate-700 md:col-span-2">
-                  Additional Specifications (Label: Value, one per line)
-                  <textarea
-                    value={fieldValues.specificationsText}
-                    onChange={(event) => updateField("specificationsText", event.target.value)}
-                    className="mt-1 min-h-[90px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Weight: 250g"
-                  />
-                </label>
-              </div>
-            </section>
+                </section>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -983,7 +1241,21 @@ export default function VendorAddProductForm({
             disabled={saving}
             className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? (mode === "edit" ? "Updating Product..." : "Publishing Product...") : mode === "edit" ? "Update Product" : "Publish Product"}
+            {saving
+              ? mode === "edit"
+                ? compactMode
+                  ? "Updating Menu Item..."
+                  : "Updating Product..."
+                : compactMode
+                ? "Publishing Menu Item..."
+                : "Publishing Product..."
+              : mode === "edit"
+              ? compactMode
+                ? "Update Menu Item"
+                : "Update Product"
+              : compactMode
+              ? "Publish Menu Item"
+              : "Publish Product"}
           </button>
 
           {submitNotice || actionMessage ? <p className="text-sm text-slate-600">{submitNotice || actionMessage}</p> : null}
