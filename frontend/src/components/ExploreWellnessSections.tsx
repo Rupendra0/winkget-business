@@ -260,58 +260,29 @@ export default function ExploreWellnessSections() {
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
           </div>
 
-          <div className="md:hidden">
-            <div
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-              aria-label="Explore cards carousel"
-              onTouchStart={(event) => handleTouchStart(event, exploreSwipeRefs)}
-              onTouchMove={(event) => handleTouchMove(event, exploreSwipeRefs)}
-              onTouchEnd={(event) => handleTouchEnd(event, exploreSwipeRefs, exploreCards.length, setExploreMobileIndex)}
-              onTouchCancel={() => {
-                exploreSwipeRefs.touchStartRef.current = null;
-                exploreSwipeRefs.suppressTapRef.current = false;
-              }}
-              style={{ touchAction: "pan-y" }}
-            >
-              <div
-                className="flex w-full transition-transform duration-700 ease-out"
-                style={{ transform: `translateX(-${exploreMobileIndex * 100}%)` }}
+          {/* Mobile: Scrollable carousel showing 2 cards */}
+          <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+            {exploreCards.map((card) => (
+              <Link
+                key={`explore-mobile-${card.cardId}`}
+                href={buildCategoryHref(card.categorySlug)}
+                className="shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
               >
-                {exploreCards.map((card) => (
-                  <Link
-                    key={`explore-mobile-${card.cardId}`}
-                    href={buildCategoryHref(card.categorySlug)}
-                    className="group relative w-full shrink-0 overflow-hidden"
-                    onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
-                  >
-                    <img
-                      src={card.image}
-                      alt={card.categoryName || "Explore"}
-                      className="h-[150px] w-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                      <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {exploreCards.length > 1 ? (
-              <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
-                {exploreCards.map((card, index) => (
-                  <span
-                    key={`explore-dot-${card.cardId}`}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === exploreMobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
-                    }`}
-                  />
-                ))}
-              </div>
-            ) : null}
+                <img
+                  src={card.image}
+                  alt={card.categoryName || "Explore"}
+                  className="h-[150px] w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6">
+                  <p className="line-clamp-2 text-xs font-semibold text-white">{card.categoryName || "Category"}</p>
+                </div>
+              </Link>
+            ))}
           </div>
 
+          {/* Desktop: Grid layout */}
           <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
             {exploreCards.map((card) => (
               <Link
@@ -340,58 +311,29 @@ export default function ExploreWellnessSections() {
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
           </div>
 
-          <div className="md:hidden">
-            <div
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-              aria-label="Health and wellness cards carousel"
-              onTouchStart={(event) => handleTouchStart(event, wellnessSwipeRefs)}
-              onTouchMove={(event) => handleTouchMove(event, wellnessSwipeRefs)}
-              onTouchEnd={(event) => handleTouchEnd(event, wellnessSwipeRefs, wellnessCards.length, setWellnessMobileIndex)}
-              onTouchCancel={() => {
-                wellnessSwipeRefs.touchStartRef.current = null;
-                wellnessSwipeRefs.suppressTapRef.current = false;
-              }}
-              style={{ touchAction: "pan-y" }}
-            >
-              <div
-                className="flex w-full transition-transform duration-700 ease-out"
-                style={{ transform: `translateX(-${wellnessMobileIndex * 100}%)` }}
+          {/* Mobile: Scrollable carousel showing 3 cards */}
+          <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+            {wellnessCards.map((card) => (
+              <Link
+                key={`wellness-mobile-${card.cardId}`}
+                href={buildCategoryHref(card.categorySlug)}
+                className="shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
               >
-                {wellnessCards.map((card) => (
-                  <Link
-                    key={`wellness-mobile-${card.cardId}`}
-                    href={buildCategoryHref(card.categorySlug)}
-                    className="group relative w-full shrink-0 overflow-hidden"
-                    onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
-                  >
-                    <img
-                      src={card.image}
-                      alt={card.categoryName || "Health and wellness"}
-                      className="h-[250px] w-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                      <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {wellnessCards.length > 1 ? (
-              <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
-                {wellnessCards.map((card, index) => (
-                  <span
-                    key={`wellness-dot-${card.cardId}`}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === wellnessMobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
-                    }`}
-                  />
-                ))}
-              </div>
-            ) : null}
+                <img
+                  src={card.image}
+                  alt={card.categoryName || "Health and wellness"}
+                  className="h-[200px] w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6">
+                  <p className="line-clamp-2 text-xs font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                </div>
+              </Link>
+            ))}
           </div>
 
+          {/* Desktop: Grid layout */}
           <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
             {wellnessCards.map((card) => (
               <Link

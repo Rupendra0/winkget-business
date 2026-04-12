@@ -215,84 +215,47 @@ export default function PromoBanners() {
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        <>
-            <div className="md:hidden">
-              <div
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                aria-label="Featured offers carousel"
-                onTouchStart={handleMobileTouchStart}
-                onTouchMove={handleMobileTouchMove}
-                onTouchEnd={handleMobileTouchEnd}
-                onTouchCancel={() => {
-                  touchStartRef.current = null;
-                  suppressTapRef.current = false;
-                }}
-                style={{ touchAction: "pan-y" }}
-              >
-                <div
-                  className="flex w-full transition-transform duration-700 ease-out"
-                  style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
-                >
-                  {visibleCards.map((card) => (
-                    <Link
-                      key={card.cardId}
-                      href={buildCategoryHref(card.categorySlug)}
-                      className="group relative w-full shrink-0 overflow-hidden"
-                      onClickCapture={(event) => {
-                        if (!suppressTapRef.current) return;
-                        event.preventDefault();
-                        event.stopPropagation();
-                        suppressTapRef.current = false;
-                      }}
-                    >
-                      <img
-                        src={card.image}
-                        alt={card.categoryName || "Promotion"}
-                        className="h-[200px] w-full object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                        <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
+        {/* Mobile: Scrollable carousel showing 3 cards */}
+        <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+          {visibleCards.map((card) => (
+            <Link
+              key={card.cardId}
+              href={buildCategoryHref(card.categorySlug)}
+              className="shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+            >
+              <img
+                src={card.image}
+                alt={card.categoryName || "Promotion"}
+                className="h-[180px] w-full object-cover"
+                loading="lazy"
+              />
+              <div className="bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6">
+                <p className="line-clamp-2 text-xs font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
               </div>
+            </Link>
+          ))}
+        </div>
 
-              {visibleCards.length > 1 ? (
-                <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
-                  {visibleCards.map((card, index) => (
-                    <span
-                      key={`${card.cardId}-dot`}
-                      className={`h-1.5 rounded-full transition-all ${
-                        index === mobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
-                      }`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
-              {visibleCards.map((card) => (
-                <Link
-                  key={card.cardId}
-                  href={buildCategoryHref(card.categorySlug)}
-                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-                >
-                  <img
-                    src={card.image}
-                    alt={card.categoryName || "Promotion"}
-                    className="h-[200px] w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-[215px]"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </>
+        {/* Desktop: Grid layout */}
+        <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+          {visibleCards.map((card) => (
+            <Link
+              key={card.cardId}
+              href={buildCategoryHref(card.categorySlug)}
+              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+            >
+              <img
+                src={card.image}
+                alt={card.categoryName || "Promotion"}
+                className="h-[200px] w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-[215px]"
+                loading="lazy"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

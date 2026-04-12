@@ -232,48 +232,19 @@ export default function PartnersSection() {
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        <div className="md:hidden">
-          <div
-            className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
-            aria-label="Brand sponsors carousel"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={() => {
-              touchStartRef.current = null;
-              suppressTapRef.current = false;
-            }}
-            style={{ touchAction: "pan-y" }}
-          >
-            <div
-              className="flex w-full transition-transform duration-700 ease-out"
-              style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
-            >
-              {cards.map((card) => (
-                <div key={`sponsor-mobile-${card.cardId}`} className="w-full shrink-0 p-3">
-                  {renderSponsorCard(
-                    card,
-                    "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/90 shadow-sm"
-                  )}
-                </div>
-              ))}
+        {/* Mobile: Scrollable carousel showing 3 cards */}
+        <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+          {cards.map((card) => (
+            <div key={`sponsor-mobile-${card.cardId}`} className="shrink-0 basis-[calc((100%-2rem)/3)]">
+              {renderSponsorCard(
+                card,
+                "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/90 shadow-sm"
+              )}
             </div>
-          </div>
-
-          {cards.length > 1 ? (
-            <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
-              {cards.map((card, index) => (
-                <span
-                  key={`sponsor-dot-${card.cardId}`}
-                  className={`h-1.5 rounded-full transition-all ${
-                    index === mobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
-                  }`}
-                />
-              ))}
-            </div>
-          ) : null}
+          ))}
         </div>
 
+        {/* Desktop: Grid layout */}
         <div className="hidden grid-cols-2 gap-3 sm:gap-4 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
           {cards.map((card) => (
             <div key={`sponsor-desktop-${card.cardId}`}>
