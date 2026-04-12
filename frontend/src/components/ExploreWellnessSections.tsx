@@ -275,8 +275,8 @@ export default function ExploreWellnessSections() {
                   className="h-[150px] w-full object-cover"
                   loading="lazy"
                 />
-                <div className="bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6">
-                  <p className="line-clamp-2 text-xs font-semibold text-white">{card.categoryName || "Category"}</p>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
                 </div>
               </Link>
             ))}
@@ -323,11 +323,11 @@ export default function ExploreWellnessSections() {
                 <img
                   src={card.image}
                   alt={card.categoryName || "Health and wellness"}
-                  className="h-[200px] w-full object-cover"
+                  className="h-[250px] w-full object-cover"
                   loading="lazy"
                 />
-                <div className="bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6">
-                  <p className="line-clamp-2 text-xs font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
                 </div>
               </Link>
             ))}
