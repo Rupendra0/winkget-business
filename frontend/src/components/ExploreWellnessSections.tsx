@@ -266,7 +266,7 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`explore-mobile-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
               >
                 <img
@@ -317,13 +317,13 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`wellness-mobile-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
               >
                 <img
                   src={card.image}
                   alt={card.categoryName || "Health and wellness"}
-                  className="h-[250px] w-full object-cover"
+                  className="h-[170px] w-full object-cover"
                   loading="lazy"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">

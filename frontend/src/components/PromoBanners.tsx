@@ -221,7 +221,7 @@ export default function PromoBanners() {
             <Link
               key={card.cardId}
               href={buildCategoryHref(card.categorySlug)}
-              className="shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
             >
               <img
                 src={card.image}
