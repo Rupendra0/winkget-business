@@ -84,7 +84,7 @@ const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const RESTAURANT_CATEGORY_REGEX =
-  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|biryani|pizza|burger|coffee|tea)/i;
+  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|snacks|biryani|pizza|burger|coffee|tea|lunch|dinner|breakfast|sweets|sweet|dessert|mithai|fast\s*food|street\s*food|juice|beverage)/i;
 
 const uniqueStrings = (values: Array<string | undefined>) => {
   const seen = new Set<string>();

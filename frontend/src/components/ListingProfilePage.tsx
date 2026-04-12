@@ -25,7 +25,7 @@ import {
 import { addToCart, makeStoreProduct } from "@/lib/shopStorage";
 
 const RESTAURANT_CATEGORY_REGEX =
-  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|biryani|pizza|burger|coffee|tea)/i;
+  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|snacks|biryani|pizza|burger|coffee|tea|lunch|dinner|breakfast|sweets|sweet|dessert|mithai|fast\s*food|street\s*food|juice|beverage)/i;
 
 const normalizeDigits = (value: string) => String(value || "").replace(/\D/g, "");
 
