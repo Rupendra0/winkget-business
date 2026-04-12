@@ -18,12 +18,21 @@ export default async function ListingPage({
   const storeData = await resolveStoreDataById(id);
   const profile = toListingProfileFromVendor(liveVendor);
 
-  // Prefer MyStore media for marketplace-style profile rendering.
-  const profileWithStoreMedia = {
+  // Listing profile should primarily reflect Shop media.
+  // Use MyStore media only as fallback when Shop media is not set.
+  const profileWithShopPriorityMedia = {
     ...profile,
-    logoImage: String(liveVendor.myStoreImage || "").trim() || profile.logoImage,
-    coverImage: String(liveVendor.myStoreBannerImage || "").trim() || profile.coverImage,
+    logoImage: profile.logoImage || String(liveVendor.myStoreImage || "").trim(),
+    coverImage: profile.coverImage || String(liveVendor.myStoreBannerImage || "").trim(),
   };
 
-  return <ListingProfilePage profile={profileWithStoreMedia} storeData={storeData} />;
+  const storeDataWithShopPriorityMedia = storeData
+    ? {
+        ...storeData,
+        logoImage: String(profileWithShopPriorityMedia.logoImage || storeData.logoImage || "").trim(),
+        bannerImage: String(profileWithShopPriorityMedia.coverImage || storeData.bannerImage || "").trim(),
+      }
+    : storeData;
+
+  return <ListingProfilePage profile={profileWithShopPriorityMedia} storeData={storeDataWithShopPriorityMedia} />;
 }

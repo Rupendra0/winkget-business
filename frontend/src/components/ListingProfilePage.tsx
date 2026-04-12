@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Phone,
   Share2,
+  Store,
   Star,
 } from "lucide-react";
 import type { ListingProfile, StorePageData, StoreProduct } from "@/data/listingData";
@@ -23,6 +24,7 @@ import {
   type BusinessReviewSummary,
 } from "@/lib/reviewStore";
 import { addToCart, makeStoreProduct } from "@/lib/shopStorage";
+import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
 const RESTAURANT_CATEGORY_REGEX =
   /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|snacks|biryani|pizza|burger|coffee|tea|lunch|dinner|breakfast|sweets|sweet|dessert|mithai|fast\s*food|street\s*food|juice|beverage)/i;
@@ -166,6 +168,13 @@ const toPriceForTwoLabel = (value: string) => {
   return "₹300 for two";
 };
 
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 16 16" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M13.601 2.326A7.854 7.854 0 0 0 8.023.0C3.651.0.091 3.559.091 7.932a7.9 7.9 0 0 0 1.147 4.063L0 16l4.136-1.215a7.9 7.9 0 0 0 3.887 1.017h.003c4.372.0 7.932-3.559 7.932-7.932a7.9 7.9 0 0 0-2.357-5.544zM8.026 14.53h-.002a6.6 6.6 0 0 1-3.347-.92l-.24-.144-2.455.721.655-2.39-.156-.245a6.6 6.6 0 0 1-1.02-3.52c0-3.661 2.977-6.637 6.64-6.637a6.6 6.6 0 0 1 4.713 1.953 6.6 6.6 0 0 1 1.942 4.715c-.001 3.661-2.977 6.637-6.638 6.637z" />
+    <path d="M11.644 9.488c-.197-.099-1.17-.578-1.352-.644-.182-.066-.314-.099-.446.099-.132.197-.512.644-.628.776-.116.132-.231.149-.429.05-.197-.099-.832-.307-1.585-.98-.586-.522-.981-1.167-1.097-1.364-.116-.197-.012-.304.087-.403.09-.09.197-.231.296-.347.099-.116.132-.197.198-.33.066-.132.033-.248-.017-.347-.05-.099-.446-1.074-.611-1.47-.161-.387-.324-.334-.446-.34l-.38-.007a.73.73 0 0 0-.529.248c-.182.198-.694.678-.694 1.653s.71 1.917.81 2.049c.099.132 1.4 2.138 3.393 2.997.474.204.843.325 1.131.416.475.151.908.13 1.25.079.381-.057 1.17-.479 1.336-.942.165-.463.165-.859.116-.942-.05-.083-.182-.132-.38-.231z" />
+  </svg>
+);
+
 const ActionButton = ({
   href,
   label,
@@ -185,11 +194,11 @@ const ActionButton = ({
 }) => {
   const toneClass =
     tone === "primary"
-      ? "text-sm font-medium text-[#4f5558]"
+      ? "text-sm font-semibold"
       : tone === "tertiary"
-      ? "text-xs font-medium text-[#6a7074]"
-      : "text-sm font-normal text-[#61686b]";
-  const className = `inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-[#d4f2ef] px-2 py-2 ${toneClass} sm:min-h-11`;
+      ? "text-xs font-semibold"
+      : "text-sm font-semibold";
+  const className = `inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] border border-[#BFDBFE] bg-[#DBEAFE] px-2 py-2 text-[#1E40AF] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-[#BFDBFE] hover:text-[#1D4ED8] ${toneClass} sm:min-h-11`;
 
   if (disabled || !href) {
     return (
@@ -246,6 +255,7 @@ export default function ListingProfilePage({
   const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -300,12 +310,28 @@ export default function ListingProfilePage({
     };
   }, [profile.id]);
 
+  useEffect(() => {
+    return subscribeVendorStoreStatus(String(profile.id || ""), (payload) => {
+      setLiveStoreStatus(payload);
+    });
+  }, [profile.id]);
+
   const fullAddress = useMemo(() => {
-    const trimmedAddress = stripCityStateFromAddress(profile.address || "", profile.city, profile.state);
-    return [trimmedAddress, profile.postalCode]
+    const addressParts = [profile.address, profile.city, profile.state, profile.postalCode]
       .map((item) => String(item || "").trim())
-      .filter(Boolean)
-      .join(", ");
+      .filter(Boolean);
+
+    const seen = new Set<string>();
+    const uniqueAddressParts = addressParts.filter((part) => {
+      const key = part.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+    return uniqueAddressParts.join(", ");
   }, [profile.address, profile.city, profile.postalCode, profile.state]);
 
   const phoneDigits = useMemo(() => normalizeDigits(profile.phone), [profile.phone]);
@@ -351,6 +377,12 @@ export default function ListingProfilePage({
     () => uniqueStrings(Array.isArray(profile.gallery) ? profile.gallery : []),
     [profile.gallery]
   );
+  const mobilePhotoSlots = 4;
+  const desktopPhotoSlots = 6;
+  const mobilePhotoRow = photoItems.slice(0, Math.min(photoItems.length, mobilePhotoSlots));
+  const desktopPhotoRow = photoItems.slice(0, Math.min(photoItems.length, desktopPhotoSlots));
+  const mobileOverflowCount = Math.max(0, photoItems.length - mobilePhotoSlots);
+  const desktopOverflowCount = Math.max(0, photoItems.length - desktopPhotoSlots);
 
   const openingSchedule = useMemo(() => toOpeningSchedule(profile), [profile]);
 
@@ -360,6 +392,22 @@ export default function ListingProfilePage({
       profile.badges.some((badge) => /verified|varified/i.test(String(badge || ""))),
     [profile.badges]
   );
+
+  const liveStoreOpenState = useMemo<null | boolean>(() => {
+    if (typeof liveStoreStatus?.isStoreOpen === "boolean") {
+      return liveStoreStatus.isStoreOpen;
+    }
+
+    if (typeof profile.isStoreOpen === "boolean") {
+      return profile.isStoreOpen;
+    }
+
+    if (typeof storeData?.isStoreOpen === "boolean") {
+      return storeData.isStoreOpen;
+    }
+
+    return null;
+  }, [liveStoreStatus?.isStoreOpen, profile.isStoreOpen, storeData?.isStoreOpen]);
 
   const roundedRating = Number.isFinite(Number(reviewSummary.rating))
     ? Number(reviewSummary.rating)
@@ -634,10 +682,10 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen bg-[#edeff1] px-3 pb-24 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pb-10 lg:px-8">
-      <div className="mx-auto w-full max-w-[1120px] space-y-5">
-        <section className="rounded-[24px] border border-[#d5d8db] bg-[#f1f3f4] p-4 sm:p-5">
-          <div className="overflow-hidden rounded-[18px] border border-[#d9dddf] bg-[#dbddde]">
+    <main className="min-h-screen bg-gradient-to-b from-[#ffffff] via-[#fbfdff] to-[#f5faff] px-3 pb-24 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pb-10 lg:px-8">
+      <div className="mx-auto w-full max-w-[1120px] space-y-5 lg:max-w-[1240px]">
+        <section className="rounded-[24px] border border-[#dce9f8] bg-gradient-to-br from-[#ffffff] via-[#fbfdff] to-[#f2f8ff] p-4 shadow-[0_16px_32px_rgba(59,130,246,0.07)] sm:p-5">
+          <div className="overflow-hidden rounded-[18px] border border-[#d8e6f8] bg-[#eaf3ff]">
             {coverImage ? (
               <img
                 src={coverImage}
@@ -650,7 +698,7 @@ export default function ListingProfilePage({
             )}
           </div>
 
-          <div className="relative -mt-9 flex justify-center sm:-mt-10">
+          <div className="relative -mt-9 flex justify-center sm:-mt-10 md:hidden">
             <div className="h-[92px] w-[92px] overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white sm:h-[104px] sm:w-[104px]">
               {logoImage ? (
                 <img
@@ -665,7 +713,7 @@ export default function ListingProfilePage({
             </div>
           </div>
 
-          <div className="mt-1 flex justify-end pr-1">
+          <div className="mt-1 flex justify-end pr-1 md:hidden">
             {isVerified ? (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
                 <CheckCircle2 size={14} className="text-[#2f9f57]" />
@@ -674,7 +722,7 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="mt-2 text-center">
+          <div className="mt-2 text-center md:hidden">
             <h1
               className="mx-auto max-w-full truncate px-2 text-xl font-semibold leading-snug text-[#4b4f53]"
               style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
@@ -693,107 +741,258 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2.5">
-            <ActionButton
-              href={phoneDigits ? `tel:${phoneDigits}` : undefined}
-              label="Call"
-              icon={<Phone size={14} />}
-              disabled={!phoneDigits}
-              tone="primary"
-            />
-            <ActionButton
-              href={whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined}
-              label="Whatsapp"
-              icon={<MessageCircle size={14} />}
-              disabled={!whatsappDigits}
-              external
-              tone="secondary"
-            />
-            <ActionButton
-              href={websiteHref || undefined}
-              label="Website"
-              icon={<Globe size={14} />}
-              disabled={!websiteHref}
-              external
-              tone="tertiary"
-            />
-            <ActionButton
-              href="#"
-              label="Share"
-              icon={<Share2 size={14} />}
-              tone="tertiary"
-              onClick={(event) => {
-                event.preventDefault();
-                void handleShare();
-              }}
-            />
+          <div className="hidden min-h-[182px] items-start justify-between gap-6 rounded-2xl border border-white/90 bg-gradient-to-r from-white/95 via-[#f8fcff]/95 to-[#eef7ff]/95 px-4 pb-5 pt-6 shadow-[0_12px_26px_rgba(31,79,141,0.12)] backdrop-blur-[1px] md:flex lg:px-5">
+            <div className="flex min-w-0 items-start gap-4 lg:gap-5">
+              <div className="-mt-[64px] h-[116px] w-[116px] shrink-0 overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] lg:-mt-[72px] lg:h-[126px] lg:w-[126px]">
+                {logoImage ? (
+                  <img
+                    src={logoImage}
+                    alt={`${profile.name} logo`}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-[#e6e8ea]" />
+                )}
+              </div>
+
+              <div className="min-w-0 -mt-1.5 lg:-mt-1">
+                <div className="mb-1">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${
+                      liveStoreOpenState === true
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : liveStoreOpenState === false
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-slate-200 bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        liveStoreOpenState === true
+                          ? "bg-emerald-500"
+                          : liveStoreOpenState === false
+                            ? "bg-rose-500"
+                            : "bg-slate-400"
+                      }`}
+                    />
+                    {liveStoreOpenState === true
+                      ? "Open Now"
+                      : liveStoreOpenState === false
+                        ? "Closed"
+                        : "Status Unknown"}
+                  </span>
+                </div>
+
+                <h1
+                  className="text-[2.05rem] font-black leading-[1.05] text-[#132945] lg:text-[2.45rem]"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-rajdhani), var(--font-inter), sans-serif", letterSpacing: "0.05px" }}
+                >
+                  {profile.name}
+                </h1>
+                <p
+                  className="mt-0.5 text-[15px] font-extrabold leading-tight text-[#1f4f8d] lg:text-base"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                >
+                  {profile.category}
+                </p>
+
+                {fullAddress ? (
+                  <p className="mt-1 flex items-start gap-2 text-xs font-bold leading-snug text-[#5c6c7e] lg:text-[13px]">
+                    <MapPin size={15} className="mt-0.5 shrink-0 text-[#d44040]" />
+                    <span className="min-w-0 break-words">{`Address : ${fullAddress}`}</span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {isVerified ? (
+              <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-base font-semibold text-[#1E40AF] lg:text-lg">
+                <CheckCircle2 size={18} className="text-[#2563EB]" />
+                Verified
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[#d5e4f8] bg-[radial-gradient(circle_at_12%_15%,rgba(191,219,254,0.45),rgba(255,255,255,0.9)_36%),radial-gradient(circle_at_88%_10%,rgba(186,230,253,0.4),rgba(255,255,255,0)_36%)] p-2.5 sm:p-3">
+            <div className="grid grid-cols-4 gap-2.5">
+              <ActionButton
+                href={phoneDigits ? `tel:${phoneDigits}` : undefined}
+                label="Call"
+                icon={<Phone size={14} />}
+                disabled={!phoneDigits}
+                tone="primary"
+              />
+              <ActionButton
+                href={whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined}
+                label="Whatsapp"
+                icon={<WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />}
+                disabled={!whatsappDigits}
+                external
+                tone="secondary"
+              />
+              <ActionButton
+                href={websiteHref || undefined}
+                label="Website"
+                icon={<Globe size={14} />}
+                disabled={!websiteHref}
+                external
+                tone="tertiary"
+              />
+              <ActionButton
+                href="#"
+                label="Share"
+                icon={<Share2 size={14} />}
+                tone="tertiary"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void handleShare();
+                }}
+              />
+            </div>
           </div>
 
           {shareMessage ? (
             <p className="mt-2.5 text-center text-xs font-medium text-gray-500">{shareMessage}</p>
           ) : null}
 
-          <div className="mt-3 grid grid-cols-4 items-center gap-2.5 text-center">
+          <div className="mt-3 grid grid-cols-4 items-center gap-2.5 rounded-2xl border border-[#d5e4f8] bg-[radial-gradient(circle_at_86%_20%,rgba(219,234,254,0.75),rgba(255,255,255,0)_38%),linear-gradient(145deg,#fafdff_0%,#f1f7ff_100%)] p-2.5 text-center sm:p-3">
             {storeHref ? (
               <Link
                 href={storeHref}
-                className="inline-flex min-h-10 w-full items-center justify-center rounded-[12px] bg-[#2b98c8] px-1.5 py-2 text-sm font-medium text-white sm:min-h-11"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] bg-gradient-to-br from-[#2563EB] to-[#3B82F6] px-1.5 py-2 text-sm font-semibold text-white shadow-[0_9px_18px_rgba(37,99,235,0.24)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] sm:min-h-11"
               >
-                My Store
+                <Store size={15} />
+                Store
               </Link>
             ) : (
-              <span className="inline-flex min-h-10 w-full items-center justify-center rounded-[12px] bg-[#2b98c8]/60 px-1.5 py-2 text-sm font-medium text-white sm:min-h-11">
-                My Store
+              <span className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] bg-[#2563EB]/60 px-1.5 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] sm:min-h-11">
+                <Store size={15} />
+                Store
               </span>
             )}
 
             {inquiryHref ? (
               <a
                 href={inquiryHref}
-                className="inline-flex min-h-10 w-full items-center justify-center rounded-[12px] bg-[#d4f2ef] px-1.5 py-2 text-sm font-medium text-[#666d70] sm:min-h-11"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#BFDBFE] bg-[#EFF6FF] px-1.5 py-2 text-sm font-semibold text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-[#DBEAFE] sm:min-h-11"
               >
+                <MessageCircle size={15} />
                 Inquiry
               </a>
             ) : (
-              <span className="inline-flex min-h-10 w-full items-center justify-center rounded-[12px] bg-[#d4f2ef] px-1.5 py-2 text-sm font-medium text-[#666d70] opacity-55 sm:min-h-11">
+              <span className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#BFDBFE] bg-[#EFF6FF] px-1.5 py-2 text-sm font-semibold text-[#1D4ED8] opacity-55 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:min-h-11">
+                <MessageCircle size={15} />
                 Inquiry
               </span>
             )}
 
-            <p className="inline-flex min-h-10 w-full items-center justify-center rounded-[12px] bg-transparent px-1 text-xs font-medium text-gray-500 sm:min-h-11">
+            <p className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-[#FFF7ED] px-1 text-xs font-semibold text-[#D97706] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:min-h-11">
+              <Star size={14} className="fill-[#F59E0B] text-[#F59E0B]" />
               {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
             </p>
 
-            <p className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-transparent px-1 text-xs font-medium text-[#656a6d] sm:min-h-11">
-              <CheckCircle2 size={15} className="text-[#2f9f57]" />
+            <p className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-[#EFF6FF] px-1 text-xs font-bold text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:min-h-11">
+              <CheckCircle2 size={15} className="text-emerald-600" />
               Trusted
             </p>
           </div>
 
           {photoItems.length > 0 ? (
-            <section className="mt-5">
+            <section className="mt-5 rounded-2xl border border-[#dbe7f7] bg-[radial-gradient(circle_at_10%_14%,rgba(191,219,254,0.34),rgba(255,255,255,0)_38%),linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-3 sm:p-4">
               <div className="mb-2.5 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                 <button
                   type="button"
                   onClick={() => setIsPhotosModalOpen(true)}
-                  className="text-xs font-medium text-blue-600"
+                  className="rounded-full border border-[#bfdbfe] bg-white/90 px-2.5 py-1 text-xs font-semibold text-blue-600 shadow-[0_6px_10px_rgba(59,130,246,0.12)]"
                 >
                   View All
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
-                {photoItems.slice(0, 3).map((photo, index) => (
-                    <div key={`${photo}-${index}`} className="overflow-hidden rounded-lg border border-gray-100 bg-[#dbe0e3]">
-                    <img
-                      src={photo}
-                      alt={`${profile.name} gallery ${index + 1}`}
-                      className="h-28 w-full object-cover sm:h-36 lg:h-40"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
+              <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:hidden">
+                {mobilePhotoRow.map((photo, index) => {
+                  const showOverlay = mobileOverflowCount > 0 && index === mobilePhotoRow.length - 1;
+                  if (showOverlay) {
+                    return (
+                      <button
+                        key={`${photo}-${index}`}
+                        type="button"
+                        onClick={() => setIsPhotosModalOpen(true)}
+                        className="group relative overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                        aria-label={`View ${mobileOverflowCount} more photos`}
+                      >
+                        <img
+                          src={photo}
+                          alt={`${profile.name} gallery ${index + 1}`}
+                          className="h-20 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          loading="lazy"
+                        />
+                        <span className="absolute inset-0 bg-[#0f172a]/50" />
+                        <span className="absolute inset-0 flex items-center justify-center text-lg font-extrabold text-white">
+                          +{mobileOverflowCount}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={`${photo}-${index}`}
+                      className="overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                    >
+                      <img
+                        src={photo}
+                        alt={`${profile.name} gallery ${index + 1}`}
+                        className="h-20 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden grid-cols-6 gap-3 lg:grid">
+                {desktopPhotoRow.map((photo, index) => {
+                  const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
+                  if (showOverlay) {
+                    return (
+                      <button
+                        key={`${photo}-${index}`}
+                        type="button"
+                        onClick={() => setIsPhotosModalOpen(true)}
+                        className="group relative overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                        aria-label={`View ${desktopOverflowCount} more photos`}
+                      >
+                        <img
+                          src={photo}
+                          alt={`${profile.name} gallery ${index + 1}`}
+                          className="h-28 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          loading="lazy"
+                        />
+                        <span className="absolute inset-0 bg-[#0f172a]/50" />
+                        <span className="absolute inset-0 flex items-center justify-center text-xl font-extrabold text-white">
+                          +{desktopOverflowCount}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={`${photo}-${index}`}
+                      className="overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                    >
+                      <img
+                        src={photo}
+                        alt={`${profile.name} gallery ${index + 1}`}
+                        className="h-28 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </section>
           ) : null}
@@ -1004,7 +1203,7 @@ export default function ListingProfilePage({
             onClick={() => setIsPhotosModalOpen(false)}
           >
             <section
-              className="w-full max-w-3xl rounded-2xl border border-[#d7dce0] bg-[#f1f3f4] p-4 shadow-xl"
+              className="w-full max-w-5xl rounded-2xl border border-[#d7e4f6] bg-gradient-to-br from-[#fcfeff] via-[#f7fbff] to-[#eef6ff] p-4 shadow-xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -1019,13 +1218,13 @@ export default function ListingProfilePage({
               </div>
 
               <div className="max-h-[70vh] overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-6">
                   {photoItems.map((photo, index) => (
-                    <div key={`${photo}-all-${index}`} className="overflow-hidden rounded-[10px] bg-[#dbe0e3]">
+                    <div key={`${photo}-all-${index}`} className="overflow-hidden rounded-[10px] border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_6px_12px_rgba(59,130,246,0.1)]">
                       <img
                         src={photo}
                         alt={`${profile.name} gallery full ${index + 1}`}
-                        className="h-32 w-full object-cover sm:h-40"
+                        className="h-20 w-full object-cover sm:h-24 lg:h-28"
                         loading="lazy"
                       />
                     </div>

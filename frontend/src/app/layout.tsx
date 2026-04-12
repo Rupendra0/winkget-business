@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Inter, Poppins, Rajdhani } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
@@ -22,6 +22,13 @@ const poppins = Poppins({
   display: "swap",
 });
 
+const rajdhani = Rajdhani({
+  variable: "--font-rajdhani",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Winkget Business - Find Local Services",
   description: "Discover and book trusted local businesses and services near you",
@@ -35,7 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${inter.className} ${inter.variable} ${poppins.variable} antialiased`}
+        className={`${inter.className} ${inter.variable} ${poppins.variable} ${rajdhani.variable} antialiased`}
       >
         <ImageProtection />
         <Suspense fallback={null}>
