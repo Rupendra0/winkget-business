@@ -1287,45 +1287,50 @@ export default function ListingProfilePage({
           <section className="relative overflow-hidden rounded-[12px] border border-[#dde3ea] bg-white px-4 py-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)] sm:px-5">
             <div className="pointer-events-none absolute -left-16 -top-16 h-32 w-32 rounded-full bg-[#ffe7ca]/55 blur-2xl" />
 
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 gap-3 md:gap-5">
               <div>
                 <h3
-                  className="inline-flex items-center gap-2 text-[1.08rem] font-bold text-black"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-black md:gap-2 md:text-[1.08rem]"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706]">
-                    <CalendarDays size={15} />
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706] md:h-7 md:w-7 md:rounded-[9px]">
+                    <CalendarDays size={11} className="md:hidden" />
+                    <CalendarDays size={15} className="hidden md:block" />
                   </span>
                   Establishment Year
                 </h3>
                 {profile.establishmentYear ? (
-                  <p className="mt-3 inline-flex items-center rounded-full border border-[#ffddb0] bg-[#fff6e8] px-3 py-1.5 text-sm font-bold text-[#b45309]">
+                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#ffddb0] bg-[#fff6e8] px-2 py-1 text-[11px] font-bold text-[#b45309] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
                     {`Since ${profile.establishmentYear}`}
                   </p>
                 ) : null}
               </div>
 
-              <div className="border-l border-[#e5e9ef] pl-5">
+              <div className="border-l border-[#e5e9ef] pl-3 md:pl-5">
                 <h3
-                  className="inline-flex items-center gap-2 text-[1.08rem] font-bold text-black"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-black md:gap-2 md:text-[1.08rem]"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706]">
-                    <Clock3 size={15} />
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706] md:h-7 md:w-7 md:rounded-[9px]">
+                    <Clock3 size={11} className="md:hidden" />
+                    <Clock3 size={15} className="hidden md:block" />
                   </span>
                   Opening Time :
                 </h3>
 
-                <ul className="mt-3 space-y-2">
+                <ul className="mt-2 space-y-2 md:mt-3">
                   {openingSchedule.map((item) => (
                     <li
                       key={`${item.day}-${item.time}`}
-                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-sm font-semibold leading-tight text-[#526071]"
+                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[10px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
                     >
-                      <span className="rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280]">
+                      <span className="hidden rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280] md:inline">
                         {item.day}
                       </span>
-                      <span className="ml-1.5">{item.time}</span>
+                      <span className="hidden md:inline md:ml-1.5">{item.time}</span>
+                      <span className="block whitespace-nowrap md:hidden">
+                        {`${String(item.day || "").replace(/\s*-\s*/g, "-")} ${String(item.time || "").replace(/\s*-\s*/g, "-")}`}
+                      </span>
                     </li>
                   ))}
                 </ul>

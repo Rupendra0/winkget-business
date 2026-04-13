@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Star, Filter, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Filter, ShoppingCart, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
@@ -18,6 +18,7 @@ const buildProductMap = (products: StorePageData["products"]) => {
 export default function StorePage({ data }: { data: StorePageData }) {
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     setIsReviewHydrated(true);
@@ -102,15 +103,32 @@ export default function StorePage({ data }: { data: StorePageData }) {
               loading="lazy"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-800/30 to-transparent" />
-            <div className="absolute bottom-5 left-5 flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full border-2 border-white overflow-hidden shadow-lg bg-white">
+            <div className="absolute inset-0 p-3 sm:hidden">
+              <div className="flex h-full flex-col justify-between">
+                <div className="min-w-0 text-white">
+                  <div className="truncate text-[31px] font-extrabold leading-[0.95] tracking-tight">{data.storeName}</div>
+                  <div className="mt-0.5 truncate text-[14px] font-semibold text-white/90">{data.tagline}</div>
+                  <div className="mt-1 flex items-center gap-1.5 text-[13px] font-medium text-white/90">
+                    <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                    {ratingLabel(storeReviewStats.rating)} ({storeReviewStats.reviews} reviews)
+                  </div>
+                </div>
+
+                <div className="h-[78px] w-[78px] rounded-full border-2 border-white overflow-hidden shadow-lg bg-white">
+                  <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-5 left-5 hidden items-center gap-4 sm:flex">
+              <div className="h-[82px] w-[82px] rounded-full border-2 border-white overflow-hidden shadow-lg bg-white">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
               </div>
               <div className="text-white">
-                <div className="text-2xl font-bold leading-tight">{data.storeName}</div>
-                <div className="text-sm text-white/80">{data.tagline}</div>
-                <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
-                  <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                <div className="max-w-[780px] text-[2.45rem] font-extrabold leading-[0.95] tracking-tight">{data.storeName}</div>
+                <div className="mt-0.5 text-base font-semibold text-white/90">{data.tagline}</div>
+                <div className="mt-1.5 flex items-center gap-2 text-sm font-medium text-white/90">
+                  <Star size={13} className="fill-yellow-400 text-yellow-400" />
                   {ratingLabel(storeReviewStats.rating)} ({storeReviewStats.reviews} reviews)
                 </div>
               </div>
@@ -119,11 +137,12 @@ export default function StorePage({ data }: { data: StorePageData }) {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
-          <aside className="rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 space-y-6 h-fit lg:sticky lg:top-24">
+          <aside className="hidden rounded-2xl bg-white/80 border border-white/80 shadow-lg p-5 space-y-6 h-fit lg:block lg:sticky lg:top-24">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <Filter size={16} />
               Filters
             </div>
+
             {data.filters.map((group) => (
               <div key={group.label}>
                 <div className="text-xs font-semibold text-slate-500 uppercase mb-2">
@@ -351,6 +370,68 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </section>
           </div>
         </section>
+
+        {!isMobileFiltersOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileFiltersOpen(true)}
+            className="fixed bottom-40 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-white shadow-lg lg:hidden"
+          >
+            <span className="inline-flex items-center gap-2 text-sm font-semibold">
+              <SlidersHorizontal size={16} />
+              Filters
+            </span>
+          </button>
+        ) : null}
+
+        {isMobileFiltersOpen ? (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/35"
+              onClick={() => setIsMobileFiltersOpen(false)}
+              aria-label="Close filters"
+            />
+
+            <section className="fixed bottom-0 left-0 max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900">Filters</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-600"
+                  aria-label="Close filter panel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                {data.filters.map((group) => (
+                  <div key={group.label}>
+                    <div className="mb-2 text-xs font-semibold uppercase text-slate-500">{group.label}</div>
+                    <div className="space-y-2">
+                      {group.options.map((option) => (
+                        <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
       <Footer />
     </main>

@@ -535,7 +535,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
         <button
           type="button"
           onClick={() => setMobileFilterOpen(true)}
-          className="fixed bottom-20 right-4 z-40 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg md:hidden"
+          className="fixed bottom-40 right-4 z-40 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg md:hidden"
         >
           <span className="inline-flex items-center gap-2 text-sm font-semibold">
             <SlidersHorizontal size={16} />
