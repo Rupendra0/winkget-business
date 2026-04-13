@@ -38,6 +38,16 @@ const reviewSchema = new Schema(
       trim: true,
       maxlength: 1200,
     },
+    editCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 2,
+    },
+    editedAt: {
+      type: Date,
+      default: null,
+    },
     isVisible: {
       type: Boolean,
       default: true,

@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BriefcaseBusiness,
+  CalendarDays,
   CheckCircle2,
+  Clock3,
   Globe,
+  Info,
+  Layers3,
   MapPin,
   MessageCircle,
+  MessageSquare,
+  Pencil,
+  PencilLine,
   Phone,
   Share2,
   Store,
   Star,
+  Trash2,
 } from "lucide-react";
 import type { ListingProfile, StorePageData, StoreProduct } from "@/data/listingData";
 import { buildProductSlug } from "@/data/productSlug";
@@ -18,8 +27,10 @@ import Footer from "@/components/Footer";
 import RestaurantMarketplacePage from "@/components/RestaurantMarketplacePage";
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import {
+  deleteBusinessReview,
   fetchBusinessReviews,
   submitBusinessReview,
+  updateBusinessReview,
   type BusinessReview,
   type BusinessReviewSummary,
 } from "@/lib/reviewStore";
@@ -194,17 +205,19 @@ const ActionButton = ({
 }) => {
   const toneClass =
     tone === "primary"
-      ? "text-sm font-semibold"
+      ? "text-[12px] font-medium md:text-sm md:font-semibold"
       : tone === "tertiary"
-      ? "text-xs font-semibold"
-      : "text-sm font-semibold";
-  const className = `inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] border border-[#BFDBFE] bg-[#DBEAFE] px-2 py-2 text-[#1E40AF] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-[#BFDBFE] hover:text-[#1D4ED8] ${toneClass} sm:min-h-11`;
+      ? "text-[11px] font-medium md:text-xs md:font-semibold"
+      : "text-[12px] font-medium md:text-sm md:font-semibold";
+  const className = `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-white/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.76),rgba(239,246,255,0.68))] px-1.5 py-2 text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white/90 hover:text-black hover:shadow-[0_10px_20px_rgba(15,23,42,0.1)] ${toneClass} md:min-h-11 md:rounded-[12px]`;
 
   if (disabled || !href) {
     return (
       <button type="button" disabled className={`${className} opacity-55`}>
-        {icon}
-        {label}
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+          {icon}
+        </span>
+        <span>{label}</span>
       </button>
     );
   }
@@ -218,16 +231,20 @@ const ActionButton = ({
         className={className}
         onClick={onClick}
       >
-        {icon}
-        {label}
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+          {icon}
+        </span>
+        <span>{label}</span>
       </a>
     );
   }
 
   return (
     <a href={href} className={className} onClick={onClick}>
-      {icon}
-      {label}
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+        {icon}
+      </span>
+      <span>{label}</span>
     </a>
   );
 };
@@ -251,11 +268,20 @@ export default function ListingProfilePage({
   const [reviewRatingInput, setReviewRatingInput] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
+  const [reviewActionMessage, setReviewActionMessage] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [expandedReviewIds, setExpandedReviewIds] = useState<Record<string, boolean>>({});
+  const [reviewOverflowIds, setReviewOverflowIds] = useState<Record<string, boolean>>({});
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editReviewText, setEditReviewText] = useState("");
+  const [editReviewRating, setEditReviewRating] = useState(5);
+  const [isUpdatingReview, setIsUpdatingReview] = useState(false);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
+  const reviewTextRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
 
   useEffect(() => {
     let active = true;
@@ -291,6 +317,8 @@ export default function ListingProfilePage({
     const loadReviews = async () => {
       setReviewsLoading(true);
       setViewerHasReviewed(false);
+      setReviewActionMessage(null);
+      setEditingReviewId(null);
       const result = await fetchBusinessReviews(profile.id, 40);
       if (!active) return;
 
@@ -414,14 +442,62 @@ export default function ListingProfilePage({
     : 0;
   const reviewCount = Math.max(0, Number(reviewSummary.reviews || 0));
   const ratingOutOfFive = Math.max(0, Math.min(5, Math.round(roundedRating || 0)));
+  const ownReview = useMemo(() => {
+    if (!currentUser?.id) return null;
+    return reviews.find((review) => review.reviewerId === currentUser.id) || null;
+  }, [currentUser?.id, reviews]);
+  const reviewsToDisplay = useMemo(() => {
+    const base = reviews.slice(0, 12);
+    if (!ownReview) {
+      return base;
+    }
+
+    if (base.some((item) => item.id === ownReview.id)) {
+      return base;
+    }
+
+    return [ownReview, ...base.slice(0, 11)];
+  }, [ownReview, reviews]);
   const hasAlreadyReviewed = useMemo(
-    () =>
-      Boolean(
-        currentUser?.id &&
-          (viewerHasReviewed || reviews.some((review) => review.reviewerId === currentUser.id))
-      ),
-    [currentUser?.id, reviews, viewerHasReviewed]
+    () => Boolean(currentUser?.id && (viewerHasReviewed || ownReview)),
+    [currentUser?.id, ownReview, viewerHasReviewed]
   );
+
+  useEffect(() => {
+    const measureOverflow = () => {
+      setReviewOverflowIds((previous) => {
+        let changed = false;
+        const next = { ...previous };
+
+        for (const review of reviewsToDisplay) {
+          if (expandedReviewIds[review.id]) {
+            continue;
+          }
+
+          const node = reviewTextRefs.current[review.id];
+          if (!node) {
+            continue;
+          }
+
+          const hasOverflow = node.scrollHeight - node.clientHeight > 1;
+          if (next[review.id] !== hasOverflow) {
+            next[review.id] = hasOverflow;
+            changed = true;
+          }
+        }
+
+        return changed ? next : previous;
+      });
+    };
+
+    const frame = window.requestAnimationFrame(measureOverflow);
+    window.addEventListener("resize", measureOverflow);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measureOverflow);
+    };
+  }, [expandedReviewIds, reviewsToDisplay]);
 
   const handleShare = async () => {
     const pageUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -500,7 +576,120 @@ export default function ListingProfilePage({
     setReviewText("");
     setReviewRatingInput(5);
     setReviewFormMessage("Review submitted successfully.");
+    setReviewActionMessage(null);
     setIsSubmittingReview(false);
+  };
+
+  const toggleReviewExpanded = (reviewId: string) => {
+    setExpandedReviewIds((previous) => ({
+      ...previous,
+      [reviewId]: !previous[reviewId],
+    }));
+  };
+
+  const startEditReview = (review: BusinessReview) => {
+    setReviewActionMessage(null);
+    setEditingReviewId(review.id);
+    setEditReviewText(String(review.comment || ""));
+    setEditReviewRating(Math.max(1, Math.min(5, Number(review.rating || 5))));
+  };
+
+  const cancelEditReview = () => {
+    setEditingReviewId(null);
+    setEditReviewText("");
+    setEditReviewRating(5);
+  };
+
+  const handleUpdateReview = async (review: BusinessReview) => {
+    if (!currentUser?.id || review.reviewerId !== currentUser.id) {
+      return;
+    }
+
+    const reviewEditCount = Math.max(0, Number(review.editCount || 0));
+    if (reviewEditCount >= 2) {
+      setReviewActionMessage("Edit limit reached (2/2). You can delete and post a new review.");
+      return;
+    }
+
+    const comment = editReviewText.trim();
+    if (!comment || comment.length < 5) {
+      setReviewActionMessage("Please write your review.");
+      return;
+    }
+
+    if (comment.length > 1200) {
+      setReviewActionMessage("Review must be 1200 characters or fewer.");
+      return;
+    }
+
+    const originalRating = Math.max(1, Math.min(5, Number(review.rating || 0)));
+    const originalComment = String(review.comment || "").trim();
+    if (originalRating === editReviewRating && originalComment === comment) {
+      setReviewActionMessage("No changes to save.");
+      return;
+    }
+
+    setIsUpdatingReview(true);
+    setReviewActionMessage(null);
+
+    const updateResult = await updateBusinessReview({
+      reviewId: review.id,
+      businessId: profile.id,
+      aliasBusinessIds: [profile.id, profile.storeId || ""].filter(Boolean),
+      rating: editReviewRating,
+      comment,
+    });
+
+    if (!updateResult.ok) {
+      setReviewActionMessage(updateResult.message);
+      setIsUpdatingReview(false);
+      return;
+    }
+
+    setReviews((previous) =>
+      previous.map((item) => (item.id === updateResult.review.id ? updateResult.review : item))
+    );
+    setReviewSummary(updateResult.summary);
+    setViewerHasReviewed(true);
+    setReviewActionMessage("Review updated successfully.");
+    setEditingReviewId(null);
+    setIsUpdatingReview(false);
+  };
+
+  const handleDeleteReview = async (review: BusinessReview) => {
+    if (!currentUser?.id || review.reviewerId !== currentUser.id) {
+      return;
+    }
+
+    const confirmed = window.confirm("Delete your review?");
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingReviewId(review.id);
+    setReviewActionMessage(null);
+
+    const deleteResult = await deleteBusinessReview({
+      reviewId: review.id,
+      businessId: profile.id,
+      aliasBusinessIds: [profile.id, profile.storeId || ""].filter(Boolean),
+    });
+
+    if (!deleteResult.ok) {
+      setReviewActionMessage(deleteResult.message);
+      setDeletingReviewId(null);
+      return;
+    }
+
+    setReviews((previous) => previous.filter((item) => item.id !== deleteResult.reviewId));
+    setReviewSummary(deleteResult.summary);
+    setViewerHasReviewed(false);
+    if (editingReviewId === review.id) {
+      cancelEditReview();
+    }
+    setReviewFormMessage("Review deleted. You can add a new review.");
+    setReviewActionMessage("Review deleted successfully.");
+    setDeletingReviewId(null);
   };
 
   const coverImage = String(profile.coverImage || "").trim();
@@ -682,10 +871,10 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#ffffff] via-[#fbfdff] to-[#f5faff] px-3 pb-24 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pb-10 lg:px-8">
+    <main className="min-h-screen bg-[#f6f7f9] px-3 pb-24 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pb-10 lg:px-8">
       <div className="mx-auto w-full max-w-[1120px] space-y-5 lg:max-w-[1240px]">
-        <section className="rounded-[24px] border border-[#dce9f8] bg-gradient-to-br from-[#ffffff] via-[#fbfdff] to-[#f2f8ff] p-4 shadow-[0_16px_32px_rgba(59,130,246,0.07)] sm:p-5">
-          <div className="overflow-hidden rounded-[18px] border border-[#d8e6f8] bg-[#eaf3ff]">
+        <section className="rounded-[24px] border border-[#d9dde3] bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] sm:p-5">
+          <div className="overflow-hidden rounded-[18px] border border-[#d9dde2] bg-[#f2f3f5]">
             {coverImage ? (
               <img
                 src={coverImage}
@@ -698,7 +887,7 @@ export default function ListingProfilePage({
             )}
           </div>
 
-          <div className="relative -mt-9 flex justify-center sm:-mt-10 md:hidden">
+          <div className="relative -mt-[46px] flex justify-center sm:-mt-[52px] md:hidden">
             <div className="h-[92px] w-[92px] overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white sm:h-[104px] sm:w-[104px]">
               {logoImage ? (
                 <img
@@ -713,7 +902,32 @@ export default function ListingProfilePage({
             </div>
           </div>
 
-          <div className="mt-1 flex justify-end pr-1 md:hidden">
+          <div className="mt-1 flex items-center justify-between gap-2 px-1 md:hidden">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+                liveStoreOpenState === true
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : liveStoreOpenState === false
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : "border-slate-200 bg-slate-50 text-slate-600"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  liveStoreOpenState === true
+                    ? "bg-emerald-500"
+                    : liveStoreOpenState === false
+                      ? "bg-rose-500"
+                      : "bg-slate-400"
+                }`}
+              />
+              {liveStoreOpenState === true
+                ? "Open Now"
+                : liveStoreOpenState === false
+                  ? "Closed"
+                  : "Status Unknown"}
+            </span>
+
             {isVerified ? (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
                 <CheckCircle2 size={14} className="text-[#2f9f57]" />
@@ -724,24 +938,24 @@ export default function ListingProfilePage({
 
           <div className="mt-2 text-center md:hidden">
             <h1
-              className="mx-auto max-w-full truncate px-2 text-xl font-semibold leading-snug text-[#4b4f53]"
+              className="mx-auto max-w-full truncate px-2 text-[22px] font-extrabold leading-snug text-[#4b4f53]"
               style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
             >
               {profile.name}
             </h1>
-            <p className="mt-0.5 text-sm font-medium leading-tight text-gray-600">
+            <p className="mt-0.5 text-sm font-bold leading-tight text-gray-600">
               {profile.category}
             </p>
 
             {fullAddress ? (
-              <p className="mx-auto mt-1 flex max-w-[900px] items-center justify-center gap-1.5 px-1 text-xs font-normal leading-tight text-gray-500">
+              <p className="mx-auto mt-1 flex max-w-[900px] items-center justify-center gap-1.5 px-1 text-xs font-bold leading-tight text-gray-500">
                 <MapPin size={14} className="shrink-0 text-[#d44040]" />
                 <span className="min-w-0 truncate whitespace-nowrap">{`Address : ${fullAddress}`}</span>
               </p>
             ) : null}
           </div>
 
-          <div className="hidden min-h-[182px] items-start justify-between gap-6 rounded-2xl border border-white/90 bg-gradient-to-r from-white/95 via-[#f8fcff]/95 to-[#eef7ff]/95 px-4 pb-5 pt-6 shadow-[0_12px_26px_rgba(31,79,141,0.12)] backdrop-blur-[1px] md:flex lg:px-5">
+          <div className="hidden min-h-[182px] items-start justify-between gap-6 rounded-2xl border border-[#e2e5e9] bg-white px-4 pb-5 pt-6 shadow-[0_10px_22px_rgba(15,23,42,0.06)] md:flex lg:px-5">
             <div className="flex min-w-0 items-start gap-4 lg:gap-5">
               <div className="-mt-[64px] h-[116px] w-[116px] shrink-0 overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] lg:-mt-[72px] lg:h-[126px] lg:w-[126px]">
                 {logoImage ? (
@@ -814,7 +1028,7 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-[#d5e4f8] bg-[radial-gradient(circle_at_12%_15%,rgba(191,219,254,0.45),rgba(255,255,255,0.9)_36%),radial-gradient(circle_at_88%_10%,rgba(186,230,253,0.4),rgba(255,255,255,0)_36%)] p-2.5 sm:p-3">
+          <div className="mt-4 rounded-2xl border border-white/70 bg-[#f8fbff]/70 p-2 backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:border-0 md:bg-transparent md:p-0 md:shadow-none">
             <div className="grid grid-cols-4 gap-2.5">
               <ActionButton
                 href={phoneDigits ? `tel:${phoneDigits}` : undefined}
@@ -856,18 +1070,22 @@ export default function ListingProfilePage({
             <p className="mt-2.5 text-center text-xs font-medium text-gray-500">{shareMessage}</p>
           ) : null}
 
-          <div className="mt-3 grid grid-cols-4 items-center gap-2.5 rounded-2xl border border-[#d5e4f8] bg-[radial-gradient(circle_at_86%_20%,rgba(219,234,254,0.75),rgba(255,255,255,0)_38%),linear-gradient(145deg,#fafdff_0%,#f1f7ff_100%)] p-2.5 text-center sm:p-3">
+          <div className="mt-2.5 grid grid-cols-4 items-center gap-2.5 rounded-2xl border border-white/70 bg-[#f7fbff]/75 p-2 text-center backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:mt-3 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
             {storeHref ? (
               <Link
                 href={storeHref}
-                className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] bg-gradient-to-br from-[#2563EB] to-[#3B82F6] px-1.5 py-2 text-sm font-semibold text-white shadow-[0_9px_18px_rgba(37,99,235,0.24)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] sm:min-h-11"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#2563EB] to-[#3B82F6] px-1.5 py-2 text-[12px] font-medium text-white shadow-[0_10px_20px_rgba(37,99,235,0.28)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
               >
-                <Store size={15} />
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
+                  <Store size={13} />
+                </span>
                 Store
               </Link>
             ) : (
-              <span className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] bg-[#2563EB]/60 px-1.5 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] sm:min-h-11">
-                <Store size={15} />
+              <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#5B8EF0] to-[#78A7F4] px-1.5 py-2 text-[12px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
+                  <Store size={13} />
+                </span>
                 Store
               </span>
             )}
@@ -875,31 +1093,40 @@ export default function ListingProfilePage({
             {inquiryHref ? (
               <a
                 href={inquiryHref}
-                className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#BFDBFE] bg-[#EFF6FF] px-1.5 py-2 text-sm font-semibold text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-[#DBEAFE] sm:min-h-11"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
               >
-                <MessageCircle size={15} />
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                  <MessageCircle size={13} />
+                </span>
                 Inquiry
               </a>
             ) : (
-              <span className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#BFDBFE] bg-[#EFF6FF] px-1.5 py-2 text-sm font-semibold text-[#1D4ED8] opacity-55 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:min-h-11">
-                <MessageCircle size={15} />
+              <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black opacity-55 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                  <MessageCircle size={13} />
+                </span>
                 Inquiry
               </span>
             )}
 
-            <p className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-[#FFF7ED] px-1 text-xs font-semibold text-[#D97706] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:min-h-11">
-              <Star size={14} className="fill-[#F59E0B] text-[#F59E0B]" />
-              {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
+            <p className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#F6D8A9] bg-[linear-gradient(145deg,rgba(255,248,236,0.95),rgba(255,242,222,0.9))] px-1 text-[12px] font-medium text-[#B45309] shadow-[0_8px_18px_rgba(180,83,9,0.12)] md:min-h-11 md:rounded-[12px] md:text-xs md:font-semibold">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#FCD8A6] bg-white/85 text-[#D97706] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
+              </span>
+              <span className="md:hidden">{roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}</span>
+              <span className="hidden md:inline">{`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}</span>
             </p>
 
-            <p className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-[12px] bg-[#EFF6FF] px-1 text-xs font-bold text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:min-h-11">
-              <CheckCircle2 size={15} className="text-emerald-600" />
+            <p className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#BBF7D0] bg-[linear-gradient(145deg,rgba(240,253,244,0.95),rgba(220,252,231,0.9))] px-1 text-[12px] font-semibold text-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.12)] md:min-h-11 md:rounded-[12px] md:text-xs md:font-bold">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#A7F3D0] bg-white/85 text-emerald-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+              </span>
               Trusted
             </p>
           </div>
 
           {photoItems.length > 0 ? (
-            <section className="mt-5 rounded-2xl border border-[#dbe7f7] bg-[radial-gradient(circle_at_10%_14%,rgba(191,219,254,0.34),rgba(255,255,255,0)_38%),linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-3 sm:p-4">
+            <section className="mt-5 rounded-2xl border border-[#d9dde2] bg-white p-3 sm:p-4">
               <div className="mb-2.5 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                 <button
@@ -920,7 +1147,7 @@ export default function ListingProfilePage({
                         key={`${photo}-${index}`}
                         type="button"
                         onClick={() => setIsPhotosModalOpen(true)}
-                        className="group relative overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                        className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
                         aria-label={`View ${mobileOverflowCount} more photos`}
                       >
                         <img
@@ -930,7 +1157,7 @@ export default function ListingProfilePage({
                           loading="lazy"
                         />
                         <span className="absolute inset-0 bg-[#0f172a]/50" />
-                        <span className="absolute inset-0 flex items-center justify-center text-lg font-extrabold text-white">
+                        <span className="absolute inset-0 grid place-items-center text-center text-lg font-extrabold leading-none text-white">
                           +{mobileOverflowCount}
                         </span>
                       </button>
@@ -940,7 +1167,7 @@ export default function ListingProfilePage({
                   return (
                     <div
                       key={`${photo}-${index}`}
-                      className="overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                      className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
                     >
                       <img
                         src={photo}
@@ -962,17 +1189,17 @@ export default function ListingProfilePage({
                         key={`${photo}-${index}`}
                         type="button"
                         onClick={() => setIsPhotosModalOpen(true)}
-                        className="group relative overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                        className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
                         aria-label={`View ${desktopOverflowCount} more photos`}
                       >
                         <img
                           src={photo}
                           alt={`${profile.name} gallery ${index + 1}`}
-                          className="h-28 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          className="aspect-square w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                           loading="lazy"
                         />
                         <span className="absolute inset-0 bg-[#0f172a]/50" />
-                        <span className="absolute inset-0 flex items-center justify-center text-xl font-extrabold text-white">
+                        <span className="absolute inset-0 grid place-items-center text-center text-xl font-extrabold leading-none text-white">
                           +{desktopOverflowCount}
                         </span>
                       </button>
@@ -982,12 +1209,12 @@ export default function ListingProfilePage({
                   return (
                     <div
                       key={`${photo}-${index}`}
-                      className="overflow-hidden rounded-lg border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_8px_16px_rgba(59,130,246,0.12)]"
+                      className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
                     >
                       <img
                         src={photo}
                         alt={`${profile.name} gallery ${index + 1}`}
-                        className="h-28 w-full object-cover"
+                        className="aspect-square w-full object-cover"
                         loading="lazy"
                       />
                     </div>
@@ -999,26 +1226,56 @@ export default function ListingProfilePage({
         </section>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-[8px] bg-[#edf4f3] px-4 py-5 sm:px-5">
+          <section className="relative overflow-hidden rounded-[12px] border border-[#dde3ea] bg-white px-4 py-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)] sm:px-5">
+            <div className="pointer-events-none absolute -right-20 -top-16 h-32 w-32 rounded-full bg-[#dbeafe]/55 blur-2xl" />
+
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <h3 className="text-base font-semibold text-[#6a6f72]">Services</h3>
-                <ul className="mt-2.5 space-y-2.5">
+                <h3
+                  className="inline-flex items-center gap-2.5 text-xl font-bold text-black"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB]">
+                    <BriefcaseBusiness size={15} />
+                  </span>
+                  <span>Services</span>
+                </h3>
+
+                <ul className="mt-3 space-y-2">
                   {serviceItems.map((service) => (
-                    <li key={service} className="flex items-center gap-2 text-sm font-medium text-[#62676a]">
-                      <CheckCircle2 size={16} className="shrink-0 text-[#2f9f57]" />
+                    <li
+                      key={service}
+                      className="flex items-center gap-2.5 rounded-[10px] border border-[#e6ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-base font-semibold text-[#53606f] transition-all duration-200 hover:translate-x-[1px] hover:bg-white"
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#86efac] bg-[#ecfdf3] text-[#16a34a]">
+                        <CheckCircle2 size={13} />
+                      </span>
                       {service}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div>
-                <h3 className="text-base font-semibold text-[#6a6f72]">Categories</h3>
-                <ul className="mt-2.5 space-y-2.5">
+              <div className="border-l border-[#e5e9ef] pl-5">
+                <h3
+                  className="inline-flex items-center gap-2.5 text-xl font-bold text-black"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB]">
+                    <Layers3 size={15} />
+                  </span>
+                  <span>Categories</span>
+                </h3>
+
+                <ul className="mt-3 space-y-2">
                   {categoryItems.map((category) => (
-                    <li key={category} className="flex items-center gap-2 text-sm font-medium text-[#62676a]">
-                      <CheckCircle2 size={16} className="shrink-0 text-[#2f9f57]" />
+                    <li
+                      key={category}
+                      className="flex items-center gap-2.5 rounded-[10px] border border-[#e6ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-base font-semibold text-[#53606f] transition-all duration-200 hover:translate-x-[1px] hover:bg-white"
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#86efac] bg-[#ecfdf3] text-[#16a34a]">
+                        <CheckCircle2 size={13} />
+                      </span>
                       {category}
                     </li>
                   ))}
@@ -1027,21 +1284,48 @@ export default function ListingProfilePage({
             </div>
           </section>
 
-          <section className="rounded-[8px] bg-[#edf4f3] px-4 py-5 sm:px-5">
+          <section className="relative overflow-hidden rounded-[12px] border border-[#dde3ea] bg-white px-4 py-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)] sm:px-5">
+            <div className="pointer-events-none absolute -left-16 -top-16 h-32 w-32 rounded-full bg-[#ffe7ca]/55 blur-2xl" />
+
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <h3 className="text-base font-semibold text-[#6a6f72]">Establishment Year</h3>
+                <h3
+                  className="inline-flex items-center gap-2 text-[1.08rem] font-bold text-black"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706]">
+                    <CalendarDays size={15} />
+                  </span>
+                  Establishment Year
+                </h3>
                 {profile.establishmentYear ? (
-                  <p className="mt-2.5 text-sm font-medium text-[#5a5f63]">{`Since ${profile.establishmentYear}`}</p>
+                  <p className="mt-3 inline-flex items-center rounded-full border border-[#ffddb0] bg-[#fff6e8] px-3 py-1.5 text-sm font-bold text-[#b45309]">
+                    {`Since ${profile.establishmentYear}`}
+                  </p>
                 ) : null}
               </div>
 
-              <div>
-                <h3 className="text-base font-semibold text-[#6a6f72]">Opening Time :</h3>
-                <ul className="mt-2.5 space-y-2">
+              <div className="border-l border-[#e5e9ef] pl-5">
+                <h3
+                  className="inline-flex items-center gap-2 text-[1.08rem] font-bold text-black"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706]">
+                    <Clock3 size={15} />
+                  </span>
+                  Opening Time :
+                </h3>
+
+                <ul className="mt-3 space-y-2">
                   {openingSchedule.map((item) => (
-                    <li key={`${item.day}-${item.time}`} className="text-sm font-medium leading-tight text-[#61666a]">
-                      {`${item.day} : ${item.time}`}
+                    <li
+                      key={`${item.day}-${item.time}`}
+                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-sm font-semibold leading-tight text-[#526071]"
+                    >
+                      <span className="rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280]">
+                        {item.day}
+                      </span>
+                      <span className="ml-1.5">{item.time}</span>
                     </li>
                   ))}
                 </ul>
@@ -1050,160 +1334,365 @@ export default function ListingProfilePage({
           </section>
 
           {profile.description ? (
-            <section className="rounded-[8px] bg-[#edf4f3] px-4 py-5 sm:px-5 lg:col-span-2">
-              <h3 className="text-base font-semibold text-[#6a6f72]">About Business :</h3>
-              <p className="mt-2.5 text-sm font-medium leading-[1.6] text-[#5f6468]">
+            <section className="relative overflow-hidden rounded-[12px] border border-[#e5e7eb] bg-[linear-gradient(140deg,#fffefb_0%,#ffffff_58%,#f7fff9_100%)] px-4 py-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] sm:px-5 lg:col-span-2">
+              <div className="pointer-events-none absolute -right-16 -top-14 h-28 w-28 rounded-full bg-[#fde68a]/25 blur-2xl" />
+              <h3
+                className="relative inline-flex items-center gap-2 text-[1.03rem] font-bold text-[#1f2a44]"
+                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#e5d7b4] bg-[#fff7e7] text-[#b45309]">
+                  <Info size={15} />
+                </span>
+                About Business :
+              </h3>
+              <p
+                className="relative mt-3 text-[14px] font-medium leading-[1.72] text-[#3e4a5a]"
+                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+              >
                 {profile.description}
               </p>
             </section>
           ) : null}
 
-          <section className="rounded-[8px] bg-transparent px-1 py-1.5 lg:col-span-2">
-            <div className="flex items-center gap-4">
-              <h3 className="text-base font-semibold text-[#6a6f72]">Rating & Reviews</h3>
-              <div className="flex items-center gap-1 rounded-[8px] bg-[#e8ecef] px-2 py-1">
+          <section className="rounded-[12px] border border-[#e6dfd2] bg-[#fffcf7] px-3 py-3 lg:col-span-2 sm:px-4">
+            <div className="flex items-center gap-3">
+              <h3
+                className="inline-flex items-center gap-2 text-[1.02rem] font-bold text-[#1f2a44]"
+                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#fde2ba] bg-[#fff3df] text-[#d97706]">
+                  <MessageSquare size={15} />
+                </span>
+                Rating & Reviews
+              </h3>
+              <div className="flex items-center gap-1 rounded-full border border-[#fde2b0] bg-[#fff4df] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
-                    size={20}
+                    size={18}
                     className={
                       star <= ratingOutOfFive
-                        ? "fill-[#f3b400] text-[#f3b400]"
-                        : "text-[#c3c8cc]"
+                        ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.45)]"
+                        : "text-[#c9ced4]"
                     }
                   />
                 ))}
               </div>
             </div>
 
-            <div className="mt-2.5 space-y-5">
+            <div className="mt-3 space-y-3.5">
               {reviewsLoading ? (
                 <p className="text-sm font-medium text-[#666b6f]">Loading reviews...</p>
               ) : reviews.length > 0 ? (
-                reviews.slice(0, 12).map((review) => (
-                  <article key={review.id} className="border-b border-[#d8dcdf] pb-3.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-[#5d6266]">{review.author}</p>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={`${review.id}-${star}`}
-                            size={16}
-                            className={
-                              star <= Math.round(Number(review.rating || 0))
-                                ? "fill-[#f3b400] text-[#f3b400]"
-                                : "text-[#c8cdd1]"
-                            }
-                          />
-                        ))}
+                reviewsToDisplay.map((review) => {
+                  const reviewScore = Math.max(0, Math.min(5, Math.round(Number(review.rating || 0))));
+                  const sentiment = reviewScore <= 2 ? "low" : reviewScore === 3 ? "medium" : "high";
+                  const isOwnReview = Boolean(currentUser?.id && review.reviewerId === currentUser.id);
+                  const isEditingThisReview = editingReviewId === review.id;
+                  const reviewEditCount = Math.max(0, Number(review.editCount || 0));
+                  const editsRemaining = Math.max(0, 2 - reviewEditCount);
+                  const reviewWasEdited = Boolean(review.isEdited || reviewEditCount > 0);
+                  const isExpanded = Boolean(expandedReviewIds[review.id]);
+                  const canToggleMore = Boolean(reviewOverflowIds[review.id]);
+                  const toneClasses =
+                    sentiment === "low"
+                      ? {
+                          card: "border-[#f4cccc] bg-[#fff6f6]",
+                          comment: "text-[#9f2f2f]",
+                          star: "fill-[#ef4444] text-[#ef4444] drop-shadow-[0_1px_2px_rgba(239,68,68,0.36)]",
+                        }
+                      : sentiment === "medium"
+                        ? {
+                            card: "border-[#f7dfb3] bg-[#fff9ef]",
+                            comment: "text-[#9a580a]",
+                            star: "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.4)]",
+                          }
+                        : {
+                            card: "border-[#c8edd8] bg-[#f3fff8]",
+                            comment: "text-[#166534]",
+                            star: "fill-[#22c55e] text-[#22c55e] drop-shadow-[0_1px_2px_rgba(34,197,94,0.35)]",
+                          };
+
+                  return (
+                    <article
+                      key={review.id}
+                      className={`rounded-[10px] border px-3 py-2.5 shadow-[0_4px_10px_rgba(15,23,42,0.04)] ${
+                        toneClasses.card
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <p
+                            className="text-[11px] font-semibold text-[#6b7280]"
+                            style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                          >
+                            {review.author}
+                          </p>
+                          {reviewWasEdited ? (
+                            <span className="rounded-full border border-[#d1d5db] bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#4b5563]">
+                              Edited
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={`${review.id}-${star}`}
+                              size={17}
+                              className={
+                                star <= reviewScore
+                                  ? toneClasses.star
+                                  : "text-[#d2d7dc]"
+                              }
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <p className="mt-1.5 text-sm font-medium leading-[1.45] text-[#5f6468]">
-                      {review.comment}
-                    </p>
+                      {isEditingThisReview ? (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <button
+                                key={`${review.id}-edit-${value}`}
+                                type="button"
+                                onClick={() => setEditReviewRating(value)}
+                                disabled={isUpdatingReview}
+                                className="rounded-full p-1 transition-colors duration-150 hover:bg-white/70 disabled:opacity-60"
+                                aria-label={`Set rating ${value}`}
+                              >
+                                <Star
+                                  size={18}
+                                  className={
+                                    value <= editReviewRating
+                                      ? "fill-[#f59e0b] text-[#f59e0b]"
+                                      : "text-[#c3c8cc]"
+                                  }
+                                />
+                              </button>
+                            ))}
+                          </div>
 
-                    {review.createdAt ? (
-                      <p className="mt-1.5 text-xs font-medium text-gray-500">
-                        {formatReviewDate(String(review.createdAt || ""))}
-                      </p>
-                    ) : null}
-                  </article>
-                ))
+                          <textarea
+                            value={editReviewText}
+                            onChange={(event) => setEditReviewText(event.target.value)}
+                            disabled={isUpdatingReview}
+                            className="min-h-[90px] w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#334155] outline-none"
+                          />
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleUpdateReview(review)}
+                              disabled={isUpdatingReview}
+                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] bg-[#1d4ed8] px-3 text-xs font-semibold text-white disabled:opacity-60"
+                            >
+                              {isUpdatingReview ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditReview}
+                              disabled={isUpdatingReview}
+                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-[#cbd5e1] bg-white px-3 text-xs font-semibold text-[#475569]"
+                            >
+                              Cancel
+                            </button>
+                            <span className="text-[11px] font-medium text-[#6b7280]">
+                              {`Edits left: ${editsRemaining}`}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p
+                            ref={(node) => {
+                              reviewTextRefs.current[review.id] = node;
+                              if (!node || isExpanded) {
+                                return;
+                              }
+
+                              const hasOverflow = node.scrollHeight - node.clientHeight > 1;
+                              setReviewOverflowIds((previous) =>
+                                previous[review.id] === hasOverflow
+                                  ? previous
+                                  : { ...previous, [review.id]: hasOverflow }
+                              );
+                            }}
+                            className={`mt-1.5 text-[15px] font-semibold leading-[1.45] ${toneClasses.comment} ${
+                              isExpanded ? "" : "line-clamp-2 md:line-clamp-5"
+                            }`}
+                            style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                          >
+                            {review.comment}
+                          </p>
+
+                          {canToggleMore ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleReviewExpanded(review.id)}
+                              className="mt-1 text-xs font-semibold text-[#1d4ed8] hover:underline"
+                            >
+                              {isExpanded ? "Less" : "More"}
+                            </button>
+                          ) : null}
+
+                          <div className="mt-1.5 flex items-center justify-between gap-3">
+                            {review.createdAt ? (
+                              <p className="text-xs font-medium text-gray-500">
+                                {formatReviewDate(String(review.createdAt || ""))}
+                              </p>
+                            ) : <span />}
+
+                            {isOwnReview ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => startEditReview(review)}
+                                  disabled={reviewEditCount >= 2}
+                                  className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#cbd5e1] bg-white px-2.5 text-[11px] font-semibold text-[#334155] disabled:cursor-not-allowed disabled:opacity-55"
+                                >
+                                  <Pencil size={12} />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteReview(review)}
+                                  disabled={deletingReviewId === review.id}
+                                  className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#fecaca] bg-white px-2.5 text-[11px] font-semibold text-[#b91c1c] disabled:opacity-60"
+                                >
+                                  <Trash2 size={12} />
+                                  {deletingReviewId === review.id ? "Deleting..." : "Delete"}
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {isOwnReview && reviewEditCount >= 2 ? (
+                            <p className="mt-1 text-[11px] font-medium text-[#b45309]">
+                              Edit limit reached (2/2).
+                            </p>
+                          ) : null}
+                        </>
+                      )}
+                    </article>
+                  );
+                })
               ) : (
                 <p className="text-sm font-medium text-[#666b6f]">No reviews yet.</p>
               )}
             </div>
+
+            {reviewActionMessage ? (
+              <p className="mt-2 text-xs font-medium text-[#4b5563]">{reviewActionMessage}</p>
+            ) : null}
 
             <p className="mt-2.5 text-xs font-medium text-gray-500">
               {`Overall ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} from ${reviewCount} reviews`}
             </p>
           </section>
 
-          <section className="rounded-[8px] bg-[#edf4f3] px-4 py-5 sm:px-5 lg:col-span-2">
-            <h3 className="text-base font-semibold text-[#6a6f72]">Write a Review</h3>
+          <section className="relative overflow-hidden rounded-[12px] border border-[#e2e7ee] bg-[linear-gradient(135deg,#ffffff_0%,#f9fbff_62%,#f4fff8_100%)] px-4 py-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] sm:px-5 lg:col-span-2">
+            <div className="pointer-events-none absolute -right-20 -top-16 h-32 w-32 rounded-full bg-[#bfdbfe]/35 blur-2xl" />
+            <div className="pointer-events-none absolute -left-20 bottom-0 h-28 w-28 rounded-full bg-[#bbf7d0]/25 blur-2xl" />
 
-            <form className="mt-3.5 space-y-3.5" onSubmit={handleSubmitReview}>
-              <label className="block text-xs font-medium text-gray-600">
-                Name
-                <input
-                  type="text"
-                  value={reviewAuthor}
-                  onChange={(event) => setReviewAuthor(event.target.value)}
-                  disabled={authLoading || !currentUser || hasAlreadyReviewed}
-                  className="mt-1 min-h-10 w-full rounded-[10px] border border-[#d4dadd] bg-white px-3 text-sm font-medium text-[#4f5357] outline-none"
-                  placeholder="Your name"
-                />
-              </label>
+            <h3
+              className="relative inline-flex items-center gap-2 text-[1.03rem] font-bold text-[#1f2a44]"
+              style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563eb]">
+                <PencilLine size={15} />
+              </span>
+              Write a Review
+            </h3>
 
-              <div>
-                <p className="text-xs font-medium text-gray-600">Rating</p>
-                <div className="mt-1 flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setReviewRatingInput(value)}
-                      disabled={authLoading || !currentUser || hasAlreadyReviewed}
-                      className="rounded p-1 disabled:opacity-60"
-                      aria-label={`Rate ${value}`}
-                    >
-                      <Star
-                        size={20}
-                        className={
-                          value <= reviewRatingInput
-                            ? "fill-[#f3b400] text-[#f3b400]"
-                            : "text-[#c3c8cc]"
-                        }
-                      />
-                    </button>
-                  ))}
-                </div>
+            {authLoading ? (
+              <p className="mt-3.5 text-sm font-medium text-[#6b7280]">Checking login status...</p>
+            ) : hasAlreadyReviewed ? (
+              <div className="mt-3.5 rounded-[12px] border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-sm font-semibold text-[#166534]">
+                You already reviewed this shop. You can edit (up to 2 times) or delete your review above.
               </div>
+            ) : (
+              <form className="relative mt-3.5 space-y-3.5" onSubmit={handleSubmitReview}>
+                <label className="block text-xs font-semibold text-[#4b5563]">
+                  Name
+                  <input
+                    type="text"
+                    value={reviewAuthor}
+                    onChange={(event) => setReviewAuthor(event.target.value)}
+                    disabled={!currentUser}
+                    className="mt-1 min-h-10 w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 text-sm font-medium text-[#374151] outline-none"
+                    placeholder="Your name"
+                  />
+                </label>
 
-              <label className="block text-xs font-medium text-gray-600">
-                Review
-                <textarea
-                  value={reviewText}
-                  onChange={(event) => setReviewText(event.target.value)}
-                  disabled={authLoading || !currentUser || hasAlreadyReviewed}
-                  className="mt-1 min-h-[96px] w-full rounded-[10px] border border-[#d4dadd] bg-white px-3 py-2 text-sm font-medium text-[#4f5357] outline-none"
-                  placeholder="Write your review"
-                />
-              </label>
+                <div>
+                  <p className="text-xs font-semibold text-[#4b5563]">Rating</p>
+                  <div className="mt-1 flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setReviewRatingInput(value)}
+                        disabled={!currentUser}
+                        className="rounded-full p-1 transition-colors duration-150 hover:bg-[#fff7e6] disabled:opacity-60"
+                        aria-label={`Rate ${value}`}
+                      >
+                        <Star
+                          size={21}
+                          className={
+                            value <= reviewRatingInput
+                              ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.4)]"
+                              : "text-[#c3c8cc]"
+                          }
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {authLoading ? (
-                <p className="text-xs font-medium text-gray-500">Checking login status...</p>
-              ) : !currentUser ? (
-                <Link href="/auth" className="inline-flex rounded-[10px] bg-[#d4f2ef] px-3 py-2 text-xs font-medium text-[#5f6569]">
-                  Login to write a review
-                </Link>
-              ) : hasAlreadyReviewed ? (
-                <p className="text-xs font-medium text-[#2f9f57]">You have already reviewed this shop.</p>
-              ) : null}
+                <label className="block text-xs font-semibold text-[#4b5563]">
+                  Review
+                  <textarea
+                    value={reviewText}
+                    onChange={(event) => setReviewText(event.target.value)}
+                    disabled={!currentUser}
+                    className="mt-1 min-h-[96px] w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#374151] outline-none"
+                    placeholder="Write your review"
+                  />
+                </label>
 
-              {reviewFormMessage ? (
-                <p className="text-xs font-medium text-[#5f6569]">{reviewFormMessage}</p>
-              ) : null}
+                {reviewFormMessage ? (
+                  <p className="text-xs font-medium text-[#5f6569]">{reviewFormMessage}</p>
+                ) : null}
 
-              <button
-                type="submit"
-                disabled={authLoading || !currentUser || hasAlreadyReviewed || isSubmittingReview}
-                className="inline-flex min-h-10 items-center justify-center rounded-[10px] bg-[#2b98c8] px-4 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {isSubmittingReview ? "Submitting..." : "Submit Review"}
-              </button>
-            </form>
+                {!currentUser ? (
+                  <Link
+                    href="/auth"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-[10px] border border-[#bae6fd] bg-[#e0f2fe] px-4 text-sm font-semibold text-[#0f4f68]"
+                  >
+                    Login to write a review
+                  </Link>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview}
+                    className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#2b98c8] px-4 text-sm font-semibold text-white shadow-[0_6px_12px_rgba(43,152,200,0.28)] disabled:opacity-60"
+                  >
+                    {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                  </button>
+                )}
+              </form>
+            )}
           </section>
         </div>
 
         {isPhotosModalOpen ? (
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3"
             onClick={() => setIsPhotosModalOpen(false)}
           >
             <section
-              className="w-full max-w-5xl rounded-2xl border border-[#d7e4f6] bg-gradient-to-br from-[#fcfeff] via-[#f7fbff] to-[#eef6ff] p-4 shadow-xl"
+              className="w-full max-w-5xl rounded-2xl border border-[#d9dde2] bg-white p-4 shadow-xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -1220,7 +1709,7 @@ export default function ListingProfilePage({
               <div className="max-h-[70vh] overflow-y-auto pr-1">
                 <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-6">
                   {photoItems.map((photo, index) => (
-                    <div key={`${photo}-all-${index}`} className="overflow-hidden rounded-[10px] border border-[#d8e6f7] bg-[#eaf2fa] shadow-[0_6px_12px_rgba(59,130,246,0.1)]">
+                    <div key={`${photo}-all-${index}`} className="overflow-hidden rounded-[10px] border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]">
                       <img
                         src={photo}
                         alt={`${profile.name} gallery full ${index + 1}`}

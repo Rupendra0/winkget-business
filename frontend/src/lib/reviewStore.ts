@@ -5,7 +5,11 @@ export type BusinessReview = {
   author: string;
   rating: number;
   comment: string;
+  editCount?: number;
+  isEdited?: boolean;
+  editedAt?: string | null;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type BusinessReviewSummary = {
@@ -40,6 +44,28 @@ type SubmitBusinessReviewInput = {
 
 type SubmitBusinessReviewResult =
   | { ok: true; review: BusinessReview; summary: BusinessReviewSummary }
+  | { ok: false; message: string };
+
+type UpdateBusinessReviewInput = {
+  reviewId: string;
+  businessId: string;
+  aliasBusinessIds?: string[];
+  rating: number;
+  comment: string;
+};
+
+type UpdateBusinessReviewResult =
+  | { ok: true; review: BusinessReview; summary: BusinessReviewSummary }
+  | { ok: false; message: string };
+
+type DeleteBusinessReviewInput = {
+  reviewId: string;
+  businessId: string;
+  aliasBusinessIds?: string[];
+};
+
+type DeleteBusinessReviewResult =
+  | { ok: true; reviewId: string; summary: BusinessReviewSummary }
   | { ok: false; message: string };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -285,6 +311,116 @@ export const submitBusinessReview = async (
     };
   } catch {
     return { ok: false, message: "Failed to submit review" };
+  }
+};
+
+export const updateBusinessReview = async (
+  input: UpdateBusinessReviewInput
+): Promise<UpdateBusinessReviewResult> => {
+  const reviewId = String(input.reviewId || "").trim();
+  const normalizedBusinessId = normalizeBusinessId(input.businessId);
+  if (!reviewId) {
+    return { ok: false, message: "Review not found" };
+  }
+
+  if (!normalizedBusinessId) {
+    return { ok: false, message: "Business not found for review" };
+  }
+
+  const rating = Math.max(1, Math.min(5, Number(input.rating || 0)));
+  const comment = String(input.comment || "").trim();
+  if (!comment) {
+    return { ok: false, message: "Please write your review" };
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/reviews/${encodeURIComponent(reviewId)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ rating, comment }),
+    });
+
+    const payload = (await response.json()) as {
+      ok: boolean;
+      message?: string;
+      review?: BusinessReview;
+      summary?: BusinessReviewSummary;
+    };
+
+    if (!response.ok || !payload.ok || !payload.review || !payload.summary) {
+      return { ok: false, message: payload.message || "Failed to update review" };
+    }
+
+    const normalizedSummary: BusinessReviewSummary = {
+      rating: roundRating(Number(payload.summary.rating || 0)),
+      reviews: Math.max(0, Number(payload.summary.reviews || 0)),
+    };
+
+    cacheReviewSummary(
+      [normalizedBusinessId, ...(input.aliasBusinessIds || [])],
+      normalizedSummary
+    );
+
+    return {
+      ok: true,
+      review: payload.review,
+      summary: normalizedSummary,
+    };
+  } catch {
+    return { ok: false, message: "Failed to update review" };
+  }
+};
+
+export const deleteBusinessReview = async (
+  input: DeleteBusinessReviewInput
+): Promise<DeleteBusinessReviewResult> => {
+  const reviewId = String(input.reviewId || "").trim();
+  const normalizedBusinessId = normalizeBusinessId(input.businessId);
+  if (!reviewId) {
+    return { ok: false, message: "Review not found" };
+  }
+
+  if (!normalizedBusinessId) {
+    return { ok: false, message: "Business not found for review" };
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/reviews/${encodeURIComponent(reviewId)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    const payload = (await response.json()) as {
+      ok: boolean;
+      message?: string;
+      deletedReviewId?: string;
+      summary?: BusinessReviewSummary;
+    };
+
+    if (!response.ok || !payload.ok || !payload.summary || !payload.deletedReviewId) {
+      return { ok: false, message: payload.message || "Failed to delete review" };
+    }
+
+    const normalizedSummary: BusinessReviewSummary = {
+      rating: roundRating(Number(payload.summary.rating || 0)),
+      reviews: Math.max(0, Number(payload.summary.reviews || 0)),
+    };
+
+    cacheReviewSummary(
+      [normalizedBusinessId, ...(input.aliasBusinessIds || [])],
+      normalizedSummary
+    );
+
+    return {
+      ok: true,
+      reviewId: String(payload.deletedReviewId),
+      summary: normalizedSummary,
+    };
+  } catch {
+    return { ok: false, message: "Failed to delete review" };
   }
 };
 

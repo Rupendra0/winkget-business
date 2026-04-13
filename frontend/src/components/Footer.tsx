@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { footerData } from "@/data/homeData";
@@ -14,11 +15,32 @@ const sectionTitleClass = "text-sm font-semibold text-slate-800";
 const linkTextClass = "text-sm text-slate-600 transition-colors hover:text-slate-900";
 const smallTextClass = "text-xs text-slate-500";
 
+const footerRouteMap: Record<string, string> = {
+  "My Account": "/profile",
+  "My Order": "/orders",
+  "Free Listing": "/vendor-register",
+  "Add Your Business": "/vendor-register",
+  B2B: "/vendor",
+  Explore: "/",
+  Payment: "/cart",
+  "Become a partner": "/vendor-register",
+  "Order your meal": "/search",
+  "Find what you need": "/search",
+};
+
+const toCategorySlug = (value: string) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+
 export default function Footer() {
   const [desktopCategoriesExpanded, setDesktopCategoriesExpanded] = useState(false);
   const [desktopQuickLinksExpanded, setDesktopQuickLinksExpanded] = useState(false);
 
-  const [openMobileSection, setOpenMobileSection] = useState<MobileSection>("categories");
+  const [openMobileSection, setOpenMobileSection] = useState<MobileSection>(null);
   const [mobileCategoriesExpanded, setMobileCategoriesExpanded] = useState(false);
   const [mobileQuickLinksExpanded, setMobileQuickLinksExpanded] = useState(false);
 
@@ -88,9 +110,13 @@ export default function Footer() {
             <div className={`${sectionTitleClass} mb-2`}>Categories</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2">
               {desktopCategories.map((item) => (
-                <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                <Link
+                  key={item}
+                  href={`/category/${toCategorySlug(item)}`}
+                  className={`${linkTextClass} text-left`}
+                >
                   {item}
-                </button>
+                </Link>
               ))}
             </div>
             {hasMoreDesktopCategories ? (
@@ -107,21 +133,43 @@ export default function Footer() {
           <section>
             <div className={`${sectionTitleClass} mb-2`}>Site Navigation</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-              {footerData.navigation.map((item) => (
-                <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                  {item}
-                </button>
-              ))}
+              {footerData.navigation.map((item) => {
+                const href = footerRouteMap[item];
+                if (href) {
+                  return (
+                    <Link key={item} href={href} className={`${linkTextClass} text-left`}>
+                      {item}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                    {item}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-3">
               <div className={`${sectionTitleClass} mb-2`}>Quicklinks</div>
               <div className="grid grid-cols-3 gap-2">
-                {desktopQuickLinks.map((item) => (
-                  <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                    {item}
-                  </button>
-                ))}
+                {desktopQuickLinks.map((item) => {
+                  const href = footerRouteMap[item];
+                  if (href) {
+                    return (
+                      <Link key={item} href={href} className={`${linkTextClass} text-left`}>
+                        {item}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                      {item}
+                    </button>
+                  );
+                })}
               </div>
               {hasMoreDesktopQuickLinks ? (
                 <button
@@ -164,16 +212,22 @@ export default function Footer() {
               />
             </button>
             <div
-              className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ${
-                openMobileSection === "categories" ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                openMobileSection === "categories"
+                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0"
               }`}
             >
-              <div className="overflow-hidden pb-3">
+              <div className="min-h-0 overflow-hidden pb-3">
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                   {mobileCategories.map((item) => (
-                    <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                    <Link
+                      key={item}
+                      href={`/category/${toCategorySlug(item)}`}
+                      className={`${linkTextClass} text-left`}
+                    >
                       {item}
-                    </button>
+                    </Link>
                   ))}
                 </div>
                 {hasMoreMobileCategories ? (
@@ -204,27 +258,51 @@ export default function Footer() {
               />
             </button>
             <div
-              className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ${
-                openMobileSection === "navigation" ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                openMobileSection === "navigation"
+                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0"
               }`}
             >
-              <div className="overflow-hidden pb-3">
+              <div className="min-h-0 overflow-hidden pb-3">
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                  {footerData.navigation.map((item) => (
-                    <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                      {item}
-                    </button>
-                  ))}
+                  {footerData.navigation.map((item) => {
+                    const href = footerRouteMap[item];
+                    if (href) {
+                      return (
+                        <Link key={item} href={href} className={`${linkTextClass} text-left`}>
+                          {item}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                        {item}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="mt-3">
                   <div className={`${sectionTitleClass} mb-2`}>Quicklinks</div>
                   <div className="grid grid-cols-2 gap-2">
-                    {mobileQuickLinks.map((item) => (
-                      <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                        {item}
-                      </button>
-                    ))}
+                    {mobileQuickLinks.map((item) => {
+                      const href = footerRouteMap[item];
+                      if (href) {
+                        return (
+                          <Link key={item} href={href} className={`${linkTextClass} text-left`}>
+                            {item}
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                          {item}
+                        </button>
+                      );
+                    })}
                   </div>
                   {hasMoreMobileQuickLinks ? (
                     <button
@@ -255,11 +333,13 @@ export default function Footer() {
               />
             </button>
             <div
-              className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ${
-                openMobileSection === "policies" ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                openMobileSection === "policies"
+                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0"
               }`}
             >
-              <div className="overflow-hidden pb-3">
+              <div className="min-h-0 overflow-hidden pb-3">
                 <div className="space-y-2">
                   {footerData.policies.map((item) => (
                     <button key={item} type="button" className={`${linkTextClass} block text-left`}>
@@ -275,11 +355,22 @@ export default function Footer() {
 
         <div className="mt-4 border-t border-orange-100/80 pt-3">
           <div className="flex flex-wrap gap-2 text-xs text-slate-600 md:gap-4 md:text-sm">
-            {footerData.bottomLinks.map((item) => (
-              <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                {item}
-              </button>
-            ))}
+            {footerData.bottomLinks.map((item) => {
+              const href = footerRouteMap[item];
+              if (href) {
+                return (
+                  <Link key={item} href={href} className={`${linkTextClass} text-left`}>
+                    {item}
+                  </Link>
+                );
+              }
+
+              return (
+                <button key={item} type="button" className={`${linkTextClass} text-left`}>
+                  {item}
+                </button>
+              );
+            })}
           </div>
 
           <div className={`mt-3 ${smallTextClass}`}>{footerData.copyright}</div>

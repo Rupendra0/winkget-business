@@ -48,6 +48,24 @@ const roundRating = (value) => {
   return Number(numeric.toFixed(2));
 };
 
+const toMongooseValidationMessage = (error, fallback) => {
+  if (!error) return fallback;
+
+  if (error.name === "ValidationError") {
+    const first = Object.values(error.errors || {})[0];
+    if (first?.message) {
+      return first.message;
+    }
+    return fallback;
+  }
+
+  if (error.name === "CastError") {
+    return "Invalid review data";
+  }
+
+  return fallback;
+};
+
 const toReviewPayload = (review) => ({
   id: String(review._id),
   businessId: review.businessKey,
@@ -55,7 +73,11 @@ const toReviewPayload = (review) => ({
   author: review.authorName,
   rating: Number(review.rating || 0),
   comment: review.comment,
+  editCount: Math.max(0, Number(review.editCount || 0)),
+  editedAt: review.editedAt || null,
+  isEdited: Math.max(0, Number(review.editCount || 0)) > 0,
   createdAt: review.createdAt,
+  updatedAt: review.updatedAt,
 });
 
 const getBusinessSummary = async (businessId) => {
@@ -131,7 +153,7 @@ router.get("/reviews", async (req, res) => {
       })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select("_id businessKey reviewer authorName rating comment createdAt")
+        .select("_id businessKey reviewer authorName rating comment editCount editedAt createdAt updatedAt")
         .lean(),
       getBusinessSummary(businessId),
       resolveAuthenticatedUser(req),
@@ -143,6 +165,7 @@ router.get("/reviews", async (req, res) => {
         await Review.exists({
           businessKey: businessId,
           reviewer: viewer._id,
+          isVisible: true,
         })
       );
     }
@@ -176,6 +199,10 @@ router.post("/reviews", requireAuth, async (req, res) => {
 
     if (!comment || comment.length < 5) {
       return res.status(400).json({ ok: false, message: "Please write a meaningful review" });
+    }
+
+    if (comment.length > 1200) {
+      return res.status(400).json({ ok: false, message: "Review must be 1200 characters or fewer" });
     }
 
     let vendorId;
@@ -214,11 +241,132 @@ router.post("/reviews", requireAuth, async (req, res) => {
       summary,
     });
   } catch (error) {
+    if (error?.name === "ValidationError" || error?.name === "CastError") {
+      return res.status(400).json({
+        ok: false,
+        message: toMongooseValidationMessage(error, "Invalid review data"),
+      });
+    }
+
     if (error?.code === 11000) {
       return res.status(409).json({ ok: false, message: "You have already reviewed this business" });
     }
 
     return res.status(500).json({ ok: false, message: "Failed to submit review", error: error.message });
+  }
+});
+
+router.put("/reviews/:reviewId", requireAuth, async (req, res) => {
+  try {
+    const authUser = req.authUser;
+    const reviewId = String(req.params?.reviewId || "").trim();
+    if (!OBJECT_ID_REGEX.test(reviewId)) {
+      return res.status(400).json({ ok: false, message: "Invalid review id" });
+    }
+
+    const rating = Number(req.body?.rating || 0);
+    const comment = String(req.body?.comment || "").trim();
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ ok: false, message: "Rating must be between 1 and 5" });
+    }
+
+    if (!comment || comment.length < 5) {
+      return res.status(400).json({ ok: false, message: "Please write a meaningful review" });
+    }
+
+    if (comment.length > 1200) {
+      return res.status(400).json({ ok: false, message: "Review must be 1200 characters or fewer" });
+    }
+
+    const review = await Review.findById(reviewId);
+    if (!review || !review.isVisible) {
+      return res.status(404).json({ ok: false, message: "Review not found" });
+    }
+
+    if (String(review.reviewer) !== String(authUser._id)) {
+      return res.status(403).json({ ok: false, message: "You can only edit your own review" });
+    }
+
+    const currentEditCount = Math.max(0, Number(review.editCount || 0));
+    if (currentEditCount >= 2) {
+      return res.status(403).json({ ok: false, message: "You can edit a review at most 2 times" });
+    }
+
+    const currentComment = String(review.comment || "").trim();
+    if (Number(review.rating) === rating && currentComment === comment) {
+      const summary = await getBusinessSummary(review.businessKey);
+      return res.status(200).json({
+        ok: true,
+        message: "No changes detected in your review",
+        review: toReviewPayload(review),
+        summary,
+      });
+    }
+
+    review.rating = rating;
+    review.comment = comment;
+    review.editCount = Math.min(2, currentEditCount + 1);
+    review.editedAt = new Date();
+    await review.save();
+
+    const updatedReview = await Review.findById(reviewId)
+      .select("_id businessKey reviewer authorName rating comment editCount editedAt createdAt updatedAt")
+      .lean();
+
+    if (!updatedReview) {
+      return res.status(404).json({ ok: false, message: "Review not found after update" });
+    }
+
+    const summary = await getBusinessSummary(review.businessKey);
+
+    return res.status(200).json({
+      ok: true,
+      message: "Review updated successfully",
+      review: toReviewPayload(updatedReview),
+      summary,
+    });
+  } catch (error) {
+    if (error?.name === "ValidationError" || error?.name === "CastError") {
+      return res.status(400).json({
+        ok: false,
+        message: toMongooseValidationMessage(error, "Invalid review data"),
+      });
+    }
+
+    return res.status(500).json({ ok: false, message: "Failed to update review", error: error.message });
+  }
+});
+
+router.delete("/reviews/:reviewId", requireAuth, async (req, res) => {
+  try {
+    const authUser = req.authUser;
+    const reviewId = String(req.params?.reviewId || "").trim();
+    if (!OBJECT_ID_REGEX.test(reviewId)) {
+      return res.status(400).json({ ok: false, message: "Invalid review id" });
+    }
+
+    const review = await Review.findById(reviewId).select("_id reviewer businessKey isVisible").lean();
+    if (!review || !review.isVisible) {
+      return res.status(404).json({ ok: false, message: "Review not found" });
+    }
+
+    if (String(review.reviewer) !== String(authUser._id)) {
+      return res.status(403).json({ ok: false, message: "You can only delete your own review" });
+    }
+
+    await Review.deleteOne({ _id: reviewId });
+    const summary = await getBusinessSummary(review.businessKey);
+
+    return res.status(200).json({
+      ok: true,
+      message: "Review deleted successfully",
+      deletedReviewId: reviewId,
+      businessId: review.businessKey,
+      summary,
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to delete review", error: error.message });
   }
 });
 
