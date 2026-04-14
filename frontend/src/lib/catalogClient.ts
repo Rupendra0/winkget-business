@@ -589,7 +589,7 @@ export function toCategoryPageDataFromCatalog(input: {
 
 export function toListingProfileFromVendor(vendor: CatalogVendorDetail): ListingProfile {
   const displayName = vendor.businessName || vendor.name || vendor.id;
-  const categoryLabel = vendor.businessSubcategory?.name || vendor.businessCategory?.name || vendor.subcategory || "";
+  const categoryLabel = vendor.businessCategory?.name || vendor.businessSubcategory?.name || vendor.subcategory || "";
   const phone = vendor.businessPhone || "";
   const email = vendor.businessEmail || "";
   const tags = uniqueStrings([...(vendor.tags || []), ...(vendor.serviceTags || [])]);

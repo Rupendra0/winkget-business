@@ -69,6 +69,7 @@ const findListing = (id: string) => {
 };
 
 const normalizeString = (value: unknown) => String(value || "").trim();
+const normalizeCategoryKey = (value: unknown) => normalizeString(value).toLowerCase();
 
 const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -85,8 +86,6 @@ const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
 
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
-const RESTAURANT_CATEGORY_REGEX =
-  /(restaurant|food|cafe|dining|kitchen|bakery|meal|snack|snacks|biryani|pizza|burger|coffee|tea|lunch|dinner|breakfast|sweets|sweet|dessert|mithai|fast\s*food|street\s*food|juice|beverage)/i;
 
 const uniqueStrings = (values: Array<string | undefined>) => {
   const seen = new Set<string>();
@@ -137,15 +136,10 @@ const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
     .slice(0, 12);
 };
 
-const isRestaurantMarketplaceProfile = (profile: ListingProfile, categoryLabel: string) => {
-  const candidates = [
-    categoryLabel,
-    profile.category,
-    ...(Array.isArray(profile.tags) ? profile.tags : []),
-    ...(Array.isArray(profile.services) ? profile.services : []),
-  ];
+const isRestaurantCategoryLabel = (value: string) => normalizeCategoryKey(value) === "restaurant";
 
-  return candidates.some((value) => RESTAURANT_CATEGORY_REGEX.test(normalizeString(value)));
+const isRestaurantMarketplaceProfile = (profile: ListingProfile, categoryLabel: string) => {
+  return [categoryLabel, profile.category].some((value) => isRestaurantCategoryLabel(value));
 };
 
 const toPriceForTwoLabel = (profile: ListingProfile) => {
