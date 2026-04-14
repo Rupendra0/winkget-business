@@ -678,8 +678,6 @@ function MyStorePreviewSection({
         </div>
 
         <div className="space-y-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3">
-          <p className="text-xs text-gray-600">{description || "Add a business description in Shop to improve MyStore profile."}</p>
-
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore DP</p>
@@ -883,8 +881,6 @@ function OverviewSection({
             <h3 className="font-display text-lg font-semibold text-gray-900">Lead Sources</h3>
             <BarChart3 className="h-[18px] w-[18px] text-blue-600" aria-hidden="true" />
           </div>
-          <p className="mt-1 text-xs text-gray-500">Built from enquiry channel data currently present in backend.</p>
-
           <div className="mt-4 space-y-3">
             {leadSources.map((source) => (
               <ProgressBar key={source.label} label={source.label} value={source.value} />
@@ -897,8 +893,6 @@ function OverviewSection({
             <h3 className="font-display text-lg font-semibold text-gray-900">Service Performance</h3>
             <Sparkles className="h-[18px] w-[18px] text-emerald-600" aria-hidden="true" />
           </div>
-          <p className="mt-1 text-xs text-gray-500">Service confidence by tags currently configured on your profile.</p>
-
           <div className="mt-4 space-y-3">
             {servicePerformance.map((service) => (
               <ProgressBar key={service.label} label={service.label} value={service.value} />
@@ -1103,15 +1097,15 @@ function CallsSection({ callLeads }: { callLeads: VendorInquiry[] }) {
   return (
     <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <p className="text-sm text-gray-600">
-          Only user-generated call requests are listed here, including contact details and callback context.
-        </p>
+        <h3 className="text-sm text-gray-600">
+          Calls from users :
+        </h3>
       </article>
 
       {callLeads.length === 0 ? (
         <EmptyState
           title="No call leads yet"
-          body="New call requests from users will appear here with phone and email details."
+          body="New call requests from users will appear here."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -1329,15 +1323,15 @@ function ShopProfileSection({
 
   return (
     <section className="space-y-4">
-      <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <article className="rounded-2xl bg-white p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Live Shop Preview</p>
 
-        <div className="mt-3 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
+        <div className="mt-3 overflow-hidden rounded-2xl bg-gray-50">
           <div className="vendor-shop-preview-banner relative w-full overflow-hidden bg-gray-100">
             <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-black/5" />
             <div className="absolute inset-x-3 bottom-3 flex items-end gap-3">
-              <div className="vendor-shop-preview-avatar overflow-hidden rounded-2xl border-2 border-white bg-white shadow-sm">
+              <div className="vendor-shop-preview-avatar overflow-hidden rounded-2xl bg-white">
                 <img src={avatarImage} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
               </div>
               <div className="min-w-0 flex-1 pb-1 text-white">
@@ -1346,25 +1340,14 @@ function ShopProfileSection({
               </div>
             </div>
           </div>
-
-          {galleryItems.length > 0 ? (
-            <div className="grid grid-cols-4 gap-2 p-3">
-              {galleryItems.slice(0, 4).map((url) => (
-                <div key={url} className="h-14 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                  <img src={url} alt="Shop gallery" className="h-full w-full object-cover" loading="lazy" />
-                </div>
-              ))}
-            </div>
-          ) : null}
         </div>
-
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {form.instagramUrl ? (
             <a
               href={form.instagramUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 font-semibold text-pink-700"
+              className="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2.5 py-1 font-semibold text-pink-700"
             >
               <Instagram className="h-3.5 w-3.5" aria-hidden="true" />
               Instagram
@@ -1375,7 +1358,7 @@ function ShopProfileSection({
               href={form.facebookUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 font-semibold text-blue-700"
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700"
             >
               <Facebook className="h-3.5 w-3.5" aria-hidden="true" />
               Facebook
@@ -1386,7 +1369,7 @@ function ShopProfileSection({
               href={form.youtubeUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 font-semibold text-rose-700"
+              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 font-semibold text-rose-700"
             >
               <Youtube className="h-3.5 w-3.5" aria-hidden="true" />
               YouTube
@@ -1396,36 +1379,34 @@ function ShopProfileSection({
       </article>
 
       <form onSubmit={onSubmit} className="space-y-4">
-        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl bg-white p-5">
           <h3 className="font-display text-lg font-semibold text-gray-900">Shop Profile</h3>
-          <p className="mt-1 text-xs text-gray-500">
-            Upload your shop DP, banner, and gallery photos with instant preview.
-          </p>
+          
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Display Photo</p>
-              <div className="mt-2 h-24 w-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="mt-2 h-24 w-24 overflow-hidden rounded-xl bg-white">
                 <img src={avatarImage} alt="Shop display" className="h-full w-full object-cover" loading="lazy" />
               </div>
               <button
                 type="button"
                 onClick={() => onRemoveImage("image")}
-                className="mt-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                className="mt-2 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Remove DP
               </button>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Banner</p>
-              <div className="mt-2 h-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="mt-2 h-24 overflow-hidden rounded-xl bg-white">
                 <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
               </div>
               <button
                 type="button"
                 onClick={() => onRemoveImage("shopBannerImage")}
-                className="mt-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                className="mt-2 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Remove Banner
               </button>
@@ -1433,7 +1414,7 @@ function ShopProfileSection({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">
               <Camera className="h-4 w-4" aria-hidden="true" />
               Upload DP
               <input
@@ -1447,7 +1428,7 @@ function ShopProfileSection({
               />
             </label>
 
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">
               <ImagePlus className="h-4 w-4" aria-hidden="true" />
               Upload Banner
               <input
@@ -1462,7 +1443,7 @@ function ShopProfileSection({
             </label>
           </div>
 
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">
             <Upload className="h-4 w-4" aria-hidden="true" />
             Upload Shop Photos
             <input
@@ -1477,7 +1458,7 @@ function ShopProfileSection({
             />
           </label>
 
-          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <div className="mt-3 rounded-xl bg-gray-50 p-3">
             <p className="text-xs font-semibold text-gray-600">Shop Photos (max {MAX_SHOP_GALLERY_ITEMS})</p>
 
             {galleryItems.length === 0 ? (
@@ -1485,7 +1466,7 @@ function ShopProfileSection({
             ) : (
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {galleryItems.map((url) => (
-                  <div key={url} className="relative overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <div key={url} className="relative overflow-hidden rounded-lg bg-white">
                     <img src={url} alt="Shop gallery" className="h-20 w-full object-cover" loading="lazy" />
                     <button
                       type="button"
@@ -1507,7 +1488,7 @@ function ShopProfileSection({
                 type="text"
                 value={form.businessAddress}
                 onChange={(event) => onChange("businessAddress", event.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
               />
             </label>
 
@@ -1517,7 +1498,7 @@ function ShopProfileSection({
                 type="url"
                 value={form.website}
                 onChange={(event) => onChange("website", event.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                 placeholder="https://..."
               />
             </label>
@@ -1527,17 +1508,17 @@ function ShopProfileSection({
               <textarea
                 value={form.businessDescription}
                 onChange={(event) => onChange("businessDescription", event.target.value)}
-                className="min-h-[100px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                className="min-h-[100px] w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
               />
             </label>
           </div>
 
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <div className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
             <p className="font-semibold">Premium feature</p>
             <p className="mt-1">Social media links are locked. Upgrade to Premium to unlock editing.</p>
             <button
               type="button"
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-200"
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Go Premium
@@ -1554,7 +1535,7 @@ function ShopProfileSection({
                 value={form.instagramUrl}
                 onChange={(event) => onChange("instagramUrl", event.target.value)}
                 disabled={socialLocked}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                 placeholder="https://instagram.com/..."
               />
             </label>
@@ -1568,7 +1549,7 @@ function ShopProfileSection({
                 value={form.facebookUrl}
                 onChange={(event) => onChange("facebookUrl", event.target.value)}
                 disabled={socialLocked}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                 placeholder="https://facebook.com/..."
               />
             </label>
@@ -1582,7 +1563,7 @@ function ShopProfileSection({
                 value={form.youtubeUrl}
                 onChange={(event) => onChange("youtubeUrl", event.target.value)}
                 disabled={socialLocked}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                 placeholder="https://youtube.com/..."
               />
             </label>
@@ -1837,10 +1818,6 @@ function VendorProductsSection({
                     <div className="p-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xl font-semibold leading-tight text-gray-900">{product.productName}</p>
-                        <p className="mt-1 text-xs text-gray-600">
-                          {product.categoryLabel || product.categorySlug} / {product.subcategoryName || product.subcategorySlug}
-                        </p>
-                        <p className="mt-1 text-[11px] text-gray-500">Updated {formatDateTime(product.updatedAt)}</p>
                       </div>
 
                       <div className="mt-2.5 flex flex-wrap items-end gap-2">
@@ -1908,7 +1885,6 @@ function VendorProductsSection({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-display text-lg font-semibold text-gray-900">{editingProductId ? "Edit Product" : "Add Product"}</h3>
-                  <p className="mt-1 text-xs text-gray-500">Schema-aligned product payload for future multi-platform sync.</p>
                 </div>
 
                 <button
@@ -2332,8 +2308,6 @@ function SettingsSection({
     <form onSubmit={onSubmit} className="space-y-4">
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <h3 className="font-display text-lg font-semibold text-gray-900">Profile Settings</h3>
-        <p className="mt-1 text-xs text-gray-500">These fields submit through /api/auth/me and save directly to your vendor profile.</p>
-
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-gray-600">Owner Name</span>
@@ -2776,7 +2750,7 @@ export default function VendorDashboard() {
         label: "Enquiries",
         value: enquiryCount,
         trend: `Open ${openEnquiries}`,
-        hint: "Live from vendor inquiries API",
+        hint: "",
         icon: MessageSquare,
         trendPositive: openEnquiries > 0,
       },
@@ -2784,7 +2758,7 @@ export default function VendorDashboard() {
         label: "Call Leads",
         value: callLeads.length,
         trend: callLeads.length > 0 ? `+${callLeads.length}` : "+0",
-        hint: "From user call requests",
+        hint: "",
         icon: PhoneCall,
         trendPositive: callLeads.length > 0,
       },
@@ -2792,7 +2766,7 @@ export default function VendorDashboard() {
         label: "Reviews",
         value: reviewCount,
         trend: `Avg ${formatRating(reviews.summary.rating)}`,
-        hint: "Live from reviews API",
+        hint: "",
         icon: Star,
         trendPositive: reviewCount > 0,
       },
@@ -2800,7 +2774,7 @@ export default function VendorDashboard() {
         label: "Orders",
         value: 0,
         trend: "API pending",
-        hint: "Awaiting backend endpoint",
+        hint: "",
         icon: ClipboardList,
         trendPositive: false,
       },
@@ -3830,9 +3804,6 @@ export default function VendorDashboard() {
         <section className="w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <Building2 className="mx-auto h-9 w-9 text-[var(--vendor-primary)]" aria-hidden="true" />
           <h1 className="mt-4 font-display text-2xl font-semibold text-gray-900">Vendor session required</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Log in with a vendor account to view your dashboard. This panel relies on the existing Winkget backend session.
-          </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/login"
@@ -3911,11 +3882,6 @@ export default function VendorDashboard() {
                 );
               })}
             </nav>
-
-            <div className="mt-auto rounded-2xl border border-white/60 bg-white/70 p-3 text-xs text-gray-600">
-              <p className="font-semibold text-gray-800">Account Status</p>
-              <p className="mt-1">{vendor.vendorStatus === "approved" ? "Verified vendor" : "Pending verification"}</p>
-            </div>
           </aside>
 
           <section className="min-w-0 space-y-5">
@@ -4042,7 +4008,6 @@ export default function VendorDashboard() {
             <aside className="hidden space-y-4 xl:block">
               <article className="rounded-2xl bg-white/60 p-5 backdrop-blur-md">
                 <h3 className="font-display text-lg font-semibold text-gray-900">Quick Analytics</h3>
-                <p className="mt-1 text-xs text-gray-500">Current backend-fed status summary.</p>
 
                 <div className="mt-4 space-y-3">
                   <div className="rounded-xl border border-white/60 bg-white/70 p-3">
@@ -4118,7 +4083,6 @@ export default function VendorDashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Notifications</p>
-                <p className="text-xs text-gray-600">Unread first. Showing latest {MAX_NOTIFICATIONS_IN_POPUP} notifications.</p>
               </div>
 
               <button

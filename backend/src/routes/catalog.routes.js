@@ -348,6 +348,7 @@ const toSubcategorySummary = (subcategory) => ({
   name: subcategory.name,
   slug: subcategory.slug,
   description: subcategory.description,
+  icon: subcategory.icon,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
   customFormEnabled: Boolean(subcategory.customFormEnabled),
@@ -612,7 +613,7 @@ router.get("/subcategories", withPublicGetCache(async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields")
+      .select("_id category parentSubcategory name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name")
       .lean();

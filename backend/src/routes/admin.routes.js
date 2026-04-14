@@ -344,6 +344,7 @@ const toSubcategorySummary = (subcategory) => ({
   name: subcategory.name,
   slug: subcategory.slug,
   description: subcategory.description,
+  icon: subcategory.icon,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
   ...toCustomFormSummary(subcategory),
@@ -545,6 +546,130 @@ const collectDescendantSubcategoryIds = async (rootSubcategoryId) => {
 
   return (rows[0]?.descendantIds || []).map((id) => String(id));
 };
+
+const parseSortOrderRequest = (value) => {
+  if (value === undefined || value === null) {
+    return {
+      provided: false,
+      value: null,
+      error: "",
+    };
+  }
+
+  if (typeof value === "string" && !value.trim()) {
+    return {
+      provided: false,
+      value: null,
+      error: "",
+    };
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || !Number.isInteger(numeric)) {
+    return {
+      provided: true,
+      value: null,
+      error: "Sort order must be a whole number",
+    };
+  }
+
+  if (numeric <= 0) {
+    return {
+      provided: true,
+      value: null,
+      error: "",
+    };
+  }
+
+  return {
+    provided: true,
+    value: numeric,
+    error: "",
+  };
+};
+
+const clampSortOrderInsertIndex = (sortOrder, countWithoutCurrent) => {
+  if (!Number.isFinite(Number(sortOrder))) {
+    return countWithoutCurrent;
+  }
+
+  const clamped = Math.max(1, Math.min(Number(sortOrder), countWithoutCurrent + 1));
+  return clamped - 1;
+};
+
+const fetchOrderedCategoryIds = async () => {
+  const categories = await Category.find({})
+    .sort({ sortOrder: 1, name: 1, _id: 1 })
+    .select("_id")
+    .lean();
+
+  return categories.map((category) => String(category._id));
+};
+
+const applyCategorySortOrders = async (orderedCategoryIds) => {
+  if (!orderedCategoryIds.length) {
+    return;
+  }
+
+  await Category.bulkWrite(
+    orderedCategoryIds.map((categoryId, index) => ({
+      updateOne: {
+        filter: { _id: categoryId },
+        update: { $set: { sortOrder: index + 1 } },
+      },
+    }))
+  );
+};
+
+const resolveObjectIdValue = (value) => {
+  if (!value) return null;
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  return toObjectId(value);
+};
+
+const buildSubcategorySortGroupFilter = (categoryId, parentSubcategoryId) => {
+  const categoryObjectId = resolveObjectIdValue(categoryId);
+  if (!categoryObjectId) {
+    return null;
+  }
+
+  return {
+    category: categoryObjectId,
+    parentSubcategory: resolveObjectIdValue(parentSubcategoryId) || null,
+  };
+};
+
+const fetchOrderedSubcategoryIds = async (categoryId, parentSubcategoryId) => {
+  const query = buildSubcategorySortGroupFilter(categoryId, parentSubcategoryId);
+  if (!query) {
+    return [];
+  }
+
+  const subcategories = await Subcategory.find(query)
+    .sort({ sortOrder: 1, name: 1, _id: 1 })
+    .select("_id")
+    .lean();
+
+  return subcategories.map((subcategory) => String(subcategory._id));
+};
+
+const applySubcategorySortOrders = async (orderedSubcategoryIds) => {
+  if (!orderedSubcategoryIds.length) {
+    return;
+  }
+
+  await Subcategory.bulkWrite(
+    orderedSubcategoryIds.map((subcategoryId, index) => ({
+      updateOne: {
+        filter: { _id: subcategoryId },
+        update: { $set: { sortOrder: index + 1 } },
+      },
+    }))
+  );
+};
+
+const buildSubcategorySortGroupKey = (categoryId, parentSubcategoryId) =>
+  `${String(categoryId || "").trim()}:${String(parentSubcategoryId || "root").trim() || "root"}`;
 
 const toVendorSummary = (vendor) => ({
   id: String(vendor._id),
@@ -2021,8 +2146,7 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
     const description = String(req.body?.description || "").trim();
     const imageInput = String(req.body?.image || "").trim();
     const iconInput = String(req.body?.icon || "").trim();
-    const sortOrderInput = req.body?.sortOrder;
-    const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
     const customFormEnabled = req.body?.customFormEnabled !== undefined ? Boolean(req.body.customFormEnabled) : false;
     const customFormTitle = String(req.body?.customFormTitle || "").trim();
@@ -2040,6 +2164,10 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Category icon image must be a valid URL or image data" });
     }
 
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
+    }
+
     const slug = await resolveUniqueSlug(slugify(name));
 
     const category = await Category.create({
@@ -2049,12 +2177,19 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       image: imageInput || undefined,
       icon: iconInput || undefined,
       isActive,
-      sortOrder,
+      sortOrder: sortOrderRequest.value || 0,
       customFormEnabled,
       customFormTitle: customFormEnabled ? customFormTitle || undefined : undefined,
       customFormFields: customFormEnabled ? customFormFields : [],
       createdBy: req.adminUser._id,
     });
+
+    const orderedCategoryIds = await fetchOrderedCategoryIds();
+    const reorderedCategoryIds = orderedCategoryIds.filter((categoryId) => categoryId !== String(category._id));
+    const categoryInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedCategoryIds.length);
+    reorderedCategoryIds.splice(categoryInsertIndex, 0, String(category._id));
+    await applyCategorySortOrders(reorderedCategoryIds);
+    category.sortOrder = categoryInsertIndex + 1;
 
     return res.status(201).json({
       ok: true,
@@ -2074,9 +2209,14 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
   try {
     const categoryId = String(req.params.id || "").trim();
     const category = await Category.findById(categoryId);
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
 
     if (!category) {
       return res.status(404).json({ ok: false, message: "Category not found" });
+    }
+
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
     }
 
     if (req.body?.name !== undefined) {
@@ -2116,14 +2256,6 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
       category.isActive = Boolean(req.body.isActive);
     }
 
-    if (req.body?.sortOrder !== undefined) {
-      const numericSort = Number(req.body.sortOrder);
-      if (!Number.isFinite(numericSort)) {
-        return res.status(400).json({ ok: false, message: "Invalid sort order" });
-      }
-      category.sortOrder = numericSort;
-    }
-
     if (req.body?.customFormEnabled !== undefined) {
       category.customFormEnabled = Boolean(req.body.customFormEnabled);
     }
@@ -2143,6 +2275,15 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
     }
 
     await category.save();
+
+    if (sortOrderRequest.provided) {
+      const orderedCategoryIds = await fetchOrderedCategoryIds();
+      const reorderedCategoryIds = orderedCategoryIds.filter((itemId) => itemId !== String(category._id));
+      const categoryInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedCategoryIds.length);
+      reorderedCategoryIds.splice(categoryInsertIndex, 0, String(category._id));
+      await applyCategorySortOrders(reorderedCategoryIds);
+      category.sortOrder = categoryInsertIndex + 1;
+    }
 
     return res.status(200).json({
       ok: true,
@@ -2196,7 +2337,7 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
+      .select("_id category parentSubcategory name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name")
       .lean();
@@ -2216,8 +2357,8 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
     const parentSubcategoryId = String(req.body?.parentSubcategoryId || "").trim();
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
-    const sortOrderInput = req.body?.sortOrder;
-    const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
+    const iconInput = String(req.body?.icon || "").trim();
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
     const customFormEnabled = req.body?.customFormEnabled !== undefined ? Boolean(req.body.customFormEnabled) : false;
     const customFormTitle = String(req.body?.customFormTitle || "").trim();
@@ -2233,6 +2374,14 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
 
     if (parentSubcategoryId && !OBJECT_ID_REGEX.test(parentSubcategoryId)) {
       return res.status(400).json({ ok: false, message: "Invalid parent subcategory id" });
+    }
+
+    if (iconInput && !isValidCategoryMediaValue(iconInput)) {
+      return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
+    }
+
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
     }
 
     const category = await Category.findById(categoryId).select("_id name");
@@ -2260,13 +2409,21 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
       name,
       slug,
       description: description || undefined,
+      icon: iconInput || undefined,
       isActive,
-      sortOrder,
+      sortOrder: sortOrderRequest.value || 0,
       customFormEnabled,
       customFormTitle: customFormEnabled ? customFormTitle || undefined : undefined,
       customFormFields: customFormEnabled ? customFormFields : [],
       createdBy: req.adminUser._id,
     });
+
+    const orderedSubcategoryIds = await fetchOrderedSubcategoryIds(category._id, parentSubcategory?._id || null);
+    const reorderedSubcategoryIds = orderedSubcategoryIds.filter((itemId) => itemId !== String(subcategory._id));
+    const subcategoryInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedSubcategoryIds.length);
+    reorderedSubcategoryIds.splice(subcategoryInsertIndex, 0, String(subcategory._id));
+    await applySubcategorySortOrders(reorderedSubcategoryIds);
+    subcategory.sortOrder = subcategoryInsertIndex + 1;
 
     await subcategory.populate("category", "_id name");
     await subcategory.populate("parentSubcategory", "_id name");
@@ -2291,14 +2448,20 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
     const subcategory = await Subcategory.findById(subcategoryId)
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name category parentSubcategory");
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
 
     if (!subcategory) {
       return res.status(404).json({ ok: false, message: "Subcategory not found" });
     }
 
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
+    }
+
     let nextCategory = subcategory.category;
     let categoryChanged = false;
     let parentChanged = false;
+    const previousCategoryId = String(subcategory.category?._id || subcategory.category || "");
     const previousParentSubcategoryId = subcategory.parentSubcategory ? String(subcategory.parentSubcategory._id) : null;
     let nextParentSubcategoryId = previousParentSubcategoryId;
     let parentExplicitlySet = false;
@@ -2391,16 +2554,16 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       subcategory.description = description || undefined;
     }
 
-    if (req.body?.isActive !== undefined) {
-      subcategory.isActive = Boolean(req.body.isActive);
+    if (req.body?.icon !== undefined) {
+      const icon = String(req.body.icon || "").trim();
+      if (icon && !isValidCategoryMediaValue(icon)) {
+        return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
+      }
+      subcategory.icon = icon || undefined;
     }
 
-    if (req.body?.sortOrder !== undefined) {
-      const numericSort = Number(req.body.sortOrder);
-      if (!Number.isFinite(numericSort)) {
-        return res.status(400).json({ ok: false, message: "Invalid sort order" });
-      }
-      subcategory.sortOrder = numericSort;
+    if (req.body?.isActive !== undefined) {
+      subcategory.isActive = Boolean(req.body.isActive);
     }
 
     if (req.body?.customFormEnabled !== undefined) {
@@ -2421,7 +2584,33 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       subcategory.customFormFields = [];
     }
 
+    const nextCategoryId = String(nextCategory?._id || nextCategory || "");
+    const nextParentSortGroupId = subcategory.parentSubcategory ? String(subcategory.parentSubcategory) : null;
+    const movedAcrossSortGroup =
+      previousCategoryId !== nextCategoryId ||
+      String(previousParentSubcategoryId || "") !== String(nextParentSortGroupId || "");
+
     await subcategory.save();
+
+    if (movedAcrossSortGroup) {
+      const previousGroupOrderedIds = await fetchOrderedSubcategoryIds(previousCategoryId, previousParentSubcategoryId);
+      await applySubcategorySortOrders(previousGroupOrderedIds);
+
+      const nextGroupOrderedIds = await fetchOrderedSubcategoryIds(nextCategoryId, nextParentSortGroupId);
+      const reorderedNextGroupIds = nextGroupOrderedIds.filter((itemId) => itemId !== String(subcategory._id));
+      const nextGroupInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedNextGroupIds.length);
+      reorderedNextGroupIds.splice(nextGroupInsertIndex, 0, String(subcategory._id));
+      await applySubcategorySortOrders(reorderedNextGroupIds);
+      subcategory.sortOrder = nextGroupInsertIndex + 1;
+    } else if (sortOrderRequest.provided) {
+      const currentGroupOrderedIds = await fetchOrderedSubcategoryIds(nextCategoryId, nextParentSortGroupId);
+      const reorderedCurrentGroupIds = currentGroupOrderedIds.filter((itemId) => itemId !== String(subcategory._id));
+      const currentGroupInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedCurrentGroupIds.length);
+      reorderedCurrentGroupIds.splice(currentGroupInsertIndex, 0, String(subcategory._id));
+      await applySubcategorySortOrders(reorderedCurrentGroupIds);
+      subcategory.sortOrder = currentGroupInsertIndex + 1;
+    }
+
     await subcategory.populate("category", "_id name");
     await subcategory.populate("parentSubcategory", "_id name");
 
@@ -2474,6 +2663,9 @@ router.delete("/admin/categories/:id", requireAdmin, async (req, res) => {
 
     await category.deleteOne();
 
+    const remainingCategoryIds = await fetchOrderedCategoryIds();
+    await applyCategorySortOrders(remainingCategoryIds);
+
     return res.status(200).json({
       ok: true,
       message: "Category deleted",
@@ -2491,7 +2683,7 @@ router.delete("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid subcategory id" });
     }
 
-    const subcategory = await Subcategory.findById(subcategoryId).select("_id");
+    const subcategory = await Subcategory.findById(subcategoryId).select("_id category parentSubcategory");
     if (!subcategory) {
       return res.status(404).json({ ok: false, message: "Subcategory not found" });
     }
@@ -2499,7 +2691,35 @@ router.delete("/admin/subcategories/:id", requireAdmin, async (req, res) => {
     const descendantIds = await collectDescendantSubcategoryIds(subcategory._id);
     const deleteIds = [String(subcategory._id), ...descendantIds];
 
+    const deletingNodes = await Subcategory.find({ _id: { $in: deleteIds } })
+      .select("_id category parentSubcategory")
+      .lean();
+
+    const affectedGroups = new Map();
+    deletingNodes.forEach((node) => {
+      const categoryId = String(node.category || "").trim();
+      if (!categoryId) return;
+
+      const parentSubcategoryId = node.parentSubcategory ? String(node.parentSubcategory) : null;
+      const groupKey = buildSubcategorySortGroupKey(categoryId, parentSubcategoryId);
+      if (affectedGroups.has(groupKey)) {
+        return;
+      }
+
+      affectedGroups.set(groupKey, {
+        categoryId,
+        parentSubcategoryId,
+      });
+    });
+
     await Subcategory.deleteMany({ _id: { $in: deleteIds } });
+
+    await Promise.all(
+      Array.from(affectedGroups.values()).map(async (group) => {
+        const orderedSubcategoryIds = await fetchOrderedSubcategoryIds(group.categoryId, group.parentSubcategoryId);
+        await applySubcategorySortOrders(orderedSubcategoryIds);
+      })
+    );
 
     await User.updateMany(
       { businessSubcategory: { $in: deleteIds } },

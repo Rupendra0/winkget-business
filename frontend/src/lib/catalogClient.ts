@@ -64,6 +64,7 @@ export type CatalogSubcategory = {
   slug: string;
   description?: string;
   image?: string;
+  icon?: string;
   sortOrder?: number;
   category?: CatalogReference;
   parentSubcategory?: CatalogReference;
@@ -283,11 +284,13 @@ export async function fetchCities(): Promise<CatalogCity[]> {
 export async function fetchSubcategories(filters: {
   categoryId?: string;
   categorySlug?: string;
+  cacheBust?: string;
 }): Promise<CatalogSubcategory[]> {
   try {
     const query = toQueryString({
       categoryId: filters.categoryId,
       categorySlug: filters.categorySlug,
+      cacheBust: filters.cacheBust,
     });
 
     const response = await fetch(`${BACKEND_URL}/api/subcategories${query}`, {

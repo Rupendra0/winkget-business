@@ -98,6 +98,12 @@ export type StoreSection = {
   productIds: string[];
 };
 
+export type StoreCategoryBarItem = {
+  id: string;
+  label: string;
+  iconImage?: string;
+};
+
 export type StorePageData = {
   id: string;
   storeName: string;
@@ -121,6 +127,7 @@ export type StorePageData = {
   address: string;
   sublocality?: string;
   categories: string[];
+  categoryBarItems?: StoreCategoryBarItem[];
   filters: { label: string; options: string[] }[];
   products: StoreProduct[];
   featured: StoreSection;

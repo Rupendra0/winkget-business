@@ -275,11 +275,34 @@ const resolveStandardCategorySelection = (
   const normalizedCategorySlug = String(initialCategorySlug || "").trim();
   const normalizedSubcategorySlug = String(initialSubcategorySlug || "").trim();
 
-  const resolvedCategory = categoryOptions.find((item) => item.slug === normalizedCategorySlug) || categoryOptions[0] || null;
-  const child2Options = Array.isArray(resolvedCategory?.childSubcategories)
-    ? resolvedCategory.childSubcategories
-    : [];
-  const resolvedSubcategory = child2Options.find((item) => item.slug === normalizedSubcategorySlug) || child2Options[0] || null;
+  let resolvedCategory = categoryOptions.find((item) => item.slug === normalizedCategorySlug) || null;
+  let resolvedSubcategory: VendorCatalogSubcategory | null = null;
+
+  if (!resolvedCategory && normalizedSubcategorySlug) {
+    const fallbackCategory = categoryOptions.find((item) => item.slug === normalizedSubcategorySlug) || null;
+    if (fallbackCategory) {
+      resolvedCategory = fallbackCategory;
+    }
+  }
+
+  if (!resolvedCategory && normalizedSubcategorySlug) {
+    const nestedMatch = findNestedSubcategoryMatch(categoryOptions, normalizedSubcategorySlug);
+    if (nestedMatch) {
+      resolvedCategory = nestedMatch.parent;
+      resolvedSubcategory = nestedMatch.child;
+    }
+  }
+
+  if (!resolvedCategory) {
+    resolvedCategory = categoryOptions[0] || null;
+  }
+
+  if (!resolvedSubcategory) {
+    const child2Options = Array.isArray(resolvedCategory?.childSubcategories)
+      ? resolvedCategory.childSubcategories
+      : [];
+    resolvedSubcategory = child2Options.find((item) => item.slug === normalizedSubcategorySlug) || null;
+  }
 
   return {
     categorySlug: String(resolvedCategory?.slug || "").trim(),
@@ -321,12 +344,23 @@ export default function VendorAddProductForm({
         : [];
     }
 
-    return categories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      childSubcategories: Array.isArray(category.subcategories) ? category.subcategories : [],
-    }));
+    const firstLayerOptions: VendorCatalogSubcategory[] = [];
+    categories.forEach((category) => {
+      const subcategories = Array.isArray(category.subcategories) ? category.subcategories : [];
+      subcategories.forEach((subcategory) => {
+        firstLayerOptions.push({
+          id: subcategory.id,
+          name: subcategory.name,
+          slug: subcategory.slug,
+          parentSubcategoryId: subcategory.parentSubcategoryId,
+          childSubcategories: Array.isArray(subcategory.childSubcategories)
+            ? subcategory.childSubcategories
+            : [],
+        });
+      });
+    });
+
+    return firstLayerOptions;
   }, [categories, isRestaurantFlow, restaurantRootCategory]);
 
   const resolveCategorySelection = useCallback(
@@ -753,12 +787,7 @@ export default function VendorAddProductForm({
       <form onSubmit={submitProduct} className="mt-2 space-y-5">
         <div className="rounded-2xl border border-[#ece4d6] bg-[#fffdfa] px-4 py-3">
           <p className="text-sm font-semibold text-slate-900">
-            {compactMode ? "Restaurant menu mode" : "Product catalog mode"}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {compactMode
-              ? "A smaller form focused on menu essentials to publish dishes quickly."
-              : "Use the full schema form when you need advanced product details."}
+            {compactMode ? "Add menu item" : "Add Product"}
           </p>
         </div>
 
@@ -783,14 +812,14 @@ export default function VendorAddProductForm({
 
                 <>
                   <label className="block text-sm text-slate-700">
-                    {compactMode ? "Category (Child2)" : "Category"}
+                    Category
                     <span className="ml-1 text-rose-500">*</span>
                     <select
                       value={selectedCategorySlug}
                       onChange={(event) => handleCategoryChange(event.target.value)}
                       className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
                     >
-                      <option value="">Select category</option>
+                      <option value="">{compactMode ? "Select first-layer category" : "Select category"}</option>
                       {categoryOptions.map((category) => (
                         <option key={category.id} value={category.slug}>
                           {category.name}
@@ -801,7 +830,7 @@ export default function VendorAddProductForm({
                   </label>
 
                   <label className="block text-sm text-slate-700">
-                    {compactMode ? "Subcategory (Child3)" : "Subcategory"}
+                    SubCategory
                     {subcategoryOptions.length > 0 ? <span className="ml-1 text-rose-500">*</span> : null}
                     <select
                       value={selectedSubcategorySlug}
@@ -809,7 +838,7 @@ export default function VendorAddProductForm({
                       className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
                       disabled={!selectedCategory || subcategoryOptions.length === 0}
                     >
-                      <option value="">Select subcategory</option>
+                      <option value="">{compactMode ? "Select second-layer subcategory" : "Select subcategory"}</option>
                       {subcategoryOptions.map((subcategory) => (
                         <option key={subcategory.id} value={subcategory.slug}>
                           {subcategory.name}
@@ -822,7 +851,7 @@ export default function VendorAddProductForm({
 
                 {compactMode && restaurantRootCategory ? (
                   <p className="text-[11px] text-slate-500 md:col-span-2 md:-mt-2">
-                    Menu hierarchy source: Child1 {restaurantRootCategory.name} -&gt; Category (Child2) -&gt; Subcategory (Child3).
+                    Menu hierarchy source: {restaurantRootCategory.name} -&gt; Category (first layer) -&gt; SubCategory (second layer).
                   </p>
                 ) : null}
 

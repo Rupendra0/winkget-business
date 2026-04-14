@@ -24,6 +24,10 @@ import { type CustomFormField } from "@/lib/adminClient";
 type ModalMode = "category" | "subcategory" | "secondary";
 type ModalIntent = "create" | "edit";
 type NodeRefType = TreeNode["type"];
+type SubcategorySection = {
+  category: AdminCategory;
+  items: AdminSubcategory[];
+};
 
 const ROOT_PARENT_KEY = "root";
 const CATEGORY_MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
@@ -187,6 +191,7 @@ export default function CategoriesPage() {
 function CategoriesPageContent() {
   const searchParams = useSearchParams();
   const viewId = searchParams.get("view") || "category-explorer";
+  const isManageSubcategoryView = viewId === "manage-subcategory";
   const activeItem = findSidebarItem(viewId);
 
   const [message, setMessage] = useState<string | null>(null);
@@ -208,11 +213,12 @@ function CategoriesPageContent() {
   const [nameInput, setNameInput] = useState("");
   const [bannerImageInput, setBannerImageInput] = useState("");
   const [iconImageInput, setIconImageInput] = useState("");
-  const [sortOrderInput, setSortOrderInput] = useState("0");
+  const [sortOrderInput, setSortOrderInput] = useState("");
   const [activeInput, setActiveInput] = useState(true);
   const [customFormEnabledInput, setCustomFormEnabledInput] = useState(false);
   const [customFormTitleInput, setCustomFormTitleInput] = useState("");
   const [customFormFieldsInput, setCustomFormFieldsInput] = useState<DraftCustomFormField[]>([]);
+  const [subcategorySearchInput, setSubcategorySearchInput] = useState("");
 
   const { data, error, isLoading, mutate } = useSWR("category-explorer", fetchCategoryExplorer, {
     keepPreviousData: true,
@@ -278,7 +284,7 @@ function CategoriesPageContent() {
       setNameInput("");
       setBannerImageInput("");
       setIconImageInput("");
-      setSortOrderInput("0");
+      setSortOrderInput("");
       setActiveInput(true);
       setCustomFormEnabledInput(false);
       setCustomFormTitleInput("");
@@ -370,6 +376,7 @@ function CategoriesPageContent() {
           parentId: parentSubcategoryId ? `subcategory:${parentSubcategoryId}` : `category:${categoryId}`,
           categoryId,
           parentSubcategoryId: parentSubcategoryId || undefined,
+          mediaUrl: String(subcategory.icon || "").trim() || undefined,
           sortOrder: subcategory.sortOrder,
           isActive: subcategory.isActive,
           description: subcategory.description,
@@ -394,6 +401,49 @@ function CategoriesPageContent() {
       children: buildSubcategoryChildren(category.id, null, new Set<string>()),
     }));
   }, [orderedCategories, orderedSubcategories]);
+
+  const subcategorySections = useMemo<SubcategorySection[]>(() => {
+    const grouped = new Map<string, AdminSubcategory[]>();
+    const normalizedSearch = subcategorySearchInput.trim().toLowerCase();
+
+    for (const subcategory of orderedSubcategories) {
+      if (subcategory.parentSubcategory?.id) continue;
+
+      const categoryId = subcategory.category?.id;
+      if (!categoryId) continue;
+
+      const siblings = grouped.get(categoryId);
+      if (siblings) {
+        siblings.push(subcategory);
+      } else {
+        grouped.set(categoryId, [subcategory]);
+      }
+    }
+
+    for (const siblings of grouped.values()) {
+      siblings.sort(byOrderThenName);
+    }
+
+    return orderedCategories
+      .map((category) => {
+        const items = grouped.get(category.id) || [];
+        if (!normalizedSearch) {
+          return {
+            category,
+            items,
+          };
+        }
+
+        const categoryMatch = category.name.toLowerCase().includes(normalizedSearch);
+        return {
+          category,
+          items: categoryMatch
+            ? items
+            : items.filter((item) => item.name.toLowerCase().includes(normalizedSearch)),
+        };
+      })
+      .filter((section) => section.items.length > 0);
+  }, [orderedCategories, orderedSubcategories, subcategorySearchInput]);
 
   const parseNodeRef = useCallback((node: TreeNode) => {
     const [typeToken, ...entityParts] = node.id.split(":");
@@ -449,7 +499,7 @@ function CategoriesPageContent() {
         setEditingSubcategoryId(entityId);
         setNameInput(subcategory.name || "");
         setBannerImageInput("");
-        setIconImageInput("");
+        setIconImageInput(String(subcategory.icon || ""));
         setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
         setActiveInput(Boolean(subcategory.isActive));
         setCustomFormEnabledInput(Boolean(subcategory.customFormEnabled));
@@ -475,9 +525,14 @@ function CategoriesPageContent() {
         throw new Error("Name is required");
       }
 
-      const parsedSortOrder = Number(sortOrderInput || "0");
-      if (!Number.isFinite(parsedSortOrder)) {
-        throw new Error("Sort order must be a number");
+      const normalizedSortOrderInput = String(sortOrderInput || "").trim();
+      let parsedSortOrder: number | undefined;
+      if (normalizedSortOrderInput) {
+        const numericSortOrder = Number(normalizedSortOrderInput);
+        if (!Number.isFinite(numericSortOrder) || !Number.isInteger(numericSortOrder)) {
+          throw new Error("Sort order must be a whole number");
+        }
+        parsedSortOrder = numericSortOrder;
       }
 
       const customFormFields = toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput);
@@ -485,6 +540,7 @@ function CategoriesPageContent() {
       const customFormTitle = customFormTitleInput.trim();
       const categoryBannerImage = bannerImageInput.trim();
       const categoryIconImage = iconImageInput.trim();
+      const subcategoryIconImage = iconImageInput.trim();
 
       if (modalMode === "category" && !isValidCategoryMediaValue(categoryBannerImage)) {
         throw new Error("Category banner must be a valid URL or uploaded image");
@@ -492,6 +548,10 @@ function CategoriesPageContent() {
 
       if (modalMode === "category" && !isValidCategoryMediaValue(categoryIconImage)) {
         throw new Error("Category icon must be a valid URL or uploaded image");
+      }
+
+      if (modalMode !== "category" && !isValidCategoryMediaValue(subcategoryIconImage)) {
+        throw new Error("Subcategory icon must be a valid URL or uploaded image");
       }
 
       if (modalIntent === "create") {
@@ -524,6 +584,7 @@ function CategoriesPageContent() {
             categoryId,
             parentSubcategoryId,
             name: cleanName,
+            icon: subcategoryIconImage || undefined,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -561,6 +622,7 @@ function CategoriesPageContent() {
             categoryId,
             parentSubcategoryId: modalParentSubcategoryId || "",
             name: cleanName,
+            icon: subcategoryIconImage,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -707,7 +769,7 @@ function CategoriesPageContent() {
               }
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-1.5 text-xs text-(--text-soft) hover:bg-(--surface-hover)"
             >
-              Add Secondary
+              Add more
             </button>
           </div>
         }
@@ -728,6 +790,81 @@ function CategoriesPageContent() {
         {isLoading ? (
           <section className="rounded-xl border border-(--border) bg-(--surface) px-3 py-8 text-center text-sm text-(--text-soft)">
             Loading category explorer...
+          </section>
+        ) : isManageSubcategoryView ? (
+          <section className="space-y-3">
+            <div className="max-w-md">
+              <label htmlFor="subcategory-search" className="sr-only">
+                Search subcategories
+              </label>
+              <input
+                id="subcategory-search"
+                value={subcategorySearchInput}
+                onChange={(event) => setSubcategorySearchInput(event.target.value)}
+                placeholder="Search categories or subcategories"
+                className="w-full rounded-full bg-(--surface-muted) px-4 py-2 text-sm text-slate-700 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+
+            {subcategorySections.length === 0 ? (
+              <section className="rounded-xl bg-(--surface) px-3 py-8 text-center text-sm text-(--text-soft)">
+                {subcategorySearchInput.trim()
+                  ? "No subcategories matched your search."
+                  : "No top-level subcategories found yet."}
+              </section>
+            ) : (
+              subcategorySections.map((section) => (
+                <article key={section.category.id} className="space-y-2 px-1 py-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold text-(--text-strong)">{section.category.name}</h3>
+                    <span className="text-[11px] font-semibold text-slate-500">{section.items.length} subcategories</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {section.items.map((subcategory) => {
+                      const iconUrl = String(subcategory.icon || "").trim();
+
+                      return (
+                        <button
+                          key={subcategory.id}
+                          type="button"
+                          onClick={() =>
+                            openEditModal({
+                              id: `subcategory:${subcategory.id}`,
+                              label: subcategory.name,
+                              type: "subcategory",
+                              parentId: `category:${section.category.id}`,
+                              categoryId: section.category.id,
+                              mediaUrl: iconUrl || undefined,
+                              sortOrder: subcategory.sortOrder,
+                              isActive: subcategory.isActive,
+                              description: subcategory.description,
+                              createdAt: subcategory.createdAt,
+                              updatedAt: subcategory.updatedAt,
+                              children: [],
+                            })
+                          }
+                          className="group flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300"
+                          title="Click to edit subcategory"
+                        >
+                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                            {iconUrl ? (
+                              <img src={iconUrl} alt={`${subcategory.name} icon`} className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <span className="text-xs font-semibold uppercase text-slate-600">
+                                {String(subcategory.name || "S").trim().charAt(0) || "S"}
+                              </span>
+                            )}
+                          </span>
+
+                          <span className="min-w-0 flex-1 text-sm font-semibold leading-tight text-slate-800">{subcategory.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </article>
+              ))
+            )}
           </section>
         ) : (
           <TreeView
@@ -1151,13 +1288,55 @@ function CreateNodeModal({
         </section>
       ) : null}
 
+      {mode !== "category" ? (
+        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <label className="block space-y-1 text-sm text-(--text-soft)">
+            Subcategory icon image (URL or upload)
+            <input
+              value={iconImageInput}
+              onChange={(event) => onIconImageChange(event.target.value)}
+              className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
+              placeholder="https://cdn.example.com/subcategory-icon.png"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+              Upload Icon
+              <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                onIconImageChange("");
+                setIconUploadError(null);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
+
+          {iconImageInput.trim() && isValidCategoryMediaValue(iconImageInput) ? (
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
+              <img src={iconImageInput} alt="Subcategory icon preview" className="h-16 w-16 rounded-lg object-cover" loading="lazy" />
+              <p className="text-xs text-slate-500">Shown in subcategory-driven UI where available.</p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <label className="block space-y-1 text-sm text-(--text-soft)">
-        Sort order
+        Sort order (optional)
         <input
           type="number"
           value={sortOrderInput}
           onChange={(event) => onSortOrderChange(event.target.value)}
           className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 outline-none focus:border-(--accent)"
+          placeholder="Leave empty for automatic placement"
         />
       </label>
 

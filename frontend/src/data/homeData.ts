@@ -508,5 +508,5 @@ export const footerData = {
     "Order your meal",
     "Find what you need",
   ],
-  copyright: "COPYRIGHT © ALL RIGHTS RESERVED. DIYARATECH SOFTWARES",
+  copyright: "COPYRIGHT © ALL RIGHTS RESERVED BY RUPENDRA GANGWAR",
 };

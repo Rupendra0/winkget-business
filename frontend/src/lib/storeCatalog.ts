@@ -9,9 +9,11 @@ import {
 } from "@/data/listingData";
 import { buildProductSlug, parseProductSlug, toSlugToken } from "@/data/productSlug";
 import {
+  fetchSubcategories,
   fetchVendorById,
   fetchVendorStoreProducts,
   toListingProfileFromVendor,
+  type CatalogSubcategory,
   type CatalogVendorProduct,
 } from "@/lib/catalogClient";
 
@@ -101,6 +103,38 @@ const uniqueStrings = (values: Array<string | undefined>) => {
   });
 
   return result;
+};
+
+const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
+  const source = Array.isArray(subcategories) ? [...subcategories] : [];
+
+  source.sort((left, right) => {
+    const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+    const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    return String(left.name || "").localeCompare(String(right.name || ""));
+  });
+
+  return source
+    .filter((subcategory) => !subcategory.parentSubcategory?.id)
+    .map((subcategory) => {
+      const id = normalizeString(subcategory.id);
+      const label = normalizeString(subcategory.name);
+      const iconImage = normalizeString(subcategory.icon);
+      if (!id || !label) {
+        return null;
+      }
+
+      return {
+        id,
+        label,
+        iconImage: iconImage || undefined,
+      };
+    })
+    .filter((item): item is { id: string; label: string; iconImage?: string } => Boolean(item))
+    .slice(0, 12);
 };
 
 const isRestaurantMarketplaceProfile = (profile: ListingProfile, categoryLabel: string) => {
@@ -456,6 +490,11 @@ export const toStoreDataFromProfile = (
   vendorProducts: CatalogVendorProduct[] = [],
   options?: {
     includeMockFallbackProducts?: boolean;
+    categoryBarItems?: Array<{
+      id: string;
+      label: string;
+      iconImage?: string;
+    }>;
   }
 ): StorePageData => {
   const fallbackId = normalizeString(idFallback);
@@ -500,6 +539,15 @@ export const toStoreDataFromProfile = (
     ...products.map((product) => normalizeString(product.categoryLabel || product.category)),
     categoryLabel,
   ]).slice(0, 12);
+  const categoryBarItems = Array.isArray(options?.categoryBarItems)
+    ? options.categoryBarItems
+        .map((item) => ({
+          id: normalizeString(item.id),
+          label: normalizeString(item.label),
+          iconImage: normalizeString(item.iconImage) || undefined,
+        }))
+        .filter((item) => item.id && item.label)
+    : [];
   const isRestaurantMarketplace = isRestaurantMarketplaceProfile(profile, categoryLabel);
   const quickFilterChips = toQuickFilterChips(profile, categories);
   const contactPhone = normalizeString(profile.businessAlternatePhone || profile.phone);
@@ -552,6 +600,7 @@ export const toStoreDataFromProfile = (
     address: addressLabel,
     sublocality: sublocalityLabel || undefined,
     categories,
+    categoryBarItems: categoryBarItems.length > 0 ? categoryBarItems : undefined,
     filters: [
       { label: "Price", options: ["Under ₹1,000", "₹1,000 - ₹10,000", "₹10,000+"] },
       { label: "Brand", options: ["Top Brands", "Budget", "Premium"] },
@@ -588,10 +637,20 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
       return null;
     }
 
-    const liveProducts = await fetchVendorStoreProducts(resolvedId, {
-      status: "live",
-      limit: 300,
-    });
+    const businessCategoryId = normalizeString(liveVendor.businessCategory?.id);
+    const [liveProducts, liveSubcategories] = await Promise.all([
+      fetchVendorStoreProducts(resolvedId, {
+        status: "live",
+        limit: 300,
+      }),
+      businessCategoryId
+        ? fetchSubcategories({
+            categoryId: businessCategoryId,
+            cacheBust: `store-${Date.now()}`,
+          })
+        : Promise.resolve([]),
+    ]);
+    const categoryBarItems = toStoreCategoryBarItems(liveSubcategories);
 
     const baseProfile = toListingProfileFromVendor(liveVendor);
     const profile = {
@@ -601,6 +660,7 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
     };
     return toStoreDataFromProfile(profile, resolvedId, liveProducts, {
       includeMockFallbackProducts: false,
+      categoryBarItems,
     });
   };
 

@@ -125,6 +125,7 @@ export type AdminSubcategory = {
   name: string;
   slug: string;
   description?: string;
+  icon?: string;
   isActive: boolean;
   sortOrder: number;
   customFormEnabled?: boolean;
@@ -648,6 +649,7 @@ export async function createSubcategory(input: {
   parentSubcategoryId?: string;
   name: string;
   description?: string;
+  icon?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -669,6 +671,7 @@ export async function updateSubcategory(
     parentSubcategoryId?: string;
     name?: string;
     description?: string;
+    icon?: string;
     sortOrder?: number;
     isActive?: boolean;
     customFormEnabled?: boolean;
