@@ -172,12 +172,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const shippingCompactValue = /free/i.test(shippingValue) ? "Free" : "Yes";
   const categoryItems = useMemo(() => {
     const fallbackItems = ["Appliances", "Agri Inputs", "Auto Components", "Beauty & Personal Care", "Electronics"];
-    const sourceItems =
+    const sourceItems: Array<{ id: string; label: string; iconImage?: string }> =
       Array.isArray(data.categoryBarItems) && data.categoryBarItems.length > 0
         ? data.categoryBarItems
         : (data.categories.length > 0 ? data.categories : fallbackItems).map((label, index) => ({
             id: `category-pill-fallback-${index}`,
             label,
+            iconImage: undefined,
           }));
 
     return sourceItems.map((categoryItemSource, index) => {

@@ -133,7 +133,7 @@ const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
         iconImage: iconImage || undefined,
       };
     })
-    .filter((item): item is { id: string; label: string; iconImage?: string } => Boolean(item))
+    .filter((item): item is { id: string; label: string; iconImage: string | undefined } => Boolean(item))
     .slice(0, 12);
 };
 
