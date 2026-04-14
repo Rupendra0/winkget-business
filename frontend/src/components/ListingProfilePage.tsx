@@ -1352,7 +1352,7 @@ export default function ListingProfilePage({
             </section>
           ) : null}
 
-          <section className="rounded-[12px] border border-[#e6dfd2] bg-[#fffcf7] px-3 py-3 lg:col-span-2 sm:px-4">
+          <section className="rounded-[12px] border border-[#e6dfd2] px-3 py-3 lg:col-span-2 sm:px-4">
             <div className="flex items-center gap-3">
               <h3
                 className="inline-flex items-center gap-2 text-[1.02rem] font-bold text-[#1f2a44]"
@@ -1395,18 +1395,18 @@ export default function ListingProfilePage({
                   const toneClasses =
                     sentiment === "low"
                       ? {
-                          card: "border-[#f4cccc] bg-[#fff6f6]",
+                          card: "",
                           comment: "text-[#9f2f2f]",
                           star: "fill-[#ef4444] text-[#ef4444] drop-shadow-[0_1px_2px_rgba(239,68,68,0.36)]",
                         }
                       : sentiment === "medium"
                         ? {
-                            card: "border-[#f7dfb3] bg-[#fff9ef]",
+                            card: "",
                             comment: "text-[#9a580a]",
                             star: "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.4)]",
                           }
                         : {
-                            card: "border-[#c8edd8] bg-[#f3fff8]",
+                            card: "",
                             comment: "text-[#166534]",
                             star: "fill-[#22c55e] text-[#22c55e] drop-shadow-[0_1px_2px_rgba(34,197,94,0.35)]",
                           };
@@ -1414,7 +1414,7 @@ export default function ListingProfilePage({
                   return (
                     <article
                       key={review.id}
-                      className={`rounded-[10px] border px-3 py-2.5 shadow-[0_4px_10px_rgba(15,23,42,0.04)] ${
+                      className={`rounded-[10px] px-3 py-2.5 ${
                         toneClasses.card
                       }`}
                     >

@@ -549,8 +549,8 @@ function fileToDataUrl(file: File): Promise<string> {
 
 function DashboardSkeleton() {
   return (
-    <main className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,99,235,0.14),transparent_55%),radial-gradient(ellipse_at_bottom_left,rgba(236,72,153,0.12),transparent_60%)]" />
+    <main className="relative min-h-screen overflow-x-hidden bg-white">
+      <div className="pointer-events-none absolute inset-0 bg-white" />
       <div className="relative mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_320px]">
           <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border border-gray-200 bg-white/60 p-4 backdrop-blur-md lg:flex">
@@ -809,26 +809,22 @@ function OverviewSection({
     }
   > = {
     Enquiries: {
-      card:
-        "border-blue-200 bg-gradient-to-br from-blue-100/95 via-cyan-50 to-sky-100/90 shadow-[0_16px_34px_-26px_rgba(37,99,235,0.75)]",
+      card: "border-gray-200 bg-white shadow-sm",
       icon: "bg-blue-600 text-white shadow-sm shadow-blue-200",
       chip: "bg-blue-600/90 text-white",
     },
     "Call Leads": {
-      card:
-        "border-emerald-200 bg-gradient-to-br from-emerald-100/95 via-lime-50 to-green-100/90 shadow-[0_16px_34px_-26px_rgba(22,163,74,0.72)]",
+      card: "border-gray-200 bg-white shadow-sm",
       icon: "bg-emerald-600 text-white shadow-sm shadow-emerald-200",
       chip: "bg-emerald-600/90 text-white",
     },
     Reviews: {
-      card:
-        "border-amber-200 bg-gradient-to-br from-amber-100/95 via-orange-50 to-yellow-100/90 shadow-[0_16px_34px_-26px_rgba(217,119,6,0.75)]",
+      card: "border-gray-200 bg-white shadow-sm",
       icon: "bg-amber-500 text-white shadow-sm shadow-amber-200",
       chip: "bg-amber-500/90 text-white",
     },
     Orders: {
-      card:
-        "border-violet-200 bg-gradient-to-br from-violet-100/95 via-fuchsia-50 to-pink-100/90 shadow-[0_16px_34px_-26px_rgba(124,58,237,0.72)]",
+      card: "border-gray-200 bg-white shadow-sm",
       icon: "bg-violet-600 text-white shadow-sm shadow-violet-200",
       chip: "bg-violet-600/90 text-white",
     },
@@ -3800,7 +3796,7 @@ export default function VendorDashboard() {
 
   if (!vendor) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--vendor-canvas)] px-4 py-10">
+      <main className="flex min-h-screen items-center justify-center bg-white px-4 py-10">
         <section className="w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <Building2 className="mx-auto h-9 w-9 text-[var(--vendor-primary)]" aria-hidden="true" />
           <h1 className="mt-4 font-display text-2xl font-semibold text-gray-900">Vendor session required</h1>
@@ -3824,9 +3820,10 @@ export default function VendorDashboard() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[var(--vendor-canvas)] text-[var(--vendor-text-primary)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.17),transparent_54%),radial-gradient(ellipse_at_bottom_left,rgba(59,130,246,0.16),transparent_56%)]" />
-      <div className="relative mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
+    <>
+      <main className="vendor-dashboard-white relative min-h-screen overflow-x-hidden bg-white text-[var(--vendor-text-primary)]">
+        <div className="pointer-events-none absolute inset-0 bg-white" />
+        <div className="relative mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
         <div
           className={`grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] ${
             shouldShowQuickAnalytics ? "xl:grid-cols-[248px_minmax(0,1fr)_320px]" : ""
@@ -4177,7 +4174,15 @@ export default function VendorDashboard() {
           </article>
         </section>
       ) : null}
-    </main>
+      </main>
+
+      <style jsx global>{`
+        .vendor-dashboard-white :is(article, aside, header, section, form, nav, div):not([class*="absolute"])[class*="bg-"] {
+          background-color: #ffffff !important;
+          background-image: none !important;
+        }
+      `}</style>
+    </>
   );
 }
 
