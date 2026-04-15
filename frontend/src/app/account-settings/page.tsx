@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import { buildAuthHref } from "@/lib/authRedirect";
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,6 +14,7 @@ const RequiredMark = () => <span className="text-red-500">*</span>;
 
 export default function AccountSettingsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export default function AccountSettingsPage() {
     const loadSession = async () => {
       const currentUser = await fetchCurrentUser();
       if (!currentUser) {
-        router.replace("/auth");
+        router.replace(buildAuthHref(pathname || "/account-settings"));
         return;
       }
 
@@ -43,7 +45,7 @@ export default function AccountSettingsPage() {
     };
 
     void loadSession();
-  }, [router]);
+  }, [pathname, router]);
 
   const handleProfileUpdate = async () => {
     setError(null);

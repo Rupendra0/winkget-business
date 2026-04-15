@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Apple, Chrome, Lock, Mail, Store, User, Phone } from "lucide-react";
+import { resolvePostAuthRoute } from "@/lib/authRedirect";
 
 type AuthMode = "signin" | "signup";
 
@@ -16,6 +17,7 @@ const RequiredMark = () => <span className="text-red-500">*</span>;
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -139,7 +141,7 @@ export default function AuthPage() {
 
       setSuccess(mode === "signin" ? "Login successful." : "Account created successfully.");
       window.dispatchEvent(new Event("auth:changed"));
-      router.push("/");
+      router.push(resolvePostAuthRoute(searchParams.get("next")));
       router.refresh();
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : "Authentication failed";

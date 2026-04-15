@@ -11,6 +11,7 @@ const Review = require("./models/Review");
 const City = require("./models/City");
 const FailureLog = require("./models/FailureLog");
 const VendorProduct = require("./models/VendorProduct");
+const Order = require("./models/Order");
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -38,6 +39,7 @@ async function startServer() {
     await City.syncIndexes();
     await FailureLog.syncIndexes();
     await VendorProduct.syncIndexes();
+    await Order.syncIndexes();
 
     const envOrigins = String(process.env.CORS_ORIGIN || "")
       .split(",")

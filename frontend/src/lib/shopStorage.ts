@@ -1,5 +1,9 @@
 const CART_STORAGE_KEY = "winkget:cart:v1";
+const BUY_NOW_STORAGE_KEY = "winkget:buy-now:v1";
 const WISHLIST_STORAGE_KEY = "winkget:wishlist:v1";
+
+export const CART_UPDATED_EVENT = "shop:cart-updated";
+export const BUY_NOW_UPDATED_EVENT = "shop:buy-now-updated";
 
 export type StorefrontStoredProduct = {
   id: string;
@@ -18,6 +22,12 @@ export type StorefrontStoredProduct = {
 export type StorefrontCartItem = {
   product: StorefrontStoredProduct;
   quantity: number;
+};
+
+export type StorefrontBuyNowSelection = {
+  product: StorefrontStoredProduct;
+  quantity: number;
+  updatedAt: string;
 };
 
 type StoreProductInput = {
@@ -54,6 +64,15 @@ const parsePriceNumber = (value: number | string | null | undefined, fallback = 
   }
 
   return Math.max(0, Math.round(fallback));
+};
+
+const normalizeQuantity = (value: number | string | null | undefined) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.round(parsed));
 };
 
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
@@ -96,6 +115,24 @@ const emitStoreUpdate = (eventName: string, detail: unknown) => {
   window.dispatchEvent(new CustomEvent(eventName, { detail }));
 };
 
+const getCartCountFromItems = (items: StorefrontCartItem[]) => {
+  const uniqueProductIds = new Set(
+    items
+      .map((item) => normalizeString(item?.product?.id))
+      .filter(Boolean)
+  );
+
+  return uniqueProductIds.size;
+};
+
+const writeCart = (items: StorefrontCartItem[]) => {
+  safeWriteJson(CART_STORAGE_KEY, items);
+  emitStoreUpdate(CART_UPDATED_EVENT, {
+    cart: items,
+    count: getCartCountFromItems(items),
+  });
+};
+
 export const makeStoreProduct = (input: StoreProductInput, href: string): StorefrontStoredProduct => {
   const id = normalizeString(input.id) || "product";
   const storeId = normalizeString(input.storeId) || "store";
@@ -132,11 +169,18 @@ export const readCart = (): StorefrontCartItem[] => {
     return [];
   }
 
-  return cart.filter((item) => item && item.product && normalizeString(item.product.id));
+  return cart
+    .filter((item) => item && item.product && normalizeString(item.product.id))
+    .map((item) => ({
+      ...item,
+      quantity: normalizeQuantity(item.quantity),
+    }));
 };
 
+export const getCartCount = () => getCartCountFromItems(readCart());
+
 export const addToCart = (product: StorefrontStoredProduct, quantity = 1) => {
-  const nextQty = Math.max(1, Math.round(Number(quantity) || 1));
+  const nextQty = normalizeQuantity(quantity);
   const currentCart = readCart();
   const existingIndex = currentCart.findIndex((item) => item.product.id === product.id);
 
@@ -154,10 +198,86 @@ export const addToCart = (product: StorefrontStoredProduct, quantity = 1) => {
     nextCart = [...currentCart, { product, quantity: nextQty }];
   }
 
-  safeWriteJson(CART_STORAGE_KEY, nextCart);
-  emitStoreUpdate("shop:cart-updated", { cart: nextCart });
+  writeCart(nextCart);
 
   return nextCart;
+};
+
+export const setCartItemQuantity = (productId: string, quantity: number) => {
+  const normalizedProductId = normalizeString(productId);
+  if (!normalizedProductId) {
+    return readCart();
+  }
+
+  const currentCart = readCart();
+  const nextQuantity = Number(quantity);
+  if (!Number.isFinite(nextQuantity) || nextQuantity <= 0) {
+    const nextCart = currentCart.filter((item) => item.product.id !== normalizedProductId);
+    writeCart(nextCart);
+    return nextCart;
+  }
+
+  const nextCart = currentCart.map((item) =>
+    item.product.id === normalizedProductId ? { ...item, quantity: normalizeQuantity(nextQuantity) } : item
+  );
+
+  writeCart(nextCart);
+  return nextCart;
+};
+
+export const removeFromCart = (productId: string) => {
+  const normalizedProductId = normalizeString(productId);
+  if (!normalizedProductId) {
+    return readCart();
+  }
+
+  const nextCart = readCart().filter((item) => item.product.id !== normalizedProductId);
+  writeCart(nextCart);
+  return nextCart;
+};
+
+export const clearCart = () => {
+  const nextCart: StorefrontCartItem[] = [];
+  writeCart(nextCart);
+  return nextCart;
+};
+
+export const readBuyNowSelection = (): StorefrontBuyNowSelection | null => {
+  const selection = safeReadJson<StorefrontBuyNowSelection | null>(BUY_NOW_STORAGE_KEY, null);
+
+  if (!selection || typeof selection !== "object") {
+    return null;
+  }
+
+  if (!selection.product || !normalizeString(selection.product.id)) {
+    return null;
+  }
+
+  return {
+    product: selection.product,
+    quantity: normalizeQuantity(selection.quantity),
+    updatedAt: normalizeString(selection.updatedAt) || new Date().toISOString(),
+  };
+};
+
+export const setBuyNowSelection = (product: StorefrontStoredProduct, quantity = 1) => {
+  const selection: StorefrontBuyNowSelection = {
+    product,
+    quantity: normalizeQuantity(quantity),
+    updatedAt: new Date().toISOString(),
+  };
+
+  safeWriteJson(BUY_NOW_STORAGE_KEY, selection);
+  emitStoreUpdate(BUY_NOW_UPDATED_EVENT, { selection });
+
+  return selection;
+};
+
+export const clearBuyNowSelection = () => {
+  safeWriteJson(BUY_NOW_STORAGE_KEY, null);
+  emitStoreUpdate(BUY_NOW_UPDATED_EVENT, { selection: null });
+
+  return null;
 };
 
 export const readWishlist = (): StorefrontStoredProduct[] => {

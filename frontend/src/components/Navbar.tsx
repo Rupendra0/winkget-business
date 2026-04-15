@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
+import { buildAuthHref } from '@/lib/authRedirect';
+import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
 
 type AuthUser = {
   id: string;
@@ -33,7 +35,13 @@ export default function Navbar() {
   const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const [selectedCity, setSelectedCity] = useState("");
   const [loadingCities, setLoadingCities] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const currentPath = useMemo(() => {
+    const query = searchParams.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     const syncSession = async () => {
@@ -105,6 +113,22 @@ export default function Navbar() {
 
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncCartCount = () => {
+      setCartCount(getCartCount());
+    };
+
+    syncCartCount();
+
+    window.addEventListener(CART_UPDATED_EVENT, syncCartCount as EventListener);
+    window.addEventListener("storage", syncCartCount);
+
+    return () => {
+      window.removeEventListener(CART_UPDATED_EVENT, syncCartCount as EventListener);
+      window.removeEventListener("storage", syncCartCount);
     };
   }, []);
 
@@ -247,9 +271,18 @@ export default function Navbar() {
             <button className="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
-            <button className="rounded-md border border-orange-100 bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm">
+            <Link
+              href="/cart"
+              className="relative rounded-md border border-orange-100 bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              aria-label="Cart"
+            >
               <ShoppingCart size={18} />
-            </button>
+              {cartCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              ) : null}
+            </Link>
             {authLoading ? (
               <div className="h-10 w-28 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
@@ -313,7 +346,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href="/auth" className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm">
+              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm">
                 <LogIn size={18} />
                 <span className="text-sm">Login</span>
               </Link>
@@ -340,13 +373,18 @@ export default function Navbar() {
                 ))}
               </select>
             </div>
-            <button
-              type="button"
-              className="rounded-md border border-orange-100 bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+            <Link
+              href="/cart"
+              className="relative rounded-md border border-orange-100 bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
-            </button>
+              {cartCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              ) : null}
+            </Link>
             {authLoading ? (
               <div className="h-9 w-9 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
@@ -360,7 +398,7 @@ export default function Navbar() {
               </Link>
             ) : (
               <Link
-                href="/auth"
+                href={buildAuthHref(currentPath)}
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-orange-500 bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover"
                 aria-label="Login"
               >

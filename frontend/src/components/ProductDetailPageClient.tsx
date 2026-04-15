@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { buildProductSlug } from "@/data/productSlug";
 import type { ProductDetailModel, RelatedProductModel } from "@/lib/storeCatalog";
-import { addToCart, isWishlisted, makeStoreProduct, toggleWishlist } from "@/lib/shopStorage";
+import { addToCart, isWishlisted, makeStoreProduct, setBuyNowSelection, toggleWishlist } from "@/lib/shopStorage";
 
 type ProductDetailPageClientProps = {
   product: ProductDetailModel;
@@ -15,6 +16,7 @@ export default function ProductDetailPageClient({
   product,
   relatedProducts = [],
 }: ProductDetailPageClientProps) {
+  const router = useRouter();
   const galleryImages = useMemo(() => {
     const deduped = Array.from(new Set([product.image, ...(product.gallery || [])].filter(Boolean)));
     return deduped.length > 0 ? deduped : [product.image];
@@ -54,6 +56,11 @@ export default function ProductDetailPageClient({
   const onSaveForLater = () => {
     const next = toggleWishlist(storeProduct);
     setWishlisted(next);
+  };
+
+  const onBuyNow = () => {
+    setBuyNowSelection(storeProduct, quantity);
+    router.push("/checkout?mode=buy-now");
   };
 
   return (
@@ -243,16 +250,18 @@ export default function ProductDetailPageClient({
                 >
                   ADD TO CART
                 </button>
-                <Link
-                  href="/checkout"
+                <button
+                  type="button"
+                  onClick={onBuyNow}
+                  disabled={!hasPrice}
                   className={`rounded-lg px-4 py-2 text-center text-sm font-semibold transition ${
                     hasPrice
                       ? "bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:shadow-[0_6px_16px_rgba(37,99,235,0.35)]"
-                      : "pointer-events-none bg-slate-200 text-slate-500"
+                      : "bg-slate-200 text-slate-500"
                   }`}
                 >
                   BUY NOW
-                </Link>
+                </button>
               </div>
 
               {/* Save for Later */}

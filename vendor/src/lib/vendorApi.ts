@@ -103,6 +103,42 @@ export type VendorInquirySnapshot = {
   inquiries: VendorInquiry[];
 };
 
+export type VendorOrderStatus = "Pending" | "Disputed" | "Completed";
+
+export type VendorOrderItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image?: string;
+};
+
+export type VendorOrderRecord = {
+  id: string;
+  orderNo: string;
+  customer: string;
+  amount: number;
+  status: VendorOrderStatus;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+  itemCount: number;
+  items: VendorOrderItem[];
+};
+
+export type VendorOrderSummary = {
+  total: number;
+  pending: number;
+  completed: number;
+  disputed: number;
+  revenue: number;
+};
+
+export type VendorOrderSnapshot = {
+  summary: VendorOrderSummary;
+  orders: VendorOrderRecord[];
+};
+
 export type VendorProfileUpdateInput = {
   name?: string;
   email?: string;
@@ -503,6 +539,152 @@ export async function fetchVendorInquiries(
   } catch {
     return fallback;
   }
+}
+
+export async function fetchVendorOrders(options?: {
+  status?: VendorOrderStatus;
+  search?: string;
+  limit?: number;
+}): Promise<VendorOrderSnapshot> {
+  const fallback: VendorOrderSnapshot = {
+    summary: {
+      total: 0,
+      pending: 0,
+      completed: 0,
+      disputed: 0,
+      revenue: 0,
+    },
+    orders: [],
+  };
+
+  const queryParams = new URLSearchParams();
+  const status = String(options?.status || "").trim();
+  const search = String(options?.search || "").trim();
+  const limit = Number.isFinite(Number(options?.limit)) ? Number(options?.limit) : 120;
+
+  if (status) queryParams.set("status", status);
+  if (search) queryParams.set("search", search);
+  queryParams.set("limit", String(Math.max(1, Math.min(500, limit))));
+
+  try {
+    const payload = await requestJson<{
+      summary?: Partial<VendorOrderSummary>;
+      orders?: Array<
+        Partial<VendorOrderRecord> & {
+          items?: Array<Partial<VendorOrderItem>>;
+        }
+      >;
+    }>(`/api/orders/vendor?${queryParams.toString()}`);
+
+    const orders = Array.isArray(payload.orders)
+      ? payload.orders.map((order, index) => {
+          const statusValue = String(order.status || "Pending");
+          const normalizedStatus: VendorOrderStatus =
+            statusValue === "Completed" || statusValue === "Disputed" ? statusValue : "Pending";
+
+          const normalizedItems = Array.isArray(order.items)
+            ? order.items.map((item, itemIndex) => ({
+                id: String(item.id || `order-item-${index}-${itemIndex}`),
+                name: String(item.name || "Product").trim() || "Product",
+                quantity: Number.isFinite(Number(item.quantity)) ? Math.max(1, Number(item.quantity)) : 1,
+                price: Number.isFinite(Number(item.price)) ? Math.max(0, Number(item.price)) : 0,
+                image: String(item.image || "").trim() || undefined,
+              }))
+            : [];
+
+          const itemCountFromItems = normalizedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+          return {
+            id: String(order.id || `order-${index}`),
+            orderNo: String(order.orderNo || `#ORD-${index + 1}`).trim(),
+            customer: String(order.customer || "Customer").trim() || "Customer",
+            amount: Number.isFinite(Number(order.amount)) ? Math.max(0, Number(order.amount)) : 0,
+            status: normalizedStatus,
+            paymentMethod: String(order.paymentMethod || "cod").trim().toLowerCase() || "cod",
+            paymentStatus: String(order.paymentStatus || "pending").trim().toLowerCase() || "pending",
+            createdAt: String(order.createdAt || ""),
+            itemCount: Number.isFinite(Number(order.itemCount))
+              ? Math.max(0, Number(order.itemCount))
+              : itemCountFromItems,
+            items: normalizedItems,
+          };
+        })
+      : [];
+
+    const summaryInput = payload.summary || {};
+    const summary: VendorOrderSummary = {
+      total: Number.isFinite(Number(summaryInput.total)) ? Number(summaryInput.total) : orders.length,
+      pending: Number.isFinite(Number(summaryInput.pending))
+        ? Number(summaryInput.pending)
+        : orders.filter((order) => order.status === "Pending").length,
+      completed: Number.isFinite(Number(summaryInput.completed))
+        ? Number(summaryInput.completed)
+        : orders.filter((order) => order.status === "Completed").length,
+      disputed: Number.isFinite(Number(summaryInput.disputed))
+        ? Number(summaryInput.disputed)
+        : orders.filter((order) => order.status === "Disputed").length,
+      revenue: Number.isFinite(Number(summaryInput.revenue))
+        ? Number(summaryInput.revenue)
+        : orders.reduce((sum, order) => sum + Math.max(0, Number(order.amount || 0)), 0),
+    };
+
+    return {
+      summary,
+      orders,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export async function updateVendorOrderStatus(orderId: string, status: VendorOrderStatus): Promise<VendorOrderRecord> {
+  const normalizedOrderId = String(orderId || "").trim();
+  if (!normalizedOrderId) {
+    throw new Error("Order id is required");
+  }
+
+  const payload = await requestJson<{
+    order?: Partial<VendorOrderRecord> & {
+      items?: Array<Partial<VendorOrderItem>>;
+    };
+  }>(`/api/orders/vendor/${encodeURIComponent(normalizedOrderId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+  const order = payload.order;
+  if (!order) {
+    throw new Error("Failed to update order status");
+  }
+
+  const statusValue = String(order.status || "Pending");
+  const normalizedStatus: VendorOrderStatus =
+    statusValue === "Completed" || statusValue === "Disputed" ? statusValue : "Pending";
+
+  const normalizedItems = Array.isArray(order.items)
+    ? order.items.map((item, itemIndex) => ({
+        id: String(item.id || `order-item-${normalizedOrderId}-${itemIndex}`),
+        name: String(item.name || "Product").trim() || "Product",
+        quantity: Number.isFinite(Number(item.quantity)) ? Math.max(1, Number(item.quantity)) : 1,
+        price: Number.isFinite(Number(item.price)) ? Math.max(0, Number(item.price)) : 0,
+        image: String(item.image || "").trim() || undefined,
+      }))
+    : [];
+
+  const itemCountFromItems = normalizedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  return {
+    id: String(order.id || normalizedOrderId),
+    orderNo: String(order.orderNo || `#ORD-${normalizedOrderId}`).trim(),
+    customer: String(order.customer || "Customer").trim() || "Customer",
+    amount: Number.isFinite(Number(order.amount)) ? Math.max(0, Number(order.amount)) : 0,
+    status: normalizedStatus,
+    paymentMethod: String(order.paymentMethod || "cod").trim().toLowerCase() || "cod",
+    paymentStatus: String(order.paymentStatus || "pending").trim().toLowerCase() || "pending",
+    createdAt: String(order.createdAt || ""),
+    itemCount: Number.isFinite(Number(order.itemCount)) ? Math.max(0, Number(order.itemCount)) : itemCountFromItems,
+    items: normalizedItems,
+  };
 }
 
 export async function updateVendorInquiryStatus(inquiryId: string, status: InquiryStatus): Promise<VendorInquiry> {

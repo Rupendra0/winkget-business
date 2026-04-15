@@ -35,12 +35,14 @@ import {
   fetchVendorCategories,
   fetchVendorCities,
   fetchVendorInquiries,
+  fetchVendorOrders,
   fetchVendorProducts,
   fetchVendorReviewSnapshot,
   fetchVendorSession,
   logoutVendor,
   updateVendorProduct,
   updateVendorInquiryStatus,
+  updateVendorOrderStatus,
   updateVendorProfile,
   updateVendorStoreStatus,
   type InquiryStatus,
@@ -48,6 +50,9 @@ import {
   type VendorCity,
   type VendorInquiry,
   type VendorInquirySnapshot,
+  type VendorOrderRecord,
+  type VendorOrderSnapshot,
+  type VendorOrderStatus,
   type VendorProductRecord,
   type VendorProfileUpdateInput,
   type VendorProductUpsertInput,
@@ -293,6 +298,17 @@ const EMPTY_INQUIRY_SNAPSHOT: VendorInquirySnapshot = {
   inquiries: [],
 };
 
+const EMPTY_VENDOR_ORDER_SNAPSHOT: VendorOrderSnapshot = {
+  summary: {
+    total: 0,
+    pending: 0,
+    completed: 0,
+    disputed: 0,
+    revenue: 0,
+  },
+  orders: [],
+};
+
 function parseTimeToMinutes(value: string) {
   const normalized = String(value || "").trim();
   if (!/^\d{2}:\d{2}$/.test(normalized)) return null;
@@ -446,6 +462,27 @@ function buildInquirySummary(inquiries: VendorInquiry[]): VendorInquirySnapshot[
       return accumulator;
     },
     { total: 0, open: 0, inProgress: 0, closed: 0 }
+  );
+}
+
+function buildVendorOrderSummary(orders: VendorOrderRecord[]): VendorOrderSnapshot["summary"] {
+  return orders.reduce(
+    (accumulator, order) => {
+      accumulator.total += 1;
+      accumulator.revenue += Math.max(0, Number(order.amount || 0));
+
+      if (order.status === "Pending") accumulator.pending += 1;
+      if (order.status === "Completed") accumulator.completed += 1;
+      if (order.status === "Disputed") accumulator.disputed += 1;
+      return accumulator;
+    },
+    {
+      total: 0,
+      pending: 0,
+      completed: 0,
+      disputed: 0,
+      revenue: 0,
+    }
   );
 }
 
@@ -1180,20 +1217,221 @@ function ReviewsSection({ reviews }: { reviews: VendorReviewSnapshot }) {
   );
 }
 
-function OrdersSection() {
+function OrdersSection({
+  summary,
+  orders,
+  statusFilter,
+  setStatusFilter,
+  search,
+  setSearch,
+  statusDraftById,
+  onStatusDraftChange,
+  onStatusSave,
+  updatingOrderId,
+  actionMessage,
+  actionError,
+  loading,
+  error,
+}: {
+  summary: VendorOrderSnapshot["summary"];
+  orders: VendorOrderRecord[];
+  statusFilter: "All" | VendorOrderStatus;
+  setStatusFilter: (value: "All" | VendorOrderStatus) => void;
+  search: string;
+  setSearch: (value: string) => void;
+  statusDraftById: Record<string, VendorOrderStatus>;
+  onStatusDraftChange: (orderId: string, status: VendorOrderStatus) => void;
+  onStatusSave: (orderId: string) => void;
+  updatingOrderId: string | null;
+  actionMessage: string | null;
+  actionError: string | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const formatCurrency = (value: number) => `Rs ${Math.max(0, Math.round(value || 0)).toLocaleString("en-IN")}`;
+  const statusOptions: VendorOrderStatus[] = ["Pending", "Completed", "Disputed"];
+
+  const toStatusBadgeClass = (status: VendorOrderStatus) => {
+    if (status === "Completed") {
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    }
+
+    if (status === "Disputed") {
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    }
+
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  };
+
   return (
     <section className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+        <article className="rounded-xl border border-gray-100 bg-white p-3">
+          <p className="text-[11px] uppercase tracking-wide text-gray-500">Total</p>
+          <p className="mt-1 text-xl font-semibold text-gray-900">{summary.total}</p>
+        </article>
+        <article className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-amber-700">Pending</p>
+          <p className="mt-1 text-xl font-semibold text-amber-800">{summary.pending}</p>
+        </article>
+        <article className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-emerald-700">Completed</p>
+          <p className="mt-1 text-xl font-semibold text-emerald-800">{summary.completed}</p>
+        </article>
+        <article className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-rose-700">Disputed</p>
+          <p className="mt-1 text-xl font-semibold text-rose-800">{summary.disputed}</p>
+        </article>
+        <article className="rounded-xl border border-blue-200 bg-blue-50 p-3 sm:col-span-2 lg:col-span-1">
+          <p className="text-[11px] uppercase tracking-wide text-blue-700">Revenue</p>
+          <p className="mt-1 text-xl font-semibold text-blue-800">{formatCurrency(summary.revenue)}</p>
+        </article>
+      </div>
+
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <h3 className="font-display text-lg font-semibold text-gray-900">Orders Integration</h3>
-        <p className="mt-2 text-sm text-gray-600">
-          No orders API exists in current backend. This panel is kept active so it can start showing live order rows as soon as an
-          orders endpoint is added.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {(["All", "Pending", "Completed", "Disputed"] as Array<"All" | VendorOrderStatus>).map((status) => (
+            <button
+              key={`order-filter-${status}`}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                statusFilter === status
+                  ? "bg-blue-100 text-blue-700"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search order no, customer or item"
+            className="ml-auto w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 sm:w-80"
+          />
+        </div>
+
+        {actionMessage ? (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+            {actionMessage}
+          </p>
+        ) : null}
+
+        {actionError ? (
+          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {actionError}
+          </p>
+        ) : null}
+
+        <div className="mt-4 space-y-3">
+          {error ? <p className="text-xs font-medium text-red-700">{error}</p> : null}
+
+          {loading ? (
+            <p className="text-sm text-gray-600">Loading orders...</p>
+          ) : orders.length === 0 ? (
+            <EmptyState
+              title="No order records available"
+              body="New customer orders will appear here automatically."
+            />
+          ) : (
+            orders.map((order) => {
+              const leadItem = order.items[0] || null;
+              const statusDraft = statusDraftById[order.id] || order.status;
+              const hasStatusChange = statusDraft !== order.status;
+
+              return (
+                <article
+                  key={order.id}
+                  className="rounded-2xl border border-[#dbe7ff] bg-white p-4 shadow-[0_10px_22px_rgba(30,64,175,0.08)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="mt-0.5 text-l font-bold text-slate-900">{order.customer}</p>
+                      <p className="text-xs font-semibold tracking-wide text-slate-700">{order.orderNo}</p>
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-500">{formatDateTime(order.createdAt)}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-base font-extrabold text-blue-800">{formatCurrency(order.amount)}</p>
+                      <span
+                        className={`mt-1 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${toStatusBadgeClass(order.status)}`}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-blue-100 bg-[#f4f8ff] p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-200 bg-white">
+                        {leadItem?.image ? (
+                          <img src={leadItem.image} alt={leadItem.name} className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
+                            {leadItem?.name?.slice(0, 1).toUpperCase() || "P"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{leadItem?.name || "Order Items"}</p>
+                      </div>
+                    </div>
+
+                    {order.items.length > 1 ? (
+                      <div className="mt-2 border-t border-blue-100 pt-2 space-y-1">
+                        {order.items.slice(1, 4).map((item) => (
+                          <p key={`${order.id}-${item.id}-${item.name}`} className="text-xs font-medium text-slate-700">
+                            {item.name} x {item.quantity}
+                          </p>
+                        ))}
+                        {order.items.length > 4 ? (
+                          <p className="text-xs font-medium text-slate-500">+{order.items.length - 4} more items</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-700">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Items: {order.itemCount}</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Payment: {order.paymentMethod}</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                      Payment Status: {order.paymentStatus}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 p-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Update Status</span>
+                    <select
+                      value={statusDraft}
+                      onChange={(event) => onStatusDraftChange(order.id, event.target.value as VendorOrderStatus)}
+                      className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={`order-status-${order.id}-${status}`} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => onStatusSave(order.id)}
+                      disabled={!hasStatusChange || updatingOrderId === order.id}
+                      className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {updatingOrderId === order.id ? "Updating..." : hasStatusChange ? "Save" : "Saved"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
       </article>
-      <EmptyState
-        title="No order records available"
-        body="Order section is functional and ready, but the backend currently does not expose order resources yet."
-      />
     </section>
   );
 }
@@ -2472,6 +2710,15 @@ export default function VendorDashboard() {
   const [vendor, setVendor] = useState<VendorSession | null>(null);
   const [reviews, setReviews] = useState<VendorReviewSnapshot>(EMPTY_REVIEW_SNAPSHOT);
   const [inquiryData, setInquiryData] = useState<VendorInquirySnapshot>(EMPTY_INQUIRY_SNAPSHOT);
+  const [vendorOrderData, setVendorOrderData] = useState<VendorOrderSnapshot>(EMPTY_VENDOR_ORDER_SNAPSHOT);
+  const [vendorOrdersLoading, setVendorOrdersLoading] = useState(false);
+  const [vendorOrdersError, setVendorOrdersError] = useState<string | null>(null);
+  const [vendorOrderStatusFilter, setVendorOrderStatusFilter] = useState<"All" | VendorOrderStatus>("All");
+  const [vendorOrderSearch, setVendorOrderSearch] = useState("");
+  const [vendorOrderStatusDraftById, setVendorOrderStatusDraftById] = useState<Record<string, VendorOrderStatus>>({});
+  const [updatingVendorOrderId, setUpdatingVendorOrderId] = useState<string | null>(null);
+  const [vendorOrderActionMessage, setVendorOrderActionMessage] = useState<string | null>(null);
+  const [vendorOrderActionError, setVendorOrderActionError] = useState<string | null>(null);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<InquiryStatusFilter>("All");
   const [inquirySearch, setInquirySearch] = useState("");
   const [settingsForm, setSettingsForm] = useState<SettingsFormState>(() => buildSettingsForm(null));
@@ -2537,16 +2784,24 @@ export default function VendorDashboard() {
       if (!session?.id) {
         setReviews(EMPTY_REVIEW_SNAPSHOT);
         setInquiryData(EMPTY_INQUIRY_SNAPSHOT);
+        setVendorOrderData(EMPTY_VENDOR_ORDER_SNAPSHOT);
+        setVendorOrderStatusDraftById({});
+        setVendorOrderActionMessage(null);
+        setVendorOrderActionError(null);
         setVendorCategories([]);
         setVendorProducts([]);
         setVendorProductsLoaded(false);
+        setVendorOrdersLoading(false);
+        setVendorOrdersError(null);
         setLoading(false);
         return;
       }
 
-      const [reviewSnapshot, inquiriesSnapshot, categoriesSnapshot, productsSnapshot] = await Promise.all([
+      setVendorOrdersLoading(true);
+      const [reviewSnapshot, inquiriesSnapshot, ordersSnapshot, categoriesSnapshot, productsSnapshot] = await Promise.all([
         fetchVendorReviewSnapshot(session.id),
         fetchVendorInquiries({ limit: 200 }),
+        fetchVendorOrders({ limit: 300 }),
         fetchVendorCategories(),
         fetchVendorProducts({ limit: 300 }),
       ]);
@@ -2554,6 +2809,9 @@ export default function VendorDashboard() {
       if (!active) return;
       setReviews(reviewSnapshot);
       setInquiryData(inquiriesSnapshot);
+      setVendorOrderData(ordersSnapshot);
+      setVendorOrdersError(null);
+      setVendorOrdersLoading(false);
       setVendorCategories(categoriesSnapshot);
       setVendorProducts(productsSnapshot);
       setVendorProductsLoaded(true);
@@ -2577,6 +2835,16 @@ export default function VendorDashboard() {
       return next;
     });
   }, [inquiryData.inquiries]);
+
+  useEffect(() => {
+    setVendorOrderStatusDraftById((current) => {
+      const next: Record<string, VendorOrderStatus> = {};
+      vendorOrderData.orders.forEach((order) => {
+        next[order.id] = current[order.id] || order.status;
+      });
+      return next;
+    });
+  }, [vendorOrderData.orders]);
 
   useEffect(() => {
     const vendorId = String(vendor?.id || "").trim();
@@ -2633,22 +2901,30 @@ export default function VendorDashboard() {
     if (!vendor?.id || refreshing) return;
 
     setRefreshing(true);
+    setVendorOrdersLoading(true);
+    setVendorOrdersError(null);
     try {
-      const [reviewSnapshot, inquiriesSnapshot, productsSnapshot] = await Promise.all([
+      const [reviewSnapshot, inquiriesSnapshot, ordersSnapshot, productsSnapshot] = await Promise.all([
         fetchVendorReviewSnapshot(vendor.id),
         fetchVendorInquiries({ limit: 200 }),
+        fetchVendorOrders({ limit: 300 }),
         fetchVendorProducts({ limit: 300 }),
       ]);
 
       setReviews(reviewSnapshot);
       setInquiryData(inquiriesSnapshot);
+      setVendorOrderData(ordersSnapshot);
+      setVendorOrderActionMessage(null);
+      setVendorOrderActionError(null);
       setVendorProducts(productsSnapshot);
       setVendorProductsLoaded(true);
       setVendorProductsError(null);
     } catch {
       setVendorProductsError("Could not refresh products right now.");
+      setVendorOrdersError("Could not refresh orders right now.");
     } finally {
       setRefreshing(false);
+      setVendorOrdersLoading(false);
     }
   };
 
@@ -2726,6 +3002,27 @@ export default function VendorDashboard() {
     });
   }, [enquiryItems, inquirySearch, inquiryStatusFilter]);
 
+  const filteredVendorOrders = useMemo(() => {
+    const query = vendorOrderSearch.trim().toLowerCase();
+
+    return vendorOrderData.orders.filter((order) => {
+      if (vendorOrderStatusFilter !== "All" && order.status !== vendorOrderStatusFilter) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const itemNames = order.items.map((item) => item.name).join(" ");
+
+      return [order.orderNo, order.customer, order.paymentMethod, order.paymentStatus, itemNames]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [vendorOrderData.orders, vendorOrderSearch, vendorOrderStatusFilter]);
+
   const callLeads = useMemo(
     () =>
       inquiryData.inquiries.filter(
@@ -2768,14 +3065,22 @@ export default function VendorDashboard() {
       },
       {
         label: "Orders",
-        value: 0,
-        trend: "API pending",
+        value: vendorOrderData.summary.total,
+        trend: `Pending ${vendorOrderData.summary.pending}`,
         hint: "",
         icon: ClipboardList,
-        trendPositive: false,
+        trendPositive: vendorOrderData.summary.total > 0,
       },
     ];
-  }, [callLeads.length, enquiryItems.length, enquirySummary.open, reviews.summary.rating, reviews.summary.reviews]);
+  }, [
+    callLeads.length,
+    enquiryItems.length,
+    enquirySummary.open,
+    reviews.summary.rating,
+    reviews.summary.reviews,
+    vendorOrderData.summary.pending,
+    vendorOrderData.summary.total,
+  ]);
 
   const currentStoreStatus = useMemo<VendorBusinessStatus>(() => {
     if (!vendor) {
@@ -2864,12 +3169,20 @@ export default function VendorDashboard() {
       createdAt: String(review.createdAt || ""),
     }));
 
-    return [...inquiryNotifications, ...reviewNotifications].sort((left, right) => {
+    const orderNotifications = vendorOrderData.orders.map((order) => ({
+      id: `order-${order.id}`,
+      nav: "Orders" as const,
+      title: "New order",
+      detail: `${order.orderNo} from ${order.customer}`,
+      createdAt: String(order.createdAt || ""),
+    }));
+
+    return [...inquiryNotifications, ...reviewNotifications, ...orderNotifications].sort((left, right) => {
       const leftTime = new Date(left.createdAt).getTime();
       const rightTime = new Date(right.createdAt).getTime();
       return rightTime - leftTime;
     });
-  }, [inquiryData.inquiries, reviews.reviews]);
+  }, [inquiryData.inquiries, reviews.reviews, vendorOrderData.orders]);
 
   const activeNotifications = useMemo(
     () => notifications.filter((notification) => !notificationDismissMap[notification.id]),
@@ -3119,6 +3432,71 @@ export default function VendorDashboard() {
       setInquiryActionError(message);
     } finally {
       setUpdatingInquiryId(null);
+    }
+  };
+
+  const handleVendorOrderStatusDraftChange = (orderId: string, value: VendorOrderStatus) => {
+    setVendorOrderStatusDraftById((current) => ({
+      ...current,
+      [orderId]: value,
+    }));
+  };
+
+  const handleVendorOrderStatusSave = async (orderId: string) => {
+    const normalizedOrderId = String(orderId || "").trim();
+    if (!normalizedOrderId || updatingVendorOrderId) return;
+
+    const currentOrder = vendorOrderData.orders.find((order) => order.id === normalizedOrderId);
+    if (!currentOrder) return;
+
+    const nextStatus = vendorOrderStatusDraftById[normalizedOrderId] || currentOrder.status;
+    if (nextStatus === currentOrder.status) {
+      return;
+    }
+
+    const previousSnapshot = vendorOrderData;
+    const optimisticOrders = vendorOrderData.orders.map((order) =>
+      order.id === normalizedOrderId ? { ...order, status: nextStatus } : order
+    );
+
+    setVendorOrderData({
+      summary: buildVendorOrderSummary(optimisticOrders),
+      orders: optimisticOrders,
+    });
+
+    setVendorOrderActionMessage(null);
+    setVendorOrderActionError(null);
+    setUpdatingVendorOrderId(normalizedOrderId);
+
+    try {
+      const updatedOrder = await updateVendorOrderStatus(normalizedOrderId, nextStatus);
+
+      setVendorOrderData((current) => {
+        const mergedOrders = current.orders.map((order) =>
+          order.id === normalizedOrderId ? { ...order, ...updatedOrder } : order
+        );
+
+        return {
+          summary: buildVendorOrderSummary(mergedOrders),
+          orders: mergedOrders,
+        };
+      });
+
+      setVendorOrderStatusDraftById((current) => ({
+        ...current,
+        [normalizedOrderId]: updatedOrder.status,
+      }));
+      setVendorOrderActionMessage(`Order ${updatedOrder.orderNo} marked ${updatedOrder.status}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update order status";
+      setVendorOrderData(previousSnapshot);
+      setVendorOrderStatusDraftById((current) => ({
+        ...current,
+        [normalizedOrderId]: currentOrder.status,
+      }));
+      setVendorOrderActionError(message);
+    } finally {
+      setUpdatingVendorOrderId(null);
     }
   };
 
@@ -3677,7 +4055,24 @@ export default function VendorDashboard() {
     }
 
     if (activeNav === "Orders") {
-      return <OrdersSection />;
+      return (
+        <OrdersSection
+          summary={vendorOrderData.summary}
+          orders={filteredVendorOrders}
+          statusFilter={vendorOrderStatusFilter}
+          setStatusFilter={setVendorOrderStatusFilter}
+          search={vendorOrderSearch}
+          setSearch={setVendorOrderSearch}
+          statusDraftById={vendorOrderStatusDraftById}
+          onStatusDraftChange={handleVendorOrderStatusDraftChange}
+          onStatusSave={handleVendorOrderStatusSave}
+          updatingOrderId={updatingVendorOrderId}
+          actionMessage={vendorOrderActionMessage}
+          actionError={vendorOrderActionError}
+          loading={vendorOrdersLoading}
+          error={vendorOrdersError}
+        />
+      );
     }
 
     if (activeNav === "Posts") {
@@ -3821,15 +4216,15 @@ export default function VendorDashboard() {
 
   return (
     <>
-      <main className="vendor-dashboard-white relative min-h-screen overflow-x-hidden bg-white text-[var(--vendor-text-primary)]">
-        <div className="pointer-events-none absolute inset-0 bg-white" />
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_10%_5%,rgba(59,130,246,0.22),transparent_38%),radial-gradient(circle_at_90%_0%,rgba(30,64,175,0.16),transparent_45%),linear-gradient(180deg,#f8fbff_0%,#eef4ff_52%,#e7f0ff_100%)] text-[var(--vendor-text-primary)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(130deg,rgba(255,255,255,0.58),rgba(239,246,255,0.42),rgba(219,234,254,0.3))]" />
         <div className="relative mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
         <div
           className={`grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)] ${
             shouldShowQuickAnalytics ? "xl:grid-cols-[248px_minmax(0,1fr)_320px]" : ""
           }`}
         >
-          <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border-r border-gray-200 bg-white/60 p-4 backdrop-blur-md lg:flex">
+          <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border-r border-blue-100/80 bg-white/72 p-4 backdrop-blur-md lg:flex">
             <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
@@ -3864,7 +4259,7 @@ export default function VendorDashboard() {
                     type="button"
                     onClick={() => setActiveNav(item.label)}
                     className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      isActive ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-white hover:text-gray-900"
+                      isActive ? "bg-blue-100 text-blue-600" : "text-gray-600 hover:bg-blue-50/70 hover:text-gray-900"
                     }`}
                     aria-current={isActive ? "page" : undefined}
                   >
@@ -3882,8 +4277,8 @@ export default function VendorDashboard() {
           </aside>
 
           <section className="min-w-0 space-y-5">
-            <header className="rounded-2xl border border-white/20 bg-white/70 p-4 shadow-sm backdrop-blur-md">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/80 pb-3">
+            <header className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-blue-100/80 pb-3">
                 <div className="min-w-0 pr-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700/80">Shop</p>
                   <h1 className="mt-0.5 truncate font-display text-xl font-semibold text-gray-900 sm:text-2xl">{businessName}</h1>
@@ -4003,23 +4398,23 @@ export default function VendorDashboard() {
 
           {shouldShowQuickAnalytics ? (
             <aside className="hidden space-y-4 xl:block">
-              <article className="rounded-2xl bg-white/60 p-5 backdrop-blur-md">
+              <article className="rounded-2xl border border-blue-100/70 bg-white/62 p-5 backdrop-blur-md">
                 <h3 className="font-display text-lg font-semibold text-gray-900">Quick Analytics</h3>
 
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
                     <p className="text-xs text-gray-500">Enquiries</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">{enquirySummary.total}</p>
                   </div>
-                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
                     <p className="text-xs text-gray-500">Call Leads</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">{callLeads.length}</p>
                   </div>
-                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
                     <p className="text-xs text-gray-500">Average rating</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">{formatRating(reviews.summary.rating)} / 5</p>
                   </div>
-                  <div className="rounded-xl border border-white/60 bg-white/70 p-3">
+                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
                     <p className="text-xs text-gray-500">Section</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">{sectionMeta.title}</p>
                   </div>
@@ -4032,7 +4427,7 @@ export default function VendorDashboard() {
 
       <nav
         aria-label="Mobile quick actions"
-        className="fixed inset-x-4 bottom-3 z-40 rounded-2xl border border-white/70 bg-white/90 p-2 shadow-lg backdrop-blur lg:hidden"
+        className="fixed inset-x-4 bottom-3 z-40 rounded-2xl border border-blue-100/80 bg-white/88 p-2 shadow-lg backdrop-blur lg:hidden"
       >
         <ul className="grid grid-cols-6 gap-1">
           {MOBILE_BAR_ITEMS.map((item) => {
@@ -4175,13 +4570,6 @@ export default function VendorDashboard() {
         </section>
       ) : null}
       </main>
-
-      <style jsx global>{`
-        .vendor-dashboard-white :is(article, aside, header, section, form, nav, div):not([class*="absolute"])[class*="bg-"] {
-          background-color: #ffffff !important;
-          background-image: none !important;
-        }
-      `}</style>
     </>
   );
 }

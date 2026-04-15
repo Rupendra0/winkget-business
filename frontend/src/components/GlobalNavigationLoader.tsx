@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { rememberRoute } from "@/lib/authRedirect";
 
 const MIN_VISIBLE_MS = 220;
 const FAILSAFE_HIDE_MS = 12000;
@@ -51,6 +52,7 @@ export default function GlobalNavigationLoader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
+  const currentPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
   const [isVisible, setIsVisible] = useState(false);
   const startTimestampRef = useRef(0);
@@ -110,11 +112,13 @@ export default function GlobalNavigationLoader() {
   useEffect(() => {
     if (!initializedRef.current) {
       initializedRef.current = true;
+      rememberRoute(currentPath);
       return;
     }
 
+    rememberRoute(currentPath);
     stopLoader();
-  }, [routeKey, stopLoader]);
+  }, [currentPath, routeKey, stopLoader]);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Mail, Phone, LogOut, UserRound, Building2, BadgeCheck, MapPin, Globe } from "lucide-react";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import { buildAuthHref } from "@/lib/authRedirect";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +47,7 @@ export default function ProfilePage() {
     const loadSession = async () => {
       const currentUser = await fetchCurrentUser();
       if (!currentUser) {
-        router.replace("/auth");
+        router.replace(buildAuthHref(pathname || "/profile"));
         return;
       }
       setUser(currentUser);
@@ -53,7 +55,7 @@ export default function ProfilePage() {
     };
 
     void loadSession();
-  }, [router]);
+  }, [pathname, router]);
 
   if (loading || !user) {
     return (

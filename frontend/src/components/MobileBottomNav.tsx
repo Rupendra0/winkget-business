@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Briefcase, Home, LayoutGrid, ShoppingBag, UserRound } from "lucide-react";
+import { buildAuthHref } from "@/lib/authRedirect";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
@@ -64,7 +65,7 @@ export default function MobileBottomNav() {
     };
   }, []);
 
-  const accountHref = isAuthenticated ? "/profile" : "/auth";
+  const accountHref = isAuthenticated ? "/profile" : buildAuthHref(pathname || "/");
 
   const tabs = useMemo<BottomTab[]>(() => {
     const onHome = pathname === "/";
