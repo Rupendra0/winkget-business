@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Clock3,
   Globe,
-  Info,
   Layers3,
   MapPin,
   MessageCircle,
@@ -20,6 +19,7 @@ import {
   Store,
   Star,
   Trash2,
+  UserRound,
 } from "lucide-react";
 import type { ListingProfile, StorePageData, StoreProduct } from "@/data/listingData";
 import { buildProductSlug } from "@/data/productSlug";
@@ -269,6 +269,8 @@ export default function ListingProfilePage({
   const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
   const [reviewActionMessage, setReviewActionMessage] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
+  const [isBusinessInfoOverflowing, setIsBusinessInfoOverflowing] = useState(false);
   const [expandedReviewIds, setExpandedReviewIds] = useState<Record<string, boolean>>({});
   const [reviewOverflowIds, setReviewOverflowIds] = useState<Record<string, boolean>>({});
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
@@ -277,9 +279,11 @@ export default function ListingProfilePage({
   const [isUpdatingReview, setIsUpdatingReview] = useState(false);
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
+  const businessInfoTextRef = useRef<HTMLParagraphElement | null>(null);
   const reviewTextRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
 
   useEffect(() => {
@@ -405,7 +409,7 @@ export default function ListingProfilePage({
     [profile.gallery]
   );
   const mobilePhotoSlots = 4;
-  const desktopPhotoSlots = 6;
+  const desktopPhotoSlots = 8;
   const mobilePhotoRow = photoItems.slice(0, Math.min(photoItems.length, mobilePhotoSlots));
   const desktopPhotoRow = photoItems.slice(0, Math.min(photoItems.length, desktopPhotoSlots));
   const mobileOverflowCount = Math.max(0, photoItems.length - mobilePhotoSlots);
@@ -463,6 +467,30 @@ export default function ListingProfilePage({
   );
 
   useEffect(() => {
+    setIsBusinessInfoExpanded(false);
+    setIsBusinessInfoOverflowing(false);
+  }, [profile.description, profile.id]);
+
+  useEffect(() => {
+    const measureBusinessInfoOverflow = () => {
+      const node = businessInfoTextRef.current;
+      if (!node || isBusinessInfoExpanded) {
+        return;
+      }
+
+      setIsBusinessInfoOverflowing(node.scrollHeight - node.clientHeight > 1);
+    };
+
+    const frame = window.requestAnimationFrame(measureBusinessInfoOverflow);
+    window.addEventListener("resize", measureBusinessInfoOverflow);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measureBusinessInfoOverflow);
+    };
+  }, [isBusinessInfoExpanded, profile.description]);
+
+  useEffect(() => {
     const measureOverflow = () => {
       setReviewOverflowIds((previous) => {
         let changed = false;
@@ -497,6 +525,25 @@ export default function ListingProfilePage({
       window.removeEventListener("resize", measureOverflow);
     };
   }, [expandedReviewIds, reviewsToDisplay]);
+
+  const closePhotosModal = () => {
+    setIsPhotosModalOpen(false);
+    setSelectedPhotoUrl(null);
+  };
+
+  const openAllPhotosModal = () => {
+    setSelectedPhotoUrl(null);
+    setIsPhotosModalOpen(true);
+  };
+
+  const openSinglePhotoModal = (photoUrl: string) => {
+    if (!photoUrl) {
+      return;
+    }
+
+    setSelectedPhotoUrl(photoUrl);
+    setIsPhotosModalOpen(true);
+  };
 
   const handleShare = async () => {
     const pageUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -864,24 +911,24 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f9] px-3 pb-24 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pb-10 lg:px-8">
-      <div className="mx-auto w-full max-w-[1120px] space-y-5 lg:max-w-[1240px]">
-        <section className="rounded-[24px] border border-[#d9dde3] bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.06)] sm:p-5">
-          <div className="overflow-hidden rounded-[18px] border border-[#d9dde2] bg-[#f2f3f5]">
+    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
+      <div className="mx-auto w-full max-w-[1120px] space-y-0 lg:max-w-[1240px]">
+        <section className="rounded-[24px] bg-white px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
+          <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f2f3f5]">
             {coverImage ? (
               <img
                 src={coverImage}
                 alt={profile.name}
-                className="h-44 w-full object-cover sm:h-52 lg:h-60"
+                className="h-50 w-full object-cover sm:h-56 lg:h-78"
                 loading="lazy"
               />
             ) : (
-              <div className="h-44 w-full bg-[#d4d8db] sm:h-52 lg:h-60" />
+              <div className="h-48 w-full bg-[#d4d8db] sm:h-56 lg:h-64" />
             )}
           </div>
 
-          <div className="relative -mt-[46px] flex justify-center sm:-mt-[52px] md:hidden">
-            <div className="h-[92px] w-[92px] overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white sm:h-[104px] sm:w-[104px]">
+          <div className="relative z-20 -mt-[56px] flex justify-center sm:-mt-[62px] md:hidden">
+            <div className="h-[95px] w-[95px] overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white sm:h-[104px] sm:w-[104px]">
               {logoImage ? (
                 <img
                   src={logoImage}
@@ -895,14 +942,14 @@ export default function ListingProfilePage({
             </div>
           </div>
 
-          <div className="mt-1 flex items-center justify-between gap-2 px-1 md:hidden">
+          <div className="-mt-8 flex items-center justify-between gap-2 -px-1 md:hidden">
             <span
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                 liveStoreOpenState === true
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  ? "bg-emerald-50 text-emerald-700 motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
                   : liveStoreOpenState === false
-                    ? "border-rose-200 bg-rose-50 text-rose-700"
-                    : "border-slate-200 bg-slate-50 text-slate-600"
+                    ? "bg-rose-50 text-rose-700"
+                    : "bg-slate-50 text-slate-600"
               }`}
             >
               <span
@@ -920,19 +967,12 @@ export default function ListingProfilePage({
                   ? "Closed"
                   : "Status Unknown"}
             </span>
-
-            {isVerified ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
-                <CheckCircle2 size={14} className="text-[#2f9f57]" />
-                Verified
-              </span>
-            ) : null}
           </div>
 
           <div className="mt-2 text-center md:hidden">
             <h1
-              className="mx-auto max-w-full truncate px-2 text-[22px] font-extrabold leading-snug text-[#4b4f53]"
-              style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+              className="mx-auto max-w-full truncate px-2 text-[20px] font-extrabold leading-snug text-[#4b4f53]"
+              style={{ fontFamily: "sans-serif" }}
             >
               {profile.name}
             </h1>
@@ -948,9 +988,9 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="hidden min-h-[182px] items-start justify-between gap-6 rounded-2xl border border-[#e2e5e9] bg-white px-4 pb-5 pt-6 shadow-[0_10px_22px_rgba(15,23,42,0.06)] md:flex lg:px-5">
+          <div className="hidden min-h-[182px] items-start justify-between gap-6 px-4 pb-5 pt-6 md:flex lg:min-h-[128px] lg:px-5 lg:pb-2 lg:pt-4">
             <div className="flex min-w-0 items-start gap-4 lg:gap-5">
-              <div className="-mt-[64px] h-[116px] w-[116px] shrink-0 overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] lg:-mt-[72px] lg:h-[126px] lg:w-[126px]">
+              <div className="relative z-20 -mt-[68px] h-[116px] w-[116px] shrink-0 overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] lg:-mt-[73px] lg:h-[126px] lg:w-[126px]">
                 {logoImage ? (
                   <img
                     src={logoImage}
@@ -963,49 +1003,23 @@ export default function ListingProfilePage({
                 )}
               </div>
 
-              <div className="min-w-0 -mt-1.5 lg:-mt-1">
-                <div className="mb-1">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${
-                      liveStoreOpenState === true
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : liveStoreOpenState === false
-                          ? "border-rose-200 bg-rose-50 text-rose-700"
-                          : "border-slate-200 bg-slate-50 text-slate-600"
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        liveStoreOpenState === true
-                          ? "bg-emerald-500"
-                          : liveStoreOpenState === false
-                            ? "bg-rose-500"
-                            : "bg-slate-400"
-                      }`}
-                    />
-                    {liveStoreOpenState === true
-                      ? "Open Now"
-                      : liveStoreOpenState === false
-                        ? "Closed"
-                        : "Status Unknown"}
-                  </span>
-                </div>
+              <div className="min-w-0 -mt-3 lg:-mt-2.5">
 
                 <h1
-                  className="text-[2.05rem] font-black leading-[1.05] text-[#132945] lg:text-[2.45rem]"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-rajdhani), var(--font-inter), sans-serif", letterSpacing: "0.05px" }}
+                  className="text-[0.875rem] font-black leading-[1.05] text-[#132945] lg:text-[2rem]"
+                  style={{ fontFamily: "sans-serif", letterSpacing: "0.05px" }}
                 >
                   {profile.name}
                 </h1>
                 <p
-                  className="mt-0.5 text-[15px] font-extrabold leading-tight text-[#1f4f8d] lg:text-base"
+                  className="mt-2 text-[15px] font-extrabold leading-tight text-[#1f4f8d] lg:text-base"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
                 >
                   {profile.category}
                 </p>
 
                 {fullAddress ? (
-                  <p className="mt-1 flex items-start gap-2 text-xs font-bold leading-snug text-[#5c6c7e] lg:text-[13px]">
+                  <p className="mt-2.5 flex items-start gap-2 text-xs font-bold leading-snug text-[#5c6c7e] lg:text-[13px]">
                     <MapPin size={15} className="mt-0.5 shrink-0 text-[#d44040]" />
                     <span className="min-w-0 break-words">{`Address : ${fullAddress}`}</span>
                   </p>
@@ -1013,16 +1027,53 @@ export default function ListingProfilePage({
               </div>
             </div>
 
-            {isVerified ? (
-              <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-base font-semibold text-[#1E40AF] lg:text-lg">
-                <CheckCircle2 size={18} className="text-[#2563EB]" />
-                Verified
-              </span>
-            ) : null}
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-full px-3 py-1 text-sm font-bold lg:text-base ${
+                liveStoreOpenState === true
+                  ? "bg-emerald-50 text-emerald-700 motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
+                  : liveStoreOpenState === false
+                    ? "bg-rose-50 text-rose-700"
+                    : "bg-slate-50 text-slate-600"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  liveStoreOpenState === true
+                    ? "bg-emerald-500"
+                    : liveStoreOpenState === false
+                      ? "bg-rose-500"
+                      : "bg-slate-400"
+                }`}
+              />
+              {liveStoreOpenState === true
+                ? "Open Now"
+                : liveStoreOpenState === false
+                  ? "Closed"
+                  : "Status Unknown"}
+            </span>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/70 bg-[#f8fbff]/70 p-2 backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-            <div className="grid grid-cols-4 gap-2.5">
+          <div className="mt-4 rounded-2xl border border-white/70 bg-[#f8fbff]/75 p-2 backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:border-0 md:bg-transparent md:p-0 md:shadow-none lg:hidden">
+            <div className="grid grid-cols-3 gap-2.5">
+              {storeHref ? (
+                <Link
+                  href={storeHref}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-[#6366F1] px-1.5 py-2 text-[12px] font-medium text-white transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
+                    <Store size={13} />
+                  </span>
+                  My Store
+                </Link>
+              ) : (
+                <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#5B8EF0] to-[#78A7F4] px-1.5 py-2 text-[12px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
+                    <Store size={13} />
+                  </span>
+                  Store
+                </span>
+              )}
+
               <ActionButton
                 href={phoneDigits ? `tel:${phoneDigits}` : undefined}
                 label="Call"
@@ -1038,6 +1089,28 @@ export default function ListingProfilePage({
                 external
                 tone="secondary"
               />
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+              {inquiryHref ? (
+                <a
+                  href={inquiryHref}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                    <MessageCircle size={13} />
+                  </span>
+                  Inquiry
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black opacity-55 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                    <MessageCircle size={13} />
+                  </span>
+                  Inquiry
+                </span>
+              )}
+
               <ActionButton
                 href={websiteHref || undefined}
                 label="Website"
@@ -1063,75 +1136,20 @@ export default function ListingProfilePage({
             <p className="mt-2.5 text-center text-xs font-medium text-gray-500">{shareMessage}</p>
           ) : null}
 
-          <div className="mt-2.5 grid grid-cols-4 items-center gap-2.5 rounded-2xl border border-white/70 bg-[#f7fbff]/75 p-2 text-center backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:mt-3 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-            {storeHref ? (
-              <Link
-                href={storeHref}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#2563EB] to-[#3B82F6] px-1.5 py-2 text-[12px] font-medium text-white shadow-[0_10px_20px_rgba(37,99,235,0.28)] transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
-              >
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
-                  <Store size={13} />
-                </span>
-                Store
-              </Link>
-            ) : (
-              <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#5B8EF0] to-[#78A7F4] px-1.5 py-2 text-[12px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
-                  <Store size={13} />
-                </span>
-                Store
-              </span>
-            )}
-
-            {inquiryHref ? (
-              <a
-                href={inquiryHref}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
-              >
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                  <MessageCircle size={13} />
-                </span>
-                Inquiry
-              </a>
-            ) : (
-              <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black opacity-55 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                  <MessageCircle size={13} />
-                </span>
-                Inquiry
-              </span>
-            )}
-
-            <p className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#F6D8A9] bg-[linear-gradient(145deg,rgba(255,248,236,0.95),rgba(255,242,222,0.9))] px-1 text-[12px] font-medium text-[#B45309] shadow-[0_8px_18px_rgba(180,83,9,0.12)] md:min-h-11 md:rounded-[12px] md:text-xs md:font-semibold">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#FCD8A6] bg-white/85 text-[#D97706] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
-              </span>
-              <span className="md:hidden">{roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}</span>
-              <span className="hidden md:inline">{`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}</span>
-            </p>
-
-            <p className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#BBF7D0] bg-[linear-gradient(145deg,rgba(240,253,244,0.95),rgba(220,252,231,0.9))] px-1 text-[12px] font-semibold text-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.12)] md:min-h-11 md:rounded-[12px] md:text-xs md:font-bold">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#A7F3D0] bg-white/85 text-emerald-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                <CheckCircle2 size={13} className="text-emerald-600" />
-              </span>
-              Trusted
-            </p>
-          </div>
-
           {photoItems.length > 0 ? (
-            <section className="mt-5 rounded-2xl border border-[#d9dde2] bg-white p-3 sm:p-4">
+            <section className="mt-5 bg-white p-3 sm:p-4 lg:hidden">
               <div className="mb-2.5 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                 <button
                   type="button"
-                  onClick={() => setIsPhotosModalOpen(true)}
+                  onClick={openAllPhotosModal}
                   className="rounded-full border border-[#bfdbfe] bg-white/90 px-2.5 py-1 text-xs font-semibold text-blue-600 shadow-[0_6px_10px_rgba(59,130,246,0.12)]"
                 >
                   View All
                 </button>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:hidden">
+              <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
                 {mobilePhotoRow.map((photo, index) => {
                   const showOverlay = mobileOverflowCount > 0 && index === mobilePhotoRow.length - 1;
                   if (showOverlay) {
@@ -1139,7 +1157,7 @@ export default function ListingProfilePage({
                       <button
                         key={`${photo}-${index}`}
                         type="button"
-                        onClick={() => setIsPhotosModalOpen(true)}
+                        onClick={openAllPhotosModal}
                         className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
                         aria-label={`View ${mobileOverflowCount} more photos`}
                       >
@@ -1158,9 +1176,12 @@ export default function ListingProfilePage({
                   }
 
                   return (
-                    <div
+                    <button
                       key={`${photo}-${index}`}
+                      type="button"
+                      onClick={() => openSinglePhotoModal(photo)}
                       className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
+                      aria-label={`View photo ${index + 1}`}
                     >
                       <img
                         src={photo}
@@ -1168,81 +1189,220 @@ export default function ListingProfilePage({
                         className="h-20 w-full object-cover"
                         loading="lazy"
                       />
-                    </div>
+                    </button>
                   );
                 })}
               </div>
 
-              <div className="hidden grid-cols-6 gap-3 lg:grid">
-                {desktopPhotoRow.map((photo, index) => {
-                  const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
-                  if (showOverlay) {
+            </section>
+          ) : null}
+
+          <div className="mt-2 hidden lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+            <section className="bg-white p-5 [&_.desktop-elevate]:!shadow-sm [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300 [&_.desktop-card:hover]:!shadow-md">
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {storeHref ? (
+                    <Link
+                      href={storeHref}
+                      className="desktop-elevate inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#4F46E5]"
+                    >
+                      <Store size={16} />
+                      My Store
+                    </Link>
+                  ) : (
+                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#A5B4FC] px-3 text-sm font-semibold text-white opacity-60">
+                      <Store size={16} />
+                      Store
+                    </span>
+                  )}
+
+                  {phoneDigits ? (
+                    <a
+                      href={`tel:${phoneDigits}`}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                    >
+                      <Phone size={15} />
+                      Call
+                    </a>
+                  ) : (
+                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
+                      <Phone size={15} />
+                      Call
+                    </span>
+                  )}
+
+                  {whatsappDigits ? (
+                    <a
+                      href={`https://wa.me/${whatsappDigits}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                    >
+                      <WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />
+                      Whatsapp
+                    </a>
+                  ) : (
+                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
+                      <WhatsAppIcon className="h-4 w-4 text-[#9CA3AF]" />
+                      Whatsapp
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {inquiryHref ? (
+                    <a
+                      href={inquiryHref}
+                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl  px-3 text-sm text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                    >
+                      <MessageCircle size={15} />
+                      Inquiry
+                    </a>
+                  ) : (
+                    <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
+                      <MessageCircle size={15} />
+                      Inquiry
+                    </span>
+                  )}
+
+                  {websiteHref ? (
+                    <a
+                      href={websiteHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+                    >
+                      <Globe size={14} />
+                      Website
+                    </a>
+                  ) : (
+                    <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
+                      <Globe size={14} />
+                      Website
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => void handleShare()}
+                    className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm  text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+                  >
+                    <Share2 size={14} />
+                    Share
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 items-center gap-2 text-center">
+                  <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-[#B45309]">
+                    <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
+                    {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
+                  </p>
+
+                  <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-emerald-700">
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                    Trusted
+                  </p>
+
+                  <p
+                    className={`inline-flex min-h-7 items-center justify-center gap-1 text-sm ${
+                      isVerified ? "text-[#2563EB]" : "text-[#64748b]"
+                    }`}
+                  >
+                    <CheckCircle2 size={13} className={isVerified ? "text-[#2563EB]" : "text-[#94a3b8]"} />
+                    {isVerified ? "Verified" : "Not Verified"}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {photoItems.length > 0 ? (
+              <section className="bg-white p-5 lg:-mt-16">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
+                  <button
+                    type="button"
+                    onClick={openAllPhotosModal}
+                    className="rounded-full px-3 py-1 text-xs font-semibold text-indigo-600 transition-colors duration-200 hover:bg-indigo-50"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3">
+                  {desktopPhotoRow.map((photo, index) => {
+                    const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
+                    if (showOverlay) {
+                      return (
+                        <button
+                          key={`${photo}-${index}`}
+                          type="button"
+                          onClick={openAllPhotosModal}
+                          className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
+                          aria-label={`View ${desktopOverflowCount} more photos`}
+                        >
+                          <img
+                            src={photo}
+                            alt={`${profile.name} gallery ${index + 1}`}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          <span className="absolute inset-0 bg-slate-900/45 transition-colors duration-200" />
+                          <span className="absolute inset-0 grid place-items-center text-center text-white">
+                            <span className="text-2xl font-extrabold leading-none">+{desktopOverflowCount}</span>
+                          </span>
+                        </button>
+                      );
+                    }
+
                     return (
                       <button
                         key={`${photo}-${index}`}
                         type="button"
-                        onClick={() => setIsPhotosModalOpen(true)}
-                        className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
-                        aria-label={`View ${desktopOverflowCount} more photos`}
+                        onClick={() => openSinglePhotoModal(photo)}
+                        className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
+                        aria-label={`View photo ${index + 1}`}
                       >
                         <img
                           src={photo}
                           alt={`${profile.name} gallery ${index + 1}`}
-                          className="aspect-square w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                           loading="lazy"
                         />
-                        <span className="absolute inset-0 bg-[#0f172a]/50" />
-                        <span className="absolute inset-0 grid place-items-center text-center text-xl font-extrabold leading-none text-white">
-                          +{desktopOverflowCount}
-                        </span>
+                        <span className="absolute inset-0 bg-slate-900/0 transition-colors duration-200 group-hover:bg-slate-900/35" />
                       </button>
                     );
-                  }
-
-                  return (
-                    <div
-                      key={`${photo}-${index}`}
-                      className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
-                    >
-                      <img
-                        src={photo}
-                        alt={`${profile.name} gallery ${index + 1}`}
-                        className="aspect-square w-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-        </section>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="relative overflow-hidden rounded-[12px] border border-[#dde3ea] bg-white px-4 py-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)] sm:px-5">
-            <div className="pointer-events-none absolute -right-20 -top-16 h-32 w-32 rounded-full bg-[#dbeafe]/55 blur-2xl" />
+                  })}
+                </div>
+              </section>
+            ) : (
+              <section className="bg-white p-5 lg:-mt-3">
+                <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
+                <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
+              </section>
+            )}
+          </div>
+        <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:grid-cols-2">
+          <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5">
 
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <h3
-                  className="inline-flex items-center gap-2.5 text-xl font-bold text-black"
+                  className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB]">
-                    <BriefcaseBusiness size={15} />
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
+                    <BriefcaseBusiness size={13} className="md:hidden" />
+                    <BriefcaseBusiness size={15} className="hidden md:block" />
                   </span>
                   <span>Services</span>
                 </h3>
 
-                <ul className="mt-3 space-y-2">
+                <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
                   {serviceItems.map((service) => (
                     <li
                       key={service}
-                      className="flex items-center gap-2.5 rounded-[10px] border border-[#e6ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-base font-semibold text-[#53606f] transition-all duration-200 hover:translate-x-[1px] hover:bg-white"
+                      className="text-[15px] text-black md:text-base"
                     >
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#86efac] bg-[#ecfdf3] text-[#16a34a]">
-                        <CheckCircle2 size={13} />
-                      </span>
                       {service}
                     </li>
                   ))}
@@ -1251,24 +1411,22 @@ export default function ListingProfilePage({
 
               <div className="border-l border-[#e5e9ef] pl-5">
                 <h3
-                  className="inline-flex items-center gap-2.5 text-xl font-bold text-black"
+                  className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB]">
-                    <Layers3 size={15} />
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
+                    <Layers3 size={13} className="md:hidden" />
+                    <Layers3 size={15} className="hidden md:block" />
                   </span>
                   <span>Categories</span>
                 </h3>
 
-                <ul className="mt-3 space-y-2">
+                <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
                   {categoryItems.map((category) => (
                     <li
                       key={category}
-                      className="flex items-center gap-2.5 rounded-[10px] border border-[#e6ebf2] bg-[#f9fbfd] px-2.5 py-1.5 text-base font-semibold text-[#53606f] transition-all duration-200 hover:translate-x-[1px] hover:bg-white"
+                      className="text-[15px] text-black md:text-base"
                     >
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#86efac] bg-[#ecfdf3] text-[#16a34a]">
-                        <CheckCircle2 size={13} />
-                      </span>
                       {category}
                     </li>
                   ))}
@@ -1277,34 +1435,33 @@ export default function ListingProfilePage({
             </div>
           </section>
 
-          <section className="relative overflow-hidden rounded-[12px] border border-[#dde3ea] bg-white px-4 py-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)] sm:px-5">
-            <div className="pointer-events-none absolute -left-16 -top-16 h-32 w-32 rounded-full bg-[#ffe7ca]/55 blur-2xl" />
+          <section className="relative overflow-hidden rounded-[12px] bg-white px-2 py-5 sm:px-5">
 
             <div className="grid grid-cols-2 gap-3 md:gap-5">
               <div>
                 <h3
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706] md:h-7 md:w-7 md:rounded-[9px]">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
                     <CalendarDays size={11} className="md:hidden" />
                     <CalendarDays size={15} className="hidden md:block" />
                   </span>
                   Establishment Year
                 </h3>
                 {profile.establishmentYear ? (
-                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#ffddb0] bg-[#fff6e8] px-2 py-1 text-[11px] font-bold text-[#b45309] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
                     {`Since ${profile.establishmentYear}`}
                   </p>
                 ) : null}
               </div>
 
-              <div className="border-l border-[#e5e9ef] pl-3 md:pl-5">
+              <div className="pl-3 md:pl-5">
                 <h3
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#ffe4c5] bg-[#fff7ec] text-[#d97706] md:h-7 md:w-7 md:rounded-[9px]">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
                     <Clock3 size={11} className="md:hidden" />
                     <Clock3 size={15} className="hidden md:block" />
                   </span>
@@ -1315,7 +1472,7 @@ export default function ListingProfilePage({
                   {openingSchedule.map((item) => (
                     <li
                       key={`${item.day}-${item.time}`}
-                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[10px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
+                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
                     >
                       <span className="hidden rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280] md:inline">
                         {item.day}
@@ -1332,246 +1489,394 @@ export default function ListingProfilePage({
           </section>
 
           {profile.description ? (
-            <section className="relative overflow-hidden rounded-[12px] border border-[#e5e7eb] bg-[linear-gradient(140deg,#fffefb_0%,#ffffff_58%,#f7fff9_100%)] px-4 py-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] sm:px-5 lg:col-span-2">
-              <div className="pointer-events-none absolute -right-16 -top-14 h-28 w-28 rounded-full bg-[#fde68a]/25 blur-2xl" />
-              <h3
-                className="relative inline-flex items-center gap-2 text-[1.03rem] font-bold text-[#1f2a44]"
-                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#e5d7b4] bg-[#fff7e7] text-[#b45309]">
-                  <Info size={15} />
-                </span>
-                About Business :
-              </h3>
-              <p
-                className="relative mt-3 text-[14px] font-medium leading-[1.72] text-[#3e4a5a]"
-                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-              >
-                {profile.description}
-              </p>
+            <section className="overflow-hidden rounded-[12px] bg-white px-4 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.08)] sm:px-5 lg:col-span-2">
+              <div className="flex items-start gap-4">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white sm:h-24 sm:w-24">
+                  {logoImage ? (
+                    <img
+                      src={logoImage}
+                      alt={`${profile.name} logo`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-[#eef2f6]" />
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <h3
+                    className="text-[0.98rem] font-bold text-[#1f2937] md:text-[1.03rem]"
+                    style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                  >
+                    Business Info
+                  </h3>
+                  <div className="relative mt-2">
+                    <p
+                      ref={businessInfoTextRef}
+                      className={`text-[13px] font-medium leading-[1.68] text-[#334155] md:text-[14px] md:leading-[1.72] ${
+                        isBusinessInfoExpanded
+                          ? ""
+                          : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:5]"
+                      }`}
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                    >
+                      {profile.description}
+                    </p>
+                    {isBusinessInfoOverflowing || isBusinessInfoExpanded ? (
+                      isBusinessInfoExpanded ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
+                          className="mt-2 inline-flex items-center text-xs font-semibold text-[#2563eb] md:text-[13px]"
+                        >
+                          Less
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
+                          className="absolute bottom-0 right-0 inline-flex items-center bg-white pl-0.5 text-xs font-semibold text-[#2563eb] md:text-[13px]"
+                        >
+                            ... More
+                        </button>
+                      )
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </section>
           ) : null}
 
-          <section className="rounded-[12px] border border-[#e6dfd2] px-3 py-3 lg:col-span-2 sm:px-4">
-            <div className="flex items-center gap-3">
-              <h3
-                className="inline-flex items-center gap-2 text-[1.02rem] font-bold text-[#1f2a44]"
-                style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#fde2ba] bg-[#fff3df] text-[#d97706]">
-                  <MessageSquare size={15} />
-                </span>
-                Rating & Reviews
-              </h3>
-              <div className="flex items-center gap-1 rounded-full border border-[#fde2b0] bg-[#fff4df] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    size={18}
-                    className={
-                      star <= ratingOutOfFive
-                        ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.45)]"
-                        : "text-[#c9ced4]"
-                    }
-                  />
-                ))}
-              </div>
+          <section className="rounded-[12px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:col-span-2 sm:px-5 sm:py-5">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,250px)_minmax(0,1fr)_minmax(0,430px)] lg:items-start">
+              <article className="rounded-[8px] bg-[#f5f5f6] px-4 py-7 text-center">
+                <p className="text-[15px] font-semibold text-[#1f2937]">Rating</p>
+                <p
+                  className="mt-2 text-[46px] font-bold leading-none text-[#f38a5d]"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                >
+                  {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
+                </p>
+                <p className="mt-2 text-[13px] font-medium text-[#5b6572]">{`(${reviewCount} Reviews)`}</p>
+              </article>
+
+              <article>
+                <h3
+                  className="text-[1.05rem] font-bold text-[#1f2937]"
+                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                >
+                  {`Based on ${reviewCount} Reviews`}
+                </h3>
+
+                <div className="mt-2 space-y-1.5">
+                  {[5, 4, 3, 2, 1].map((score) => {
+                    const count = reviews.reduce((total, review) => {
+                      const rating = Math.max(1, Math.min(5, Math.round(Number(review.rating || 0))));
+                      return total + (rating === score ? 1 : 0);
+                    }, 0);
+
+                    return (
+                      <div key={score} className="flex items-center gap-2">
+                        <span className="w-[54px] text-[13px] font-semibold text-[#4b5563]">{`${score} Star`}</span>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={`${score}-${star}`}
+                              size={18}
+                              className={
+                                star <= score
+                                  ? "fill-[#f5b014] text-[#f5b014]"
+                                  : "text-[#c8cfd8]"
+                              }
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#475569]">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+
+              <article className="rounded-[14px] border border-[#efefef] bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+                {authLoading ? (
+                  <p className="text-sm font-medium text-[#6b7280]">Checking login status...</p>
+                ) : !currentUser ? (
+                  <>
+                    <h4 className="text-[2rem] font-semibold leading-tight text-[#333333]">Login to review</h4>
+                    <p className="mt-3 text-[1rem] font-medium text-[#4b5563]">
+                      For seamless experience you must login/signup
+                    </p>
+                    <Link
+                      href="/auth"
+                      className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[7px] bg-[#f58b5c] text-xl font-semibold text-white"
+                    >
+                      Login
+                    </Link>
+
+                    <div className="pointer-events-none relative mt-4 overflow-hidden rounded-[10px] border border-white/70 bg-white/45 p-3 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                      <div className="space-y-2 blur-[1.6px]">
+                        <div>
+                          <div className="mb-1 h-3 w-14 rounded bg-[#d9dfe8]" />
+                          <div className="h-9 w-full rounded-[8px] border border-[#d7dee6] bg-white/80" />
+                        </div>
+                        <div>
+                          <div className="mb-1 h-3 w-16 rounded bg-[#d9dfe8]" />
+                          <div className="h-6 w-32 rounded bg-white/80" />
+                        </div>
+                        <div>
+                          <div className="mb-1 h-3 w-16 rounded bg-[#d9dfe8]" />
+                          <div className="h-20 w-full rounded-[8px] border border-[#d7dee6] bg-white/80" />
+                        </div>
+                        <div className="h-10 w-full rounded-[8px] bg-[#f9c3ab]" />
+                      </div>
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.45))]" />
+                    </div>
+                  </>
+                ) : hasAlreadyReviewed ? (
+                  <>
+                    <h4 className="text-[1.6rem] font-semibold leading-tight text-[#333333]">Thanks for your review</h4>
+                    <p className="mt-3 text-sm font-medium text-[#4b5563]">
+                      You already reviewed this shop. You can edit or delete your review below.
+                    </p>
+                    {reviewActionMessage ? (
+                      <p className="mt-3 text-xs font-medium text-[#4b5563]">{reviewActionMessage}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <form className="space-y-3" onSubmit={handleSubmitReview}>
+                    <h4 className="text-[1.6rem] font-semibold leading-tight text-[#333333]">Write a review</h4>
+
+                    <label className="block text-xs font-semibold text-[#4b5563]">
+                      Name
+                      <input
+                        type="text"
+                        value={reviewAuthor}
+                        onChange={(event) => setReviewAuthor(event.target.value)}
+                        disabled={!currentUser}
+                        className="mt-1 min-h-10 w-full rounded-[8px] border border-[#d7dee6] bg-white px-3 text-sm font-medium text-[#374151] outline-none"
+                        placeholder="Your name"
+                      />
+                    </label>
+
+                    <div>
+                      <p className="text-xs font-semibold text-[#4b5563]">Rating</p>
+                      <div className="mt-1 flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setReviewRatingInput(value)}
+                            className="rounded-full p-1"
+                            aria-label={`Rate ${value}`}
+                          >
+                            <Star
+                              size={20}
+                              className={
+                                value <= reviewRatingInput
+                                  ? "fill-[#f5b014] text-[#f5b014]"
+                                  : "text-[#c8cfd8]"
+                              }
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label className="block text-xs font-semibold text-[#4b5563]">
+                      Review
+                      <textarea
+                        value={reviewText}
+                        onChange={(event) => setReviewText(event.target.value)}
+                        className="mt-1 min-h-[96px] w-full rounded-[8px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#374151] outline-none"
+                        placeholder="Write your review"
+                      />
+                    </label>
+
+                    {reviewFormMessage ? (
+                      <p className="text-xs font-medium text-[#5f6569]">{reviewFormMessage}</p>
+                    ) : null}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingReview}
+                      className="inline-flex h-11 w-full items-center justify-center rounded-[8px] bg-[#f58b5c] text-base font-semibold text-white disabled:opacity-60"
+                    >
+                      {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                    </button>
+                  </form>
+                )}
+              </article>
             </div>
 
-            <div className="mt-3 space-y-3.5">
+            <div className="mt-7 space-y-4">
               {reviewsLoading ? (
                 <p className="text-sm font-medium text-[#666b6f]">Loading reviews...</p>
               ) : reviews.length > 0 ? (
                 reviewsToDisplay.map((review) => {
                   const reviewScore = Math.max(0, Math.min(5, Math.round(Number(review.rating || 0))));
-                  const sentiment = reviewScore <= 2 ? "low" : reviewScore === 3 ? "medium" : "high";
                   const isOwnReview = Boolean(currentUser?.id && review.reviewerId === currentUser.id);
                   const isEditingThisReview = editingReviewId === review.id;
                   const reviewEditCount = Math.max(0, Number(review.editCount || 0));
                   const editsRemaining = Math.max(0, 2 - reviewEditCount);
                   const reviewWasEdited = Boolean(review.isEdited || reviewEditCount > 0);
-                  const isExpanded = Boolean(expandedReviewIds[review.id]);
-                  const canToggleMore = Boolean(reviewOverflowIds[review.id]);
-                  const toneClasses =
-                    sentiment === "low"
-                      ? {
-                          card: "",
-                          comment: "text-[#9f2f2f]",
-                          star: "fill-[#ef4444] text-[#ef4444] drop-shadow-[0_1px_2px_rgba(239,68,68,0.36)]",
-                        }
-                      : sentiment === "medium"
-                        ? {
-                            card: "",
-                            comment: "text-[#9a580a]",
-                            star: "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.4)]",
-                          }
-                        : {
-                            card: "",
-                            comment: "text-[#166534]",
-                            star: "fill-[#22c55e] text-[#22c55e] drop-shadow-[0_1px_2px_rgba(34,197,94,0.35)]",
-                          };
 
                   return (
-                    <article
-                      key={review.id}
-                      className={`rounded-[10px] px-3 py-2.5 ${
-                        toneClasses.card
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <p
-                            className="text-[11px] font-semibold text-[#6b7280]"
-                            style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-                          >
-                            {review.author}
-                          </p>
-                          {reviewWasEdited ? (
-                            <span className="rounded-full border border-[#d1d5db] bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#4b5563]">
-                              Edited
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={`${review.id}-${star}`}
-                              size={17}
-                              className={
-                                star <= reviewScore
-                                  ? toneClasses.star
-                                  : "text-[#d2d7dc]"
-                              }
-                            />
-                          ))}
-                        </div>
-                      </div>
+                    <article key={review.id} className="rounded-[10px] border border-[#eceff3] bg-white px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#6f83df] text-lg font-bold text-white">
+                          <UserRound size={22} strokeWidth={2.2} />
+                        </span>
 
-                      {isEditingThisReview ? (
-                        <div className="mt-2 space-y-2">
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((value) => (
-                              <button
-                                key={`${review.id}-edit-${value}`}
-                                type="button"
-                                onClick={() => setEditReviewRating(value)}
-                                disabled={isUpdatingReview}
-                                className="rounded-full p-1 transition-colors duration-150 hover:bg-white/70 disabled:opacity-60"
-                                aria-label={`Set rating ${value}`}
-                              >
-                                <Star
-                                  size={18}
-                                  className={
-                                    value <= editReviewRating
-                                      ? "fill-[#f59e0b] text-[#f59e0b]"
-                                      : "text-[#c3c8cc]"
-                                  }
-                                />
-                              </button>
-                            ))}
-                          </div>
-
-                          <textarea
-                            value={editReviewText}
-                            onChange={(event) => setEditReviewText(event.target.value)}
-                            disabled={isUpdatingReview}
-                            className="min-h-[90px] w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#334155] outline-none"
-                          />
-
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void handleUpdateReview(review)}
-                              disabled={isUpdatingReview}
-                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] bg-[#1d4ed8] px-3 text-xs font-semibold text-white disabled:opacity-60"
-                            >
-                              {isUpdatingReview ? "Saving..." : "Save"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={cancelEditReview}
-                              disabled={isUpdatingReview}
-                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-[#cbd5e1] bg-white px-3 text-xs font-semibold text-[#475569]"
-                            >
-                              Cancel
-                            </button>
-                            <span className="text-[11px] font-medium text-[#6b7280]">
-                              {`Edits left: ${editsRemaining}`}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p
-                            ref={(node) => {
-                              reviewTextRefs.current[review.id] = node;
-                              if (!node || isExpanded) {
-                                return;
-                              }
-
-                              const hasOverflow = node.scrollHeight - node.clientHeight > 1;
-                              setReviewOverflowIds((previous) =>
-                                previous[review.id] === hasOverflow
-                                  ? previous
-                                  : { ...previous, [review.id]: hasOverflow }
-                              );
-                            }}
-                            className={`mt-1.5 text-[15px] font-semibold leading-[1.45] ${toneClasses.comment} ${
-                              isExpanded ? "" : "line-clamp-2 md:line-clamp-5"
-                            }`}
-                            style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-                          >
-                            {review.comment}
-                          </p>
-
-                          {canToggleMore ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleReviewExpanded(review.id)}
-                              className="mt-1 text-xs font-semibold text-[#1d4ed8] hover:underline"
-                            >
-                              {isExpanded ? "Less" : "More"}
-                            </button>
-                          ) : null}
-
-                          <div className="mt-1.5 flex items-center justify-between gap-3">
-                            {review.createdAt ? (
-                              <p className="text-xs font-medium text-gray-500">
-                                {formatReviewDate(String(review.createdAt || ""))}
-                              </p>
-                            ) : <span />}
-
-                            {isOwnReview ? (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditReview(review)}
-                                  disabled={reviewEditCount >= 2}
-                                  className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#cbd5e1] bg-white px-2.5 text-[11px] font-semibold text-[#334155] disabled:cursor-not-allowed disabled:opacity-55"
-                                >
-                                  <Pencil size={12} />
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => void handleDeleteReview(review)}
-                                  disabled={deletingReviewId === review.id}
-                                  className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#fecaca] bg-white px-2.5 text-[11px] font-semibold text-[#b91c1c] disabled:opacity-60"
-                                >
-                                  <Trash2 size={12} />
-                                  {deletingReviewId === review.id ? "Deleting..." : "Delete"}
-                                </button>
-                              </div>
+                            <p className="text-base font-semibold text-[#1f2937]">{review.author}</p>
+                            {reviewWasEdited ? (
+                              <span className="rounded-full border border-[#d1d5db] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#4b5563]">
+                                Edited
+                              </span>
                             ) : null}
                           </div>
 
-                          {isOwnReview && reviewEditCount >= 2 ? (
-                            <p className="mt-1 text-[11px] font-medium text-[#b45309]">
-                              Edit limit reached (2/2).
-                            </p>
-                          ) : null}
-                        </>
-                      )}
+                          <div className="mt-1 flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={`${review.id}-${star}`}
+                                size={18}
+                                className={
+                                  star <= reviewScore
+                                    ? "fill-[#f5b014] text-[#f5b014]"
+                                    : "text-[#c8cfd8]"
+                                }
+                              />
+                            ))}
+                          </div>
+
+                          {isEditingThisReview ? (
+                            <div className="mt-2 space-y-2">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((value) => (
+                                  <button
+                                    key={`${review.id}-edit-${value}`}
+                                    type="button"
+                                    onClick={() => setEditReviewRating(value)}
+                                    disabled={isUpdatingReview}
+                                    className="rounded-full p-1 disabled:opacity-60"
+                                    aria-label={`Set rating ${value}`}
+                                  >
+                                    <Star
+                                      size={18}
+                                      className={
+                                        value <= editReviewRating
+                                          ? "fill-[#f5b014] text-[#f5b014]"
+                                          : "text-[#c8cfd8]"
+                                      }
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+
+                              <textarea
+                                value={editReviewText}
+                                onChange={(event) => setEditReviewText(event.target.value)}
+                                disabled={isUpdatingReview}
+                                className="min-h-[90px] w-full rounded-[8px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#334155] outline-none"
+                              />
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleUpdateReview(review)}
+                                  disabled={isUpdatingReview}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-[8px] bg-[#f58b5c] px-3 text-xs font-semibold text-white disabled:opacity-60"
+                                >
+                                  {isUpdatingReview ? "Saving..." : "Save"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEditReview}
+                                  disabled={isUpdatingReview}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-[#cbd5e1] bg-white px-3 text-xs font-semibold text-[#475569]"
+                                >
+                                  Cancel
+                                </button>
+                                <span className="text-[11px] font-medium text-[#6b7280]">
+                                  {`Edits left: ${editsRemaining}`}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="relative mt-3">
+                                <p
+                                  ref={(node) => {
+                                    reviewTextRefs.current[review.id] = node;
+                                  }}
+                                  className={`text-[13px] font-medium leading-[1.55] text-[#475569] md:text-[14px] md:leading-[1.5] ${
+                                    expandedReviewIds[review.id]
+                                      ? ""
+                                      : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] md:[-webkit-line-clamp:5]"
+                                  }`}
+                                >
+                                  {review.comment}
+                                </p>
+
+                                {reviewOverflowIds[review.id] || expandedReviewIds[review.id] ? (
+                                  expandedReviewIds[review.id] ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleReviewExpanded(review.id)}
+                                      className="mt-1 inline-flex items-center text-[11px] font-semibold text-[#2563eb] md:text-xs"
+                                    >
+                                      Less
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleReviewExpanded(review.id)}
+                                      className="absolute bottom-0 right-0 inline-flex items-center bg-white pl-0.5 text-[11px] font-semibold text-[#2563eb] md:text-xs"
+                                    >
+                                      ...... More
+                                    </button>
+                                  )
+                                ) : null}
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                {review.createdAt ? (
+                                  <p className="text-xs font-medium text-gray-500">
+                                    {formatReviewDate(String(review.createdAt || ""))}
+                                  </p>
+                                ) : <span />}
+
+                                {isOwnReview ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditReview(review)}
+                                      disabled={reviewEditCount >= 2}
+                                      className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#cbd5e1] bg-white px-2.5 text-[11px] font-semibold text-[#334155] disabled:cursor-not-allowed disabled:opacity-55"
+                                    >
+                                      <Pencil size={12} />
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleDeleteReview(review)}
+                                      disabled={deletingReviewId === review.id}
+                                      className="inline-flex min-h-8 items-center gap-1 rounded-[8px] border border-[#fecaca] bg-white px-2.5 text-[11px] font-semibold text-[#b91c1c] disabled:opacity-60"
+                                    >
+                                      <Trash2 size={12} />
+                                      {deletingReviewId === review.id ? "Deleting..." : "Delete"}
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </article>
                   );
                 })
@@ -1581,143 +1886,69 @@ export default function ListingProfilePage({
             </div>
 
             {reviewActionMessage ? (
-              <p className="mt-2 text-xs font-medium text-[#4b5563]">{reviewActionMessage}</p>
+              <p className="mt-3 text-xs font-medium text-[#4b5563]">{reviewActionMessage}</p>
             ) : null}
 
             <p className="mt-2.5 text-xs font-medium text-gray-500">
               {`Overall ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} from ${reviewCount} reviews`}
             </p>
           </section>
-
-          <section className="relative overflow-hidden rounded-[12px] border border-[#e2e7ee] bg-[linear-gradient(135deg,#ffffff_0%,#f9fbff_62%,#f4fff8_100%)] px-4 py-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] sm:px-5 lg:col-span-2">
-            <div className="pointer-events-none absolute -right-20 -top-16 h-32 w-32 rounded-full bg-[#bfdbfe]/35 blur-2xl" />
-            <div className="pointer-events-none absolute -left-20 bottom-0 h-28 w-28 rounded-full bg-[#bbf7d0]/25 blur-2xl" />
-
-            <h3
-              className="relative inline-flex items-center gap-2 text-[1.03rem] font-bold text-[#1f2a44]"
-              style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-            >
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-[9px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563eb]">
-                <PencilLine size={15} />
-              </span>
-              Write a Review
-            </h3>
-
-            {authLoading ? (
-              <p className="mt-3.5 text-sm font-medium text-[#6b7280]">Checking login status...</p>
-            ) : hasAlreadyReviewed ? (
-              <div className="mt-3.5 rounded-[12px] border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-sm font-semibold text-[#166534]">
-                You already reviewed this shop. You can edit (up to 2 times) or delete your review above.
-              </div>
-            ) : (
-              <form className="relative mt-3.5 space-y-3.5" onSubmit={handleSubmitReview}>
-                <label className="block text-xs font-semibold text-[#4b5563]">
-                  Name
-                  <input
-                    type="text"
-                    value={reviewAuthor}
-                    onChange={(event) => setReviewAuthor(event.target.value)}
-                    disabled={!currentUser}
-                    className="mt-1 min-h-10 w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 text-sm font-medium text-[#374151] outline-none"
-                    placeholder="Your name"
-                  />
-                </label>
-
-                <div>
-                  <p className="text-xs font-semibold text-[#4b5563]">Rating</p>
-                  <div className="mt-1 flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setReviewRatingInput(value)}
-                        disabled={!currentUser}
-                        className="rounded-full p-1 transition-colors duration-150 hover:bg-[#fff7e6] disabled:opacity-60"
-                        aria-label={`Rate ${value}`}
-                      >
-                        <Star
-                          size={21}
-                          className={
-                            value <= reviewRatingInput
-                              ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-[0_1px_2px_rgba(245,158,11,0.4)]"
-                              : "text-[#c3c8cc]"
-                          }
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <label className="block text-xs font-semibold text-[#4b5563]">
-                  Review
-                  <textarea
-                    value={reviewText}
-                    onChange={(event) => setReviewText(event.target.value)}
-                    disabled={!currentUser}
-                    className="mt-1 min-h-[96px] w-full rounded-[10px] border border-[#d7dee6] bg-white px-3 py-2 text-sm font-medium text-[#374151] outline-none"
-                    placeholder="Write your review"
-                  />
-                </label>
-
-                {reviewFormMessage ? (
-                  <p className="text-xs font-medium text-[#5f6569]">{reviewFormMessage}</p>
-                ) : null}
-
-                {!currentUser ? (
-                  <Link
-                    href="/auth"
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-[10px] border border-[#bae6fd] bg-[#e0f2fe] px-4 text-sm font-semibold text-[#0f4f68]"
-                  >
-                    Login to write a review
-                  </Link>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReview}
-                    className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#2b98c8] px-4 text-sm font-semibold text-white shadow-[0_6px_12px_rgba(43,152,200,0.28)] disabled:opacity-60"
-                  >
-                    {isSubmittingReview ? "Submitting..." : "Submit Review"}
-                  </button>
-                )}
-              </form>
-            )}
-          </section>
         </div>
+        </section>
 
         {isPhotosModalOpen ? (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3"
-            onClick={() => setIsPhotosModalOpen(false)}
+            onClick={closePhotosModal}
           >
             <section
-              className="w-full max-w-5xl rounded-2xl border border-[#d9dde2] bg-white p-4 shadow-xl"
+              className="w-full max-w-5xl rounded-2xl bg-white p-4"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-[20px] font-semibold text-[#5b6064]">All Photos</h3>
+                <h3 className="text-[20px] font-semibold text-[#5b6064]">
+                  {selectedPhotoUrl ? "Photo Preview" : "All Photos"}
+                </h3>
                 <button
                   type="button"
-                  onClick={() => setIsPhotosModalOpen(false)}
+                  onClick={closePhotosModal}
                   className="rounded-[10px] bg-[#d4f2ef] px-3 py-1.5 text-[13px] font-semibold text-[#5f6569]"
                 >
                   Close
                 </button>
               </div>
 
-              <div className="max-h-[70vh] overflow-y-auto pr-1">
-                <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-6">
-                  {photoItems.map((photo, index) => (
-                    <div key={`${photo}-all-${index}`} className="overflow-hidden rounded-[10px] border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]">
-                      <img
-                        src={photo}
-                        alt={`${profile.name} gallery full ${index + 1}`}
-                        className="h-20 w-full object-cover sm:h-24 lg:h-28"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
+              {selectedPhotoUrl ? (
+                <div className="flex max-h-[78vh] items-center justify-center overflow-hidden rounded-[12px] bg-[#f3f4f6]">
+                  <img
+                    src={selectedPhotoUrl}
+                    alt={`${profile.name} photo preview`}
+                    className="max-h-[78vh] w-full object-contain"
+                    loading="lazy"
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="max-h-[70vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-6">
+                    {photoItems.map((photo, index) => (
+                      <button
+                        key={`${photo}-all-${index}`}
+                        type="button"
+                        onClick={() => openSinglePhotoModal(photo)}
+                        className="overflow-hidden rounded-[10px] bg-[#f3f4f6]"
+                        aria-label={`View photo ${index + 1}`}
+                      >
+                        <img
+                          src={photo}
+                          alt={`${profile.name} gallery full ${index + 1}`}
+                          className="h-20 w-full object-cover sm:h-24 lg:h-28"
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         ) : null}

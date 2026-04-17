@@ -911,8 +911,7 @@ router.put("/auth/me", async (req, res) => {
     const uniqueServiceTags = Array.from(new Set(serviceTags));
     const shopGallery = shopGalleryInput
       .map((value) => normalizeMediaValue(value))
-      .filter(Boolean)
-      .slice(0, 12);
+      .filter(Boolean);
 
     if (user.role === "vendor") {
       if (!email || !phone) {

@@ -36,6 +36,7 @@ export default function Navbar() {
   const [selectedCity, setSelectedCity] = useState("");
   const [loadingCities, setLoadingCities] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const currentPath = useMemo(() => {
@@ -168,6 +169,27 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [menuOpen]);
 
+  useEffect(() => {
+    const updateMobileSearchOnlyState = () => {
+      const isMobileViewport = window.innerWidth < 768;
+      if (!isMobileViewport) {
+        setIsMobileSearchOnly(false);
+        return;
+      }
+
+      setIsMobileSearchOnly(window.scrollY > 56);
+    };
+
+    updateMobileSearchOnlyState();
+    window.addEventListener("scroll", updateMobileSearchOnlyState, { passive: true });
+    window.addEventListener("resize", updateMobileSearchOnlyState);
+
+    return () => {
+      window.removeEventListener("scroll", updateMobileSearchOnlyState);
+      window.removeEventListener("resize", updateMobileSearchOnlyState);
+    };
+  }, []);
+
   const displayName = useMemo(() => {
     if (!user) return "";
     return user.name || user.email || user.phone || "Profile";
@@ -210,7 +232,13 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-orange-100/80 shadow-sm font-medium">
       <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
-        <div className="flex items-center justify-between py-3">
+        <div
+          className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
+            isMobileSearchOnly
+              ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-3 md:opacity-100"
+              : "max-h-24 py-3 opacity-100"
+          }`}
+        >
           {/* Logo */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-3">
             {showBack ? (
@@ -409,7 +437,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className="md:hidden pb-3">
+        <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3"}`}>
           <div className="flex items-center gap-2 rounded-full border border-orange-100 bg-white px-5 py-2 shadow-sm">
             <Search size={18} className="text-orange-500" />
             <input

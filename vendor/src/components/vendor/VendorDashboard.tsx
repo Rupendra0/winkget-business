@@ -239,7 +239,6 @@ const DEFAULT_VENDOR_AVATAR =
 const DEFAULT_VENDOR_BANNER =
   "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=60";
 const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
-const MAX_SHOP_GALLERY_ITEMS = 8;
 const NOTIFICATION_READ_STORAGE_KEY_PREFIX = "winkget_vendor_notification_reads";
 const NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX = "winkget_vendor_notification_dismissed";
 const MAX_NOTIFICATIONS_IN_POPUP = 20;
@@ -554,7 +553,7 @@ function parseShopGalleryInput(value: string): string[] {
     new Set(
       expanded.filter((item) => MEDIA_URL_REGEX.test(item) || IMAGE_DATA_URL_REGEX.test(item))
     )
-  ).slice(0, MAX_SHOP_GALLERY_ITEMS);
+  );
 }
 
 function filterShopGalleryItems(values: string[], profileImage: string, bannerImage: string): string[] {
@@ -698,12 +697,12 @@ function MyStorePreviewSection({
   return (
     <section className="space-y-4">
       <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <div className="relative h-40 sm:h-48">
+        <div className="relative h-44 sm:h-52 lg:h-60">
           <img src={displayBanner} alt={`${businessName} banner`} className="h-full w-full object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-900/60 via-gray-900/25 to-transparent" />
 
           <div className="absolute bottom-4 left-4 flex items-center gap-3">
-            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white bg-white shadow">
+            <div className="h-[96px] w-[96px] overflow-hidden rounded-full border-2 border-white bg-white shadow sm:h-[104px] sm:w-[104px] lg:h-[116px] lg:w-[116px]">
               <img src={displayAvatar} alt={`${businessName} dp`} className="h-full w-full object-cover" loading="lazy" />
             </div>
 
@@ -718,6 +717,9 @@ function MyStorePreviewSection({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore DP</p>
+              <div className="mt-2 h-[116px] w-[116px] overflow-hidden rounded-full border-2 border-white bg-white shadow-sm lg:h-[126px] lg:w-[126px]">
+                <img src={displayAvatar} alt="MyStore DP preview" className="h-full w-full object-cover" loading="lazy" />
+              </div>
               <div className="mt-2 flex items-center gap-2">
                 <label
                   className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
@@ -751,6 +753,9 @@ function MyStorePreviewSection({
 
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore Banner</p>
+              <div className="mt-2 h-44 overflow-hidden rounded-xl bg-gray-100 sm:h-52 lg:h-60">
+                <img src={displayBanner} alt="MyStore banner preview" className="h-full w-full object-cover" loading="lazy" />
+              </div>
               <div className="mt-2 flex items-center gap-2">
                 <label
                   className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
@@ -1565,7 +1570,7 @@ function ShopProfileSection({
             <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-black/5" />
             <div className="absolute inset-x-3 bottom-3 flex items-end gap-3">
-              <div className="vendor-shop-preview-avatar overflow-hidden rounded-2xl bg-white">
+              <div className="vendor-shop-preview-avatar overflow-hidden rounded-full bg-white">
                 <img src={avatarImage} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
               </div>
               <div className="min-w-0 flex-1 pb-1 text-white">
@@ -1620,7 +1625,7 @@ function ShopProfileSection({
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Display Photo</p>
-              <div className="mt-2 h-24 w-24 overflow-hidden rounded-xl bg-white">
+              <div className="mt-2 h-[116px] w-[116px] overflow-hidden rounded-full border-2 border-white bg-white shadow-sm lg:h-[126px] lg:w-[126px]">
                 <img src={avatarImage} alt="Shop display" className="h-full w-full object-cover" loading="lazy" />
               </div>
               <button
@@ -1634,7 +1639,7 @@ function ShopProfileSection({
 
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Banner</p>
-              <div className="mt-2 h-24 overflow-hidden rounded-xl bg-white">
+              <div className="mt-2 h-44 overflow-hidden rounded-xl bg-white sm:h-52 lg:h-60">
                 <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
               </div>
               <button
@@ -1693,15 +1698,15 @@ function ShopProfileSection({
           </label>
 
           <div className="mt-3 rounded-xl bg-gray-50 p-3">
-            <p className="text-xs font-semibold text-gray-600">Shop Photos (max {MAX_SHOP_GALLERY_ITEMS})</p>
+            <p className="text-xs font-semibold text-gray-600">Shop Photos</p>
 
             {galleryItems.length === 0 ? (
               <p className="mt-2 text-xs text-gray-500">No photos uploaded yet.</p>
             ) : (
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {galleryItems.map((url) => (
-                  <div key={url} className="relative overflow-hidden rounded-lg bg-white">
-                    <img src={url} alt="Shop gallery" className="h-20 w-full object-cover" loading="lazy" />
+                  <div key={url} className="relative overflow-hidden rounded-xl bg-white">
+                    <img src={url} alt="Shop gallery" className="aspect-[4/3] w-full object-cover" loading="lazy" />
                     <button
                       type="button"
                       onClick={() => onRemoveGalleryItem(url)}
@@ -3595,19 +3600,14 @@ export default function VendorDashboard() {
       shopProfileForm.image,
       shopProfileForm.shopBannerImage
     );
-    const availableSlots = Math.max(0, MAX_SHOP_GALLERY_ITEMS - sanitizedExistingGallery.length);
-    if (availableSlots === 0) {
-      setShopProfileError(`Shop gallery supports up to ${MAX_SHOP_GALLERY_ITEMS} images.`);
-      return;
-    }
 
     try {
-      const uploadedGallery = await Promise.all(validImageFiles.slice(0, availableSlots).map((file) => fileToDataUrl(file)));
+      const uploadedGallery = await Promise.all(validImageFiles.map((file) => fileToDataUrl(file)));
       const mergedGallery = filterShopGalleryItems(
         [...sanitizedExistingGallery, ...uploadedGallery],
         shopProfileForm.image,
         shopProfileForm.shopBannerImage
-      ).slice(0, MAX_SHOP_GALLERY_ITEMS);
+      );
 
       setShopProfileForm((current) => ({
         ...current,

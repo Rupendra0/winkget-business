@@ -306,7 +306,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     shopBannerImage: vendor.shopBannerImage || "",
     myStoreImage: vendor.myStoreImage || "",
     myStoreBannerImage: vendor.myStoreBannerImage || "",
-    shopGallery: Array.isArray(vendor.shopGallery) ? vendor.shopGallery.filter(Boolean).slice(0, 12) : [],
+    shopGallery: Array.isArray(vendor.shopGallery) ? vendor.shopGallery.filter(Boolean) : [],
     ctaLabel: "Inquiry",
     badges: vendor.vendorStatus === "approved" ? ["Verified"] : [],
     priceRange: undefined,
