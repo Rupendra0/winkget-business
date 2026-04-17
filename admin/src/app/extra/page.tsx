@@ -498,12 +498,12 @@ export default function ExtraPage() {
         <Modal
           open={Boolean(editingCity)}
           title={editingCity ? `Edit city: ${editingCity.name}` : "Edit city"}
-          onClose={closeEditCityModal}
+          onClose={() => closeEditCityModal()}
           footer={
             <>
               <button
                 type="button"
-                onClick={closeEditCityModal}
+                onClick={() => closeEditCityModal()}
                 disabled={savingCityEdit}
                 className="rounded-lg border border-(--border) px-3 py-1.5 text-xs text-(--text-soft) disabled:opacity-60"
               >
