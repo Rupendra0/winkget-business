@@ -7,11 +7,14 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Copy,
   Globe,
   Layers3,
+  Mail,
   MapPin,
   MessageCircle,
   MessageSquare,
+  Navigation,
   Pencil,
   PencilLine,
   Phone,
@@ -26,6 +29,7 @@ import { buildProductSlug } from "@/data/productSlug";
 import Footer from "@/components/Footer";
 import RestaurantMarketplacePage from "@/components/RestaurantMarketplacePage";
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import { submitVendorInquiry } from "@/lib/catalogClient";
 import {
   deleteBusinessReview,
   fetchBusinessReviews,
@@ -117,6 +121,9 @@ const formatReviewDate = (value: string) => {
     year: "numeric",
   });
 };
+
+const INQUIRY_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INQUIRY_PHONE_REGEX = /^[0-9]{10}$/;
 
 type OpeningScheduleItem = {
   day: string;
@@ -282,7 +289,18 @@ export default function ListingProfilePage({
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [inquiryName, setInquiryName] = useState("");
+  const [inquiryPhone, setInquiryPhone] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquirySubject, setInquirySubject] = useState(`Inquiry for ${profile.name}`);
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [inquiryFormMessage, setInquiryFormMessage] = useState<string | null>(null);
+  const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [contactCardMessage, setContactCardMessage] = useState<string | null>(null);
+  const [isHeroScrollBarVisible, setIsHeroScrollBarVisible] = useState(false);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
+  const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const businessInfoTextRef = useRef<HTMLParagraphElement | null>(null);
   const reviewTextRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
 
@@ -342,9 +360,62 @@ export default function ListingProfilePage({
   }, [profile.id]);
 
   useEffect(() => {
+    setInquirySubject(`Inquiry for ${profile.name}`);
+    setInquiryFormMessage(null);
+  }, [profile.id, profile.name]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const name = String(currentUser.name || "").trim();
+    const email = String(currentUser.email || "").trim();
+    const phone = normalizeDigits(String(currentUser.phone || "")).slice(0, 10);
+
+    if (name) {
+      setInquiryName((previous) => previous || name);
+    }
+
+    if (email) {
+      setInquiryEmail((previous) => previous || email);
+    }
+
+    if (phone) {
+      setInquiryPhone((previous) => previous || phone);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     return subscribeVendorStoreStatus(String(profile.id || ""), (payload) => {
       setLiveStoreStatus(payload);
     });
+  }, [profile.id]);
+
+  useEffect(() => {
+    const updateHeroScrollBarVisibility = () => {
+      if (typeof window === "undefined" || window.innerWidth < 1024) {
+        setIsHeroScrollBarVisible(false);
+        return;
+      }
+
+      const heroRect = heroSectionRef.current?.getBoundingClientRect();
+      if (!heroRect) {
+        setIsHeroScrollBarVisible(false);
+        return;
+      }
+
+      setIsHeroScrollBarVisible(heroRect.bottom <= 72);
+    };
+
+    updateHeroScrollBarVisibility();
+    window.addEventListener("scroll", updateHeroScrollBarVisibility, { passive: true });
+    window.addEventListener("resize", updateHeroScrollBarVisibility);
+
+    return () => {
+      window.removeEventListener("scroll", updateHeroScrollBarVisibility);
+      window.removeEventListener("resize", updateHeroScrollBarVisibility);
+    };
   }, [profile.id]);
 
   const fullAddress = useMemo(() => {
@@ -371,28 +442,30 @@ export default function ListingProfilePage({
     [profile.phone, profile.whatsapp]
   );
   const websiteHref = useMemo(() => sanitizeWebsite(profile.website), [profile.website]);
+  const emailHref = useMemo(() => {
+    const email = String(profile.email || "").trim();
+    if (!email) {
+      return "";
+    }
+
+    return `mailto:${email}?subject=${encodeURIComponent(`Inquiry for ${profile.name}`)}`;
+  }, [profile.email, profile.name]);
+  const directionsHref = useMemo(() => {
+    const query = fullAddress || [profile.name, profile.city].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
+    if (!query) {
+      return "";
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }, [fullAddress, profile.city, profile.name]);
   const storeHref = useMemo(() => {
     const storeId = String(profile.storeId || profile.id || "").trim();
     return storeId ? `/store/${storeId}` : "";
   }, [profile.id, profile.storeId]);
-  const inquiryHref = useMemo(() => {
-    const email = String(profile.email || "").trim();
-    const subject = encodeURIComponent(`Inquiry for ${profile.name}`);
-
-    if (email) {
-      return `mailto:${email}?subject=${subject}`;
-    }
-
-    if (whatsappDigits) {
-      return `https://wa.me/${whatsappDigits}`;
-    }
-
-    if (phoneDigits) {
-      return `tel:${phoneDigits}`;
-    }
-
-    return "";
-  }, [phoneDigits, profile.email, profile.name, whatsappDigits]);
+  const hasInquiryTarget = useMemo(
+    () => Boolean(String(profile.id || profile.storeId || "").trim()),
+    [profile.id, profile.storeId]
+  );
 
   const categoryItems = useMemo(
     () => uniqueStrings([profile.category, ...(Array.isArray(profile.tags) ? profile.tags : [])]),
@@ -408,8 +481,10 @@ export default function ListingProfilePage({
     () => uniqueStrings(Array.isArray(profile.gallery) ? profile.gallery : []),
     [profile.gallery]
   );
-  const mobilePhotoSlots = 4;
-  const desktopPhotoSlots = 8;
+  const photoGridColumns = 4;
+  const photoGridRows = 4;
+  const mobilePhotoSlots = photoGridColumns * photoGridRows;
+  const desktopPhotoSlots = photoGridColumns * photoGridRows;
   const mobilePhotoRow = photoItems.slice(0, Math.min(photoItems.length, mobilePhotoSlots));
   const desktopPhotoRow = photoItems.slice(0, Math.min(photoItems.length, desktopPhotoSlots));
   const mobileOverflowCount = Math.max(0, photoItems.length - mobilePhotoSlots);
@@ -545,6 +620,29 @@ export default function ListingProfilePage({
     setIsPhotosModalOpen(true);
   };
 
+  const openInquiryModal = () => {
+    setInquiryFormMessage(null);
+    setIsInquiryModalOpen(true);
+  };
+
+  const closeInquiryModal = () => {
+    setIsInquiryModalOpen(false);
+  };
+
+  const handleCopyAddress = async () => {
+    if (!fullAddress) {
+      setContactCardMessage("Address is unavailable.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(fullAddress);
+      setContactCardMessage("Address copied.");
+    } catch {
+      setContactCardMessage("Unable to copy address.");
+    }
+  };
+
   const handleShare = async () => {
     const pageUrl = typeof window !== "undefined" ? window.location.href : "";
     if (!pageUrl) return;
@@ -570,6 +668,127 @@ export default function ListingProfilePage({
       setShareMessage("Unable to share right now");
     }
   };
+
+  const handleSubmitInquiry = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setInquiryFormMessage(null);
+
+    const vendorId = String(profile.id || profile.storeId || "").trim();
+    if (!vendorId) {
+      setInquiryFormMessage("Vendor information is unavailable right now.");
+      return;
+    }
+
+    const name = inquiryName.trim();
+    const phone = normalizeDigits(inquiryPhone).slice(0, 10);
+    const email = inquiryEmail.trim();
+    const subject = inquirySubject.trim() || `Inquiry for ${profile.name}`;
+    const message = inquiryMessage.trim();
+
+    if (!name) {
+      setInquiryFormMessage("Please enter your name.");
+      return;
+    }
+
+    if (!INQUIRY_PHONE_REGEX.test(phone)) {
+      setInquiryFormMessage("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    if (email && !INQUIRY_EMAIL_REGEX.test(email)) {
+      setInquiryFormMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (message.length < 8) {
+      setInquiryFormMessage("Please enter a detailed enquiry.");
+      return;
+    }
+
+    setIsSubmittingInquiry(true);
+    try {
+      await submitVendorInquiry({
+        vendorId,
+        name,
+        phone,
+        email: email || undefined,
+        subject,
+        message,
+        channel: "Web",
+      });
+
+      setInquiryMessage("");
+      setInquiryFormMessage("Enquiry sent successfully.");
+    } catch (submitError) {
+      setInquiryFormMessage(
+        submitError instanceof Error ? submitError.message : "Unable to send enquiry right now."
+      );
+    } finally {
+      setIsSubmittingInquiry(false);
+    }
+  };
+
+  const renderInquiryForm = (formClassName = "space-y-2.5") => (
+    <form className={formClassName} onSubmit={handleSubmitInquiry}>
+      <input
+        type="text"
+        value={inquiryName}
+        onChange={(event) => setInquiryName(event.target.value)}
+        className="w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+        placeholder="Your name"
+        required
+      />
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <input
+          type="tel"
+          value={inquiryPhone}
+          onChange={(event) => setInquiryPhone(normalizeDigits(event.target.value).slice(0, 10))}
+          className="w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+          placeholder="Phone"
+          inputMode="numeric"
+          maxLength={10}
+          required
+        />
+
+        <input
+          type="email"
+          value={inquiryEmail}
+          onChange={(event) => setInquiryEmail(event.target.value)}
+          className="w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+          placeholder="Email (optional)"
+        />
+      </div>
+
+      <input
+        type="text"
+        value={inquirySubject}
+        onChange={(event) => setInquirySubject(event.target.value)}
+        className="w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+        placeholder="Subject"
+      />
+
+      <textarea
+        value={inquiryMessage}
+        onChange={(event) => setInquiryMessage(event.target.value)}
+        className="min-h-[92px] w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+        placeholder="Write your enquiry"
+        required
+      />
+
+      {inquiryFormMessage ? (
+        <p className="text-xs font-medium text-[#4b5563]">{inquiryFormMessage}</p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={isSubmittingInquiry}
+        className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#2563eb] text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#1d4ed8] disabled:opacity-60"
+      >
+        {isSubmittingInquiry ? "Sending..." : "Send Enquiry"}
+      </button>
+    </form>
+  );
 
   const handleSubmitReview = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -911,9 +1130,110 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
+    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8 lg:pb-28">
       <div className="mx-auto w-full max-w-[1120px] space-y-0 lg:max-w-[1240px]">
+        {isHeroScrollBarVisible ? (
+          <>
+            <section className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[#d7dde6] bg-white/95 shadow-[0_-8px_20px_rgba(15,23,42,0.12)] backdrop-blur lg:block">
+              <div className="w-full px-4 py-2.5 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="truncate text-[18px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                    <span className="inline-flex items-center gap-1 rounded-[7px] bg-[#118c2a] px-2 py-0.5 text-[13px] font-bold text-white">
+                      {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
+                      <Star size={14} className="fill-white text-white" />
+                    </span>
+
+                    <span className="text-[13px] font-medium text-[#374151]">{`${reviewCount} Ratings`}</span>
+
+                    <span className="inline-flex rounded-[7px] bg-[#f9dd67] px-2 py-0.5 text-[13px] font-semibold text-[#7c5800]">
+                      Trust
+                    </span>
+
+                    <span className="text-[15px] font-semibold text-[#2964b8]">Verified</span>
+
+                    <span className="text-[15px] font-semibold text-[#111827]">Claimed</span>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-3">
+                  {phoneDigits ? (
+                    <a
+                      href={`tel:${phoneDigits}`}
+                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#0e9f2f] px-5 text-sm font-semibold text-white"
+                    >
+                      <Phone size={18} />
+                      <span>{profile.phone}</span>
+                    </a>
+                  ) : (
+                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#9ca3af] px-5 text-sm font-semibold text-white opacity-70">
+                      <Phone size={18} />
+                      Call
+                    </span>
+                  )}
+
+                  {hasInquiryTarget ? (
+                    <button
+                      type="button"
+                      onClick={openInquiryModal}
+                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#1778d0] px-5 text-sm font-semibold text-white"
+                    >
+                      <MessageCircle size={18} />
+                      Enquire Now
+                    </button>
+                  ) : (
+                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#93c5fd] px-5 text-sm font-semibold text-white opacity-70">
+                      <MessageCircle size={18} />
+                      Enquire Now
+                    </span>
+                  )}
+
+                  {whatsappDigits ? (
+                    <a
+                      href={`https://wa.me/${whatsappDigits}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] border border-[#1f8d29] bg-white px-5 text-sm font-semibold text-[#0f172a]"
+                    >
+                      <WhatsAppIcon className="h-5 w-5 text-[#16a34a]" />
+                      WhatsApp
+                    </a>
+                  ) : (
+                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-slate-500 opacity-70">
+                      <WhatsAppIcon className="h-5 w-5 text-[#94a3b8]" />
+                      WhatsApp
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => void handleShare()}
+                    className="inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151]"
+                    aria-label="Share profile"
+                  >
+                    <Share2 size={20} />
+                  </button>
+
+                  <a
+                    href={websiteHref || "#"}
+                    target={websiteHref ? "_blank" : undefined}
+                    rel={websiteHref ? "noreferrer" : undefined}
+                    className={`inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151] ${websiteHref ? "" : "pointer-events-none opacity-55"}`}
+                    aria-label="Open website"
+                  >
+                    <Globe size={20} />
+                  </a>
+                </div>
+              </div>
+              </div>
+            </section>
+          </>
+        ) : null}
+
         <section className="rounded-[24px] bg-white px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
+          <div ref={heroSectionRef}>
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f2f3f5]">
             {coverImage ? (
               <img
@@ -972,7 +1292,7 @@ export default function ListingProfilePage({
           <div className="mt-2 text-center md:hidden">
             <h1
               className="mx-auto max-w-full truncate px-2 text-[20px] font-extrabold leading-snug text-[#4b4f53]"
-              style={{ fontFamily: "sans-serif" }}
+              style={{ fontFamily: "Fahkwang" }}
             >
               {profile.name}
             </h1>
@@ -1007,7 +1327,7 @@ export default function ListingProfilePage({
 
                 <h1
                   className="text-[0.875rem] font-black leading-[1.05] text-[#132945] lg:text-[2rem]"
-                  style={{ fontFamily: "sans-serif", letterSpacing: "0.05px" }}
+                  style={{ fontFamily: "Fahkwang", letterSpacing: "0.05px" }}
                 >
                   {profile.name}
                 </h1>
@@ -1092,16 +1412,17 @@ export default function ListingProfilePage({
             </div>
 
             <div className="mt-2.5 grid grid-cols-3 gap-2.5">
-              {inquiryHref ? (
-                <a
-                  href={inquiryHref}
+              {hasInquiryTarget ? (
+                <button
+                  type="button"
+                  onClick={openInquiryModal}
                   className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
                 >
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
                     <MessageCircle size={13} />
                   </span>
                   Inquiry
-                </a>
+                </button>
               ) : (
                 <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black opacity-55 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
@@ -1135,6 +1456,7 @@ export default function ListingProfilePage({
           {shareMessage ? (
             <p className="mt-2.5 text-center text-xs font-medium text-gray-500">{shareMessage}</p>
           ) : null}
+          </div>
 
           {photoItems.length > 0 ? (
             <section className="mt-5 bg-white p-3 sm:p-4 lg:hidden">
@@ -1198,147 +1520,328 @@ export default function ListingProfilePage({
           ) : null}
 
           <div className="mt-2 hidden lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
-            <section className="bg-white p-5 [&_.desktop-elevate]:!shadow-sm [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300 [&_.desktop-card:hover]:!shadow-md">
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-3">
-                  {storeHref ? (
-                    <Link
-                      href={storeHref}
-                      className="desktop-elevate inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#4F46E5]"
-                    >
-                      <Store size={16} />
-                      My Store
-                    </Link>
-                  ) : (
-                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#A5B4FC] px-3 text-sm font-semibold text-white opacity-60">
-                      <Store size={16} />
-                      Store
-                    </span>
-                  )}
+            <div className="space-y-5">
+              <section className="bg-white p-5 [&_.desktop-elevate]:!shadow-sm [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300 [&_.desktop-card:hover]:!shadow-md">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    {storeHref ? (
+                      <Link
+                        href={storeHref}
+                        className="desktop-elevate inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#4F46E5]"
+                      >
+                        <Store size={16} />
+                        My Store
+                      </Link>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#A5B4FC] px-3 text-sm font-semibold text-white opacity-60">
+                        <Store size={16} />
+                        Store
+                      </span>
+                    )}
 
-                  {phoneDigits ? (
-                    <a
-                      href={`tel:${phoneDigits}`}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
-                    >
-                      <Phone size={15} />
-                      Call
-                    </a>
-                  ) : (
-                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
-                      <Phone size={15} />
-                      Call
-                    </span>
-                  )}
+                    {phoneDigits ? (
+                      <a
+                        href={`tel:${phoneDigits}`}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                      >
+                        <Phone size={15} />
+                        Call
+                      </a>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
+                        <Phone size={15} />
+                        Call
+                      </span>
+                    )}
 
-                  {whatsappDigits ? (
-                    <a
-                      href={`https://wa.me/${whatsappDigits}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                    {whatsappDigits ? (
+                      <a
+                        href={`https://wa.me/${whatsappDigits}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                      >
+                        <WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />
+                        Whatsapp
+                      </a>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
+                        <WhatsAppIcon className="h-4 w-4 text-[#9CA3AF]" />
+                        Whatsapp
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    {hasInquiryTarget ? (
+                      <button
+                        type="button"
+                        onClick={openInquiryModal}
+                        className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl  px-3 text-sm text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                      >
+                        <MessageCircle size={15} />
+                        Inquiry
+                      </button>
+                    ) : (
+                      <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
+                        <MessageCircle size={15} />
+                        Inquiry
+                      </span>
+                    )}
+
+                    {websiteHref ? (
+                      <a
+                        href={websiteHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+                      >
+                        <Globe size={14} />
+                        Website
+                      </a>
+                    ) : (
+                      <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
+                        <Globe size={14} />
+                        Website
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => void handleShare()}
+                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm  text-slate-700 transition-colors duration-200 hover:bg-slate-50"
                     >
-                      <WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />
-                      Whatsapp
-                    </a>
-                  ) : (
-                    <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
-                      <WhatsAppIcon className="h-4 w-4 text-[#9CA3AF]" />
-                      Whatsapp
-                    </span>
-                  )}
+                      <Share2 size={14} />
+                      Share
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center gap-2 text-center">
+                    <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-[#B45309]">
+                      <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
+                      {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
+                    </p>
+
+                    <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-emerald-700">
+                      <CheckCircle2 size={13} className="text-emerald-600" />
+                      Trusted
+                    </p>
+
+                    <p
+                      className={`inline-flex min-h-7 items-center justify-center gap-1 text-sm ${
+                        isVerified ? "text-[#2563EB]" : "text-[#64748b]"
+                      }`}
+                    >
+                      <CheckCircle2 size={13} className={isVerified ? "text-[#2563EB]" : "text-[#94a3b8]"} />
+                      {isVerified ? "Verified" : "Not Verified"}
+                    </p>
+                  </div>
                 </div>
+              </section>
 
-                <div className="grid grid-cols-3 gap-3">
-                  {inquiryHref ? (
-                    <a
-                      href={inquiryHref}
-                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl  px-3 text-sm text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+              <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <h3
+                      className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
                     >
-                      <MessageCircle size={15} />
-                      Inquiry
-                    </a>
-                  ) : (
-                    <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
-                      <MessageCircle size={15} />
-                      Inquiry
-                    </span>
-                  )}
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
+                        <BriefcaseBusiness size={13} className="md:hidden" />
+                        <BriefcaseBusiness size={15} className="hidden md:block" />
+                      </span>
+                      <span>Services</span>
+                    </h3>
 
-                  {websiteHref ? (
-                    <a
-                      href={websiteHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+                    <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
+                      {serviceItems.map((service) => (
+                        <li
+                          key={service}
+                          className="text-[15px] text-black md:text-base"
+                        >
+                          {service}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="border-l border-[#e5e9ef] pl-5">
+                    <h3
+                      className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
                     >
-                      <Globe size={14} />
-                      Website
-                    </a>
-                  ) : (
-                    <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
-                      <Globe size={14} />
-                      Website
-                    </span>
-                  )}
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
+                        <Layers3 size={13} className="md:hidden" />
+                        <Layers3 size={15} className="hidden md:block" />
+                      </span>
+                      <span>Categories</span>
+                    </h3>
 
-                  <button
-                    type="button"
-                    onClick={() => void handleShare()}
-                    className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm  text-slate-700 transition-colors duration-200 hover:bg-slate-50"
-                  >
-                    <Share2 size={14} />
-                    Share
-                  </button>
+                    <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
+                      {categoryItems.map((category) => (
+                        <li
+                          key={category}
+                          className="text-[15px] text-black md:text-base"
+                        >
+                          {category}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
+              </section>
 
-                <div className="grid grid-cols-3 items-center gap-2 text-center">
-                  <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-[#B45309]">
-                    <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
-                    {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
-                  </p>
+              <section className="rounded-[12px] bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.06)]">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[1.1rem] font-semibold text-[#0f172a]">Contact</h3>
+                    {phoneDigits ? (
+                      <a
+                        href={`tel:${phoneDigits}`}
+                        className="mt-2 inline-flex items-center gap-2 text-base font-semibold text-[#2563eb]"
+                      >
+                        <Phone size={16} />
+                        <span>{profile.phone}</span>
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-sm font-medium text-[#64748b]">Phone unavailable</p>
+                    )}
+                    {profile.businessAlternatePhone ? (
+                      <p className="mt-1 text-sm font-medium text-[#475569]">{`Alt: ${profile.businessAlternatePhone}`}</p>
+                    ) : null}
+                  </div>
 
-                  <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-emerald-700">
-                    <CheckCircle2 size={13} className="text-emerald-600" />
-                    Trusted
-                  </p>
+                  <div className="border-t border-[#e7edf4] pt-3">
+                    <h3 className="text-[1.1rem] font-semibold text-[#0f172a]">Address</h3>
+                    {fullAddress ? (
+                      <p className="mt-2 text-[15px] leading-[1.55] text-[#1f2937]">{fullAddress}</p>
+                    ) : (
+                      <p className="mt-2 text-sm font-medium text-[#64748b]">Address unavailable</p>
+                    )}
 
-                  <p
-                    className={`inline-flex min-h-7 items-center justify-center gap-1 text-sm ${
-                      isVerified ? "text-[#2563EB]" : "text-[#64748b]"
-                    }`}
-                  >
-                    <CheckCircle2 size={13} className={isVerified ? "text-[#2563EB]" : "text-[#94a3b8]"} />
-                    {isVerified ? "Verified" : "Not Verified"}
-                  </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                      {directionsHref ? (
+                        <a
+                          href={directionsHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-9 items-center gap-2 rounded-[8px] bg-[#eff6ff] px-3 text-sm font-semibold text-[#2563eb]"
+                        >
+                          <Navigation size={15} />
+                          Get Directions
+                        </a>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyAddress()}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-[8px] bg-[#f1f5f9] px-3 text-sm font-semibold text-[#334155]"
+                      >
+                        <Copy size={15} />
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-[#e7edf4] border-t border-[#e7edf4] pt-1">
+                    {emailHref ? (
+                      <a
+                        href={emailHref}
+                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
+                      >
+                        <Mail size={17} className="text-[#2563eb]" />
+                        <span>Send Enquiry by Email</span>
+                      </a>
+                    ) : null}
+
+                    {whatsappDigits ? (
+                      <a
+                        href={`https://wa.me/${whatsappDigits}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
+                      >
+                        <MessageCircle size={17} className="text-[#2563eb]" />
+                        <span>Get info via WhatsApp</span>
+                      </a>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => void handleShare()}
+                      className="flex min-h-11 w-full items-center gap-2 text-left text-[1.03rem] font-medium text-[#0f172a]"
+                    >
+                      <Share2 size={17} className="text-[#2563eb]" />
+                      <span>Share</span>
+                    </button>
+
+                    {websiteHref ? (
+                      <a
+                        href={websiteHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
+                      >
+                        <Globe size={17} className="text-[#2563eb]" />
+                        <span>Website</span>
+                      </a>
+                    ) : null}
+                  </div>
+
+                  {contactCardMessage ? (
+                    <p className="text-xs font-medium text-[#4b5563]">{contactCardMessage}</p>
+                  ) : null}
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
 
-            {photoItems.length > 0 ? (
-              <section className="bg-white p-5 lg:-mt-16">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
-                  <button
-                    type="button"
-                    onClick={openAllPhotosModal}
-                    className="rounded-full px-3 py-1 text-xs font-semibold text-indigo-600 transition-colors duration-200 hover:bg-indigo-50"
-                  >
-                    View All
-                  </button>
-                </div>
+            <div className="space-y-4">
+              {photoItems.length > 0 ? (
+                <section className="bg-white p-5 lg:-mt-16">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
+                    <button
+                      type="button"
+                      onClick={openAllPhotosModal}
+                      className="rounded-full px-3 py-1 text-xs font-semibold text-indigo-600 transition-colors duration-200 hover:bg-indigo-50"
+                    >
+                      View All
+                    </button>
+                  </div>
 
-                <div className="grid grid-cols-4 gap-3">
-                  {desktopPhotoRow.map((photo, index) => {
-                    const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
-                    if (showOverlay) {
+                  <div className="grid grid-cols-4 gap-3">
+                    {desktopPhotoRow.map((photo, index) => {
+                      const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
+                      if (showOverlay) {
+                        return (
+                          <button
+                            key={`${photo}-${index}`}
+                            type="button"
+                            onClick={openAllPhotosModal}
+                            className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
+                            aria-label={`View ${desktopOverflowCount} more photos`}
+                          >
+                            <img
+                              src={photo}
+                              alt={`${profile.name} gallery ${index + 1}`}
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            <span className="absolute inset-0 bg-slate-900/45 transition-colors duration-200" />
+                            <span className="absolute inset-0 grid place-items-center text-center text-white">
+                              <span className="text-2xl font-extrabold leading-none">+{desktopOverflowCount}</span>
+                            </span>
+                          </button>
+                        );
+                      }
+
                       return (
                         <button
                           key={`${photo}-${index}`}
                           type="button"
-                          onClick={openAllPhotosModal}
+                          onClick={() => openSinglePhotoModal(photo)}
                           className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
-                          aria-label={`View ${desktopOverflowCount} more photos`}
+                          aria-label={`View photo ${index + 1}`}
                         >
                           <img
                             src={photo}
@@ -1346,43 +1849,83 @@ export default function ListingProfilePage({
                             className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                             loading="lazy"
                           />
-                          <span className="absolute inset-0 bg-slate-900/45 transition-colors duration-200" />
-                          <span className="absolute inset-0 grid place-items-center text-center text-white">
-                            <span className="text-2xl font-extrabold leading-none">+{desktopOverflowCount}</span>
-                          </span>
+                          <span className="absolute inset-0 bg-slate-900/0 transition-colors duration-200 group-hover:bg-slate-900/35" />
                         </button>
                       );
-                    }
+                    })}
+                  </div>
+                </section>
+              ) : (
+                <section className="bg-white p-5 lg:-mt-3">
+                  <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
+                  <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
+                </section>
+              )}
 
-                    return (
-                      <button
-                        key={`${photo}-${index}`}
-                        type="button"
-                        onClick={() => openSinglePhotoModal(photo)}
-                        className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
-                        aria-label={`View photo ${index + 1}`}
-                      >
-                        <img
-                          src={photo}
-                          alt={`${profile.name} gallery ${index + 1}`}
-                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                        <span className="absolute inset-0 bg-slate-900/0 transition-colors duration-200 group-hover:bg-slate-900/35" />
-                      </button>
-                    );
-                  })}
+              <section className="rounded-[12px] border border-[#e8edf5] bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.06)]">
+                <div className="mb-3 flex items-center gap-2 text-[#1f2937]">
+                  <MessageSquare size={16} className="text-[#2563eb]" />
+                  <h3 className="text-sm font-semibold">Enquiry Form</h3>
+                </div>
+
+                {renderInquiryForm()}
+              </section>
+
+              <section className="hidden h-fit self-start overflow-hidden rounded-[12px] bg-white px-2 py-3 sm:px-5 md:py-4 lg:block">
+                <div className="grid grid-cols-2 gap-3 md:gap-5">
+                  <div>
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <CalendarDays size={11} className="md:hidden" />
+                        <CalendarDays size={15} className="hidden md:block" />
+                      </span>
+                      Establishment Year
+                    </h3>
+                    {profile.establishmentYear ? (
+                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                        {`Since ${profile.establishmentYear}`}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="pl-3 md:pl-5">
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <Clock3 size={11} className="md:hidden" />
+                        <Clock3 size={15} className="hidden md:block" />
+                      </span>
+                      Opening Time :
+                    </h3>
+
+                    <ul className="mt-2 space-y-2 md:mt-3">
+                      {openingSchedule.map((item) => (
+                        <li
+                          key={`${item.day}-${item.time}`}
+                          className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
+                        >
+                          <span className="hidden rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280] md:inline">
+                            {item.day}
+                          </span>
+                          <span className="hidden md:inline md:ml-1.5">{item.time}</span>
+                          <span className="block whitespace-nowrap md:hidden">
+                            {`${String(item.day || "").replace(/\s*-\s*/g, "-")} ${String(item.time || "").replace(/\s*-\s*/g, "-")}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </section>
-            ) : (
-              <section className="bg-white p-5 lg:-mt-3">
-                <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
-                <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
-              </section>
-            )}
+            </div>
           </div>
         <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:grid-cols-2">
-          <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5">
+          <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5 lg:hidden">
 
             <div className="grid grid-cols-2 gap-5">
               <div>
@@ -1435,7 +1978,7 @@ export default function ListingProfilePage({
             </div>
           </section>
 
-          <section className="relative overflow-hidden rounded-[12px] bg-white px-2 py-5 sm:px-5">
+          <section className="relative h-fit self-start overflow-hidden rounded-[12px] bg-white px-2 py-3 sm:px-5 md:py-4 lg:hidden">
 
             <div className="grid grid-cols-2 gap-3 md:gap-5">
               <div>
@@ -1949,6 +2492,31 @@ export default function ListingProfilePage({
                   </div>
                 </div>
               )}
+            </section>
+          </div>
+        ) : null}
+
+        {isInquiryModalOpen ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3"
+            onClick={closeInquiryModal}
+          >
+            <section
+              className="w-full max-w-lg rounded-2xl bg-white p-4"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-[20px] font-semibold text-[#5b6064]">Enquiry Form</h3>
+                <button
+                  type="button"
+                  onClick={closeInquiryModal}
+                  className="rounded-[10px] bg-[#d4f2ef] px-3 py-1.5 text-[13px] font-semibold text-[#5f6569]"
+                >
+                  Close
+                </button>
+              </div>
+
+              {renderInquiryForm("space-y-2.5")}
             </section>
           </div>
         ) : null}
