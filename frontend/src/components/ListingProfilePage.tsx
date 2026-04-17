@@ -1135,12 +1135,12 @@ export default function ListingProfilePage({
         {isHeroScrollBarVisible ? (
           <>
             <section className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[#d7dde6] bg-white/95 shadow-[0_-8px_20px_rgba(15,23,42,0.12)] backdrop-blur lg:block">
-              <div className="w-full px-4 py-2.5 sm:px-6 lg:px-8">
+              <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="truncate text-[18px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
+                  <h2 className="truncate text-[28px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
                     <span className="inline-flex items-center gap-1 rounded-[7px] bg-[#118c2a] px-2 py-0.5 text-[13px] font-bold text-white">
                       {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
                       <Star size={14} className="fill-white text-white" />
@@ -1162,13 +1162,13 @@ export default function ListingProfilePage({
                   {phoneDigits ? (
                     <a
                       href={`tel:${phoneDigits}`}
-                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#0e9f2f] px-5 text-sm font-semibold text-white"
+                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#0e9f2f] px-5 text-sm font-semibold text-white"
                     >
                       <Phone size={18} />
                       <span>{profile.phone}</span>
                     </a>
                   ) : (
-                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#9ca3af] px-5 text-sm font-semibold text-white opacity-70">
+                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#9ca3af] px-5 text-sm font-semibold text-white opacity-70">
                       <Phone size={18} />
                       Call
                     </span>
@@ -1178,13 +1178,13 @@ export default function ListingProfilePage({
                     <button
                       type="button"
                       onClick={openInquiryModal}
-                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#1778d0] px-5 text-sm font-semibold text-white"
+                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#1778d0] px-5 text-sm font-semibold text-white"
                     >
                       <MessageCircle size={18} />
                       Enquire Now
                     </button>
                   ) : (
-                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] bg-[#93c5fd] px-5 text-sm font-semibold text-white opacity-70">
+                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#93c5fd] px-5 text-sm font-semibold text-white opacity-70">
                       <MessageCircle size={18} />
                       Enquire Now
                     </span>
@@ -1195,13 +1195,13 @@ export default function ListingProfilePage({
                       href={`https://wa.me/${whatsappDigits}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex min-h-12 items-center gap-2 rounded-[10px] border border-[#1f8d29] bg-white px-5 text-sm font-semibold text-[#0f172a]"
+                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#1f8d29] bg-white px-5 text-sm font-semibold text-[#0f172a]"
                     >
                       <WhatsAppIcon className="h-5 w-5 text-[#16a34a]" />
                       WhatsApp
                     </a>
                   ) : (
-                    <span className="inline-flex min-h-12 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-slate-500 opacity-70">
+                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-slate-500 opacity-70">
                       <WhatsAppIcon className="h-5 w-5 text-[#94a3b8]" />
                       WhatsApp
                     </span>
@@ -1210,7 +1210,7 @@ export default function ListingProfilePage({
                   <button
                     type="button"
                     onClick={() => void handleShare()}
-                    className="inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151]"
+                    className="inline-flex h-14 w-14 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151]"
                     aria-label="Share profile"
                   >
                     <Share2 size={20} />
@@ -1220,7 +1220,7 @@ export default function ListingProfilePage({
                     href={websiteHref || "#"}
                     target={websiteHref ? "_blank" : undefined}
                     rel={websiteHref ? "noreferrer" : undefined}
-                    className={`inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151] ${websiteHref ? "" : "pointer-events-none opacity-55"}`}
+                    className={`inline-flex h-14 w-14 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151] ${websiteHref ? "" : "pointer-events-none opacity-55"}`}
                     aria-label="Open website"
                   >
                     <Globe size={20} />
