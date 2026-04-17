@@ -1222,6 +1222,21 @@ export default function ListingProfilePage({
                     </span>
                   )}
 
+                  {storeHref ? (
+                    <Link
+                      href={storeHref}
+                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#c7d2fe] bg-[#4338ca] px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#e0e7ff]"
+                    >
+                      <Store size={18} />
+                      My Store
+                    </Link>
+                  ) : (
+                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-[#4338ca] px-5 text-sm font-semibold text-white opacity-70">
+                      <Store size={18} />
+                      My Store
+                    </span>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => void handleShare()}
