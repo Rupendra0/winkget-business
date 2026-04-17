@@ -1137,24 +1137,39 @@ export default function ListingProfilePage({
             <section className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[#d7dde6] bg-white/95 shadow-[0_-8px_20px_rgba(15,23,42,0.12)] backdrop-blur lg:block">
               <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="truncate text-[28px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white">
+                    {logoImage ? (
+                      <img
+                        src={logoImage}
+                        alt={`${profile.name} logo`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-[#e6e8ea]" />
+                    )}
+                  </div>
 
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-                    <span className="inline-flex items-center gap-1 rounded-[7px] bg-[#118c2a] px-2 py-0.5 text-[13px] font-bold text-white">
-                      {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
-                      <Star size={14} className="fill-white text-white" />
-                    </span>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-[25px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
 
-                    <span className="text-[13px] font-medium text-[#374151]">{`${reviewCount} Ratings`}</span>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-[#118c2a] px-2 py-0.5 text-[13px] font-bold text-white">
+                        {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
+                        <Star size={14} className="fill-white text-white" />
+                      </span>
 
-                    <span className="inline-flex rounded-[7px] bg-[#f9dd67] px-2 py-0.5 text-[13px] font-semibold text-[#7c5800]">
-                      Trust
-                    </span>
+                      <span className="text-[13px] font-medium text-[#374151]">{`${reviewCount} Ratings`}</span>
 
-                    <span className="text-[15px] font-semibold text-[#2964b8]">Verified</span>
+                      <span className="inline-flex rounded-[7px] bg-[#f9dd67] px-2 py-0.5 text-[13px] font-semibold text-[#7c5800]">
+                        Trust
+                      </span>
 
-                    <span className="text-[15px] font-semibold text-[#111827]">Claimed</span>
+                      <span className="text-[15px] font-semibold text-[#2964b8]">Verified</span>
+
+                      <span className="text-[15px] font-semibold text-[#111827]">Claimed</span>
+                    </div>
                   </div>
                 </div>
 
