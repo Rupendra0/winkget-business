@@ -4281,6 +4281,103 @@ export default function VendorDashboard() {
           </aside>
 
           <section className="min-w-0 space-y-5">
+            <article className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md xl:hidden">
+              <h3 className="font-display text-lg font-semibold text-gray-900">Quick Controls</h3>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={refreshDashboardData}
+                  disabled={refreshing}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                >
+                  <RefreshCcw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
+                  {refreshing ? "Refreshing" : "Refresh"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAlertsOpen((current) => !current)}
+                  className="relative inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                  Alerts
+                  {unreadAlertsCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[9px] font-bold text-white">
+                      {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
+                    </span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+                >
+                  <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                  {loggingOut ? "Signing out" : "Logout"}
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="grid grid-cols-4 gap-2">
+                  <div
+                    className={`inline-flex h-9 items-center justify-center gap-1 rounded-full border px-2 text-xs font-semibold ${
+                      currentStoreStatus.isOpen === true
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : currentStoreStatus.isOpen === false
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-gray-300 bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
+                    {storeStatusLabel}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleVendorStoreStatusChange("auto")}
+                    disabled={storeStatusSaving}
+                    className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                      currentStoreStatus.mode === "auto"
+                        ? "border-blue-200 bg-blue-100 text-blue-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    } disabled:opacity-60`}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleVendorStoreStatusChange("manual", "open")}
+                    disabled={storeStatusSaving}
+                    className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                      currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "open"
+                        ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    } disabled:opacity-60`}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleVendorStoreStatusChange("manual", "closed")}
+                    disabled={storeStatusSaving}
+                    className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                      currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "closed"
+                        ? "border-rose-200 bg-rose-100 text-rose-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    } disabled:opacity-60`}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {storeStatusMessage ? <p className="text-xs text-emerald-700">{storeStatusMessage}</p> : null}
+                {storeStatusError ? <p className="text-xs text-red-700">{storeStatusError}</p> : null}
+              </div>
+            </article>
+
             <header className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md">
               <DashboardSummaryCards stats={stats} onStatClick={handleOverviewStatClick} />
             </header>
