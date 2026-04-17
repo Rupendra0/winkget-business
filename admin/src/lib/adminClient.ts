@@ -689,7 +689,7 @@ export async function updateSubcategory(
 
 export async function createCity(input: {
   name: string;
-  state?: string;
+  state: string;
   sortOrder?: number;
   isActive?: boolean;
 }): Promise<AdminCity> {

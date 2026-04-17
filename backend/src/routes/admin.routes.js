@@ -621,6 +621,30 @@ const applyCategorySortOrders = async (orderedCategoryIds) => {
   );
 };
 
+const fetchOrderedCityIds = async () => {
+  const cities = await City.find({})
+    .sort({ sortOrder: 1, name: 1, _id: 1 })
+    .select("_id")
+    .lean();
+
+  return cities.map((city) => String(city._id));
+};
+
+const applyCitySortOrders = async (orderedCityIds) => {
+  if (!orderedCityIds.length) {
+    return;
+  }
+
+  await City.bulkWrite(
+    orderedCityIds.map((cityId, index) => ({
+      updateOne: {
+        filter: { _id: cityId },
+        update: { $set: { sortOrder: index + 1 } },
+      },
+    }))
+  );
+};
+
 const resolveObjectIdValue = (value) => {
   if (!value) return null;
   if (value instanceof mongoose.Types.ObjectId) return value;
@@ -2768,12 +2792,19 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     const state = String(req.body?.state || "").trim();
-    const sortOrderInput = req.body?.sortOrder;
-    const sortOrder = Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 0;
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "City name is required" });
+    }
+
+    if (!state) {
+      return res.status(400).json({ ok: false, message: "State is required" });
+    }
+
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
     }
 
     const existingByName = await City.findOne({ name: toExactRegex(name) }).select("_id");
@@ -2785,11 +2816,18 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
     const city = await City.create({
       name,
       slug,
-      state: state || undefined,
+      state,
       isActive,
-      sortOrder,
+      sortOrder: sortOrderRequest.value || 0,
       createdBy: req.adminUser._id,
     });
+
+    const orderedCityIds = await fetchOrderedCityIds();
+    const reorderedCityIds = orderedCityIds.filter((cityId) => cityId !== String(city._id));
+    const cityInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedCityIds.length);
+    reorderedCityIds.splice(cityInsertIndex, 0, String(city._id));
+    await applyCitySortOrders(reorderedCityIds);
+    city.sortOrder = cityInsertIndex + 1;
 
     return res.status(201).json({
       ok: true,
@@ -2808,8 +2846,13 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
 router.patch("/admin/cities/:id", requireAdmin, async (req, res) => {
   try {
     const cityId = String(req.params.id || "").trim();
+    const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     if (!OBJECT_ID_REGEX.test(cityId)) {
       return res.status(400).json({ ok: false, message: "Invalid city id" });
+    }
+
+    if (sortOrderRequest.error) {
+      return res.status(400).json({ ok: false, message: sortOrderRequest.error });
     }
 
     const city = await City.findById(cityId);
@@ -2837,22 +2880,28 @@ router.patch("/admin/cities/:id", requireAdmin, async (req, res) => {
     }
 
     if (req.body?.state !== undefined) {
-      city.state = String(req.body.state || "").trim() || undefined;
+      const nextState = String(req.body.state || "").trim();
+      if (!nextState) {
+        return res.status(400).json({ ok: false, message: "State cannot be empty" });
+      }
+
+      city.state = nextState;
     }
 
     if (req.body?.isActive !== undefined) {
       city.isActive = Boolean(req.body.isActive);
     }
 
-    if (req.body?.sortOrder !== undefined) {
-      const numericSort = Number(req.body.sortOrder);
-      if (!Number.isFinite(numericSort)) {
-        return res.status(400).json({ ok: false, message: "Invalid sort order" });
-      }
-      city.sortOrder = numericSort;
-    }
-
     await city.save();
+
+    if (sortOrderRequest.provided) {
+      const orderedCityIds = await fetchOrderedCityIds();
+      const reorderedCityIds = orderedCityIds.filter((itemId) => itemId !== String(city._id));
+      const cityInsertIndex = clampSortOrderInsertIndex(sortOrderRequest.value, reorderedCityIds.length);
+      reorderedCityIds.splice(cityInsertIndex, 0, String(city._id));
+      await applyCitySortOrders(reorderedCityIds);
+      city.sortOrder = cityInsertIndex + 1;
+    }
 
     return res.status(200).json({
       ok: true,
@@ -3006,6 +3055,9 @@ router.delete("/admin/cities/:id", requireAdmin, async (req, res) => {
     );
 
     await city.deleteOne();
+
+    const remainingCityIds = await fetchOrderedCityIds();
+    await applyCitySortOrders(remainingCityIds);
 
     return res.status(200).json({
       ok: true,

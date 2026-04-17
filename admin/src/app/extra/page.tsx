@@ -30,6 +30,37 @@ const sortLocalities = (city: AdminCity) =>
     return left.name.localeCompare(right.name);
   });
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+] as const;
+
 export default function ExtraPage() {
   const searchParams = useSearchParams();
   const activeItem = findSidebarItem(searchParams.get("view"));
@@ -50,6 +81,13 @@ export default function ExtraPage() {
 
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [localityNameInput, setLocalityNameInput] = useState("");
+
+  const [editingCityId, setEditingCityId] = useState<string | null>(null);
+  const [editCityName, setEditCityName] = useState("");
+  const [editCityState, setEditCityState] = useState("");
+  const [editCitySortOrder, setEditCitySortOrder] = useState("0");
+  const [editCityActive, setEditCityActive] = useState(true);
+  const [savingCityEdit, setSavingCityEdit] = useState(false);
 
   const loadCities = useCallback(async () => {
     setLoading(true);
@@ -76,6 +114,11 @@ export default function ExtraPage() {
     [selectedCityId, sortedCities]
   );
 
+  const editingCity = useMemo(
+    () => sortedCities.find((city) => city.id === editingCityId) || null,
+    [editingCityId, sortedCities]
+  );
+
   useEffect(() => {
     if (!selectedCityId) return;
     const exists = cities.some((city) => city.id === selectedCityId);
@@ -84,6 +127,18 @@ export default function ExtraPage() {
       setLocalityNameInput("");
     }
   }, [cities, selectedCityId]);
+
+  useEffect(() => {
+    if (!editingCityId) return;
+    const exists = cities.some((city) => city.id === editingCityId);
+    if (!exists) {
+      setEditingCityId(null);
+      setEditCityName("");
+      setEditCityState("");
+      setEditCitySortOrder("0");
+      setEditCityActive(true);
+    }
+  }, [cities, editingCityId]);
 
   const handleCreateCity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -97,6 +152,12 @@ export default function ExtraPage() {
       return;
     }
 
+    const state = cityState.trim();
+    if (!state) {
+      setError("State is required");
+      return;
+    }
+
     const sortOrder = Number(citySortOrder || "0");
     if (!Number.isFinite(sortOrder)) {
       setError("City sort order must be numeric");
@@ -107,7 +168,7 @@ export default function ExtraPage() {
     try {
       const created = await createCity({
         name,
-        state: cityState.trim() || undefined,
+        state,
         sortOrder,
         isActive: cityActive,
       });
@@ -122,6 +183,71 @@ export default function ExtraPage() {
       setError(toErrorMessage(createError, "Unable to create city"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openEditCity = (city: AdminCity) => {
+    setError(null);
+    setMessage(null);
+    setEditingCityId(city.id);
+    setEditCityName(city.name);
+    setEditCityState(String(city.state || "").trim());
+    setEditCitySortOrder(String(city.sortOrder ?? 0));
+    setEditCityActive(Boolean(city.isActive));
+  };
+
+  const closeEditCityModal = (force = false) => {
+    if (savingCityEdit && !force) return;
+    setEditingCityId(null);
+    setEditCityName("");
+    setEditCityState("");
+    setEditCitySortOrder("0");
+    setEditCityActive(true);
+  };
+
+  const handleEditCity = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingCity) return;
+
+    setError(null);
+    setMessage(null);
+
+    const name = editCityName.trim();
+    if (!name) {
+      setError("City name is required");
+      return;
+    }
+
+    const state = editCityState.trim();
+    if (!state) {
+      setError("State is required");
+      return;
+    }
+
+    const sortOrder = Number(editCitySortOrder || "0");
+    if (!Number.isFinite(sortOrder)) {
+      setError("City sort order must be numeric");
+      return;
+    }
+
+    setSavingCityEdit(true);
+    setBusyCityId(editingCity.id);
+    try {
+      const updated = await updateCity(editingCity.id, {
+        name,
+        state,
+        sortOrder,
+        isActive: editCityActive,
+      });
+
+      setMessage(`City "${updated.name}" updated`);
+      closeEditCityModal(true);
+      await loadCities();
+    } catch (updateError) {
+      setError(toErrorMessage(updateError, "Unable to update city"));
+    } finally {
+      setSavingCityEdit(false);
+      setBusyCityId((current) => (current === editingCity.id ? null : current));
     }
   };
 
@@ -252,17 +378,25 @@ export default function ExtraPage() {
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
               required
             />
-            <input
+            <select
               value={cityState}
               onChange={(event) => setCityState(event.target.value)}
-              placeholder="State (optional)"
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
-            />
+              required
+            >
+              <option value="">Select state</option>
+              {INDIAN_STATES.map((stateName) => (
+                <option key={stateName} value={stateName}>
+                  {stateName}
+                </option>
+              ))}
+            </select>
             <input
               type="number"
               value={citySortOrder}
               onChange={(event) => setCitySortOrder(event.target.value)}
-              placeholder="Sort order"
+              placeholder="Sort order (0 = last)"
+              step={1}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
             />
             <label className="inline-flex items-center gap-2 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text-soft)">
@@ -332,6 +466,14 @@ export default function ExtraPage() {
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       type="button"
+                      onClick={() => openEditCity(city)}
+                      disabled={cityBusy || savingCityEdit}
+                      className="rounded-md border border-(--border) bg-(--surface-muted) px-2 py-1 text-[11px] font-semibold text-(--text-soft) disabled:opacity-60"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void handleToggleCity(city)}
                       disabled={cityBusy}
                       className="rounded-md border border-(--border) bg-(--surface-muted) px-2 py-1 text-[11px] font-semibold text-(--text-soft) disabled:opacity-60"
@@ -352,6 +494,88 @@ export default function ExtraPage() {
             })}
           </section>
         )}
+
+        <Modal
+          open={Boolean(editingCity)}
+          title={editingCity ? `Edit city: ${editingCity.name}` : "Edit city"}
+          onClose={closeEditCityModal}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeEditCityModal}
+                disabled={savingCityEdit}
+                className="rounded-lg border border-(--border) px-3 py-1.5 text-xs text-(--text-soft) disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="edit-city-form"
+                disabled={savingCityEdit}
+                className="rounded-lg bg-(--accent) px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-70"
+              >
+                {savingCityEdit ? "Saving..." : "Save City"}
+              </button>
+            </>
+          }
+        >
+          {editingCity ? (
+            <form id="edit-city-form" onSubmit={handleEditCity} className="grid gap-2 sm:grid-cols-2">
+              <label className="sm:col-span-2 block">
+                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">City name</span>
+                <input
+                  value={editCityName}
+                  onChange={(event) => setEditCityName(event.target.value)}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">State</span>
+                <select
+                  value={editCityState}
+                  onChange={(event) => setEditCityState(event.target.value)}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
+                  required
+                >
+                  <option value="">Select state</option>
+                  {editCityState && !INDIAN_STATES.some((stateName) => stateName === editCityState) ? (
+                    <option value={editCityState}>{editCityState}</option>
+                  ) : null}
+                  {INDIAN_STATES.map((stateName) => (
+                    <option key={stateName} value={stateName}>
+                      {stateName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Sort order</span>
+                <input
+                  type="number"
+                  value={editCitySortOrder}
+                  onChange={(event) => setEditCitySortOrder(event.target.value)}
+                  placeholder="Sort order (0 = last)"
+                  step={1}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
+                />
+              </label>
+
+              <label className="sm:col-span-2 inline-flex items-center gap-2 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text-soft)">
+                <input
+                  type="checkbox"
+                  checked={editCityActive}
+                  onChange={(event) => setEditCityActive(event.target.checked)}
+                  className="h-4 w-4"
+                />
+                Active
+              </label>
+            </form>
+          ) : null}
+        </Modal>
 
         <Modal
           open={Boolean(selectedCity)}
