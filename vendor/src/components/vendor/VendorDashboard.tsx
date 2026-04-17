@@ -827,92 +827,98 @@ function StatusBadge({ status }: { status: InquiryStatus }) {
   return <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`}>{status}</span>;
 }
 
-function OverviewSection({
+const OVERVIEW_STAT_CARD_STYLES: Record<
+  StatCardItem["label"],
+  {
+    card: string;
+    icon: string;
+    chip: string;
+  }
+> = {
+  Enquiries: {
+    card: "border-blue-200 bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-100 shadow-sm",
+    icon: "bg-blue-600 text-white shadow-sm shadow-blue-200",
+    chip: "bg-blue-600/90 text-white",
+  },
+  "Call Leads": {
+    card: "border-emerald-200 bg-gradient-to-br from-emerald-50 via-green-50 to-lime-100 shadow-sm",
+    icon: "bg-emerald-600 text-white shadow-sm shadow-emerald-200",
+    chip: "bg-emerald-600/90 text-white",
+  },
+  Reviews: {
+    card: "border-amber-200 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-100 shadow-sm",
+    icon: "bg-amber-500 text-white shadow-sm shadow-amber-200",
+    chip: "bg-amber-500/90 text-white",
+  },
+  Orders: {
+    card: "border-violet-200 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-100 shadow-sm",
+    icon: "bg-violet-600 text-white shadow-sm shadow-violet-200",
+    chip: "bg-violet-600/90 text-white",
+  },
+};
+
+function DashboardSummaryCards({
   stats,
   onStatClick,
+}: {
+  stats: StatCardItem[];
+  onStatClick: (label: StatCardItem["label"]) => void;
+}) {
+  return (
+    <section className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      {stats.map((item) => {
+        const Icon = item.icon;
+        const cardStyle = OVERVIEW_STAT_CARD_STYLES[item.label];
+        const mobileLabel =
+          item.label === "Enquiries"
+            ? "Enq"
+            : item.label === "Call Leads"
+              ? "Calls"
+              : item.label;
+
+        return (
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => onStatClick(item.label)}
+            className={`group rounded-2xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:p-5 ${cardStyle.card}`}
+          >
+            <div className="flex items-center justify-between sm:items-start">
+              <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${cardStyle.icon}`}>
+                <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden="true" />
+              </span>
+              <span
+                className={`hidden rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex ${
+                  item.trendPositive ? cardStyle.chip : "bg-white/85 text-gray-600 ring-1 ring-gray-200"
+                }`}
+              >
+                {item.trend}
+              </span>
+            </div>
+            <p className="mt-2 text-[9px] font-semibold uppercase text-gray-700 sm:hidden">{mobileLabel}</p>
+            <p className="mt-4 hidden text-xs font-semibold uppercase tracking-wide text-gray-600 sm:block">{item.label}</p>
+            <p className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:mt-1 sm:text-3xl">{item.value}</p>
+            <p className="mt-1 hidden text-xs text-gray-600 sm:block">{item.hint}</p>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+function OverviewSection({
   leadSources,
   servicePerformance,
   recentInquiries,
   recentReviews,
 }: {
-  stats: StatCardItem[];
-  onStatClick: (label: StatCardItem["label"]) => void;
   leadSources: Array<{ label: string; value: number }>;
   servicePerformance: Array<{ label: string; value: number }>;
   recentInquiries: VendorInquiry[];
   recentReviews: VendorReview[];
 }) {
-  const statCardStyles: Record<
-    StatCardItem["label"],
-    {
-      card: string;
-      icon: string;
-      chip: string;
-    }
-  > = {
-    Enquiries: {
-      card: "border-gray-200 bg-white shadow-sm",
-      icon: "bg-blue-600 text-white shadow-sm shadow-blue-200",
-      chip: "bg-blue-600/90 text-white",
-    },
-    "Call Leads": {
-      card: "border-gray-200 bg-white shadow-sm",
-      icon: "bg-emerald-600 text-white shadow-sm shadow-emerald-200",
-      chip: "bg-emerald-600/90 text-white",
-    },
-    Reviews: {
-      card: "border-gray-200 bg-white shadow-sm",
-      icon: "bg-amber-500 text-white shadow-sm shadow-amber-200",
-      chip: "bg-amber-500/90 text-white",
-    },
-    Orders: {
-      card: "border-gray-200 bg-white shadow-sm",
-      icon: "bg-violet-600 text-white shadow-sm shadow-violet-200",
-      chip: "bg-violet-600/90 text-white",
-    },
-  };
-
   return (
     <section className="space-y-6">
-      <section className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        {stats.map((item) => {
-          const Icon = item.icon;
-          const cardStyle = statCardStyles[item.label];
-          const mobileLabel =
-            item.label === "Enquiries"
-              ? "Enq"
-              : item.label === "Call Leads"
-                ? "Calls"
-                : item.label;
-
-          return (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => onStatClick(item.label)}
-              className={`group rounded-2xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:p-5 ${cardStyle.card}`}
-            >
-              <div className="flex items-center justify-between sm:items-start">
-                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${cardStyle.icon}`}>
-                  <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden="true" />
-                </span>
-                <span
-                  className={`hidden rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex ${
-                    item.trendPositive ? cardStyle.chip : "bg-white/85 text-gray-600 ring-1 ring-gray-200"
-                  }`}
-                >
-                  {item.trend}
-                </span>
-              </div>
-              <p className="mt-2 text-[9px] font-semibold uppercase text-gray-700 sm:hidden">{mobileLabel}</p>
-              <p className="mt-4 hidden text-xs font-semibold uppercase tracking-wide text-gray-600 sm:block">{item.label}</p>
-              <p className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:mt-1 sm:text-3xl">{item.value}</p>
-              <p className="mt-1 hidden text-xs text-gray-600 sm:block">{item.hint}</p>
-            </button>
-          );
-        })}
-      </section>
-
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
@@ -4017,8 +4023,6 @@ export default function VendorDashboard() {
     if (activeNav === "Overview") {
       return (
         <OverviewSection
-          stats={stats}
-          onStatClick={handleOverviewStatClick}
           leadSources={leadSources}
           servicePerformance={servicePerformance}
           recentInquiries={enquiryItems.slice(0, 4)}
@@ -4278,119 +4282,7 @@ export default function VendorDashboard() {
 
           <section className="min-w-0 space-y-5">
             <header className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-blue-100/80 pb-3">
-                <div className="min-w-0 pr-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700/80">Shop</p>
-                  <h1 className="mt-0.5 truncate font-display text-xl font-semibold text-gray-900 sm:text-2xl">{businessName}</h1>
-                  <p className="mt-0.5 text-xs text-gray-500">Vendor: {vendorName}</p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveNav("Shop")}
-                    className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm"
-                    aria-label="Open shop profile"
-                  >
-                    <img src={sidebarAvatar} alt={businessName} className="h-full w-full object-cover" loading="lazy" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={refreshDashboardData}
-                    disabled={refreshing}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
-                  >
-                    <RefreshCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
-                    {refreshing ? "Refreshing" : "Refresh"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAlertsOpen((current) => !current)}
-                    className="relative inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                  >
-                    <Bell className="h-4 w-4" aria-hidden="true" />
-                    Alerts
-                    {unreadAlertsCount > 0 ? (
-                      <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">
-                        {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
-                      </span>
-                    ) : null}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
-                  >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    {loggingOut ? "Signing out" : "Logout"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-                <div className="space-y-0.5">
-                  <p className="text-sm text-gray-600">{location}</p>
-                  <p className="text-[11px] text-gray-500">Status Source: {storeStatusSourceLabel}</p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <div
-                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
-                      currentStoreStatus.isOpen === true
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : currentStoreStatus.isOpen === false
-                          ? "border-rose-200 bg-rose-50 text-rose-700"
-                          : "border-gray-300 bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
-                    {storeStatusLabel}
-                  </div>
-
-                  <div className="inline-flex items-center rounded-xl border border-gray-200 bg-white p-1">
-                    <button
-                      type="button"
-                      onClick={() => void handleVendorStoreStatusChange("auto")}
-                      disabled={storeStatusSaving}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
-                        currentStoreStatus.mode === "auto"
-                          ? "bg-blue-100 text-blue-700"
-                          : "text-gray-600 hover:bg-gray-50"
-                      } disabled:opacity-60`}
-                    >
-                      Auto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleVendorStoreStatusChange("manual", "open")}
-                      disabled={storeStatusSaving}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
-                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "open"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "text-gray-600 hover:bg-gray-50"
-                      } disabled:opacity-60`}
-                    >
-                      Open
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleVendorStoreStatusChange("manual", "closed")}
-                      disabled={storeStatusSaving}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
-                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "closed"
-                          ? "bg-rose-100 text-rose-700"
-                          : "text-gray-600 hover:bg-gray-50"
-                      } disabled:opacity-60`}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {storeStatusMessage ? <p className="mt-1.5 text-xs text-emerald-700">{storeStatusMessage}</p> : null}
-              {storeStatusError ? <p className="mt-1.5 text-xs text-red-700">{storeStatusError}</p> : null}
+              <DashboardSummaryCards stats={stats} onStatClick={handleOverviewStatClick} />
             </header>
 
             <div className="min-w-0">{renderActiveSection()}</div>
@@ -4399,24 +4291,121 @@ export default function VendorDashboard() {
           {shouldShowQuickAnalytics ? (
             <aside className="hidden space-y-4 xl:block">
               <article className="rounded-2xl border border-blue-100/70 bg-white/62 p-5 backdrop-blur-md">
+                <h3 className="font-display text-lg font-semibold text-gray-900">Quick Controls</h3>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={refreshDashboardData}
+                    disabled={refreshing}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    <RefreshCcw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
+                    {refreshing ? "Refreshing" : "Refresh"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAlertsOpen((current) => !current)}
+                    className="relative inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                    Alerts
+                    {unreadAlertsCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 py-0.5 text-[9px] font-bold text-white">
+                        {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
+                      </span>
+                    ) : null}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+                  >
+                    <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                    {loggingOut ? "Signing out" : "Logout"}
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="grid grid-cols-4 gap-2">
+                    <div
+                      className={`inline-flex h-9 items-center justify-center gap-1 rounded-full border px-2 text-xs font-semibold ${
+                        currentStoreStatus.isOpen === true
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : currentStoreStatus.isOpen === false
+                            ? "border-rose-200 bg-rose-50 text-rose-700"
+                            : "border-gray-300 bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
+                      {storeStatusLabel}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("auto")}
+                      disabled={storeStatusSaving}
+                      className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "auto"
+                          ? "border-blue-200 bg-blue-100 text-blue-700"
+                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Auto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("manual", "open")}
+                      disabled={storeStatusSaving}
+                      className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "open"
+                          ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVendorStoreStatusChange("manual", "closed")}
+                      disabled={storeStatusSaving}
+                      className={`inline-flex h-9 items-center justify-center rounded-xl border px-2 text-[11px] font-semibold transition ${
+                        currentStoreStatus.mode === "manual" && currentStoreStatus.manualStatus === "closed"
+                          ? "border-rose-200 bg-rose-100 text-rose-700"
+                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      } disabled:opacity-60`}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  {storeStatusMessage ? <p className="text-xs text-emerald-700">{storeStatusMessage}</p> : null}
+                  {storeStatusError ? <p className="text-xs text-red-700">{storeStatusError}</p> : null}
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-blue-100/70 bg-white/62 p-5 backdrop-blur-md">
                 <h3 className="font-display text-lg font-semibold text-gray-900">Quick Analytics</h3>
 
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
-                    <p className="text-xs text-gray-500">Enquiries</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">{enquirySummary.total}</p>
+                  <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-3">
+                    <p className="text-xs text-blue-700">Enquiries</p>
+                    <p className="mt-1 text-sm font-semibold text-blue-900">{enquirySummary.total}</p>
                   </div>
-                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
-                    <p className="text-xs text-gray-500">Call Leads</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">{callLeads.length}</p>
+                  <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50 p-3">
+                    <p className="text-xs text-emerald-700">Call Leads</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-900">{callLeads.length}</p>
                   </div>
-                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
-                    <p className="text-xs text-gray-500">Average rating</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">{formatRating(reviews.summary.rating)} / 5</p>
+                  <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-3">
+                    <p className="text-xs text-amber-700">Average rating</p>
+                    <p className="mt-1 text-sm font-semibold text-amber-900">{formatRating(reviews.summary.rating)} / 5</p>
                   </div>
-                  <div className="rounded-xl border border-blue-100/70 bg-white/75 p-3">
-                    <p className="text-xs text-gray-500">Section</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">{sectionMeta.title}</p>
+                  <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-3">
+                    <p className="text-xs text-violet-700">Section</p>
+                    <p className="mt-1 text-sm font-semibold text-violet-900">{sectionMeta.title}</p>
                   </div>
                 </div>
               </article>
