@@ -138,15 +138,15 @@ export default function CityStrip() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+      <section className="px-0 py-4 sm:px-4 lg:px-6 xl:px-8">
         <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
-          <div className="flex gap-6 overflow-x-auto pb-2">
+          <div className="flex gap-4 overflow-x-auto pb-2">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`city-partner-skeleton-${index}`}
-                className="shrink-0 basis-[76%] overflow-hidden rounded-xl border border-slate-200 bg-white sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)]"
+                className="shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)]"
               >
                 <div className="h-32 w-full bg-slate-200/70" />
                 <div className="space-y-2 p-3">
@@ -167,19 +167,19 @@ export default function CityStrip() {
   }
 
   return (
-    <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+    <section className="px-0 py-4 sm:px-4 lg:px-6 xl:px-8">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
         <div className="mb-4">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
           <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>
         </div>
 
-        <div className="flex gap-6 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
           {partners.map((partner) => (
             <Link
               key={partner.id}
               href={partner.href}
-              className="relative shrink-0 basis-[76%] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,23,42,0.12)]"
+              className="relative shrink-0 basis-[calc((100%-1rem)/2)] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,23,42,0.12)]"
             >
               {partner.isNew ? (
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>
@@ -188,9 +188,9 @@ export default function CityStrip() {
               <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full border-b border-slate-100 object-cover" loading="lazy" />
 
               <div className="p-3.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 text-sm font-semibold text-gray-900 line-clamp-1">{partner.name}</div>
-                  <div className="shrink-0 text-xs font-semibold text-amber-600">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
+                <div className="block md:flex md:items-start md:justify-between md:gap-2">
+                  <div className="min-w-0 text-sm font-semibold text-gray-900 md:line-clamp-1">{partner.name}</div>
+                  <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
                 <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
                 <div className="mt-1.5 text-xs text-gray-500 line-clamp-2">{partner.address}</div>

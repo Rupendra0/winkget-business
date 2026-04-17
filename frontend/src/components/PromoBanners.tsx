@@ -186,7 +186,7 @@ export default function PromoBanners() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+      <section className="px-0 py-4 sm:px-4 lg:px-6 xl:px-8">
         <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
           <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
@@ -209,7 +209,7 @@ export default function PromoBanners() {
   }
 
   return (
-    <section className="px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+    <section className="px-0 py-4 sm:px-4 lg:px-6 xl:px-8">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
@@ -221,12 +221,12 @@ export default function PromoBanners() {
             <Link
               key={card.cardId}
               href={buildCategoryHref(card.categorySlug)}
-              className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl bg-white transition"
             >
               <img
                 src={card.image}
                 alt={card.categoryName || "Promotion"}
-                className="h-[200px] w-full object-cover sm:h-[215px]"
+                className="h-[140px] w-full object-cover sm:h-[215px]"
                 loading="lazy"
               />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
