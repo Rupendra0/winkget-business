@@ -1225,7 +1225,7 @@ export default function ListingProfilePage({
                   {storeHref ? (
                     <Link
                       href={storeHref}
-                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#c7d2fe] bg-[#4338ca] px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#e0e7ff]"
+                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#c7d2fe] bg-[#4338ca] px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#e0e7ff] hover:text-black"
                     >
                       <Store size={18} />
                       My Store
