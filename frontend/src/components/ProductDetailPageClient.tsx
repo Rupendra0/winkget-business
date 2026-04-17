@@ -37,6 +37,8 @@ export default function ProductDetailPageClient({
   const [activeImage, setActiveImage] = useState(galleryImages[0] || product.image || "");
   const [quantity, setQuantity] = useState(1);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showFullHighlights, setShowFullHighlights] = useState(false);
+  const [showFullBottomDescription, setShowFullBottomDescription] = useState(false);
   const [wishlisted, setWishlisted] = useState(() => isWishlisted(product?.id));
   const [isAboutOpen, setIsAboutOpen] = useState(true);
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
@@ -69,6 +71,8 @@ export default function ProductDetailPageClient({
   const hasSpecifications = Array.isArray(product.specifications) && product.specifications.length > 0;
   const hasKeyAttributes = Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0;
   const hasHighlights = Array.isArray(product.highlights) && product.highlights.length > 0;
+  const hasLongHighlightsFallback = String(product.description || "").trim().length > 180;
+  const hasLongBottomDescription = String(product.description || "").trim().length > 260;
 
   const mergedFacts = useMemo(() => {
     const next: Array<[string, string]> = [];
@@ -602,16 +606,48 @@ export default function ProductDetailPageClient({
           {isAboutOpen ? (
             <>
               {hasHighlights ? (
-                <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                  {product.highlights.map((item, index) => (
-                    <li key={`${product.id}-h-${index}`} className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-700" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                    {(showFullHighlights ? product.highlights : product.highlights.slice(0, 4)).map((item, index) => (
+                      <li key={`${product.id}-h-${index}`} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-700" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {product.highlights.length > 4 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowFullHighlights((previous) => !previous)}
+                      className="mt-2 text-xs font-semibold text-blue-700"
+                    >
+                      {showFullHighlights ? "View Less" : "View More"}
+                    </button>
+                  ) : null}
+                </>
               ) : product.description ? (
-                <p className="mt-3 text-sm leading-6 text-slate-700">{product.description}</p>
+                <>
+                  <p
+                    className={`mt-3 text-sm leading-6 text-slate-700 ${
+                      showFullHighlights
+                        ? ""
+                        : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4]"
+                    }`}
+                  >
+                    {product.description}
+                  </p>
+
+                  {hasLongHighlightsFallback ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowFullHighlights((previous) => !previous)}
+                      className="mt-2 text-xs font-semibold text-blue-700"
+                    >
+                      {showFullHighlights ? "View Less" : "View More"}
+                    </button>
+                  ) : null}
+                </>
               ) : (
                 <p className="mt-3 text-sm leading-6 text-slate-500">Description not provided by seller yet.</p>
               )}
@@ -681,9 +717,25 @@ export default function ProductDetailPageClient({
 
         <article className="bg-white p-3 sm:p-4">
           <h2 className="text-left text-base font-bold text-slate-900 sm:text-lg">Product Description</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+          <p
+            className={`mt-3 whitespace-pre-line text-sm leading-6 text-slate-700 ${
+              showFullBottomDescription
+                ? ""
+                : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:6]"
+            }`}
+          >
             {product.description || "Description not provided by seller yet."}
           </p>
+
+          {hasLongBottomDescription ? (
+            <button
+              type="button"
+              onClick={() => setShowFullBottomDescription((previous) => !previous)}
+              className="mt-2 text-xs font-semibold text-blue-700"
+            >
+              {showFullBottomDescription ? "View Less" : "View More"}
+            </button>
+          ) : null}
         </article>
       </section>
 

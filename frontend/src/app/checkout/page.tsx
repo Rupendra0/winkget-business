@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
+import { buildProductSlug } from "@/data/productSlug";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import { buildAuthHref } from "@/lib/authRedirect";
 import {
@@ -28,6 +29,7 @@ import {
   type CheckoutMode,
   type SavedAddress,
 } from "@/lib/checkoutStore";
+import { type StorefrontCartItem } from "@/lib/shopStorage";
 
 const formatPrice = (value: number) => `Rs. ${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 
@@ -57,6 +59,35 @@ const toAddressDraft = (address: SavedAddress): AddressDraft => ({
   tag: address.tag,
 });
 
+const resolveProductHref = (item: StorefrontCartItem) => {
+  const storedHref = String(item?.product?.href || "").trim();
+  if (storedHref && storedHref !== "/") {
+    return storedHref;
+  }
+
+  const slug = buildProductSlug({
+    id: item.product.id,
+    name: item.product.name,
+    storeId: item.product.storeId,
+    sellerName: item.product.sellerName,
+  });
+
+  if (!slug) {
+    return "/";
+  }
+
+  return `/product/${encodeURIComponent(slug)}`;
+};
+
+const resolveVendorProfileHref = (item: StorefrontCartItem) => {
+  const storeId = String(item?.product?.storeId || "").trim();
+  if (!storeId) {
+    return "/";
+  }
+
+  return `/listing/${encodeURIComponent(storeId)}`;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -71,6 +102,7 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [isAddressPickerOpen, setIsAddressPickerOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState("");
   const [addressDraft, setAddressDraft] = useState<AddressDraft>(EMPTY_ADDRESS_DRAFT);
   const [addressError, setAddressError] = useState("");
@@ -160,6 +192,11 @@ export default function CheckoutPage() {
     setSelectedAddressIdState(addressId);
   };
 
+  const handleAddressSelectFromPicker = (addressId: string) => {
+    handleAddressSelect(addressId);
+    setIsAddressPickerOpen(false);
+  };
+
   const handleAddressSave = async () => {
     if (!user?.id || savingAddress) {
       return;
@@ -184,6 +221,7 @@ export default function CheckoutPage() {
     const nextAddressState = readAddresses(user.id);
     setAddresses(nextAddressState.addresses);
     setSelectedAddressIdState(nextAddressState.selectedAddressId || saved.id);
+    setIsAddressPickerOpen(false);
     setShowAddressForm(false);
     setEditingAddressId("");
     setAddressDraft(EMPTY_ADDRESS_DRAFT);
@@ -191,6 +229,7 @@ export default function CheckoutPage() {
   };
 
   const openAddAddress = () => {
+    setIsAddressPickerOpen(false);
     setEditingAddressId("");
     setAddressDraft({
       ...EMPTY_ADDRESS_DRAFT,
@@ -202,10 +241,19 @@ export default function CheckoutPage() {
   };
 
   const openEditAddress = (address: SavedAddress) => {
+    setIsAddressPickerOpen(false);
     setEditingAddressId(address.id);
     setAddressDraft(toAddressDraft(address));
     setAddressError("");
     setShowAddressForm(true);
+  };
+
+  const openAddressPicker = () => {
+    if (!user || addresses.length === 0) {
+      return;
+    }
+
+    setIsAddressPickerOpen(true);
   };
 
   const handleContinueToPayment = () => {
@@ -264,16 +312,6 @@ export default function CheckoutPage() {
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Delivery Address</p>
                   </div>
-
-                  {user ? (
-                    <button
-                      type="button"
-                      onClick={openAddAddress}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#c7d7ff] bg-[#f2f6ff] px-3 py-1.5 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e7efff]"
-                    >
-                      <Plus size={14} /> Add New
-                    </button>
-                  ) : null}
                 </div>
 
                 {!authChecked ? (
@@ -292,51 +330,46 @@ export default function CheckoutPage() {
                 ) : (
                   <>
                     {addresses.length > 0 && !showAddressForm ? (
-                      <div className="mt-3 space-y-2">
-                        {addresses.map((address) => {
-                          const isSelected = selectedAddress?.id === address.id;
+                      <div className="mt-3">
+                        {selectedAddress ? (
+                          <div className="w-full rounded-xl border border-[#d8e0ea] bg-white px-3 py-3 text-left">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
+                                <Check size={14} className="text-[#2563eb]" />
+                                {selectedAddress.fullName}
+                                <span className="rounded-full border border-[#cbd5e1] bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                                  {selectedAddress.tag}
+                                </span>
+                              </div>
 
-                          return (
-                            <button
-                              type="button"
-                              key={address.id}
-                              onClick={() => handleAddressSelect(address.id)}
-                              className={`w-full rounded-xl border px-3 py-3 text-left transition ${
-                                isSelected
-                                  ? "border-[#2563eb] bg-[#eff6ff]"
-                                  : "border-[#d8e0ea] bg-white hover:border-[#9db2d6]"
-                              }`}
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
-                                  {isSelected ? <Check size={14} className="text-[#2563eb]" /> : null}
-                                  {address.fullName}
-                                  <span className="rounded-full border border-[#cbd5e1] bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
-                                    {address.tag}
-                                  </span>
-                                </div>
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openEditAddress(address);
-                                  }}
+                                  onClick={openAddressPicker}
+                                  className="inline-flex items-center rounded-lg border border-[#cbd5e1] bg-white px-2.5 py-1 text-xs font-semibold text-[#1d4ed8] hover:bg-[#f8fafc]"
+                                >
+                                  Change
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditAddress(selectedAddress)}
                                   className="inline-flex items-center gap-1 rounded-lg border border-[#cbd5e1] bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
                                 >
                                   <Pencil size={12} /> Edit
                                 </button>
                               </div>
-                              <p className="mt-1 text-sm text-[#334155]">
-                                {address.line1}
-                                {address.line2 ? `, ${address.line2}` : ""}
-                                {address.landmark ? `, ${address.landmark}` : ""}
-                              </p>
-                              <p className="mt-1 text-xs text-[#64748b]">
-                                {address.city}, {address.state} - {address.postalCode} | {address.phone}
-                              </p>
-                            </button>
-                          );
-                        })}
+                            </div>
+
+                            <p className="mt-1 text-sm text-[#334155]">
+                              {selectedAddress.line1}
+                              {selectedAddress.line2 ? `, ${selectedAddress.line2}` : ""}
+                              {selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ""}
+                            </p>
+                            <p className="mt-1 text-xs text-[#64748b]">
+                              {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postalCode} | {selectedAddress.phone}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -463,6 +496,93 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     ) : null}
+
+                    {isAddressPickerOpen && addresses.length > 0 ? (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-3"
+                        onClick={() => setIsAddressPickerOpen(false)}
+                      >
+                        <section
+                          className="w-full max-w-xl rounded-2xl bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.2)]"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <p className="text-base font-semibold text-[#0f172a]">Select Delivery Address</p>
+                            <button
+                              type="button"
+                              onClick={openAddAddress}
+                              className="inline-flex items-center gap-1 rounded-lg border border-[#c7d7ff] bg-[#f2f6ff] px-3 py-1.5 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e7efff]"
+                            >
+                              <Plus size={14} /> Add New
+                            </button>
+                          </div>
+
+                          <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+                            {addresses.map((address) => {
+                              const isSelected = selectedAddress?.id === address.id;
+
+                              return (
+                                <div
+                                  key={address.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => handleAddressSelectFromPicker(address.id)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      handleAddressSelectFromPicker(address.id);
+                                    }
+                                  }}
+                                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                                    isSelected
+                                      ? "border-[#2563eb] bg-[#eff6ff]"
+                                      : "border-[#d8e0ea] bg-white hover:border-[#9db2d6]"
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
+                                      {isSelected ? <Check size={14} className="text-[#2563eb]" /> : null}
+                                      {address.fullName}
+                                      <span className="rounded-full border border-[#cbd5e1] bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                                        {address.tag}
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openEditAddress(address);
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-[#cbd5e1] bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                                    >
+                                      <Pencil size={12} /> Edit
+                                    </button>
+                                  </div>
+                                  <p className="mt-1 text-sm text-[#334155]">
+                                    {address.line1}
+                                    {address.line2 ? `, ${address.line2}` : ""}
+                                    {address.landmark ? `, ${address.landmark}` : ""}
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#64748b]">
+                                    {address.city}, {address.state} - {address.postalCode} | {address.phone}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setIsAddressPickerOpen(false)}
+                              className="rounded-lg border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </section>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </article>
@@ -470,18 +590,57 @@ export default function CheckoutPage() {
               <article className="rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
                 <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Order Summary</p>
                 <div className="mt-2 space-y-2">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex items-start gap-2 rounded-lg border border-[#e5eaf1] bg-[#f8fbff] px-3 py-2">
-                      <img src={item.product.image} alt={item.product.name} className="h-12 w-12 rounded-md border border-[#dce4f2] bg-white object-contain" />
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 text-sm font-semibold text-[#0f172a]">{item.product.name}</p>
-                        <p className="mt-0.5 text-xs text-[#64748b]">Qty: {item.quantity}</p>
-                      </div>
-                      <p className="text-sm font-bold text-[#0f172a]">
-                        {formatPrice(Number(item.product.price || 0) * Math.max(1, Number(item.quantity || 1)))}
-                      </p>
-                    </div>
-                  ))}
+                  {items.map((item) => {
+                    const unitPrice = Number(item.product.price || 0);
+                    const quantity = Math.max(1, Number(item.quantity || 1));
+                    const lineTotal = unitPrice * quantity;
+                    const productHref = resolveProductHref(item);
+                    const vendorProfileHref = resolveVendorProfileHref(item);
+
+                    return (
+                      <article
+                        key={item.product.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => router.push(productHref)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(productHref);
+                          }
+                        }}
+                        className="grid cursor-pointer gap-3 rounded-2xl border border-[#dde3ea] bg-white p-3 shadow-sm transition hover:border-[#c5d4ef] sm:grid-cols-[96px_minmax(0,1fr)]"
+                      >
+                        <div className="overflow-hidden rounded-xl border border-[#e6ebf2] bg-[#f8fbff]">
+                          <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="line-clamp-2 text-[1rem] font-semibold text-[#0f172a]">{item.product.name}</p>
+                          <p className="text-xs text-[#6b7280]">
+                            Seller:{" "}
+                            <Link
+                              href={vendorProfileHref}
+                              onClick={(event) => event.stopPropagation()}
+                              className="font-semibold text-[#1d4ed8] hover:underline"
+                            >
+                              {item.product.sellerName || "Winkget Seller"}
+                            </Link>
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-xl font-bold text-[#111827]">{formatPrice(unitPrice)}</p>
+                            {Number(item.product.oldPrice || 0) > unitPrice ? (
+                              <p className="text-sm text-[#94a3b8] line-through">{formatPrice(Number(item.product.oldPrice || 0))}</p>
+                            ) : null}
+                            <p className="text-sm font-semibold text-[#166534]">Total: {formatPrice(lineTotal)}</p>
+                          </div>
+
+                          <p className="text-xs font-semibold text-[#475569]">Qty: {quantity}</p>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </article>
             </section>

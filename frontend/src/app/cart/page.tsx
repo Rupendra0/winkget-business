@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, ShieldCheck, ShoppingCart, Trash2 } from "lucide-react";
 import { buildProductSlug } from "@/data/productSlug";
 import {
   CART_UPDATED_EVENT,
   readCart,
   removeFromCart,
+  setBuyNowSelection,
   setCartItemQuantity,
   type StorefrontCartItem,
 } from "@/lib/shopStorage";
@@ -35,8 +37,18 @@ const resolveProductHref = (item: StorefrontCartItem) => {
   return `/product/${encodeURIComponent(slug)}`;
 };
 
+const resolveVendorProfileHref = (item: StorefrontCartItem) => {
+  const storeId = String(item?.product?.storeId || "").trim();
+  if (!storeId) {
+    return "/";
+  }
+
+  return `/listing/${encodeURIComponent(storeId)}`;
+};
+
 export default function CartPage() {
   const [items, setItems] = useState<StorefrontCartItem[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     const syncCart = () => {
@@ -72,6 +84,12 @@ export default function CartPage() {
   const removeItem = (productId: string) => {
     const nextItems = removeFromCart(productId);
     setItems(nextItems);
+  };
+
+  const buyNowItem = (item: StorefrontCartItem) => {
+    const quantity = Math.max(1, Number(item.quantity || 1));
+    setBuyNowSelection(item.product, quantity);
+    router.push("/checkout?mode=buy-now");
   };
 
   return (
@@ -113,11 +131,21 @@ export default function CartPage() {
                 const quantity = Math.max(1, Number(item.quantity || 1));
                 const lineTotal = unitPrice * quantity;
                 const productHref = resolveProductHref(item);
+                const vendorProfileHref = resolveVendorProfileHref(item);
 
                 return (
                   <article
                     key={item.product.id}
-                    className="grid gap-3 rounded-2xl border border-[#dde3ea] bg-white p-3 shadow-sm sm:grid-cols-[96px_minmax(0,1fr)]"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(productHref)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(productHref);
+                      }
+                    }}
+                    className="grid cursor-pointer gap-3 rounded-2xl border border-[#dde3ea] bg-white p-3 shadow-sm transition hover:border-[#c5d4ef] sm:grid-cols-[96px_minmax(0,1fr)]"
                   >
                     <div className="overflow-hidden rounded-xl border border-[#e6ebf2] bg-[#f8fbff]">
                       <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
@@ -125,7 +153,16 @@ export default function CartPage() {
 
                     <div className="space-y-2">
                       <p className="line-clamp-2 text-[1rem] font-semibold text-[#0f172a]">{item.product.name}</p>
-                      <p className="text-xs text-[#6b7280]">Seller: {item.product.sellerName || "Winkget Seller"}</p>
+                      <p className="text-xs text-[#6b7280]">
+                        Seller:{" "}
+                        <Link
+                          href={vendorProfileHref}
+                          onClick={(event) => event.stopPropagation()}
+                          className="font-semibold text-[#1d4ed8] hover:underline"
+                        >
+                          {item.product.sellerName || "Winkget Seller"}
+                        </Link>
+                      </p>
 
                       <div className="flex flex-wrap items-center gap-3">
                         <p className="text-xl font-bold text-[#111827]">{formatPrice(unitPrice)}</p>
@@ -139,7 +176,10 @@ export default function CartPage() {
                         <div className="inline-flex items-center rounded-lg border border-[#ced8ee] bg-white">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, quantity - 1)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateQuantity(item.product.id, quantity - 1);
+                            }}
                             className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-[#f3f6ff]"
                             aria-label="Decrease quantity"
                           >
@@ -148,7 +188,10 @@ export default function CartPage() {
                           <span className="w-10 text-center text-sm font-semibold text-[#0f172a]">{quantity}</span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.product.id, quantity + 1)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateQuantity(item.product.id, quantity + 1);
+                            }}
                             className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-[#f3f6ff]"
                             aria-label="Increase quantity"
                           >
@@ -158,18 +201,25 @@ export default function CartPage() {
 
                         <button
                           type="button"
-                          onClick={() => removeItem(item.product.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeItem(item.product.id);
+                          }}
                           className="inline-flex items-center gap-1 rounded-lg border border-[#f3c5c5] bg-[#fff5f5] px-2.5 py-1.5 text-xs font-semibold text-[#b91c1c] hover:bg-[#ffeceb]"
                         >
                           <Trash2 size={14} /> Remove
                         </button>
 
-                        <Link
-                          href={productHref}
-                          className="inline-flex items-center rounded-lg border border-[#d6dbe4] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            buyNowItem(item);
+                          }}
+                          className="inline-flex items-center rounded-lg bg-[#2563eb] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
                         >
-                          View Product
-                        </Link>
+                          Buy Now
+                        </button>
                       </div>
                     </div>
                   </article>

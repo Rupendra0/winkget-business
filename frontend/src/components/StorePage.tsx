@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Star,
@@ -29,7 +30,7 @@ import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
-import { addToCart, makeStoreProduct } from "@/lib/shopStorage";
+import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart } from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -49,9 +50,11 @@ const CATEGORY_ICON_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const CATEGORY_ICON_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 
 export default function StorePage({ data }: { data: StorePageData }) {
+  const router = useRouter();
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [addedToCartProductIds, setAddedToCartProductIds] = useState<Record<string, boolean>>({});
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -59,6 +62,29 @@ export default function StorePage({ data }: { data: StorePageData }) {
     return subscribeReviewUpdates(() => {
       setReviewUpdateVersion((prev) => prev + 1);
     });
+  }, []);
+
+  useEffect(() => {
+    const syncCartState = () => {
+      const next: Record<string, boolean> = {};
+      readCart().forEach((item) => {
+        const productId = String(item?.product?.id || "").trim();
+        if (productId) {
+          next[productId] = true;
+        }
+      });
+
+      setAddedToCartProductIds(next);
+    };
+
+    syncCartState();
+    window.addEventListener(CART_UPDATED_EVENT, syncCartState as EventListener);
+    window.addEventListener("storage", syncCartState);
+
+    return () => {
+      window.removeEventListener(CART_UPDATED_EVENT, syncCartState as EventListener);
+      window.removeEventListener("storage", syncCartState);
+    };
   }, []);
 
   const storeReviewStats = useMemo(
@@ -86,6 +112,15 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
   const handleAddToCart = useCallback(
     (product: StoreProduct) => {
+      const alreadyInCart = readCart().some((item) => item.product.id === product.id);
+      if (alreadyInCart) {
+        setAddedToCartProductIds((previous) => ({
+          ...previous,
+          [product.id]: true,
+        }));
+        return;
+      }
+
       const href = buildProductHref(product);
       const storeProduct = makeStoreProduct(
         {
@@ -100,6 +135,11 @@ export default function StorePage({ data }: { data: StorePageData }) {
       );
 
       addToCart(storeProduct, 1);
+
+      setAddedToCartProductIds((previous) => ({
+        ...previous,
+        [product.id]: true,
+      }));
     },
     [buildProductHref, data.id, data.storeName]
   );
@@ -471,6 +511,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   }
 
                   const productHref = buildProductHref(product);
+                  const isProductInCart = Boolean(addedToCartProductIds[product.id]);
 
                   return (
                     <div
@@ -491,11 +532,15 @@ export default function StorePage({ data }: { data: StorePageData }) {
                         <div className="text-sm font-semibold text-blue-700">{product.price}</div>
                         <button
                           type="button"
-                          onClick={() => handleAddToCart(product)}
-                          className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover"
+                          onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
+                          className={`mt-auto h-10 w-full rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-2 ${
+                            isProductInCart
+                              ? "bg-emerald-600 hover:bg-emerald-700"
+                              : "bg-blue-600 btn-hover"
+                          }`}
                         >
                           <ShoppingCart size={14} />
-                          Add to Cart
+                          {isProductInCart ? "Go to Cart" : "Add to Cart"}
                         </button>
                       </div>
                     </div>
@@ -539,6 +584,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   }
 
                   const productHref = buildProductHref(product);
+                  const isProductInCart = Boolean(addedToCartProductIds[product.id]);
 
                   return (
                     <div
@@ -556,13 +602,18 @@ export default function StorePage({ data }: { data: StorePageData }) {
                         <Link href={productHref} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
                           {product.name}
                         </Link>
-                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>                        <button
+                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>
+                        <button
                           type="button"
-                          onClick={() => handleAddToCart(product)}
-                          className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-2 btn-hover"
+                          onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
+                          className={`mt-auto h-10 w-full rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-2 ${
+                            isProductInCart
+                              ? "bg-emerald-600 hover:bg-emerald-700"
+                              : "bg-blue-600 btn-hover"
+                          }`}
                         >
                           <ShoppingCart size={14} />
-                          Add to Cart
+                          {isProductInCart ? "Go to Cart" : "Add to Cart"}
                         </button>
                       </div>
                     </div>
@@ -583,31 +634,42 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 {data.products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="rounded-2xl bg-white overflow-hidden flex h-full flex-col card-hover"
-                  >
-                    <Link href={buildProductHref(product)} className="h-40 bg-slate-50 shrink-0 block">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="h-full w-full object-contain p-4"
-                      />
-                    </Link>
-                    <div className="p-4 flex flex-1 flex-col gap-2">
-                      <Link href={buildProductHref(product)} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
-                        {product.name}
-                      </Link>
-                      <div className="text-sm font-semibold text-blue-700">{product.price}</div>                      <button
-                        type="button"
-                        onClick={() => handleAddToCart(product)}
-                        className="mt-auto h-10 w-full rounded-xl bg-blue-600 text-white text-sm font-semibold flex items-center justify-center gap-2 btn-hover"
+                  (() => {
+                    const isProductInCart = Boolean(addedToCartProductIds[product.id]);
+
+                    return (
+                      <div
+                        key={product.id}
+                        className="rounded-2xl bg-white overflow-hidden flex h-full flex-col card-hover"
                       >
-                        <ShoppingCart size={14} />
-                        Add to Cart
-                      </button>
-                    </div>
-                  </div>
+                        <Link href={buildProductHref(product)} className="h-40 bg-slate-50 shrink-0 block">
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-contain p-4"
+                          />
+                        </Link>
+                        <div className="p-4 flex flex-1 flex-col gap-2">
+                          <Link href={buildProductHref(product)} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
+                            {product.name}
+                          </Link>
+                          <div className="text-sm font-semibold text-blue-700">{product.price}</div>
+                          <button
+                            type="button"
+                            onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
+                            className={`mt-auto h-10 w-full rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 ${
+                              isProductInCart
+                                ? "bg-emerald-600 hover:bg-emerald-700"
+                                : "bg-blue-600 btn-hover"
+                            }`}
+                          >
+                            <ShoppingCart size={14} />
+                            {isProductInCart ? "Go to Cart" : "Add to Cart"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()
                 ))}
               </div>
             </section>

@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Clock3,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
+import { CART_UPDATED_EVENT, readCart } from "@/lib/shopStorage";
 import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
 type RestaurantMarketplacePageProps = {
@@ -129,6 +131,7 @@ export default function RestaurantMarketplacePage({
   onAddToCart,
   storeReviewStats,
 }: RestaurantMarketplacePageProps) {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeChip, setActiveChip] = useState("All");
   const [sortMode, setSortMode] = useState<SortMode>("featured");
@@ -138,12 +141,36 @@ export default function RestaurantMarketplacePage({
   const [quickViewProduct, setQuickViewProduct] = useState<StoreProduct | null>(null);
   const [quickViewImage, setQuickViewImage] = useState("");
   const [quickViewSaved, setQuickViewSaved] = useState(false);
+  const [addedToCartProductIds, setAddedToCartProductIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     return subscribeVendorStoreStatus(String(data.id || ""), (payload) => {
       setLiveStoreStatus(payload);
     });
   }, [data.id]);
+
+  useEffect(() => {
+    const syncCartState = () => {
+      const next: Record<string, boolean> = {};
+      readCart().forEach((item) => {
+        const productId = String(item?.product?.id || "").trim();
+        if (productId) {
+          next[productId] = true;
+        }
+      });
+
+      setAddedToCartProductIds(next);
+    };
+
+    syncCartState();
+    window.addEventListener(CART_UPDATED_EVENT, syncCartState as EventListener);
+    window.addEventListener("storage", syncCartState);
+
+    return () => {
+      window.removeEventListener(CART_UPDATED_EVENT, syncCartState as EventListener);
+      window.removeEventListener("storage", syncCartState);
+    };
+  }, []);
 
   const categoryBubbles = useMemo(() => {
     const mapped = new Map<string, { label: string; imageUrl: string }>();
@@ -301,6 +328,7 @@ export default function RestaurantMarketplacePage({
         quickViewProduct?.subcategoryName ||
         "Food & Beverages"
     ).trim() || "Food & Beverages";
+  const isQuickViewInCart = quickViewProduct ? Boolean(addedToCartProductIds[quickViewProduct.id]) : false;
 
   const openQuickView = (product: StoreProduct) => {
     const primaryImage =
@@ -317,6 +345,26 @@ export default function RestaurantMarketplacePage({
     setQuickViewProduct(null);
     setQuickViewImage("");
   };
+
+  const handleAddToCartWithFeedback = useCallback(
+    (product: StoreProduct) => {
+      const alreadyInCart = readCart().some((item) => item.product.id === product.id);
+      if (alreadyInCart) {
+        setAddedToCartProductIds((previous) => ({
+          ...previous,
+          [product.id]: true,
+        }));
+        return;
+      }
+
+      onAddToCart(product);
+      setAddedToCartProductIds((previous) => ({
+        ...previous,
+        [product.id]: true,
+      }));
+    },
+    [onAddToCart]
+  );
 
   useEffect(() => {
     if (!quickViewProduct || typeof window === "undefined") {
@@ -593,6 +641,7 @@ export default function RestaurantMarketplacePage({
                 const oldPriceValue = Number(product.oldPriceValue || 0);
                 const hasDiscount = oldPriceValue > priceValue;
                 const discountPercent = hasDiscount ? Math.round(((oldPriceValue - priceValue) / oldPriceValue) * 100) : 0;
+                const isProductInCart = Boolean(addedToCartProductIds[product.id]);
 
                 return (
                   <article
@@ -648,11 +697,15 @@ export default function RestaurantMarketplacePage({
 
                       <button
                         type="button"
-                        onClick={() => onAddToCart(product)}
-                        className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#fb6a3d] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(251,106,61,0.28)]"
+                        onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCartWithFeedback(product))}
+                        className={`mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl text-sm font-semibold text-white ${
+                          isProductInCart
+                            ? "bg-emerald-600 shadow-[0_8px_16px_rgba(5,150,105,0.26)] hover:bg-emerald-700"
+                            : "bg-[#fb6a3d] shadow-[0_8px_16px_rgba(251,106,61,0.28)]"
+                        }`}
                       >
                         <ShoppingCart size={14} />
-                        Add to Cart
+                        {isProductInCart ? "Go to Cart" : "Add to Cart"}
                       </button>
                     </div>
                   </article>
@@ -806,11 +859,17 @@ export default function RestaurantMarketplacePage({
 
                 <button
                   type="button"
-                  onClick={() => onAddToCart(quickViewProduct)}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#fb6a3d] text-base font-semibold text-white shadow-[0_10px_22px_rgba(251,106,61,0.35)]"
+                  onClick={() => (isQuickViewInCart ? router.push("/cart") : handleAddToCartWithFeedback(quickViewProduct))}
+                  className={`mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] text-base font-semibold text-white ${
+                    isQuickViewInCart
+                      ? "bg-emerald-600 shadow-[0_10px_22px_rgba(5,150,105,0.33)] hover:bg-emerald-700"
+                      : "bg-[#fb6a3d] shadow-[0_10px_22px_rgba(251,106,61,0.35)]"
+                  }`}
                 >
                   <ShoppingCart size={16} />
-                  Add to Cart • ₹{Math.round(quickViewPrice).toLocaleString("en-IN")}
+                  {isQuickViewInCart
+                    ? "Go to Cart"
+                    : `Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
                 </button>
 
                 <button
