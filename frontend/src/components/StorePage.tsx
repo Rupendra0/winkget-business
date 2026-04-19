@@ -171,12 +171,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const statusLabel = isStoreClosed ? "Closed" : "Open";
   const availabilityToneClass = isStoreClosed ? "text-rose-700" : "text-emerald-700";
   const statusToneClass = isStoreClosed ? "text-rose-700" : "text-emerald-700";
-  const availabilityCardClass = isStoreClosed
-    ? "bg-rose-50/80"
-    : "bg-emerald-50/80";
-  const statusCardClass = isStoreClosed
-    ? "bg-rose-50/80"
-    : "bg-emerald-50/80";
+  const availabilityCardClass = "";
+  const statusCardClass = "";
   const shippingLabel = useMemo(() => {
     const firstShippingLabel = data.products.find((product) => String(product.shippingLabel || "").trim())?.shippingLabel;
     const candidate = String(firstShippingLabel || data.deliveryFeeLabel || "").trim();
@@ -267,8 +263,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
   return (
     <main className="px-3 sm:px-4 lg:px-6 pb-12">
       <div className="max-w-[1400px] mx-auto space-y-10">
-        <section className="rounded-3xl overflow-hidden bg-white/70 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
-          <div className="relative h-44 sm:h-52 lg:h-56">
+        <section className="overflow-hidden bg-white/70 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
+          <div className="relative h-52 sm:h-60 lg:h-72">
             <img
               src={data.bannerImage}
               alt={data.storeName}
@@ -277,8 +273,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-800/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent sm:hidden" />
-            <div className="absolute inset-x-3 bottom-3 flex items-end gap-3 sm:hidden">
-              <div className="h-[96px] w-[96px] shrink-0 rounded-full overflow-hidden bg-white">
+            <div className="absolute bottom-3 left-6 right-3 flex items-end gap-3 sm:hidden">
+              <div className="h-[120px] w-[120px] shrink-0 rounded-full overflow-hidden bg-white">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
               </div>
 
@@ -291,7 +287,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 </div>
               </div>
             </div>
-            <div className="absolute bottom-5 left-5 hidden items-center gap-4 sm:flex">
+            <div className="absolute bottom-10 left-25 hidden items-center gap-4 sm:flex">
               <div className="h-[108px] w-[108px] rounded-full overflow-hidden bg-white">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
               </div>
@@ -319,7 +315,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
             <article className={`rounded-lg px-1.5 py-2 text-center ${availabilityCardClass}`}>
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Avail</p>
-              <div className={`mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold ${availabilityToneClass}`}>
+              <div className={`mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold ${availabilityToneClass}`}>
                 <Truck size={11} aria-hidden="true" />
                 <span>{availabilityCompactValue}</span>
               </div>
@@ -327,13 +323,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
             <article className={`rounded-lg px-1.5 py-2 text-center ${statusCardClass}`}>
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
-              <div className={`mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold ${statusToneClass}`}>
+              <div className={`mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold ${statusToneClass}`}>
                 <Store size={11} aria-hidden="true" />
                 <span>{statusLabel}</span>
               </div>
             </article>
 
-            <article className="rounded-lg bg-emerald-50/80 px-1.5 py-2 text-center">
+            <article className="rounded-lg px-1.5 py-2 text-center">
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ship</p>
               <div className="mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold text-emerald-700">
                 <CheckCircle2 size={11} aria-hidden="true" />
@@ -343,7 +339,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
 
           <div className="hidden gap-2.5 sm:grid sm:grid-cols-4">
-            <article className="rounded-xl bg-amber-50/80 px-4 py-3">
+            <article className="rounded-xl px-18 py-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ratings</p>
               <p className="mt-1.5 text-base font-semibold leading-tight text-slate-900 sm:text-lg">{ratingSummary}</p>
               <div className="mt-1.5 flex items-center gap-1">
@@ -361,24 +357,24 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <article className={`rounded-xl px-4 py-3 ${availabilityCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Availability</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 ${availabilityToneClass}`}>
+                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${availabilityToneClass}`}>
                   <Truck size={17} aria-hidden="true" />
                 </span>
-                <p className={`text-lg font-semibold leading-tight sm:text-xl ${availabilityToneClass}`}>{availabilityLabel}</p>
+                <p className={`text-base font-semibold leading-tight sm:text-lg ${availabilityToneClass}`}>{availabilityLabel}</p>
               </div>
             </article>
 
             <article className={`rounded-xl px-4 py-3 ${statusCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 ${statusToneClass}`}>
+                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${statusToneClass}`}>
                   <Store size={17} aria-hidden="true" />
                 </span>
-                <p className={`text-lg font-semibold leading-tight sm:text-xl ${statusToneClass}`}>{statusLabel}</p>
+                <p className={`text-base font-semibold leading-tight sm:text-lg ${statusToneClass}`}>{statusLabel}</p>
               </div>
             </article>
 
-            <article className="rounded-xl bg-emerald-50/80 px-4 py-3">
+            <article className="rounded-xl px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Shipping</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 text-emerald-700">
@@ -388,9 +384,10 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </article>
           </div>
+                  <div className="my-2 h-[1px] w-full bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
         </section>
 
-        <section className="-mt-8 space-y-6 sm:-mt-10 lg:-mt-4">
+        <section className="sm:-mt-6 -lg:-mt-1">
           <section className="mt-0 bg-transparent p-0 sm:-mt-5 lg:mt-0">
             <div className="mt-1.5 flex items-center gap-2 sm:gap-2.5">
               <button
@@ -451,7 +448,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
+          <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
             <aside className="hidden rounded-2xl bg-white/80 p-5 space-y-6 h-fit lg:block lg:sticky lg:top-24">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Filter size={16} />
