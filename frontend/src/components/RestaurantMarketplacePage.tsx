@@ -173,23 +173,59 @@ export default function RestaurantMarketplacePage({
   }, []);
 
   const categoryBubbles = useMemo(() => {
-    const mapped = new Map<string, { label: string; imageUrl: string }>();
+    const fallbackImage = String(data.logoImage || data.bannerImage || "").trim();
+    const mappedProductImages = new Map<string, string>();
 
     data.products.forEach((product) => {
       const label = String(product.subcategoryName || "").trim();
-      if (!label || mapped.has(label)) {
+      if (!label || mappedProductImages.has(label.toLowerCase())) {
         return;
       }
 
-      mapped.set(label, {
-        label,
-        imageUrl: String(product.imageUrl || data.logoImage || data.bannerImage || "").trim(),
-      });
+      const imageUrl = String(product.imageUrl || fallbackImage).trim();
+      if (!imageUrl) {
+        return;
+      }
+
+      mappedProductImages.set(label.toLowerCase(), imageUrl);
     });
 
-    const base = Array.from(mapped.values());
-    return [{ label: "All", imageUrl: String(data.logoImage || data.bannerImage || "").trim() }, ...base];
-  }, [data.bannerImage, data.logoImage, data.products]);
+    const adminCategoryBubbles = Array.isArray(data.categoryBarItems)
+      ? data.categoryBarItems
+          .map((item) => {
+            const id = String(item.id || "").trim();
+            const label = String(item.label || "").trim();
+            if (!id || !label) {
+              return null;
+            }
+
+            const iconImage = String(item.iconImage || "").trim();
+            const productImage = mappedProductImages.get(label.toLowerCase());
+
+            return {
+              id,
+              label,
+              imageUrl: iconImage || productImage || fallbackImage,
+            };
+          })
+          .filter((item): item is { id: string; label: string; imageUrl: string } => Boolean(item && item.imageUrl))
+      : [];
+
+    if (adminCategoryBubbles.length > 0) {
+      return [{ id: "all", label: "All", imageUrl: fallbackImage }, ...adminCategoryBubbles];
+    }
+
+    const fallbackBubbles = Array.from(mappedProductImages.entries()).map(([normalizedLabel, imageUrl]) => ({
+      id: normalizedLabel,
+      label: normalizedLabel
+        .split(" ")
+        .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ""))
+        .join(" "),
+      imageUrl,
+    }));
+
+    return [{ id: "all", label: "All", imageUrl: fallbackImage }, ...fallbackBubbles];
+  }, [data.bannerImage, data.categoryBarItems, data.logoImage, data.products]);
 
   const quickFilterChips = useMemo(() => {
     const fromProductHierarchy = data.products
@@ -204,7 +240,7 @@ export default function RestaurantMarketplacePage({
     const filtered = data.products.filter((product) => {
       const passesCategory =
         activeCategory === "All" ||
-        tokenMatch([product.subcategoryName], activeCategory);
+        tokenMatch([product.subcategoryName, product.categoryLabel, product.category], activeCategory);
       const passesChip =
         activeChip === "All" ||
         tokenMatch(
@@ -467,36 +503,40 @@ export default function RestaurantMarketplacePage({
         </div>
       </section>
 
-      <div className="relative z-20 mx-auto mt-3 w-full max-w-[1120px] space-y-5 px-3 pb-[calc(86px+env(safe-area-inset-bottom))] sm:px-4 md:mt-4 md:space-y-6 md:pb-14 lg:px-0">
-        <section className="w-full rounded-[20px] border border-[#e1e7ed] bg-[#eceff3] p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)] md:p-6">
-          <div className="flex min-w-0 items-start gap-3.5 md:gap-4">
-            <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-white bg-white shadow-sm md:h-[80px] md:w-[80px]">
+      <div className="relative z-20 mx-auto mt-0 w-full max-w-[1120px] space-y-5 px-3 pb-[calc(86px+env(safe-area-inset-bottom))] sm:px-4 md:space-y-6 md:pb-14 lg:px-0">
+        <section className="w-full overflow-visible rounded-[20px] bg-[#eceff3] p-4 md:px-6 md:pb-6 md:pt-5">
+          <div className="flex min-w-0 items-start gap-3.5 md:items-start md:justify-between md:gap-6">
+            <div className="flex min-w-0 items-start gap-3.5 md:gap-6">
+              <div className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-[24px] bg-white md:-mt-[86px] md:h-[160px] md:w-[160px] md:rounded-[34px]">
               <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" loading="lazy" />
             </div>
 
-            <div className="min-w-0">
-              <h2 className="truncate text-[22px] font-semibold leading-[1.12] text-[#1f2937] md:text-[30px]">
-                {data.storeName}
-              </h2>
-              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-medium text-slate-500">
-                <MapPin size={15} className="shrink-0 text-[#95a3b7]" />
-                <span className="truncate">{data.address || "Address unavailable"}</span>
-                <span className="text-slate-400">•</span>
-                <span className="truncate">{data.cuisineLabel || data.storeCategory || "Multi-cuisine Restaurant"}</span>
-              </p>
+              <div className="min-w-0">
+                <h2 className="truncate text-[22px] font-semibold leading-[1.12] text-[#1f2937] md:text-[45px] md:leading-[1.02]">
+                  {data.storeName}
+                </h2>
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-500 md:mt-2 md:gap-2.5 md:text-[17px]">
+                  <MapPin size={16} className="shrink-0 text-[#95a3b7]" />
+                  <span className="truncate">{data.address || "Address unavailable"}</span>
+                </p>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${openBadge.className}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${openBadge.dotClass}`} />
-                  {openBadge.label}
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 md:text-sm">
-                  <Star size={15} className="fill-amber-400 text-amber-400" />
-                  {formatRating(storeReviewStats.rating)}
-                  <span className="font-medium text-slate-500">({formatReviewCount(storeReviewStats.reviews)})</span>
-                </span>
+                <div className="mt-2 flex flex-wrap items-center gap-2.5 md:mt-4 md:gap-5">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold md:min-h-[44px] md:px-6 md:text-[15px] ${openBadge.className}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full md:h-2 md:w-2 ${openBadge.dotClass}`} />
+                    {openBadge.label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 md:gap-1.5 md:text-[18px]">
+                    <Star size={16} className="fill-amber-400 text-amber-400 md:h-[20px] md:w-[20px]" />
+                    {formatRating(storeReviewStats.rating)}
+                    <span className="font-medium text-slate-500">({formatReviewCount(storeReviewStats.reviews)})</span>
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="hidden md:block md:w-[120px]" />
           </div>
         </section>
 
@@ -550,7 +590,7 @@ export default function RestaurantMarketplacePage({
 
         {shareMessage ? <p className="text-xs font-medium text-slate-500">{shareMessage}</p> : null}
 
-        <section className="rounded-[18px] border border-[#e6eaef] bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)] md:p-5">
+        <section className="rounded-[18px] bg-white p-4 md:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="inline-flex items-center gap-2 text-xl font-semibold text-[#1f2937] md:text-2xl">
               <LayoutGrid size={20} className="text-[#ffbe0b]" />
@@ -571,8 +611,8 @@ export default function RestaurantMarketplacePage({
                   className="group shrink-0"
                 >
                   <div
-                    className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full border-2 bg-[#f8fafc] transition ${
-                      isActive ? "border-[#fb6a3d] shadow-[0_8px_18px_rgba(251,106,61,0.24)]" : "border-[#e6eaef]"
+                    className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full bg-[#f8fafc] transition ${
+                      isActive ? "bg-[#fff2ed]" : ""
                     }`}
                   >
                     <img src={category.imageUrl} alt={category.label} className="h-full w-full object-cover" loading="lazy" />
@@ -584,7 +624,7 @@ export default function RestaurantMarketplacePage({
           </div>
         </section>
 
-        <section className="rounded-[18px] border border-[#e6eaef] bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+        <section className="rounded-[18px] bg-white p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
             <UtensilsCrossed size={16} className="text-[#fb6a3d]" />
             Quick Filters
@@ -596,10 +636,10 @@ export default function RestaurantMarketplacePage({
                 key={chip}
                 type="button"
                 onClick={() => setActiveChip(chip)}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
                   activeChip === chip
-                    ? "border-[#fb6a3d] bg-[#fff2ed] text-[#d14f25]"
-                    : "border-[#e4e7ec] bg-white text-slate-600"
+                    ? "bg-[#fff2ed] text-[#d14f25]"
+                    : "bg-white text-slate-600"
                 }`}
               >
                 {chip}
@@ -608,7 +648,7 @@ export default function RestaurantMarketplacePage({
           </div>
         </section>
 
-        <section id="full-menu" className="rounded-[18px] border border-[#e6eaef] bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+        <section id="full-menu" className="rounded-[18px] bg-white p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-xl font-semibold text-[#1f2937] md:text-2xl">Full Menu</h3>
@@ -631,7 +671,7 @@ export default function RestaurantMarketplacePage({
           </div>
 
           {menuItems.length === 0 ? (
-            <p className="mt-6 rounded-xl border border-dashed border-[#d7dce3] bg-[#f8fafc] px-4 py-6 text-center text-sm text-slate-600">
+            <p className="mt-6 rounded-xl bg-[#f8fafc] px-4 py-6 text-center text-sm text-slate-600">
               No menu items match your filters yet.
             </p>
           ) : (
@@ -646,7 +686,7 @@ export default function RestaurantMarketplacePage({
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full min-h-[300px] flex-col overflow-hidden rounded-[16px] border border-[#e5e8ee] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+                    className="flex h-full min-h-[300px] flex-col overflow-hidden rounded-[16px] bg-white"
                   >
                     <button
                       type="button"
@@ -715,7 +755,7 @@ export default function RestaurantMarketplacePage({
           )}
         </section>
 
-        <section className="rounded-[20px] border border-[#dfe5ec] bg-[#f4f6f8] p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)] md:p-6">
+        <section className="rounded-[20px] bg-[#f4f6f8] p-4 md:p-6">
           <div className="flex items-center gap-2.5">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-600">
               <Info size={18} />
@@ -736,7 +776,7 @@ export default function RestaurantMarketplacePage({
               </a>
             </article>
 
-            <aside className="rounded-2xl border border-[#e1e6ed] bg-[#edf1f5] p-5">
+            <aside className="rounded-2xl bg-[#edf1f5] p-5">
               <h4 className="text-xl font-semibold text-[#1f2937]">Quick Info</h4>
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
                 <div className="space-y-1">
@@ -785,7 +825,7 @@ export default function RestaurantMarketplacePage({
             aria-label="Close menu item quick view"
           />
 
-          <article className="relative z-10 w-full max-w-[980px] overflow-hidden rounded-[22px] border border-white/60 bg-[#f8fafc] shadow-[0_28px_60px_rgba(2,6,23,0.45)]">
+          <article className="relative z-10 w-full max-w-[980px] overflow-hidden rounded-[22px] bg-[#f8fafc]">
             <button
               type="button"
               onClick={closeQuickView}
@@ -796,9 +836,9 @@ export default function RestaurantMarketplacePage({
             </button>
 
             <div className="grid md:grid-cols-[1.05fr_1fr]">
-              <div className="border-b border-slate-200 bg-[#f6f7f9] md:border-b-0 md:border-r">
+              <div className="bg-[#f6f7f9]">
                 <div className="p-4 sm:p-5">
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="overflow-hidden rounded-2xl bg-white">
                     <img
                       src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
                       alt={quickViewProduct.name}
@@ -816,8 +856,8 @@ export default function RestaurantMarketplacePage({
                             key={`quick-view-thumb-${index}`}
                             type="button"
                             onClick={() => setQuickViewImage(image)}
-                            className={`h-14 w-14 overflow-hidden rounded-xl border-2 transition ${
-                              isActive ? "border-[#fb6a3d]" : "border-slate-200"
+                            className={`h-14 w-14 overflow-hidden rounded-xl transition ${
+                              isActive ? "opacity-100" : "opacity-80"
                             }`}
                             aria-label={`Show image ${index + 1}`}
                           >
@@ -881,7 +921,7 @@ export default function RestaurantMarketplacePage({
                   {quickViewSaved ? "Saved" : "Save"}
                 </button>
 
-                <div className="mt-4 border-t border-slate-200 pt-4 text-sm text-slate-600">
+                <div className="mt-4 pt-4 text-sm text-slate-600">
                   <p>
                     Category: <span className="font-semibold text-[#fb6a3d]">{quickViewCategory}</span>
                   </p>
@@ -927,7 +967,7 @@ function InfoTile({
   subtitle: string;
 }) {
   return (
-    <article className="rounded-[14px] border border-[#dae2ea] bg-[#eef2f6] px-3 py-4 text-center shadow-[0_6px_14px_rgba(15,23,42,0.04)] md:px-4 md:py-5">
+    <article className="rounded-[14px] bg-[#eef2f6] px-3 py-4 text-center md:px-4 md:py-5">
       <div className="mx-auto mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff2e9]">{icon}</div>
       <p className="text-xl font-semibold text-[#1f2a3d] md:text-2xl">{title}</p>
       <p className="mt-1 text-xs font-medium text-slate-500 md:text-sm">{subtitle}</p>
