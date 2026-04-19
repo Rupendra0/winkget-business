@@ -1113,9 +1113,14 @@ export default function ListingProfilePage({
                 </span>
               ) : null}
 
-              {fullAddress ? <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#a8c59f]" /> : null}
-
-              <span>{profile.category}</span>
+              {fullAddress ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#a8c59f]" />
+                  <span>{profile.category}</span>
+                </span>
+              ) : (
+                <span>{profile.category}</span>
+              )}
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
@@ -1174,9 +1179,14 @@ export default function ListingProfilePage({
                     </span>
                   ) : null}
 
-                  {fullAddress ? <span className="h-4 w-4 shrink-0 rounded-full bg-[#a8c59f]" /> : null}
-
-                  <span>{profile.category}</span>
+                  {fullAddress ? (
+                    <span className="inline-flex items-center gap-2.5">
+                      <span className="h-4 w-4 shrink-0 rounded-full bg-[#a8c59f]" />
+                      <span>{profile.category}</span>
+                    </span>
+                  ) : (
+                    <span>{profile.category}</span>
+                  )}
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-5">
