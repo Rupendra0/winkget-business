@@ -3,18 +3,15 @@
 import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BadgeCheck,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  Clock3,
-  Copy,
   Globe,
   Layers3,
-  Mail,
   MapPin,
   MessageCircle,
   MessageSquare,
-  Navigation,
   Pencil,
   PencilLine,
   Phone,
@@ -48,20 +45,6 @@ const sanitizeWebsite = (value?: string) => {
   if (!trimmed) return "";
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
-};
-
-const toDisplayTime = (timeValue?: string) => {
-  const normalized = String(timeValue || "").trim();
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(normalized);
-  if (!match) {
-    return normalized;
-  }
-
-  const hour24 = Number(match[1]);
-  const minutes = Number(match[2]);
-  const suffix = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = ((hour24 + 11) % 12) + 1;
-  return `${hour12}: ${String(minutes).padStart(2, "0")} ${suffix}`;
 };
 
 const uniqueStrings = (values: string[]) => {
@@ -124,30 +107,6 @@ const formatReviewDate = (value: string) => {
 
 const INQUIRY_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INQUIRY_PHONE_REGEX = /^[0-9]{10}$/;
-
-type OpeningScheduleItem = {
-  day: string;
-  time: string;
-};
-
-const toOpeningSchedule = (profile: ListingProfile): OpeningScheduleItem[] => {
-  if (Array.isArray(profile.hours) && profile.hours.length > 0) {
-    return profile.hours
-      .map((item) => ({
-        day: String(item.day || "").trim(),
-        time: String(item.time || "").trim(),
-      }))
-      .filter((item) => item.day && item.time);
-  }
-
-  const opening = toDisplayTime(profile.shopOpeningTime);
-  const closing = toDisplayTime(profile.shopClosingTime);
-  if (!opening || !closing) {
-    return [];
-  }
-
-  return [{ day: "Mon - Sun", time: `${opening} - ${closing}` }];
-};
 
 const toStoreProductsFromMenuItems = (profile: ListingProfile): StoreProduct[] => {
   if (!Array.isArray(profile.menuItems) || profile.menuItems.length === 0) {
@@ -297,10 +256,7 @@ export default function ListingProfilePage({
   const [inquiryFormMessage, setInquiryFormMessage] = useState<string | null>(null);
   const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [contactCardMessage, setContactCardMessage] = useState<string | null>(null);
-  const [isHeroScrollBarVisible, setIsHeroScrollBarVisible] = useState(false);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
-  const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const businessInfoTextRef = useRef<HTMLParagraphElement | null>(null);
   const reviewTextRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
 
@@ -392,32 +348,6 @@ export default function ListingProfilePage({
     });
   }, [profile.id]);
 
-  useEffect(() => {
-    const updateHeroScrollBarVisibility = () => {
-      if (typeof window === "undefined" || window.innerWidth < 1024) {
-        setIsHeroScrollBarVisible(false);
-        return;
-      }
-
-      const heroRect = heroSectionRef.current?.getBoundingClientRect();
-      if (!heroRect) {
-        setIsHeroScrollBarVisible(false);
-        return;
-      }
-
-      setIsHeroScrollBarVisible(heroRect.bottom <= 72);
-    };
-
-    updateHeroScrollBarVisibility();
-    window.addEventListener("scroll", updateHeroScrollBarVisibility, { passive: true });
-    window.addEventListener("resize", updateHeroScrollBarVisibility);
-
-    return () => {
-      window.removeEventListener("scroll", updateHeroScrollBarVisibility);
-      window.removeEventListener("resize", updateHeroScrollBarVisibility);
-    };
-  }, [profile.id]);
-
   const fullAddress = useMemo(() => {
     const addressParts = [profile.address, profile.city, profile.state, profile.postalCode]
       .map((item) => String(item || "").trim())
@@ -442,22 +372,6 @@ export default function ListingProfilePage({
     [profile.phone, profile.whatsapp]
   );
   const websiteHref = useMemo(() => sanitizeWebsite(profile.website), [profile.website]);
-  const emailHref = useMemo(() => {
-    const email = String(profile.email || "").trim();
-    if (!email) {
-      return "";
-    }
-
-    return `mailto:${email}?subject=${encodeURIComponent(`Inquiry for ${profile.name}`)}`;
-  }, [profile.email, profile.name]);
-  const directionsHref = useMemo(() => {
-    const query = fullAddress || [profile.name, profile.city].map((item) => String(item || "").trim()).filter(Boolean).join(", ");
-    if (!query) {
-      return "";
-    }
-
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-  }, [fullAddress, profile.city, profile.name]);
   const storeHref = useMemo(() => {
     const storeId = String(profile.storeId || profile.id || "").trim();
     return storeId ? `/store/${storeId}` : "";
@@ -483,14 +397,34 @@ export default function ListingProfilePage({
   );
   const photoGridColumns = 4;
   const photoGridRows = 4;
+  const desktopPhotoGridRows = Math.max(1, photoGridRows - 1);
   const mobilePhotoSlots = photoGridColumns * photoGridRows;
-  const desktopPhotoSlots = photoGridColumns * photoGridRows;
+  const desktopPhotoSlots = photoGridColumns * desktopPhotoGridRows;
   const mobilePhotoRow = photoItems.slice(0, Math.min(photoItems.length, mobilePhotoSlots));
   const desktopPhotoRow = photoItems.slice(0, Math.min(photoItems.length, desktopPhotoSlots));
+  const galleryPreviewItems = photoItems.slice(0, 3);
   const mobileOverflowCount = Math.max(0, photoItems.length - mobilePhotoSlots);
   const desktopOverflowCount = Math.max(0, photoItems.length - desktopPhotoSlots);
 
-  const openingSchedule = useMemo(() => toOpeningSchedule(profile), [profile]);
+  const gstinValue = useMemo(() => {
+    const sources: Array<Record<string, unknown>> = [profile as unknown as Record<string, unknown>];
+    if (storeData && typeof storeData === "object") {
+      sources.push(storeData as unknown as Record<string, unknown>);
+    }
+
+    const gstKeys = ["gstin", "gstNumber", "gstNo", "gstinNumber", "gst", "taxId", "taxNumber"] as const;
+
+    for (const source of sources) {
+      for (const key of gstKeys) {
+        const candidate = String(source[key] || "").trim();
+        if (candidate) {
+          return candidate;
+        }
+      }
+    }
+
+    return "";
+  }, [profile, storeData]);
 
   const isVerified = useMemo(
     () =>
@@ -629,20 +563,6 @@ export default function ListingProfilePage({
     setIsInquiryModalOpen(false);
   };
 
-  const handleCopyAddress = async () => {
-    if (!fullAddress) {
-      setContactCardMessage("Address is unavailable.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(fullAddress);
-      setContactCardMessage("Address copied.");
-    } catch {
-      setContactCardMessage("Unable to copy address.");
-    }
-  };
-
   const handleShare = async () => {
     const pageUrl = typeof window !== "undefined" ? window.location.href : "";
     if (!pageUrl) return;
@@ -668,6 +588,20 @@ export default function ListingProfilePage({
       setShareMessage("Unable to share right now");
     }
   };
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  }, []);
 
   const handleSubmitInquiry = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1029,10 +963,12 @@ export default function ListingProfilePage({
       explicitFeaturedIds.length > 0
         ? explicitFeaturedIds
         : sourceProducts.slice(0, 6).map((product) => product.id);
+
     const featuredSet = new Set(featuredProductIds);
     const explicitTrendingIds = Array.isArray(storeData?.trending?.productIds)
-      ? storeData.trending.productIds.filter((id) => Boolean(id) && !featuredSet.has(id))
+      ? storeData.trending.productIds.filter(Boolean)
       : [];
+
     const trendingProductIds =
       explicitTrendingIds.length > 0
         ? explicitTrendingIds
@@ -1130,140 +1066,9 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8 lg:pb-28">
+    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
       <div className="mx-auto w-full max-w-[1120px] space-y-0 lg:max-w-[1240px]">
-        {isHeroScrollBarVisible ? (
-          <>
-            <section className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-[#d7dde6] bg-white/95 shadow-[0_-8px_20px_rgba(15,23,42,0.12)] backdrop-blur lg:block">
-              <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white">
-                    {logoImage ? (
-                      <img
-                        src={logoImage}
-                        alt={`${profile.name} logo`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-[#e6e8ea]" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <h2 className="truncate text-[25px] font-semibold leading-tight text-[#111827]">{profile.name}</h2>
-
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-[#118c2a] px-2 py-0.5 text-[13px] font-bold text-white">
-                        {roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}
-                        <Star size={14} className="fill-white text-white" />
-                      </span>
-
-                      <span className="text-[13px] font-medium text-[#374151]">{`${reviewCount} Ratings`}</span>
-
-                      <span className="inline-flex rounded-[7px] bg-[#f9dd67] px-2 py-0.5 text-[13px] font-semibold text-[#7c5800]">
-                        Trust
-                      </span>
-
-                      <span className="text-[15px] font-semibold text-[#2964b8]">Verified</span>
-
-                      <span className="text-[15px] font-semibold text-[#111827]">Claimed</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-3">
-                  {phoneDigits ? (
-                    <a
-                      href={`tel:${phoneDigits}`}
-                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#0e9f2f] px-5 text-sm font-semibold text-white"
-                    >
-                      <Phone size={18} />
-                      <span>{profile.phone}</span>
-                    </a>
-                  ) : (
-                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#9ca3af] px-5 text-sm font-semibold text-white opacity-70">
-                      <Phone size={18} />
-                      Call
-                    </span>
-                  )}
-
-                  {hasInquiryTarget ? (
-                    <button
-                      type="button"
-                      onClick={openInquiryModal}
-                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#1778d0] px-5 text-sm font-semibold text-white"
-                    >
-                      <MessageCircle size={18} />
-                      Enquire Now
-                    </button>
-                  ) : (
-                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] bg-[#93c5fd] px-5 text-sm font-semibold text-white opacity-70">
-                      <MessageCircle size={18} />
-                      Enquire Now
-                    </span>
-                  )}
-
-                  {whatsappDigits ? (
-                    <a
-                      href={`https://wa.me/${whatsappDigits}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#1f8d29] bg-white px-5 text-sm font-semibold text-[#0f172a]"
-                    >
-                      <WhatsAppIcon className="h-5 w-5 text-[#16a34a]" />
-                      WhatsApp
-                    </a>
-                  ) : (
-                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-slate-500 opacity-70">
-                      <WhatsAppIcon className="h-5 w-5 text-[#94a3b8]" />
-                      WhatsApp
-                    </span>
-                  )}
-
-                  {storeHref ? (
-                    <Link
-                      href={storeHref}
-                      className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#c7d2fe] bg-[#4338ca] px-5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#e0e7ff] hover:text-black"
-                    >
-                      <Store size={18} />
-                      My Store
-                    </Link>
-                  ) : (
-                    <span className="inline-flex min-h-14 items-center gap-2 rounded-[10px] border border-[#cbd5e1] bg-[#4338ca] px-5 text-sm font-semibold text-white opacity-70">
-                      <Store size={18} />
-                      My Store
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => void handleShare()}
-                    className="inline-flex h-14 w-14 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151]"
-                    aria-label="Share profile"
-                  >
-                    <Share2 size={20} />
-                  </button>
-
-                  <a
-                    href={websiteHref || "#"}
-                    target={websiteHref ? "_blank" : undefined}
-                    rel={websiteHref ? "noreferrer" : undefined}
-                    className={`inline-flex h-14 w-14 items-center justify-center rounded-[10px] border border-[#d1d5db] bg-white text-[#374151] ${websiteHref ? "" : "pointer-events-none opacity-55"}`}
-                    aria-label="Open website"
-                  >
-                    <Globe size={20} />
-                  </a>
-                </div>
-              </div>
-              </div>
-            </section>
-          </>
-        ) : null}
-
         <section className="rounded-[24px] bg-white px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
-          <div ref={heroSectionRef}>
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f2f3f5]">
             {coverImage ? (
               <img
@@ -1278,7 +1083,7 @@ export default function ListingProfilePage({
           </div>
 
           <div className="relative z-20 -mt-[56px] flex justify-center sm:-mt-[62px] md:hidden">
-            <div className="h-[95px] w-[95px] overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white sm:h-[104px] sm:w-[104px]">
+            <div className="h-[108px] w-[108px] overflow-hidden rounded-[28px] border-4 border-white bg-white shadow-[0_14px_28px_rgba(15,23,42,0.16)] sm:h-[116px] sm:w-[116px]">
               {logoImage ? (
                 <img
                   src={logoImage}
@@ -1292,55 +1097,54 @@ export default function ListingProfilePage({
             </div>
           </div>
 
-          <div className="-mt-8 flex items-center justify-between gap-2 -px-1 md:hidden">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                liveStoreOpenState === true
-                  ? "bg-emerald-50 text-emerald-700 motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
-                  : liveStoreOpenState === false
-                    ? "bg-rose-50 text-rose-700"
-                    : "bg-slate-50 text-slate-600"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  liveStoreOpenState === true
-                    ? "bg-emerald-500"
-                    : liveStoreOpenState === false
-                      ? "bg-rose-500"
-                      : "bg-slate-400"
-                }`}
-              />
-              {liveStoreOpenState === true
-                ? "Open Now"
-                : liveStoreOpenState === false
-                  ? "Closed"
-                  : "Status Unknown"}
-            </span>
-          </div>
-
           <div className="mt-2 text-center md:hidden">
             <h1
-              className="mx-auto max-w-full truncate px-2 text-[20px] font-extrabold leading-snug text-[#4b4f53]"
+              className="mx-auto max-w-full truncate px-2 text-[22px] font-semibold leading-snug text-[#101114]"
               style={{ fontFamily: "Fahkwang" }}
             >
               {profile.name}
             </h1>
-            <p className="mt-0.5 text-sm font-bold leading-tight text-gray-600">
-              {profile.category}
-            </p>
 
-            {fullAddress ? (
-              <p className="mx-auto mt-1 flex max-w-[900px] items-center justify-center gap-1.5 px-1 text-xs font-bold leading-tight text-gray-500">
-                <MapPin size={14} className="shrink-0 text-[#d44040]" />
-                <span className="min-w-0 truncate whitespace-nowrap">{`Address : ${fullAddress}`}</span>
-              </p>
-            ) : null}
+            <div className="mx-auto mt-1.5 flex max-w-[900px] flex-wrap items-center justify-center gap-x-3 gap-y-1 px-1 text-[14px] font-semibold leading-tight text-[#48474d]">
+              {fullAddress ? (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <MapPin size={15} className="shrink-0 text-[#ef4444]" />
+                  <span className="min-w-0 truncate whitespace-nowrap">{fullAddress}</span>
+                </span>
+              ) : null}
+
+              {fullAddress ? <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#a8c59f]" /> : null}
+
+              <span>{profile.category}</span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
+              <span
+                className={`inline-flex min-h-8 items-center rounded-full px-5 text-[12px] font-semibold ${
+                  liveStoreOpenState === true
+                    ? "bg-[#79c65a] text-[#f2ffe6]"
+                    : liveStoreOpenState === false
+                      ? "bg-[#ef4444] text-white"
+                      : "bg-[#94a3b8] text-white"
+                }`}
+              >
+                {liveStoreOpenState === true
+                  ? "Open Now"
+                  : liveStoreOpenState === false
+                    ? "Closed"
+                    : "Status Unknown"}
+              </span>
+
+              <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#434248]">
+                <Star size={17} className="fill-[#f0b100] text-[#f0b100]" />
+                <span>{`${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} ( ${reviewCount} Reviews )`}</span>
+              </span>
+            </div>
           </div>
 
           <div className="hidden min-h-[182px] items-start justify-between gap-6 px-4 pb-5 pt-6 md:flex lg:min-h-[128px] lg:px-5 lg:pb-2 lg:pt-4">
             <div className="flex min-w-0 items-start gap-4 lg:gap-5">
-              <div className="relative z-20 -mt-[68px] h-[116px] w-[116px] shrink-0 overflow-hidden rounded-full border-2 border-[#cc5c5c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] lg:-mt-[73px] lg:h-[126px] lg:w-[126px]">
+              <div className="relative z-20 -mt-[76px] h-[144px] w-[144px] shrink-0 overflow-hidden rounded-[34px] border-4 border-white bg-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] lg:-mt-[82px] lg:h-[158px] lg:w-[158px]">
                 {logoImage ? (
                   <img
                     src={logoImage}
@@ -1356,51 +1160,56 @@ export default function ListingProfilePage({
               <div className="min-w-0 -mt-3 lg:-mt-2.5">
 
                 <h1
-                  className="text-[0.875rem] font-black leading-[1.05] text-[#132945] lg:text-[2rem]"
-                  style={{ fontFamily: "Fahkwang", letterSpacing: "0.05px" }}
+                  className="text-[1.55rem] font-semibold leading-[1.08] text-[#101114] lg:text-[2.35rem]"
+                  style={{ fontFamily: "poppins", letterSpacing: "0.05px" }}
                 >
                   {profile.name}
                 </h1>
-                <p
-                  className="mt-2 text-[15px] font-extrabold leading-tight text-[#1f4f8d] lg:text-base"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-                >
-                  {profile.category}
-                </p>
 
-                {fullAddress ? (
-                  <p className="mt-2.5 flex items-start gap-2 text-xs font-bold leading-snug text-[#5c6c7e] lg:text-[13px]">
-                    <MapPin size={15} className="mt-0.5 shrink-0 text-[#d44040]" />
-                    <span className="min-w-0 break-words">{`Address : ${fullAddress}`}</span>
-                  </p>
-                ) : null}
+                <div id="listing-address" className="mt-3 flex flex-wrap items-center gap-x-7 gap-y-2 text-[15px] font-semibold leading-tight text-[#48474d] lg:text-[16px]">
+                  {fullAddress ? (
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <MapPin size={20} className="shrink-0 text-[#ef4444]" />
+                      <span className="min-w-0 break-words">{fullAddress}</span>
+                    </span>
+                  ) : null}
+
+                  {fullAddress ? <span className="h-4 w-4 shrink-0 rounded-full bg-[#a8c59f]" /> : null}
+
+                  <span>{profile.category}</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-5">
+                  <span
+                    className={`inline-flex min-h-[36px] items-center rounded-full px-5 text-[0.82rem] font-semibold ${
+                      liveStoreOpenState === true
+                        ? "bg-[#79c65a] text-[#f2ffe6]"
+                        : liveStoreOpenState === false
+                          ? "bg-[#ef4444] text-white"
+                          : "bg-[#94a3b8] text-white"
+                    }`}
+                  >
+                    {liveStoreOpenState === true
+                      ? "Open Now"
+                      : liveStoreOpenState === false
+                        ? "Closed"
+                        : "Status Unknown"}
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5 text-[1.03rem] font-semibold text-[#434248] lg:text-[1.1rem]">
+                    <Star size={18} className="fill-[#f0b100] text-[#f0b100]" />
+                    <span>{`${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} ( ${reviewCount} Reviews )`}</span>
+                  </span>
+                </div>
               </div>
             </div>
 
-            <span
-              className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-full px-3 py-1 text-sm font-bold lg:text-base ${
-                liveStoreOpenState === true
-                  ? "bg-emerald-50 text-emerald-700 motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
-                  : liveStoreOpenState === false
-                    ? "bg-rose-50 text-rose-700"
-                    : "bg-slate-50 text-slate-600"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  liveStoreOpenState === true
-                    ? "bg-emerald-500"
-                    : liveStoreOpenState === false
-                      ? "bg-rose-500"
-                      : "bg-slate-400"
-                }`}
-              />
-              {liveStoreOpenState === true
-                ? "Open Now"
-                : liveStoreOpenState === false
-                  ? "Closed"
-                  : "Status Unknown"}
-            </span>
+            {isVerified ? (
+              <span className="inline-flex shrink-0 items-center gap-2 self-start pt-2 text-[1.1rem] font-semibold text-[#4b4b50] lg:text-[1.2rem]">
+                <BadgeCheck size={26} className="fill-[#3d92e6] text-white" />
+                Verified
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-4 rounded-2xl border border-white/70 bg-[#f8fbff]/75 p-2 backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:border-0 md:bg-transparent md:p-0 md:shadow-none lg:hidden">
@@ -1486,7 +1295,6 @@ export default function ListingProfilePage({
           {shareMessage ? (
             <p className="mt-2.5 text-center text-xs font-medium text-gray-500">{shareMessage}</p>
           ) : null}
-          </div>
 
           {photoItems.length > 0 ? (
             <section className="mt-5 bg-white p-3 sm:p-4 lg:hidden">
@@ -1549,7 +1357,7 @@ export default function ListingProfilePage({
             </section>
           ) : null}
 
-          <div className="mt-2 hidden lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <div className="mt-8 hidden lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
             <div className="space-y-5">
               <section className="bg-white p-5 [&_.desktop-elevate]:!shadow-sm [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300 [&_.desktop-card:hover]:!shadow-md">
                 <div className="space-y-4">
@@ -1669,165 +1477,136 @@ export default function ListingProfilePage({
                 </div>
               </section>
 
-              <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5">
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <h3
-                      className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
-                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
-                    >
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
-                        <BriefcaseBusiness size={13} className="md:hidden" />
-                        <BriefcaseBusiness size={15} className="hidden md:block" />
-                      </span>
-                      <span>Services</span>
-                    </h3>
-
-                    <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
-                      {serviceItems.map((service) => (
-                        <li
-                          key={service}
-                          className="text-[15px] text-black md:text-base"
-                        >
-                          {service}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="border-l border-[#e5e9ef] pl-5">
-                    <h3
-                      className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
-                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
-                    >
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
-                        <Layers3 size={13} className="md:hidden" />
-                        <Layers3 size={15} className="hidden md:block" />
-                      </span>
-                      <span>Categories</span>
-                    </h3>
-
-                    <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
-                      {categoryItems.map((category) => (
-                        <li
-                          key={category}
-                          className="text-[15px] text-black md:text-base"
-                        >
-                          {category}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
-
               <section className="rounded-[12px] bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.06)]">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-[1.1rem] font-semibold text-[#0f172a]">Contact</h3>
-                    {phoneDigits ? (
-                      <a
-                        href={`tel:${phoneDigits}`}
-                        className="mt-2 inline-flex items-center gap-2 text-base font-semibold text-[#2563eb]"
-                      >
-                        <Phone size={16} />
-                        <span>{profile.phone}</span>
-                      </a>
-                    ) : (
-                      <p className="mt-2 text-sm font-medium text-[#64748b]">Phone unavailable</p>
-                    )}
-                    {profile.businessAlternatePhone ? (
-                      <p className="mt-1 text-sm font-medium text-[#475569]">{`Alt: ${profile.businessAlternatePhone}`}</p>
-                    ) : null}
-                  </div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[1.02rem] font-semibold text-[#4a4a50]">Gallery</h3>
+                  <button
+                    type="button"
+                    onClick={openAllPhotosModal}
+                    disabled={photoItems.length === 0}
+                    className="text-[0.96rem] font-semibold text-[#4a4a50] disabled:opacity-50"
+                  >
+                    View All
+                  </button>
+                </div>
 
-                  <div className="border-t border-[#e7edf4] pt-3">
-                    <h3 className="text-[1.1rem] font-semibold text-[#0f172a]">Address</h3>
-                    {fullAddress ? (
-                      <p className="mt-2 text-[15px] leading-[1.55] text-[#1f2937]">{fullAddress}</p>
-                    ) : (
-                      <p className="mt-2 text-sm font-medium text-[#64748b]">Address unavailable</p>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                      {directionsHref ? (
-                        <a
-                          href={directionsHref}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex min-h-9 items-center gap-2 rounded-[8px] bg-[#eff6ff] px-3 text-sm font-semibold text-[#2563eb]"
-                        >
-                          <Navigation size={15} />
-                          Get Directions
-                        </a>
-                      ) : null}
-
+                {galleryPreviewItems.length > 0 ? (
+                  <div className="mt-3 grid grid-cols-3 gap-3">
+                    {galleryPreviewItems.map((photo, index) => (
                       <button
+                        key={`${photo}-${index}`}
                         type="button"
-                        onClick={() => void handleCopyAddress()}
-                        className="inline-flex min-h-9 items-center gap-2 rounded-[8px] bg-[#f1f5f9] px-3 text-sm font-semibold text-[#334155]"
+                        onClick={() => openSinglePhotoModal(photo)}
+                        className="overflow-hidden rounded-xl border border-[#e4e7ec] bg-[#f3f4f6]"
+                        aria-label={`View gallery photo ${index + 1}`}
                       >
-                        <Copy size={15} />
-                        Copy
+                        <img
+                          src={photo}
+                          alt={`${profile.name} gallery preview ${index + 1}`}
+                          className="h-28 w-full object-cover"
+                          loading="lazy"
+                        />
                       </button>
-                    </div>
+                    ))}
                   </div>
+                ) : (
+                  <p className="mt-3 text-sm font-medium text-[#6b7280]">No gallery images available.</p>
+                )}
 
-                  <div className="divide-y divide-[#e7edf4] border-t border-[#e7edf4] pt-1">
-                    {emailHref ? (
-                      <a
-                        href={emailHref}
-                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
-                      >
-                        <Mail size={17} className="text-[#2563eb]" />
-                        <span>Send Enquiry by Email</span>
-                      </a>
-                    ) : null}
+                <div className="mt-5 flex items-center gap-7 border-b border-[#d8dadd] pb-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-services")}
+                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Services
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-photos")}
+                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-address")}
+                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-reviews")}
+                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Reviews
+                  </button>
+                </div>
 
-                    {whatsappDigits ? (
-                      <a
-                        href={`https://wa.me/${whatsappDigits}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
-                      >
-                        <MessageCircle size={17} className="text-[#2563eb]" />
-                        <span>Get info via WhatsApp</span>
-                      </a>
-                    ) : null}
+                {serviceItems.length > 0 ? (
+                  <ul id="listing-services" className="mt-4 space-y-2.5">
+                    {serviceItems.map((service) => (
+                      <li key={service} className="flex items-start gap-2 text-[1.01rem] font-medium text-[#3d3f44]">
+                        <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
+                        <span>{service}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm font-medium text-[#6b7280]">No services listed.</p>
+                )}
+              </section>
 
-                    <button
-                      type="button"
-                      onClick={() => void handleShare()}
-                      className="flex min-h-11 w-full items-center gap-2 text-left text-[1.03rem] font-medium text-[#0f172a]"
+              <section className="h-fit self-start overflow-hidden rounded-[12px] bg-white px-2 py-3 sm:px-5 md:py-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-5">
+                  <div>
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                     >
-                      <Share2 size={17} className="text-[#2563eb]" />
-                      <span>Share</span>
-                    </button>
-
-                    {websiteHref ? (
-                      <a
-                        href={websiteHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex min-h-11 items-center gap-2 text-[1.03rem] font-medium text-[#0f172a]"
-                      >
-                        <Globe size={17} className="text-[#2563eb]" />
-                        <span>Website</span>
-                      </a>
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <CalendarDays size={11} className="md:hidden" />
+                        <CalendarDays size={15} className="hidden md:block" />
+                      </span>
+                      Establishment Year
+                    </h3>
+                    {profile.establishmentYear ? (
+                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                        {`Since ${profile.establishmentYear}`}
+                      </p>
                     ) : null}
                   </div>
 
-                  {contactCardMessage ? (
-                    <p className="text-xs font-medium text-[#4b5563]">{contactCardMessage}</p>
-                  ) : null}
+                  <div className="pl-3 md:pl-5">
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <Store size={11} className="md:hidden" />
+                        <Store size={15} className="hidden md:block" />
+                      </span>
+                      GSTIN :
+                    </h3>
+
+                    {gstinValue ? (
+                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
+                        {gstinValue}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[12px] font-semibold text-[#64748b] md:mt-3 md:text-sm">GSTIN unavailable</p>
+                    )}
+                  </div>
                 </div>
               </section>
+
             </div>
+
 
             <div className="space-y-4">
               {photoItems.length > 0 ? (
-                <section className="bg-white p-5 lg:-mt-16">
+                <section id="listing-photos" className="bg-white p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
                     <button
@@ -1886,7 +1665,7 @@ export default function ListingProfilePage({
                   </div>
                 </section>
               ) : (
-                <section className="bg-white p-5 lg:-mt-3">
+                <section id="listing-photos" className="bg-white p-5">
                   <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                   <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
                 </section>
@@ -1901,57 +1680,6 @@ export default function ListingProfilePage({
                 {renderInquiryForm()}
               </section>
 
-              <section className="hidden h-fit self-start overflow-hidden rounded-[12px] bg-white px-2 py-3 sm:px-5 md:py-4 lg:block">
-                <div className="grid grid-cols-2 gap-3 md:gap-5">
-                  <div>
-                    <h3
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
-                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
-                        <CalendarDays size={11} className="md:hidden" />
-                        <CalendarDays size={15} className="hidden md:block" />
-                      </span>
-                      Establishment Year
-                    </h3>
-                    {profile.establishmentYear ? (
-                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
-                        {`Since ${profile.establishmentYear}`}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="pl-3 md:pl-5">
-                    <h3
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
-                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
-                        <Clock3 size={11} className="md:hidden" />
-                        <Clock3 size={15} className="hidden md:block" />
-                      </span>
-                      Opening Time :
-                    </h3>
-
-                    <ul className="mt-2 space-y-2 md:mt-3">
-                      {openingSchedule.map((item) => (
-                        <li
-                          key={`${item.day}-${item.time}`}
-                          className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
-                        >
-                          <span className="hidden rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280] md:inline">
-                            {item.day}
-                          </span>
-                          <span className="hidden md:inline md:ml-1.5">{item.time}</span>
-                          <span className="block whitespace-nowrap md:hidden">
-                            {`${String(item.day || "").replace(/\s*-\s*/g, "-")} ${String(item.time || "").replace(/\s*-\s*/g, "-")}`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
             </div>
           </div>
         <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:grid-cols-2">
@@ -2035,28 +1763,19 @@ export default function ListingProfilePage({
                   style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                 >
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
-                    <Clock3 size={11} className="md:hidden" />
-                    <Clock3 size={15} className="hidden md:block" />
+                    <Store size={11} className="md:hidden" />
+                    <Store size={15} className="hidden md:block" />
                   </span>
-                  Opening Time :
+                  GSTIN :
                 </h3>
 
-                <ul className="mt-2 space-y-2 md:mt-3">
-                  {openingSchedule.map((item) => (
-                    <li
-                      key={`${item.day}-${item.time}`}
-                      className="rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:px-2.5 md:py-1.5 md:text-sm"
-                    >
-                      <span className="hidden rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-[#6b7280] md:inline">
-                        {item.day}
-                      </span>
-                      <span className="hidden md:inline md:ml-1.5">{item.time}</span>
-                      <span className="block whitespace-nowrap md:hidden">
-                        {`${String(item.day || "").replace(/\s*-\s*/g, "-")} ${String(item.time || "").replace(/\s*-\s*/g, "-")}`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {gstinValue ? (
+                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
+                    {gstinValue}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-[12px] font-semibold text-[#64748b] md:mt-3 md:text-sm">GSTIN unavailable</p>
+                )}
               </div>
             </div>
           </section>
@@ -2121,7 +1840,7 @@ export default function ListingProfilePage({
             </section>
           ) : null}
 
-          <section className="rounded-[12px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:col-span-2 sm:px-5 sm:py-5">
+          <section id="listing-reviews" className="rounded-[12px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:col-span-2 sm:px-5 sm:py-5">
             <div className="grid gap-5 lg:grid-cols-[minmax(0,250px)_minmax(0,1fr)_minmax(0,430px)] lg:items-start">
               <article className="rounded-[8px] bg-[#f5f5f6] px-4 py-7 text-center">
                 <p className="text-[15px] font-semibold text-[#1f2937]">Rating</p>

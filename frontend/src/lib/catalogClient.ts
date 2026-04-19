@@ -86,6 +86,7 @@ export type CatalogVendorSummary = {
   city?: string;
   state?: string;
   postalCode?: string;
+  gstNumber?: string;
   sublocality?: string;
   subcategory?: string;
   imageUrl?: string;
@@ -654,6 +655,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     businessAlternatePhone: vendor.businessAlternatePhone,
     state: vendor.state,
     postalCode: vendor.postalCode,
+    gstNumber: vendor.gstNumber,
     establishmentYear: vendor.establishmentYear,
     yearsInBusiness: vendor.yearsInBusiness,
     shopOpeningTime: vendor.shopOpeningTime,

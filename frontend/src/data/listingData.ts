@@ -30,6 +30,7 @@ export type ListingProfile = {
   website?: string;
   state?: string;
   postalCode?: string;
+  gstNumber?: string;
   establishmentYear?: number;
   yearsInBusiness?: number;
   shopOpeningTime?: string;
