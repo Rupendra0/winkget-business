@@ -267,8 +267,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
   return (
     <main className="px-3 sm:px-4 lg:px-6 pb-12">
       <div className="max-w-[1400px] mx-auto space-y-10">
-        <section className="rounded-3xl overflow-hidden bg-white/70">
-          <div className="relative h-44 sm:h-52">
+        <section className="rounded-3xl overflow-hidden bg-white/70 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
+          <div className="relative h-44 sm:h-52 lg:h-56">
             <img
               src={data.bannerImage}
               alt={data.storeName}
@@ -307,7 +307,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
         </section>
 
-        <section className="-mt-10 rounded-2xl bg-white/90 p-2.5 sm:-mt-6 sm:p-3 lg:-mt-9">
+        <section className="-mt-10 rounded-2xl bg-white/90 p-2.5 sm:-mt-6 sm:p-3 lg:-mt-9 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
           <div className="grid grid-cols-4 gap-2 sm:hidden">
             <article className="rounded-lg bg-amber-50/80 px-1.5 py-2 text-center">
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Rate</p>

@@ -7,15 +7,10 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  Globe,
   Layers3,
   MapPin,
-  MessageCircle,
   MessageSquare,
   Pencil,
-  PencilLine,
-  Phone,
-  Share2,
   Store,
   Star,
   Trash2,
@@ -144,76 +139,6 @@ const toPriceForTwoLabel = (value: string) => {
   return "₹300 for two";
 };
 
-const WhatsAppIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 16 16" className={className} fill="currentColor" aria-hidden="true">
-    <path d="M13.601 2.326A7.854 7.854 0 0 0 8.023.0C3.651.0.091 3.559.091 7.932a7.9 7.9 0 0 0 1.147 4.063L0 16l4.136-1.215a7.9 7.9 0 0 0 3.887 1.017h.003c4.372.0 7.932-3.559 7.932-7.932a7.9 7.9 0 0 0-2.357-5.544zM8.026 14.53h-.002a6.6 6.6 0 0 1-3.347-.92l-.24-.144-2.455.721.655-2.39-.156-.245a6.6 6.6 0 0 1-1.02-3.52c0-3.661 2.977-6.637 6.64-6.637a6.6 6.6 0 0 1 4.713 1.953 6.6 6.6 0 0 1 1.942 4.715c-.001 3.661-2.977 6.637-6.638 6.637z" />
-    <path d="M11.644 9.488c-.197-.099-1.17-.578-1.352-.644-.182-.066-.314-.099-.446.099-.132.197-.512.644-.628.776-.116.132-.231.149-.429.05-.197-.099-.832-.307-1.585-.98-.586-.522-.981-1.167-1.097-1.364-.116-.197-.012-.304.087-.403.09-.09.197-.231.296-.347.099-.116.132-.197.198-.33.066-.132.033-.248-.017-.347-.05-.099-.446-1.074-.611-1.47-.161-.387-.324-.334-.446-.34l-.38-.007a.73.73 0 0 0-.529.248c-.182.198-.694.678-.694 1.653s.71 1.917.81 2.049c.099.132 1.4 2.138 3.393 2.997.474.204.843.325 1.131.416.475.151.908.13 1.25.079.381-.057 1.17-.479 1.336-.942.165-.463.165-.859.116-.942-.05-.083-.182-.132-.38-.231z" />
-  </svg>
-);
-
-const ActionButton = ({
-  href,
-  label,
-  icon,
-  disabled,
-  external,
-  tone,
-  onClick,
-}: {
-  href?: string;
-  label: string;
-  icon: React.ReactNode;
-  disabled?: boolean;
-  external?: boolean;
-  tone?: "primary" | "secondary" | "tertiary";
-  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
-}) => {
-  const toneClass =
-    tone === "primary"
-      ? "text-[12px] font-medium md:text-sm md:font-semibold"
-      : tone === "tertiary"
-      ? "text-[11px] font-medium md:text-xs md:font-semibold"
-      : "text-[12px] font-medium md:text-sm md:font-semibold";
-  const className = `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-white/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.76),rgba(239,246,255,0.68))] px-1.5 py-2 text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white/90 hover:text-black hover:shadow-[0_10px_20px_rgba(15,23,42,0.1)] ${toneClass} md:min-h-11 md:rounded-[12px]`;
-
-  if (disabled || !href) {
-    return (
-      <button type="button" disabled className={`${className} opacity-55`}>
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-          {icon}
-        </span>
-        <span>{label}</span>
-      </button>
-    );
-  }
-
-  if (external) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className={className}
-        onClick={onClick}
-      >
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-          {icon}
-        </span>
-        <span>{label}</span>
-      </a>
-    );
-  }
-
-  return (
-    <a href={href} className={className} onClick={onClick}>
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/80 bg-white/85 text-inherit shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-        {icon}
-      </span>
-      <span>{label}</span>
-    </a>
-  );
-};
-
 export default function ListingProfilePage({
   profile,
   storeData,
@@ -251,7 +176,6 @@ export default function ListingProfilePage({
   const [inquiryName, setInquiryName] = useState("");
   const [inquiryPhone, setInquiryPhone] = useState("");
   const [inquiryEmail, setInquiryEmail] = useState("");
-  const [inquirySubject, setInquirySubject] = useState(`Inquiry for ${profile.name}`);
   const [inquiryMessage, setInquiryMessage] = useState("");
   const [inquiryFormMessage, setInquiryFormMessage] = useState<string | null>(null);
   const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false);
@@ -316,9 +240,8 @@ export default function ListingProfilePage({
   }, [profile.id]);
 
   useEffect(() => {
-    setInquirySubject(`Inquiry for ${profile.name}`);
     setInquiryFormMessage(null);
-  }, [profile.id, profile.name]);
+  }, [profile.id]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -372,6 +295,10 @@ export default function ListingProfilePage({
     [profile.phone, profile.whatsapp]
   );
   const websiteHref = useMemo(() => sanitizeWebsite(profile.website), [profile.website]);
+  const emailHref = useMemo(() => {
+    const email = String(profile.email || "").trim();
+    return email ? `mailto:${email}` : "";
+  }, [profile.email]);
   const storeHref = useMemo(() => {
     const storeId = String(profile.storeId || profile.id || "").trim();
     return storeId ? `/store/${storeId}` : "";
@@ -390,6 +317,16 @@ export default function ListingProfilePage({
     () => uniqueStrings(Array.isArray(profile.services) ? profile.services : []),
     [profile.services]
   );
+  const serviceColumns = useMemo(() => {
+    const chunkSize = 5;
+    return serviceItems.reduce<string[][]>((columns, service, index) => {
+      if (index % chunkSize === 0) {
+        columns.push([]);
+      }
+      columns[columns.length - 1].push(service);
+      return columns;
+    }, []);
+  }, [serviceItems]);
 
   const photoItems = useMemo(
     () => uniqueStrings(Array.isArray(profile.gallery) ? profile.gallery : []),
@@ -616,7 +553,7 @@ export default function ListingProfilePage({
     const name = inquiryName.trim();
     const phone = normalizeDigits(inquiryPhone).slice(0, 10);
     const email = inquiryEmail.trim();
-    const subject = inquirySubject.trim() || `Inquiry for ${profile.name}`;
+    const subject = `Inquiry for ${profile.name}`;
     const message = inquiryMessage.trim();
 
     if (!name) {
@@ -662,7 +599,7 @@ export default function ListingProfilePage({
     }
   };
 
-  const renderInquiryForm = (formClassName = "space-y-2.5") => (
+  const renderInquiryForm = (formClassName = "space-y-2") => (
     <form className={formClassName} onSubmit={handleSubmitInquiry}>
       <input
         type="text"
@@ -694,18 +631,10 @@ export default function ListingProfilePage({
         />
       </div>
 
-      <input
-        type="text"
-        value={inquirySubject}
-        onChange={(event) => setInquirySubject(event.target.value)}
-        className="w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
-        placeholder="Subject"
-      />
-
       <textarea
         value={inquiryMessage}
         onChange={(event) => setInquiryMessage(event.target.value)}
-        className="min-h-[92px] w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
+        className="min-h-[74px] w-full rounded-lg border border-[#d8e0ea] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#94a3b8]"
         placeholder="Write your enquiry"
         required
       />
@@ -1066,9 +995,9 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
+    <main className="min-h-screen bg-[#f2f3f5] px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
       <div className="mx-auto w-full max-w-[1120px] space-y-0 lg:max-w-[1240px]">
-        <section className="rounded-[24px] bg-white px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
+        <section className="rounded-[24px] bg-[#f2f3f5] px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f2f3f5]">
             {coverImage ? (
               <img
@@ -1083,7 +1012,7 @@ export default function ListingProfilePage({
           </div>
 
           <div className="relative z-20 -mt-[56px] flex justify-center sm:-mt-[62px] md:hidden">
-            <div className="h-[108px] w-[108px] overflow-hidden rounded-[28px] border-4 border-white bg-white shadow-[0_14px_28px_rgba(15,23,42,0.16)] sm:h-[116px] sm:w-[116px]">
+            <div className="h-[108px] w-[108px] overflow-hidden rounded-[28px] border-4 border-white bg-white sm:h-[116px] sm:w-[116px]">
               {logoImage ? (
                 <img
                   src={logoImage}
@@ -1149,7 +1078,7 @@ export default function ListingProfilePage({
 
           <div className="hidden min-h-[182px] items-start justify-between gap-6 px-4 pb-5 pt-6 md:flex lg:min-h-[128px] lg:px-5 lg:pb-2 lg:pt-4">
             <div className="flex min-w-0 items-start gap-4 lg:gap-5">
-              <div className="relative z-20 -mt-[76px] h-[144px] w-[144px] shrink-0 overflow-hidden rounded-[34px] border-4 border-white bg-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] lg:-mt-[82px] lg:h-[158px] lg:w-[158px]">
+              <div className="relative z-20 -mt-[76px] h-[144px] w-[144px] shrink-0 overflow-hidden rounded-[34px] border-4 border-white bg-white lg:-mt-[82px] lg:h-[158px] lg:w-[158px]">
                 {logoImage ? (
                   <img
                     src={logoImage}
@@ -1222,83 +1151,121 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/70 bg-[#f8fbff]/75 p-2 backdrop-blur-sm shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:border-0 md:bg-transparent md:p-0 md:shadow-none lg:hidden">
-            <div className="grid grid-cols-3 gap-2.5">
+          <div className="mt-4 rounded-2xl border border-white/70 bg-white p-2 backdrop-blur-sm md:border-0 md:bg-transparent md:p-0 lg:hidden">
+            <div className="grid grid-cols-4 gap-2.5">
               {storeHref ? (
                 <Link
                   href={storeHref}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-[#6366F1] px-1.5 py-2 text-[12px] font-medium text-white transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:from-[#1D4ED8] hover:to-[#2563EB] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#4c88de] px-2 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
-                    <Store size={13} />
-                  </span>
                   My Store
                 </Link>
               ) : (
-                <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] bg-gradient-to-br from-[#5B8EF0] to-[#78A7F4] px-1.5 py-2 text-[12px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/35 bg-white/20">
-                    <Store size={13} />
-                  </span>
-                  Store
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#4c88de] px-2 text-[13px] font-semibold text-white opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  My Store
                 </span>
               )}
 
-              <ActionButton
-                href={phoneDigits ? `tel:${phoneDigits}` : undefined}
-                label="Call"
-                icon={<Phone size={14} />}
-                disabled={!phoneDigits}
-                tone="primary"
-              />
-              <ActionButton
-                href={whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined}
-                label="Whatsapp"
-                icon={<WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />}
-                disabled={!whatsappDigits}
-                external
-                tone="secondary"
-              />
+              {phoneDigits ? (
+                <a
+                  href={`tel:${phoneDigits}`}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  Call
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  Call
+                </span>
+              )}
+
+              {whatsappDigits ? (
+                <a
+                  href={`https://wa.me/${whatsappDigits}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  WhatsApp
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  WhatsApp
+                </span>
+              )}
+
+              {emailHref ? (
+                <a
+                  href={emailHref}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  Email
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  Email
+                </span>
+              )}
             </div>
 
-            <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+            <div className="mt-2.5 grid grid-cols-4 gap-2.5">
+              {websiteHref ? (
+                <a
+                  href={websiteHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  Website
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  Website
+                </span>
+              )}
+
               {hasInquiryTarget ? (
                 <button
                   type="button"
                   onClick={openInquiryModal}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 ease-in-out hover:-translate-y-[1px] hover:bg-white md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                    <MessageCircle size={13} />
-                  </span>
                   Inquiry
                 </button>
               ) : (
-                <span className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[14px] border border-[#C8DCF8] bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(234,244,255,0.82))] px-1.5 py-2 text-[12px] font-medium text-black opacity-55 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-11 md:rounded-[12px] md:text-sm md:font-semibold">
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#D5E5FB] bg-white/85 text-[#1D4ED8] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                    <MessageCircle size={13} />
-                  </span>
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
                   Inquiry
                 </span>
               )}
 
-              <ActionButton
-                href={websiteHref || undefined}
-                label="Website"
-                icon={<Globe size={14} />}
-                disabled={!websiteHref}
-                external
-                tone="tertiary"
-              />
-              <ActionButton
-                href="#"
-                label="Share"
-                icon={<Share2 size={14} />}
-                tone="tertiary"
-                onClick={(event) => {
-                  event.preventDefault();
-                  void handleShare();
-                }}
-              />
+              {websiteHref ? (
+                <a
+                  href={websiteHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  Website
+                </a>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  Website
+                </span>
+              )}
+
+              {hasInquiryTarget ? (
+                <button
+                  type="button"
+                  onClick={openInquiryModal}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                >
+                  Enquiry
+                </button>
+              ) : (
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  Enquiry
+                </span>
+              )}
             </div>
           </div>
 
@@ -1313,7 +1280,7 @@ export default function ListingProfilePage({
                 <button
                   type="button"
                   onClick={openAllPhotosModal}
-                  className="rounded-full border border-[#bfdbfe] bg-white/90 px-2.5 py-1 text-xs font-semibold text-blue-600 shadow-[0_6px_10px_rgba(59,130,246,0.12)]"
+                  className="rounded-full border border-[#bfdbfe] bg-white px-2.5 py-1 text-xs font-semibold text-blue-600"
                 >
                   View All
                 </button>
@@ -1328,7 +1295,7 @@ export default function ListingProfilePage({
                         key={`${photo}-${index}`}
                         type="button"
                         onClick={openAllPhotosModal}
-                        className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
+                        className="group relative overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6]"
                         aria-label={`View ${mobileOverflowCount} more photos`}
                       >
                         <img
@@ -1350,7 +1317,7 @@ export default function ListingProfilePage({
                       key={`${photo}-${index}`}
                       type="button"
                       onClick={() => openSinglePhotoModal(photo)}
-                      className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6] shadow-[0_6px_12px_rgba(15,23,42,0.08)]"
+                      className="overflow-hidden rounded-lg border border-[#d8dce1] bg-[#f3f4f6]"
                       aria-label={`View photo ${index + 1}`}
                     >
                       <img
@@ -1367,37 +1334,33 @@ export default function ListingProfilePage({
             </section>
           ) : null}
 
-          <div className="mt-8 hidden lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
-            <div className="space-y-5">
-              <section className="bg-white p-5 [&_.desktop-elevate]:!shadow-sm [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300 [&_.desktop-card:hover]:!shadow-md">
+          <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:relative lg:left-1/2 lg:mt-8 lg:w-[calc(100vw-3rem)] lg:max-w-none lg:-translate-x-1/2 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:items-start lg:gap-6 xl:w-[calc(100vw-4rem)]">
+            <div className="hidden lg:col-start-1 lg:block lg:space-y-5">
+              <section className="bg-white p-5 [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     {storeHref ? (
                       <Link
                         href={storeHref}
-                        className="desktop-elevate inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6366F1] px-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#4F46E5]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#4c88de] px-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf]"
                       >
-                        <Store size={16} />
                         My Store
                       </Link>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#A5B4FC] px-3 text-sm font-semibold text-white opacity-60">
-                        <Store size={16} />
-                        Store
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#4c88de] px-3 text-sm font-semibold text-white opacity-60">
+                        My Store
                       </span>
                     )}
 
                     {phoneDigits ? (
                       <a
                         href={`tel:${phoneDigits}`}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
                       >
-                        <Phone size={15} />
                         Call
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
-                        <Phone size={15} />
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
                         Call
                       </span>
                     )}
@@ -1407,32 +1370,56 @@ export default function ListingProfilePage({
                         href={`https://wa.me/${whatsappDigits}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
                       >
-                        <WhatsAppIcon className="h-4 w-4 text-[#22C55E]" />
-                        Whatsapp
+                        WhatsApp
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] px-3 text-sm font-semibold text-slate-500 opacity-60">
-                        <WhatsAppIcon className="h-4 w-4 text-[#9CA3AF]" />
-                        Whatsapp
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                        WhatsApp
+                      </span>
+                    )}
+
+                    {emailHref ? (
+                      <a
+                        href={emailHref}
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                      >
+                        Email
+                      </a>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                        Email
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
+                    {websiteHref ? (
+                      <a
+                        href={websiteHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                      >
+                        Website
+                      </a>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                        Website
+                      </span>
+                    )}
+
                     {hasInquiryTarget ? (
                       <button
                         type="button"
                         onClick={openInquiryModal}
-                        className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl  px-3 text-sm text-slate-800 transition-colors duration-200 hover:bg-[#E5E7EB]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
                       >
-                        <MessageCircle size={15} />
                         Inquiry
                       </button>
                     ) : (
-                      <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
-                        <MessageCircle size={15} />
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
                         Inquiry
                       </span>
                     )}
@@ -1442,52 +1429,35 @@ export default function ListingProfilePage({
                         href={websiteHref}
                         target="_blank"
                         rel="noreferrer"
-                        className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
                       >
-                        <Globe size={14} />
                         Website
                       </a>
                     ) : (
-                      <span className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-500 opacity-60">
-                        <Globe size={14} />
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
                         Website
                       </span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => void handleShare()}
-                      className=" inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm  text-slate-700 transition-colors duration-200 hover:bg-slate-50"
-                    >
-                      <Share2 size={14} />
-                      Share
-                    </button>
+                    {hasInquiryTarget ? (
+                      <button
+                        type="button"
+                        onClick={openInquiryModal}
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                      >
+                        Enquiry
+                      </button>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                        Enquiry
+                      </span>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-3 items-center gap-2 text-center">
-                    <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-[#B45309]">
-                      <Star size={13} className="fill-[#F59E0B] text-[#F59E0B]" />
-                      {`Rating ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"}`}
-                    </p>
-
-                    <p className="inline-flex min-h-7 items-center justify-center gap-1 text-sm  text-emerald-700">
-                      <CheckCircle2 size={13} className="text-emerald-600" />
-                      Trusted
-                    </p>
-
-                    <p
-                      className={`inline-flex min-h-7 items-center justify-center gap-1 text-sm ${
-                        isVerified ? "text-[#2563EB]" : "text-[#64748b]"
-                      }`}
-                    >
-                      <CheckCircle2 size={13} className={isVerified ? "text-[#2563EB]" : "text-[#94a3b8]"} />
-                      {isVerified ? "Verified" : "Not Verified"}
-                    </p>
-                  </div>
                 </div>
               </section>
 
-              <section className="rounded-[12px] bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.06)]">
+              <section className="rounded-[12px] bg-white p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[1.02rem] font-semibold text-[#4a4a50]">Gallery</h3>
                   <button
@@ -1513,7 +1483,7 @@ export default function ListingProfilePage({
                         <img
                           src={photo}
                           alt={`${profile.name} gallery preview ${index + 1}`}
-                          className="h-28 w-full object-cover"
+                          className="h-[14rem] w-full object-cover"
                           loading="lazy"
                         />
                       </button>
@@ -1522,8 +1492,10 @@ export default function ListingProfilePage({
                 ) : (
                   <p className="mt-3 text-sm font-medium text-[#6b7280]">No gallery images available.</p>
                 )}
+              </section>
 
-                <div className="mt-5 flex items-center gap-7 border-b border-[#d8dadd] pb-2">
+              <section className="rounded-[12px] bg-white p-4">
+                <div className="flex items-center gap-7 border-b border-[#d8dadd] pb-2">
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-services")}
@@ -1555,14 +1527,18 @@ export default function ListingProfilePage({
                 </div>
 
                 {serviceItems.length > 0 ? (
-                  <ul id="listing-services" className="mt-4 space-y-2.5">
-                    {serviceItems.map((service) => (
-                      <li key={service} className="flex items-start gap-2 text-[1.01rem] font-medium text-[#3d3f44]">
-                        <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
-                        <span>{service}</span>
-                      </li>
+                  <div id="listing-services" className="mt-4 flex flex-wrap items-start gap-x-12 gap-y-2.5">
+                    {serviceColumns.map((column, columnIndex) => (
+                      <ul key={`service-column-${columnIndex}`} className="min-w-[220px] space-y-2.5">
+                        {column.map((service) => (
+                          <li key={service} className="flex items-start gap-2 text-[1.01rem] font-[600] text-[#3d3f44]">
+                            <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
+                            <span>{service}</span>
+                          </li>
+                        ))}
+                      </ul>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <p className="mt-4 text-sm font-medium text-[#6b7280]">No services listed.</p>
                 )}
@@ -1613,87 +1589,7 @@ export default function ListingProfilePage({
 
             </div>
 
-
-            <div className="space-y-4">
-              {photoItems.length > 0 ? (
-                <section id="listing-photos" className="bg-white p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
-                    <button
-                      type="button"
-                      onClick={openAllPhotosModal}
-                      className="rounded-full px-3 py-1 text-xs font-semibold text-indigo-600 transition-colors duration-200 hover:bg-indigo-50"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-3">
-                    {desktopPhotoRow.map((photo, index) => {
-                      const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
-                      if (showOverlay) {
-                        return (
-                          <button
-                            key={`${photo}-${index}`}
-                            type="button"
-                            onClick={openAllPhotosModal}
-                            className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
-                            aria-label={`View ${desktopOverflowCount} more photos`}
-                          >
-                            <img
-                              src={photo}
-                              alt={`${profile.name} gallery ${index + 1}`}
-                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                            <span className="absolute inset-0 bg-slate-900/45 transition-colors duration-200" />
-                            <span className="absolute inset-0 grid place-items-center text-center text-white">
-                              <span className="text-2xl font-extrabold leading-none">+{desktopOverflowCount}</span>
-                            </span>
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <button
-                          key={`${photo}-${index}`}
-                          type="button"
-                          onClick={() => openSinglePhotoModal(photo)}
-                          className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] transition-shadow duration-200 hover:shadow-md"
-                          aria-label={`View photo ${index + 1}`}
-                        >
-                          <img
-                            src={photo}
-                            alt={`${profile.name} gallery ${index + 1}`}
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                          <span className="absolute inset-0 bg-slate-900/0 transition-colors duration-200 group-hover:bg-slate-900/35" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : (
-                <section id="listing-photos" className="bg-white p-5">
-                  <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
-                  <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
-                </section>
-              )}
-
-              <section className="rounded-[12px] border border-[#e8edf5] bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.06)]">
-                <div className="mb-3 flex items-center gap-2 text-[#1f2937]">
-                  <MessageSquare size={16} className="text-[#2563eb]" />
-                  <h3 className="text-sm font-semibold">Enquiry Form</h3>
-                </div>
-
-                {renderInquiryForm()}
-              </section>
-
-            </div>
-          </div>
-        <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:grid-cols-2">
-          <section className="relative overflow-hidden rounded-[12px] px-4 py-5 sm:px-5 lg:hidden">
+          <section className="relative overflow-hidden rounded-[12px] bg-white px-4 py-5 sm:px-5 lg:hidden">
 
             <div className="grid grid-cols-2 gap-5">
               <div>
@@ -1791,7 +1687,7 @@ export default function ListingProfilePage({
           </section>
 
           {profile.description ? (
-            <section className="overflow-hidden rounded-[12px] bg-white px-4 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.08)] sm:px-5 lg:col-span-2">
+            <section className="overflow-hidden rounded-[12px] bg-white px-4 py-5 sm:px-5 lg:col-start-1">
               <div className="flex items-start gap-4">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white sm:h-24 sm:w-24">
                   {logoImage ? (
@@ -1850,7 +1746,7 @@ export default function ListingProfilePage({
             </section>
           ) : null}
 
-          <section id="listing-reviews" className="rounded-[12px] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:col-span-2 sm:px-5 sm:py-5">
+          <section id="listing-reviews" className="rounded-[12px] bg-white px-4 py-4 lg:col-start-1 sm:px-5 sm:py-5">
             <div className="grid gap-5 lg:grid-cols-[minmax(0,250px)_minmax(0,1fr)_minmax(0,430px)] lg:items-start">
               <article className="rounded-[8px] bg-[#f5f5f6] px-4 py-7 text-center">
                 <p className="text-[15px] font-semibold text-[#1f2937]">Rating</p>
@@ -1901,7 +1797,7 @@ export default function ListingProfilePage({
                 </div>
               </article>
 
-              <article className="rounded-[14px] border border-[#efefef] bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+              <article className="rounded-[14px] border border-[#efefef] bg-white p-5">
                 {authLoading ? (
                   <p className="text-sm font-medium text-[#6b7280]">Checking login status...</p>
                 ) : !currentUser ? (
@@ -1917,7 +1813,7 @@ export default function ListingProfilePage({
                       Login
                     </Link>
 
-                    <div className="pointer-events-none relative mt-4 overflow-hidden rounded-[10px] border border-white/70 bg-white/45 p-3 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                    <div className="pointer-events-none relative mt-4 overflow-hidden rounded-[10px] border border-[#e2e8f0] bg-white p-3 backdrop-blur-md">
                       <div className="space-y-2 blur-[1.6px]">
                         <div>
                           <div className="mb-1 h-3 w-14 rounded bg-[#d9dfe8]" />
@@ -2195,6 +2091,83 @@ export default function ListingProfilePage({
               {`Overall ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} from ${reviewCount} reviews`}
             </p>
           </section>
+
+          <div className="hidden lg:col-start-2 lg:row-start-1 lg:block lg:space-y-4 lg:self-start lg:sticky lg:top-24">
+            {photoItems.length > 0 ? (
+              <section id="listing-photos" className="bg-white p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
+                  <button
+                    type="button"
+                    onClick={openAllPhotosModal}
+                    className="rounded-full px-3 py-1 text-xs font-semibold text-indigo-600 transition-colors duration-200 hover:bg-indigo-50"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3">
+                  {desktopPhotoRow.map((photo, index) => {
+                    const showOverlay = desktopOverflowCount > 0 && index === desktopPhotoRow.length - 1;
+                    if (showOverlay) {
+                      return (
+                        <button
+                          key={`${photo}-${index}`}
+                          type="button"
+                          onClick={openAllPhotosModal}
+                          className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] duration-200"
+                          aria-label={`View ${desktopOverflowCount} more photos`}
+                        >
+                          <img
+                            src={photo}
+                            alt={`${profile.name} gallery ${index + 1}`}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          <span className="absolute inset-0 bg-slate-900/45 transition-colors duration-200" />
+                          <span className="absolute inset-0 grid place-items-center text-center text-white">
+                            <span className="text-2xl font-extrabold leading-none">+{desktopOverflowCount}</span>
+                          </span>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={`${photo}-${index}`}
+                        type="button"
+                        onClick={() => openSinglePhotoModal(photo)}
+                        className="desktop-card group relative aspect-[4/3] overflow-hidden rounded-xl bg-[#f3f4f6] duration-200"
+                        aria-label={`View photo ${index + 1}`}
+                      >
+                        <img
+                          src={photo}
+                          alt={`${profile.name} gallery ${index + 1}`}
+                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <span className="absolute inset-0 bg-slate-900/0 transition-colors duration-200 group-hover:bg-slate-900/35" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : (
+              <section id="listing-photos" className="bg-white p-5">
+                <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
+                <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
+              </section>
+            )}
+
+            <section className="rounded-[12px] border border-[#e8edf5] bg-white p-4">
+              <div className="mb-3 flex items-center gap-2 text-[#1f2937]">
+                <MessageSquare size={16} className="text-[#2563eb]" />
+                <h3 className="text-sm font-semibold">Enquiry Form</h3>
+              </div>
+
+              {renderInquiryForm()}
+            </section>
+          </div>
         </div>
         </section>
 
@@ -2279,7 +2252,9 @@ export default function ListingProfilePage({
             </section>
           </div>
         ) : null}
+      </div>
 
+      <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
         <Footer />
       </div>
     </main>
