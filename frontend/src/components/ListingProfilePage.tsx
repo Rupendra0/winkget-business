@@ -1429,7 +1429,8 @@ export default function ListingProfilePage({
           ) : null}
 
           <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:relative lg:left-1/2 lg:mt-8 lg:w-[calc(100vw-3rem)] lg:max-w-none lg:-translate-x-1/2 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:items-start lg:gap-6 xl:w-[calc(100vw-4rem)]">
-            <div className="hidden lg:col-start-1 lg:block lg:space-y-5">
+            <div className="lg:col-start-1 lg:space-y-5">
+              <div className="hidden lg:block lg:space-y-5">
               <section className="rounded-[12px] border border-[#e8edf5] bg-white p-5 [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300">
                 <div className="space-y-4">
                   <div className="grid grid-cols-4 gap-3">
@@ -1681,162 +1682,160 @@ export default function ListingProfilePage({
                 </div>
               </section>
 
-            </div>
-
-          <section className="w-full rounded-[12px] border border-[#e8edf5] bg-white p-4 lg:hidden">
-
-            <div className="flex items-center gap-4 overflow-x-auto border-b border-[#d8dadd] pb-2">
-              <button
-                type="button"
-                onClick={() => scrollToSection("listing-services-mobile")}
-                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
-              >
-                Services
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection("listing-gallery-mobile")}
-                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
-              >
-                Photo
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection("listing-contact-details-mobile")}
-                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
-              >
-                Address
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection("listing-reviews")}
-                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
-              >
-                Reviews
-              </button>
-            </div>
-
-            {serviceItems.length > 0 ? (
-              <div id="listing-services-mobile" className="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2.5">
-                {serviceColumns.map((column, columnIndex) => (
-                  <ul key={`mobile-service-column-${columnIndex}`} className="min-w-[130px] space-y-2.5">
-                    {column.map((service) => (
-                      <li key={service} className="flex items-start gap-2 text-[0.98rem] font-[600] text-[#3d3f44]">
-                        <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
-                        <span>{service}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm font-medium text-[#6b7280]">No services listed.</p>
-            )}
-          </section>
-
-          <section className="relative w-full h-fit self-start overflow-hidden rounded-[12px] border border-[#e8edf5] bg-white px-2 py-3 sm:px-5 md:py-4 lg:hidden">
-
-            <div className="grid grid-cols-2 gap-3 md:gap-5">
-              <div>
-                <h3
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
-                >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
-                    <CalendarDays size={11} className="md:hidden" />
-                    <CalendarDays size={15} className="hidden md:block" />
-                  </span>
-                  Establishment Year
-                </h3>
-                {profile.establishmentYear ? (
-                  <p className="mt-2 flex w-fit items-center rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
-                    {`Since ${profile.establishmentYear}`}
-                  </p>
-                ) : null}
               </div>
 
-              <div className="pl-3 md:pl-5">
-                <h3
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
-                >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
-                    <Store size={11} className="md:hidden" />
-                    <Store size={15} className="hidden md:block" />
-                  </span>
-                  GSTIN :
-                </h3>
-
-                {gstinValue ? (
-                  <p className="mt-2 flex w-fit max-w-full items-center break-all rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
-                    {gstinValue}
-                  </p>
-                ) : (
-                  <p className="mt-2 text-[12px] font-semibold text-[#64748b] md:mt-3 md:text-sm">GSTIN unavailable</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {profile.description ? (
-            <section className="overflow-hidden rounded-[12px] bg-white px-4 py-5 sm:px-5 lg:col-start-1">
-              <div className="flex items-start gap-4">
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white sm:h-24 sm:w-24">
-                  {logoImage ? (
-                    <img
-                      src={logoImage}
-                      alt={`${profile.name} logo`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-[#eef2f6]" />
-                  )}
+              <section className="w-full rounded-[12px] border border-[#e8edf5] bg-white p-4 lg:hidden">
+                <div className="flex items-center gap-4 overflow-x-auto border-b border-[#d8dadd] pb-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-services-mobile")}
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Services
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-gallery-mobile")}
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-contact-details-mobile")}
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection("listing-reviews")}
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                  >
+                    Reviews
+                  </button>
                 </div>
 
-                <div className="min-w-0">
-                  <h3
-                    className="text-[0.98rem] font-bold text-[#1f2937] md:text-[1.03rem]"
-                    style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
-                  >
-                    Business Info
-                  </h3>
-                  <div className="relative mt-2">
-                    <p
-                      ref={businessInfoTextRef}
-                      className={`text-[13px] font-medium leading-[1.68] text-[#334155] md:text-[14px] md:leading-[1.72] ${
-                        isBusinessInfoExpanded
-                          ? ""
-                          : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:5]"
-                      }`}
-                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                {serviceItems.length > 0 ? (
+                  <div id="listing-services-mobile" className="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2.5">
+                    {serviceColumns.map((column, columnIndex) => (
+                      <ul key={`mobile-service-column-${columnIndex}`} className="min-w-[130px] space-y-2.5">
+                        {column.map((service) => (
+                          <li key={service} className="flex items-start gap-2 text-[0.98rem] font-[600] text-[#3d3f44]">
+                            <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
+                            <span>{service}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm font-medium text-[#6b7280]">No services listed.</p>
+                )}
+              </section>
+
+              <section className="relative w-full h-fit self-start overflow-hidden rounded-[12px] border border-[#e8edf5] bg-white px-2 py-3 sm:px-5 md:py-4 lg:hidden">
+                <div className="grid grid-cols-2 gap-3 md:gap-5">
+                  <div>
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
                     >
-                      {profile.description}
-                    </p>
-                    {isBusinessInfoOverflowing || isBusinessInfoExpanded ? (
-                      isBusinessInfoExpanded ? (
-                        <button
-                          type="button"
-                          onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
-                          className="mt-2 inline-flex items-center text-xs font-semibold text-[#2563eb] md:text-[13px]"
-                        >
-                          Less
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
-                          className="absolute bottom-0 right-0 inline-flex items-center bg-white pl-0.5 text-xs font-semibold text-[#2563eb] md:text-[13px]"
-                        >
-                            ... More
-                        </button>
-                      )
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <CalendarDays size={11} className="md:hidden" />
+                        <CalendarDays size={15} className="hidden md:block" />
+                      </span>
+                      Establishment Year
+                    </h3>
+                    {profile.establishmentYear ? (
+                      <p className="mt-2 flex w-fit items-center rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                        {`Since ${profile.establishmentYear}`}
+                      </p>
                     ) : null}
                   </div>
+
+                  <div className="pl-3 md:pl-5">
+                    <h3
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-black md:gap-2 md:text-[1.08rem]"
+                      style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.15px" }}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-[7px] border border-[#d9e1eb] bg-[#f6f8fb] text-[#475569] md:h-7 md:w-7 md:rounded-[9px]">
+                        <Store size={11} className="md:hidden" />
+                        <Store size={15} className="hidden md:block" />
+                      </span>
+                      GSTIN :
+                    </h3>
+
+                    {gstinValue ? (
+                      <p className="mt-2 flex w-fit max-w-full items-center break-all rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
+                        {gstinValue}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[12px] font-semibold text-[#64748b] md:mt-3 md:text-sm">GSTIN unavailable</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          ) : null}
+              </section>
+
+              {profile.description ? (
+                <section className="overflow-hidden rounded-[12px] bg-white px-4 py-5 sm:px-5">
+                  <div className="flex items-start gap-4">
+                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-[#d7dee6] bg-white sm:h-24 sm:w-24">
+                      {logoImage ? (
+                        <img
+                          src={logoImage}
+                          alt={`${profile.name} logo`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-[#eef2f6]" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3
+                        className="text-[0.98rem] font-bold text-[#1f2937] md:text-[1.03rem]"
+                        style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                      >
+                        Business Info
+                      </h3>
+                      <div className="relative mt-2">
+                        <p
+                          ref={businessInfoTextRef}
+                          className={`text-[13px] font-medium leading-[1.68] text-[#334155] md:text-[14px] md:leading-[1.72] ${
+                            isBusinessInfoExpanded
+                              ? ""
+                              : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:5]"
+                          }`}
+                          style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif" }}
+                        >
+                          {profile.description}
+                        </p>
+                        {isBusinessInfoOverflowing || isBusinessInfoExpanded ? (
+                          isBusinessInfoExpanded ? (
+                            <button
+                              type="button"
+                              onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
+                              className="mt-2 inline-flex items-center text-xs font-semibold text-[#2563eb] md:text-[13px]"
+                            >
+                              Less
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setIsBusinessInfoExpanded((previous) => !previous)}
+                              className="absolute bottom-0 right-0 inline-flex items-center bg-white pl-0.5 text-xs font-semibold text-[#2563eb] md:text-[13px]"
+                            >
+                                ... More
+                            </button>
+                          )
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
 
           <section id="listing-reviews" className="rounded-[12px] bg-white px-4 py-4 lg:col-start-1 sm:px-5 sm:py-5">
             <div className="grid gap-5 lg:grid-cols-[minmax(0,250px)_minmax(0,1fr)_minmax(0,430px)] lg:items-start">
@@ -2163,11 +2162,12 @@ export default function ListingProfilePage({
             <p className="mt-2.5 text-xs font-medium text-gray-500">
               {`Overall ${roundedRating > 0 ? roundedRating.toFixed(1) : "0.0"} from ${reviewCount} reviews`}
             </p>
-          </section>
+              </section>
 
-          <div className="mt-5 lg:hidden">
-            {renderBusinessContactDetails("listing-contact-details-mobile")}
-          </div>
+              <div className="mt-5 lg:hidden">
+                {renderBusinessContactDetails("listing-contact-details-mobile")}
+              </div>
+            </div>
 
           <div className="hidden lg:col-start-2 lg:row-start-1 lg:block lg:space-y-4 lg:self-start lg:sticky lg:top-24">
             {photoItems.length > 0 ? (
