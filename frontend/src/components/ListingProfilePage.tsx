@@ -4,13 +4,13 @@ import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
-  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  Layers3,
+  Mail,
   MapPin,
   MessageSquare,
   Pencil,
+  Phone,
   Store,
   Star,
   Trash2,
@@ -155,7 +155,7 @@ export default function ListingProfilePage({
   const [authLoading, setAuthLoading] = useState(true);
   const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
   const [reviewAuthor, setReviewAuthor] = useState("");
-  const [reviewRatingInput, setReviewRatingInput] = useState(5);
+  const [reviewRatingInput, setReviewRatingInput] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
   const [reviewActionMessage, setReviewActionMessage] = useState<string | null>(null);
@@ -290,10 +290,16 @@ export default function ListingProfilePage({
   }, [profile.address, profile.city, profile.postalCode, profile.state]);
 
   const phoneDigits = useMemo(() => normalizeDigits(profile.phone), [profile.phone]);
+  const businessPhoneLabel = useMemo(
+    () => String(storeData?.contactPhone || profile.businessAlternatePhone || profile.phone || "").trim(),
+    [profile.businessAlternatePhone, profile.phone, storeData?.contactPhone]
+  );
+  const businessPhoneDigits = useMemo(() => normalizeDigits(businessPhoneLabel), [businessPhoneLabel]);
   const whatsappDigits = useMemo(
     () => normalizeDigits(profile.whatsapp || profile.phone),
     [profile.phone, profile.whatsapp]
   );
+  const businessEmail = useMemo(() => String(profile.email || "").trim(), [profile.email]);
   const websiteHref = useMemo(() => sanitizeWebsite(profile.website), [profile.website]);
   const emailHref = useMemo(() => {
     const email = String(profile.email || "").trim();
@@ -472,6 +478,14 @@ export default function ListingProfilePage({
     };
   }, [expandedReviewIds, reviewsToDisplay]);
 
+  const selectedPhotoIndex = useMemo(() => {
+    if (!selectedPhotoUrl) {
+      return -1;
+    }
+
+    return photoItems.findIndex((photo) => photo === selectedPhotoUrl);
+  }, [photoItems, selectedPhotoUrl]);
+
   const closePhotosModal = () => {
     setIsPhotosModalOpen(false);
     setSelectedPhotoUrl(null);
@@ -489,6 +503,22 @@ export default function ListingProfilePage({
 
     setSelectedPhotoUrl(photoUrl);
     setIsPhotosModalOpen(true);
+  };
+
+  const showPreviousPhoto = () => {
+    if (selectedPhotoIndex <= 0) {
+      return;
+    }
+
+    setSelectedPhotoUrl(photoItems[selectedPhotoIndex - 1] || null);
+  };
+
+  const showNextPhoto = () => {
+    if (selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1) {
+      return;
+    }
+
+    setSelectedPhotoUrl(photoItems[selectedPhotoIndex + 1] || null);
   };
 
   const openInquiryModal = () => {
@@ -537,7 +567,15 @@ export default function ListingProfilePage({
     }
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    target.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+
+    // Keep section headers visible below the fixed top navigation.
+    const topOffset = 110;
+    const targetTop = Math.max(0, window.scrollY + target.getBoundingClientRect().top - topOffset);
+
+    window.scrollTo({
+      top: targetTop,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
   }, []);
 
   const handleSubmitInquiry = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -651,6 +689,62 @@ export default function ListingProfilePage({
         {isSubmittingInquiry ? "Sending..." : "Send Enquiry"}
       </button>
     </form>
+  );
+
+  const renderBusinessContactDetails = (sectionId?: string) => (
+    <section id={sectionId} className="rounded-[12px] border border-[#e8edf5] bg-white p-4">
+      <div className="mb-3 flex items-center gap-2 text-[#1f2937]">
+        <MapPin size={16} className="text-[#2563eb]" />
+        <h3 className="text-sm font-semibold">Address & Contact Details</h3>
+      </div>
+
+      <div className="space-y-2.5 text-sm text-[#1f2937]">
+        <div className="rounded-[12px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">Address</p>
+          <p className="mt-1 break-words text-[13px] font-medium text-[#334155]">
+            {fullAddress || "Address unavailable"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="rounded-[12px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5">
+            <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+              <Phone size={12} className="text-[#2563eb]" />
+              Business Phone
+            </p>
+
+            {businessPhoneDigits ? (
+              <a
+                href={`tel:${businessPhoneDigits}`}
+                className="mt-1 block break-all text-[13px] font-semibold text-[#1e3a8a] underline-offset-2 hover:underline"
+              >
+                {businessPhoneLabel || businessPhoneDigits}
+              </a>
+            ) : (
+              <p className="mt-1 text-[13px] font-medium text-[#64748b]">Phone unavailable</p>
+            )}
+          </div>
+
+          <div className="rounded-[12px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5">
+            <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+              <Mail size={12} className="text-[#2563eb]" />
+              Business Email
+            </p>
+
+            {emailHref ? (
+              <a
+                href={emailHref}
+                className="mt-1 block break-all text-[13px] font-semibold text-[#1e3a8a] underline-offset-2 hover:underline"
+              >
+                {businessEmail}
+              </a>
+            ) : (
+              <p className="mt-1 text-[13px] font-medium text-[#64748b]">Email unavailable</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 
   const handleSubmitReview = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -995,7 +1089,7 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen bg-[#f2f3f5] px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#f2f3f5] px-3 pb-24 sm:px-4 md:px-6 md:pb-10 lg:overflow-visible lg:px-8">
       <div className="mx-auto w-full max-w-[1120px] space-y-0 lg:max-w-[1240px]">
         <section className="rounded-[24px] bg-[#f2f3f5] px-4 pb-4 pt-0 sm:px-5 sm:pb-5 sm:pt-0">
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f2f3f5]">
@@ -1151,7 +1245,7 @@ export default function ListingProfilePage({
             ) : null}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/70 bg-white p-2 backdrop-blur-sm md:border-0 md:bg-transparent md:p-0 lg:hidden">
+          <div className="mt-4 -mx-7 rounded-[12px] border border-[#e8edf5] bg-white p-2 md:mx-0 lg:hidden">
             <div className="grid grid-cols-4 gap-2.5">
               {storeHref ? (
                 <Link
@@ -1274,7 +1368,7 @@ export default function ListingProfilePage({
           ) : null}
 
           {photoItems.length > 0 ? (
-            <section className="mt-5 bg-white p-3 sm:p-4 lg:hidden">
+            <section id="listing-gallery-mobile" className="mt-5 -mx-7 rounded-[12px] border border-[#e8edf5] bg-white p-3 md:mx-0 sm:p-4 lg:hidden">
               <div className="mb-2.5 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                 <button
@@ -1336,7 +1430,7 @@ export default function ListingProfilePage({
 
           <div className="-mx-7 mt-5 grid gap-5 md:mx-0 lg:relative lg:left-1/2 lg:mt-8 lg:w-[calc(100vw-3rem)] lg:max-w-none lg:-translate-x-1/2 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:items-start lg:gap-6 xl:w-[calc(100vw-4rem)]">
             <div className="hidden lg:col-start-1 lg:block lg:space-y-5">
-              <section className="bg-white p-5 [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300">
+              <section className="rounded-[12px] border border-[#e8edf5] bg-white p-5 [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300">
                 <div className="space-y-4">
                   <div className="grid grid-cols-4 gap-3">
                     {storeHref ? (
@@ -1457,7 +1551,7 @@ export default function ListingProfilePage({
                 </div>
               </section>
 
-              <section className="rounded-[12px] bg-white p-4">
+              <section id="listing-gallery" className="rounded-[12px] bg-white p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[1.02rem] font-semibold text-[#4a4a50]">Gallery</h3>
                   <button
@@ -1470,14 +1564,14 @@ export default function ListingProfilePage({
                   </button>
                 </div>
 
-                {galleryPreviewItems.length > 0 ? (
-                  <div className="mt-3 grid grid-cols-3 gap-3">
-                    {galleryPreviewItems.map((photo, index) => (
+                {photoItems.length > 0 ? (
+                  <div className="mt-3 flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+                    {photoItems.map((photo, index) => (
                       <button
                         key={`${photo}-${index}`}
                         type="button"
                         onClick={() => openSinglePhotoModal(photo)}
-                        className="overflow-hidden rounded-xl border border-[#e4e7ec] bg-[#f3f4f6]"
+                        className="shrink-0 overflow-hidden rounded-xl border border-[#e4e7ec] bg-[#f3f4f6] lg:w-[31%]"
                         aria-label={`View gallery photo ${index + 1}`}
                       >
                         <img
@@ -1505,14 +1599,14 @@ export default function ListingProfilePage({
                   </button>
                   <button
                     type="button"
-                    onClick={() => scrollToSection("listing-photos")}
+                    onClick={() => scrollToSection("listing-gallery")}
                     className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
                   >
                     Photo
                   </button>
                   <button
                     type="button"
-                    onClick={() => scrollToSection("listing-address")}
+                    onClick={() => scrollToSection("listing-footer")}
                     className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
                   >
                     Address
@@ -1558,7 +1652,7 @@ export default function ListingProfilePage({
                       Establishment Year
                     </h3>
                     {profile.establishmentYear ? (
-                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                      <p className="mt-2 flex w-fit items-center rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
                         {`Since ${profile.establishmentYear}`}
                       </p>
                     ) : null}
@@ -1577,7 +1671,7 @@ export default function ListingProfilePage({
                     </h3>
 
                     {gstinValue ? (
-                      <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
+                      <p className="mt-2 flex w-fit max-w-full items-center break-all rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
                         {gstinValue}
                       </p>
                     ) : (
@@ -1589,60 +1683,58 @@ export default function ListingProfilePage({
 
             </div>
 
-          <section className="relative overflow-hidden rounded-[12px] bg-white px-4 py-5 sm:px-5 lg:hidden">
+          <section className="w-full rounded-[12px] border border-[#e8edf5] bg-white p-4 lg:hidden">
 
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <h3
-                  className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
-                >
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
-                    <BriefcaseBusiness size={13} className="md:hidden" />
-                    <BriefcaseBusiness size={15} className="hidden md:block" />
-                  </span>
-                  <span>Services</span>
-                </h3>
-
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
-                  {serviceItems.map((service) => (
-                    <li
-                      key={service}
-                      className="text-[15px] text-black md:text-base"
-                    >
-                      {service}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="border-l border-[#e5e9ef] pl-5">
-                <h3
-                  className="inline-flex items-center gap-2 text-s font-bold text-black md:gap-2.5 md:text-xl"
-                  style={{ fontFamily: "var(--font-poppins), var(--font-inter), sans-serif", letterSpacing: "0.2px" }}
-                >
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#dbe7fb] bg-[#f3f8ff] text-[#2563EB] md:h-7 md:w-7 md:rounded-[9px]">
-                    <Layers3 size={13} className="md:hidden" />
-                    <Layers3 size={15} className="hidden md:block" />
-                  </span>
-                  <span>Categories</span>
-                </h3>
-
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-black md:space-y-2">
-                  {categoryItems.map((category) => (
-                    <li
-                      key={category}
-                      className="text-[15px] text-black md:text-base"
-                    >
-                      {category}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="flex items-center gap-4 overflow-x-auto border-b border-[#d8dadd] pb-2">
+              <button
+                type="button"
+                onClick={() => scrollToSection("listing-services-mobile")}
+                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+              >
+                Services
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("listing-gallery-mobile")}
+                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+              >
+                Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("listing-contact-details-mobile")}
+                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+              >
+                Address
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("listing-reviews")}
+                className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+              >
+                Reviews
+              </button>
             </div>
+
+            {serviceItems.length > 0 ? (
+              <div id="listing-services-mobile" className="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2.5">
+                {serviceColumns.map((column, columnIndex) => (
+                  <ul key={`mobile-service-column-${columnIndex}`} className="min-w-[130px] space-y-2.5">
+                    {column.map((service) => (
+                      <li key={service} className="flex items-start gap-2 text-[0.98rem] font-[600] text-[#3d3f44]">
+                        <span className="mt-1.5 inline-flex h-3.5 w-3.5 shrink-0 rounded-full bg-[#a8de95]" />
+                        <span>{service}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm font-medium text-[#6b7280]">No services listed.</p>
+            )}
           </section>
 
-          <section className="relative h-fit self-start overflow-hidden rounded-[12px] bg-white px-2 py-3 sm:px-5 md:py-4 lg:hidden">
+          <section className="relative w-full h-fit self-start overflow-hidden rounded-[12px] border border-[#e8edf5] bg-white px-2 py-3 sm:px-5 md:py-4 lg:hidden">
 
             <div className="grid grid-cols-2 gap-3 md:gap-5">
               <div>
@@ -1657,7 +1749,7 @@ export default function ListingProfilePage({
                   Establishment Year
                 </h3>
                 {profile.establishmentYear ? (
-                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
+                  <p className="mt-2 flex w-fit items-center rounded-full border border-[#d9e1eb] bg-[#f6f8fb] px-2 py-1 text-[13px] font-bold text-[#334155] md:mt-3 md:px-3 md:py-1.5 md:text-sm">
                     {`Since ${profile.establishmentYear}`}
                   </p>
                 ) : null}
@@ -1676,7 +1768,7 @@ export default function ListingProfilePage({
                 </h3>
 
                 {gstinValue ? (
-                  <p className="mt-2 inline-flex items-center whitespace-nowrap rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
+                  <p className="mt-2 flex w-fit max-w-full items-center break-all rounded-[10px] border border-[#e7ebf2] bg-[#f9fbfd] px-2 py-1 text-[12px] font-semibold leading-tight text-[#526071] md:mt-3 md:px-2.5 md:py-1.5 md:text-sm">
                     {gstinValue}
                   </p>
                 ) : (
@@ -1812,25 +1904,6 @@ export default function ListingProfilePage({
                     >
                       Login
                     </Link>
-
-                    <div className="pointer-events-none relative mt-4 overflow-hidden rounded-[10px] border border-[#e2e8f0] bg-white p-3 backdrop-blur-md">
-                      <div className="space-y-2 blur-[1.6px]">
-                        <div>
-                          <div className="mb-1 h-3 w-14 rounded bg-[#d9dfe8]" />
-                          <div className="h-9 w-full rounded-[8px] border border-[#d7dee6] bg-white/80" />
-                        </div>
-                        <div>
-                          <div className="mb-1 h-3 w-16 rounded bg-[#d9dfe8]" />
-                          <div className="h-6 w-32 rounded bg-white/80" />
-                        </div>
-                        <div>
-                          <div className="mb-1 h-3 w-16 rounded bg-[#d9dfe8]" />
-                          <div className="h-20 w-full rounded-[8px] border border-[#d7dee6] bg-white/80" />
-                        </div>
-                        <div className="h-10 w-full rounded-[8px] bg-[#f9c3ab]" />
-                      </div>
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.45))]" />
-                    </div>
                   </>
                 ) : hasAlreadyReviewed ? (
                   <>
@@ -1866,7 +1939,7 @@ export default function ListingProfilePage({
                             key={value}
                             type="button"
                             onClick={() => setReviewRatingInput(value)}
-                            className="rounded-full p-1"
+                            className="rounded-full p-1 group"
                             aria-label={`Rate ${value}`}
                           >
                             <Star
@@ -1874,7 +1947,7 @@ export default function ListingProfilePage({
                               className={
                                 value <= reviewRatingInput
                                   ? "fill-[#f5b014] text-[#f5b014]"
-                                  : "text-[#c8cfd8]"
+                                  : "text-[#c8cfd8] stroke-[#f5b014] fill-none"
                               }
                             />
                           </button>
@@ -1908,7 +1981,7 @@ export default function ListingProfilePage({
               </article>
             </div>
 
-            <div className="mt-7 space-y-4">
+            <div className={`${currentUser ? "mt-7" : "mt-4"} space-y-4`}>
               {reviewsLoading ? (
                 <p className="text-sm font-medium text-[#666b6f]">Loading reviews...</p>
               ) : reviews.length > 0 ? (
@@ -2092,9 +2165,13 @@ export default function ListingProfilePage({
             </p>
           </section>
 
+          <div className="mt-5 lg:hidden">
+            {renderBusinessContactDetails("listing-contact-details-mobile")}
+          </div>
+
           <div className="hidden lg:col-start-2 lg:row-start-1 lg:block lg:space-y-4 lg:self-start lg:sticky lg:top-24">
             {photoItems.length > 0 ? (
-              <section id="listing-photos" className="bg-white p-5">
+              <section id="listing-photos" className="rounded-[12px] border border-[#e8edf5] bg-white p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-base font-semibold text-[#4f5357]">Photos</h2>
                   <button
@@ -2153,7 +2230,7 @@ export default function ListingProfilePage({
                 </div>
               </section>
             ) : (
-              <section id="listing-photos" className="bg-white p-5">
+              <section id="listing-photos" className="rounded-[12px] border border-[#e8edf5] bg-white p-5">
                 <h2 className="text-base font-semibold text-[#4f5357]">Photo</h2>
                 <p className="mt-2 text-sm text-[#6b7280]">No photos available.</p>
               </section>
@@ -2167,6 +2244,8 @@ export default function ListingProfilePage({
 
               {renderInquiryForm()}
             </section>
+
+            {renderBusinessContactDetails("listing-contact-details")}
           </div>
         </div>
         </section>
@@ -2194,13 +2273,39 @@ export default function ListingProfilePage({
               </div>
 
               {selectedPhotoUrl ? (
-                <div className="flex max-h-[78vh] items-center justify-center overflow-hidden rounded-[12px] bg-[#f3f4f6]">
-                  <img
-                    src={selectedPhotoUrl}
-                    alt={`${profile.name} photo preview`}
-                    className="max-h-[78vh] w-full object-contain"
-                    loading="lazy"
-                  />
+                <div className="space-y-3">
+                  <div className="flex max-h-[78vh] items-center justify-center overflow-hidden rounded-[12px] bg-[#f3f4f6]">
+                    <img
+                      src={selectedPhotoUrl}
+                      alt={`${profile.name} photo preview`}
+                      className="max-h-[78vh] w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={showPreviousPhoto}
+                      disabled={selectedPhotoIndex <= 0}
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      Previous
+                    </button>
+
+                    <p className="text-xs font-semibold text-[#64748b]">
+                      {selectedPhotoIndex >= 0 ? `${selectedPhotoIndex + 1} / ${photoItems.length}` : `0 / ${photoItems.length}`}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={showNextPhoto}
+                      disabled={selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1}
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="max-h-[70vh] overflow-y-auto pr-1">
@@ -2242,19 +2347,19 @@ export default function ListingProfilePage({
                 <button
                   type="button"
                   onClick={closeInquiryModal}
-                  className="rounded-[10px] bg-[#d4f2ef] px-3 py-1.5 text-[13px] font-semibold text-[#5f6569]"
+                  className="rounded-[10px] bg-[#FF6967] px-3 py-1.5 text-[13px] font-semibold text-[#5f6569]"
                 >
                   Close
                 </button>
               </div>
 
-              {renderInquiryForm("space-y-2.5")}
+              {renderInquiryForm("mt-3 space-y-2.5")}
             </section>
           </div>
         ) : null}
       </div>
 
-      <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
+      <div id="listing-footer" className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
         <Footer />
       </div>
     </main>

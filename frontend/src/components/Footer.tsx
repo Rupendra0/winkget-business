@@ -1,19 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import { footerData } from "@/data/homeData";
+import { fetchCategories, type CatalogCategory } from "@/lib/catalogClient";
 
-type MobileSection = "categories" | "navigation" | "policies" | null;
+const MIN_CATEGORY_COLUMN_COUNT = 3;
+const MAX_CATEGORY_COLUMN_COUNT = 4;
+const ITEMS_PER_COLUMN = 10;
 
-const DESKTOP_CATEGORY_LIMIT = 8;
-const MOBILE_CATEGORY_LIMIT = 5;
-const QUICKLINK_LIMIT = 6;
-
-const sectionTitleClass = "text-sm font-semibold text-slate-800";
-const linkTextClass = "text-sm text-slate-600 transition-colors hover:text-slate-900";
-const smallTextClass = "text-xs text-slate-500";
+const sectionTitleClass = "text-[0.95rem] font-semibold leading-tight text-[#1f2937]";
+const linkTextClass = "text-[0.95rem] leading-[1.35] text-[#111827] transition-colors hover:text-[#111827]/80";
 
 const footerRouteMap: Record<string, string> = {
   "My Account": "/profile",
@@ -23,6 +20,7 @@ const footerRouteMap: Record<string, string> = {
   B2B: "/vendor",
   Explore: "/",
   Payment: "/cart",
+  "Pay Now": "/cart",
   "Become a partner": "/vendor-register",
   "Order your meal": "/search",
   "Find what you need": "/search",
@@ -36,344 +34,222 @@ const toCategorySlug = (value: string) =>
     .trim()
     .replace(/\s+/g, "-");
 
-export default function Footer() {
-  const [desktopCategoriesExpanded, setDesktopCategoriesExpanded] = useState(false);
-  const [desktopQuickLinksExpanded, setDesktopQuickLinksExpanded] = useState(false);
+type FooterCategory = {
+  id: string;
+  name: string;
+  slug: string;
+};
 
-  const [openMobileSection, setOpenMobileSection] = useState<MobileSection>(null);
-  const [mobileCategoriesExpanded, setMobileCategoriesExpanded] = useState(false);
-  const [mobileQuickLinksExpanded, setMobileQuickLinksExpanded] = useState(false);
+const toFooterCategory = (category: CatalogCategory): FooterCategory | null => {
+  const name = String(category?.name || "").trim();
+  if (!name) {
+    return null;
+  }
 
-  const desktopCategories = useMemo(
-    () =>
-      desktopCategoriesExpanded
-        ? footerData.categories
-        : footerData.categories.slice(0, DESKTOP_CATEGORY_LIMIT),
-    [desktopCategoriesExpanded]
-  );
+  const slug = String(category.slug || "").trim() || toCategorySlug(name);
+  if (!slug) {
+    return null;
+  }
 
-  const mobileCategories = useMemo(
-    () =>
-      mobileCategoriesExpanded
-        ? footerData.categories
-        : footerData.categories.slice(0, MOBILE_CATEGORY_LIMIT),
-    [mobileCategoriesExpanded]
-  );
-
-  const desktopQuickLinks = useMemo(
-    () =>
-      desktopQuickLinksExpanded
-        ? footerData.quickLinks
-        : footerData.quickLinks.slice(0, QUICKLINK_LIMIT),
-    [desktopQuickLinksExpanded]
-  );
-
-  const mobileQuickLinks = useMemo(
-    () =>
-      mobileQuickLinksExpanded
-        ? footerData.quickLinks
-        : footerData.quickLinks.slice(0, QUICKLINK_LIMIT),
-    [mobileQuickLinksExpanded]
-  );
-
-  const hasMoreDesktopCategories = footerData.categories.length > DESKTOP_CATEGORY_LIMIT;
-  const hasMoreMobileCategories = footerData.categories.length > MOBILE_CATEGORY_LIMIT;
-  const hasMoreDesktopQuickLinks = footerData.quickLinks.length > QUICKLINK_LIMIT;
-  const hasMoreMobileQuickLinks = footerData.quickLinks.length > QUICKLINK_LIMIT;
-
-  const toggleMobileSection = (section: MobileSection) => {
-    setOpenMobileSection((current) => (current === section ? null : section));
+  return {
+    id: String(category.id || slug),
+    name,
+    slug,
   };
+};
 
-  const renderSocial = () => (
-    <div className="mt-3">
-      <div className={`${sectionTitleClass} mb-2`}>Follow us on</div>
-      <div className="flex items-center gap-2">
-        {footerData.social.map((item) => (
-          <a
-            key={item.name}
-            href={item.url}
-            className="grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white/90 text-[10px] font-semibold text-orange-600 shadow-sm"
-          >
-            {item.name.slice(0, 2).toUpperCase()}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
+const renderMappedLink = (label: string, className: string) => {
+  const href = footerRouteMap[label];
+  if (!href) {
+    return <span className={className}>{label}</span>;
+  }
 
   return (
-    <footer className="border-t border-orange-100/80 bg-white/70 backdrop-blur-md">
-      <div className="w-full px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
-        <div className="hidden md:grid md:grid-cols-3 md:gap-8">
-          <section>
-            <div className={`${sectionTitleClass} mb-2`}>Categories</div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-              {desktopCategories.map((item) => (
-                <Link
-                  key={item}
-                  href={`/category/${toCategorySlug(item)}`}
-                  className={`${linkTextClass} text-left`}
-                >
-                  {item}
-                </Link>
-              ))}
-            </div>
-            {hasMoreDesktopCategories ? (
-              <button
-                type="button"
-                className="mt-2 text-xs font-medium text-blue-600 hover:underline"
-                onClick={() => setDesktopCategoriesExpanded((value) => !value)}
-              >
-                {desktopCategoriesExpanded ? "Show Less" : "View All"}
-              </button>
-            ) : null}
-          </section>
+    <Link href={href} className={className}>
+      {label}
+    </Link>
+  );
+};
 
-          <section>
-            <div className={`${sectionTitleClass} mb-2`}>Site Navigation</div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-              {footerData.navigation.map((item) => {
-                const href = footerRouteMap[item];
-                if (href) {
-                  return (
-                    <Link key={item} href={href} className={`${linkTextClass} text-left`}>
-                      {item}
-                    </Link>
-                  );
-                }
+const padColumn = <T,>(items: T[], size: number): Array<T | null> => {
+  const cappedItems = items.slice(0, size);
+  if (cappedItems.length >= size) {
+    return cappedItems;
+  }
 
-                return (
-                  <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                    {item}
-                  </button>
-                );
-              })}
-            </div>
+  return [...cappedItems, ...Array.from({ length: size - cappedItems.length }, () => null)];
+};
 
-            <div className="mt-3">
-              <div className={`${sectionTitleClass} mb-2`}>Quicklinks</div>
-              <div className="grid grid-cols-3 gap-2">
-                {desktopQuickLinks.map((item) => {
-                  const href = footerRouteMap[item];
-                  if (href) {
+export default function Footer() {
+  const [dbCategories, setDbCategories] = useState<FooterCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCategories = async () => {
+      setIsLoadingCategories(true);
+      const categories = await fetchCategories();
+      if (!active) {
+        return;
+      }
+
+      const sortedCategories = [...categories].sort((left, right) => {
+        const leftOrder = Number.isFinite(Number(left.sortOrder))
+          ? Number(left.sortOrder)
+          : Number.MAX_SAFE_INTEGER;
+        const rightOrder = Number.isFinite(Number(right.sortOrder))
+          ? Number(right.sortOrder)
+          : Number.MAX_SAFE_INTEGER;
+
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+
+        return String(left.name || "").localeCompare(String(right.name || ""));
+      });
+
+      const seenSlugs = new Set<string>();
+      const nextCategories = sortedCategories
+        .map(toFooterCategory)
+        .filter((category: FooterCategory | null): category is FooterCategory => Boolean(category))
+        .filter((category) => {
+          const slugKey = category.slug.toLowerCase();
+          if (seenSlugs.has(slugKey)) {
+            return false;
+          }
+
+          seenSlugs.add(slugKey);
+          return true;
+        });
+
+      setDbCategories(nextCategories);
+      setIsLoadingCategories(false);
+    };
+
+    void loadCategories();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categoryColumnCount = useMemo(
+    () =>
+      dbCategories.length >= MAX_CATEGORY_COLUMN_COUNT * ITEMS_PER_COLUMN
+        ? MAX_CATEGORY_COLUMN_COUNT
+        : MIN_CATEGORY_COLUMN_COUNT,
+    [dbCategories.length]
+  );
+
+  const categoryColumns = useMemo(() => {
+    const totalCategorySlots = categoryColumnCount * ITEMS_PER_COLUMN;
+    const visibleCategories = dbCategories.slice(0, totalCategorySlots);
+
+    return Array.from({ length: categoryColumnCount }, (_, index) => {
+      const start = index * ITEMS_PER_COLUMN;
+      const columnItems = visibleCategories.slice(start, start + ITEMS_PER_COLUMN);
+      return padColumn(columnItems, ITEMS_PER_COLUMN);
+    });
+  }, [categoryColumnCount, dbCategories]);
+
+  const footerGridColumnClass =
+    categoryColumnCount === MAX_CATEGORY_COLUMN_COUNT ? "lg:grid-cols-6" : "lg:grid-cols-5";
+
+  const siteNavigationItems = useMemo(
+    () => padColumn([...footerData.navigation, ...footerData.policies, "Pay Now"], ITEMS_PER_COLUMN),
+    []
+  );
+
+  const quickLinkItems = useMemo(() => padColumn(footerData.quickLinks, ITEMS_PER_COLUMN), []);
+
+  return (
+    <footer id="listing-footer" className="hidden border-t border-[#d5d7db] bg-white md:block">
+      <div className="mx-auto w-full max-w-[1600px] px-8 py-10 lg:px-12">
+        <div
+          className={`grid border-b border-[#cfd4dc] pb-10 ${footerGridColumnClass} lg:divide-x lg:divide-[#cfd4dc]`}
+        >
+          {categoryColumns.map((column, columnIndex) => (
+            <section key={`category-column-${columnIndex}`} className="px-6">
+              {columnIndex === 0 ? (
+                <h3 className={sectionTitleClass}>Categories</h3>
+              ) : (
+                <div className="h-[1.35rem]" aria-hidden />
+              )}
+
+              <div className="mt-4 space-y-2">
+                {column.map((category, itemIndex) => {
+                  if (isLoadingCategories && columnIndex === 0 && itemIndex === 0) {
                     return (
-                      <Link key={item} href={href} className={`${linkTextClass} text-left`}>
-                        {item}
-                      </Link>
+                      <p key="category-loading" className="text-[0.9rem] text-[#4b5563]">
+                        Loading categories...
+                      </p>
+                    );
+                  }
+
+                  if (!isLoadingCategories && dbCategories.length === 0 && columnIndex === 0 && itemIndex === 0) {
+                    return (
+                      <p key="category-empty" className="text-[0.9rem] text-[#4b5563]">
+                        No categories available.
+                      </p>
+                    );
+                  }
+
+                  if (!category) {
+                    return (
+                      <span
+                        key={`category-empty-${columnIndex}-${itemIndex}`}
+                        className="block h-[1.28rem] select-none opacity-0"
+                        aria-hidden
+                      >
+                        .
+                      </span>
                     );
                   }
 
                   return (
-                    <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                      {item}
-                    </button>
-                  );
+                      <Link
+                        key={category.id}
+                        href={`/category/${encodeURIComponent(category.slug || toCategorySlug(category.name))}`}
+                        className={`${linkTextClass} block text-left`}
+                      >
+                        {category.name}
+                      </Link>
+                    );
                 })}
               </div>
-              {hasMoreDesktopQuickLinks ? (
-                <button
-                  type="button"
-                  className="mt-2 text-xs font-medium text-blue-600 hover:underline"
-                  onClick={() => setDesktopQuickLinksExpanded((value) => !value)}
-                >
-                  {desktopQuickLinksExpanded ? "Show Less" : "More"}
-                </button>
-              ) : null}
+            </section>
+          ))}
+
+          <section className="px-6">
+            <h3 className={sectionTitleClass}>Site Navigation :</h3>
+            <div className="mt-4 space-y-2">
+              {siteNavigationItems.map((item, index) =>
+                item ? (
+                  <div key={`site-item-${index}`}>{renderMappedLink(item, `${linkTextClass} block text-left`)}</div>
+                ) : (
+                  <span key={`site-item-empty-${index}`} className="block h-[1.28rem] select-none opacity-0" aria-hidden>
+                    .
+                  </span>
+                )
+              )}
             </div>
           </section>
 
-          <section>
-            <div className={`${sectionTitleClass} mb-2`}>Policies</div>
-            <div className="space-y-2">
-              {footerData.policies.map((item) => (
-                <button key={item} type="button" className={`${linkTextClass} block text-left`}>
-                  {item}
-                </button>
-              ))}
-            </div>
-            {renderSocial()}
-          </section>
-        </div>
-
-        <div className="divide-y divide-orange-100/80 md:hidden">
-          <section>
-            <button
-              type="button"
-              onClick={() => toggleMobileSection("categories")}
-              className="flex w-full cursor-pointer items-center justify-between py-3 text-left font-medium text-slate-800"
-            >
-              <span className="text-sm font-semibold">Categories</span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  openMobileSection === "categories" ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            <div
-              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-                openMobileSection === "categories"
-                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
-                  : "pointer-events-none grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden pb-3">
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                  {mobileCategories.map((item) => (
-                    <Link
-                      key={item}
-                      href={`/category/${toCategorySlug(item)}`}
-                      className={`${linkTextClass} text-left`}
-                    >
-                      {item}
-                    </Link>
-                  ))}
-                </div>
-                {hasMoreMobileCategories ? (
-                  <button
-                    type="button"
-                    className="mt-2 text-xs font-medium text-blue-600 hover:underline"
-                    onClick={() => setMobileCategoriesExpanded((value) => !value)}
-                  >
-                    {mobileCategoriesExpanded ? "Show Less" : "View All"}
-                  </button>
-                ) : null}
-              </div>
+          <section className="px-6">
+            <h3 className={sectionTitleClass}>Quicklinks</h3>
+            <div className="mt-4 space-y-2">
+              {quickLinkItems.map((item, index) =>
+                item ? (
+                  <div key={`quick-item-${index}`}>{renderMappedLink(item, `${linkTextClass} block text-left`)}</div>
+                ) : (
+                  <span key={`quick-item-empty-${index}`} className="block h-[1.28rem] select-none opacity-0" aria-hidden>
+                    .
+                  </span>
+                )
+              )}
             </div>
           </section>
-
-          <section>
-            <button
-              type="button"
-              onClick={() => toggleMobileSection("navigation")}
-              className="flex w-full cursor-pointer items-center justify-between py-3 text-left font-medium text-slate-800"
-            >
-              <span className="text-sm font-semibold">Site Navigation</span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  openMobileSection === "navigation" ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            <div
-              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-                openMobileSection === "navigation"
-                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
-                  : "pointer-events-none grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden pb-3">
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                  {footerData.navigation.map((item) => {
-                    const href = footerRouteMap[item];
-                    if (href) {
-                      return (
-                        <Link key={item} href={href} className={`${linkTextClass} text-left`}>
-                          {item}
-                        </Link>
-                      );
-                    }
-
-                    return (
-                      <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                        {item}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-3">
-                  <div className={`${sectionTitleClass} mb-2`}>Quicklinks</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {mobileQuickLinks.map((item) => {
-                      const href = footerRouteMap[item];
-                      if (href) {
-                        return (
-                          <Link key={item} href={href} className={`${linkTextClass} text-left`}>
-                            {item}
-                          </Link>
-                        );
-                      }
-
-                      return (
-                        <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {hasMoreMobileQuickLinks ? (
-                    <button
-                      type="button"
-                      className="mt-2 text-xs font-medium text-blue-600 hover:underline"
-                      onClick={() => setMobileQuickLinksExpanded((value) => !value)}
-                    >
-                      {mobileQuickLinksExpanded ? "Show Less" : "More"}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <button
-              type="button"
-              onClick={() => toggleMobileSection("policies")}
-              className="flex w-full cursor-pointer items-center justify-between py-3 text-left font-medium text-slate-800"
-            >
-              <span className="text-sm font-semibold">Policies</span>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  openMobileSection === "policies" ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            <div
-              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-                openMobileSection === "policies"
-                  ? "pointer-events-auto grid-rows-[1fr] opacity-100"
-                  : "pointer-events-none grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden pb-3">
-                <div className="space-y-2">
-                  {footerData.policies.map((item) => (
-                    <button key={item} type="button" className={`${linkTextClass} block text-left`}>
-                      {item}
-                    </button>
-                  ))}
-                </div>
-                {renderSocial()}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="mt-4 border-t border-orange-100/80 pt-3">
-          <div className="flex flex-wrap gap-2 text-xs text-slate-600 md:gap-4 md:text-sm">
-            {footerData.bottomLinks.map((item) => {
-              const href = footerRouteMap[item];
-              if (href) {
-                return (
-                  <Link key={item} href={href} className={`${linkTextClass} text-left`}>
-                    {item}
-                  </Link>
-                );
-              }
-
-              return (
-                <button key={item} type="button" className={`${linkTextClass} text-left`}>
-                  {item}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={`mt-3 ${smallTextClass}`}>{footerData.copyright}</div>
         </div>
       </div>
     </footer>
