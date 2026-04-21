@@ -49,6 +49,36 @@ const CATEGORY_ICON_PALETTES = [
 const CATEGORY_ICON_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const CATEGORY_ICON_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 
+const toPriceValue = (value: unknown): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const numeric = Number(String(value || "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const formatIndianCurrency = (value: number): string => {
+  const amount = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  return `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(amount)}`;
+};
+
+const formatIndianCompactCurrency = (value: number): string => {
+  const amount = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+
+  if (amount >= 10_000_000) {
+    const crores = amount / 10_000_000;
+    const decimals = crores >= 100 ? 0 : crores >= 10 ? 1 : 2;
+
+    return `₹${new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals,
+    }).format(crores)} Cr`;
+  }
+
+  return formatIndianCurrency(amount);
+};
+
 export default function StorePage({ data }: { data: StorePageData }) {
   const router = useRouter();
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
@@ -113,28 +143,23 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const handleAddToCart = useCallback(
     (product: StoreProduct) => {
       const alreadyInCart = readCart().some((item) => item.product.id === product.id);
-      if (alreadyInCart) {
-        setAddedToCartProductIds((previous) => ({
-          ...previous,
-          [product.id]: true,
-        }));
-        return;
+
+      if (!alreadyInCart) {
+        const href = buildProductHref(product);
+        const storeProduct = makeStoreProduct(
+          {
+            ...product,
+            storeId: data.id,
+            sellerName: product.sellerName || data.storeName,
+            image: product.imageUrl,
+            oldPrice: product.oldPriceValue,
+            categoryLabel: product.categoryLabel || product.category,
+          },
+          href
+        );
+
+        addToCart(storeProduct, 1);
       }
-
-      const href = buildProductHref(product);
-      const storeProduct = makeStoreProduct(
-        {
-          ...product,
-          storeId: data.id,
-          sellerName: product.sellerName || data.storeName,
-          image: product.imageUrl,
-          oldPrice: product.oldPriceValue,
-          categoryLabel: product.categoryLabel || product.category,
-        },
-        href
-      );
-
-      addToCart(storeProduct, 1);
 
       setAddedToCartProductIds((previous) => ({
         ...previous,
@@ -142,6 +167,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
       }));
     },
     [buildProductHref, data.id, data.storeName]
+  );
+
+  const handleBuyNow = useCallback(
+    (product: StoreProduct) => {
+      handleAddToCart(product);
+      router.push("/checkout");
+    },
+    [handleAddToCart, router]
   );
 
   const featuredProducts = data.featured.productIds
@@ -259,6 +292,87 @@ export default function StorePage({ data }: { data: StorePageData }) {
       behavior: "smooth",
     });
   }, []);
+
+  const renderFlipkartStyleProductCard = (product: StoreProduct, imageHeightClass: string) => {
+    const productHref = buildProductHref(product);
+    const isProductInCart = Boolean(addedToCartProductIds[product.id]);
+    const ratingValue = Number(product.rating || 0);
+    const hasRating = Number.isFinite(ratingValue) && ratingValue > 0;
+
+    const currentPriceValue = toPriceValue(product.price);
+    const oldPriceValue = Number(product.oldPriceValue || 0);
+    const hasComparablePrice = Number.isFinite(oldPriceValue) && oldPriceValue > currentPriceValue && currentPriceValue > 0;
+
+    const discountPercent = hasComparablePrice
+      ? Math.max(1, Math.round(((oldPriceValue - currentPriceValue) / oldPriceValue) * 100))
+      : 0;
+
+    const currentPriceLabel =
+      currentPriceValue > 0
+        ? formatIndianCompactCurrency(currentPriceValue)
+        : String(product.price || "").trim() || "Price unavailable";
+
+    return (
+      <article
+        key={product.id}
+        className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
+      >
+        <Link href={productHref} className={`relative block ${imageHeightClass} overflow-hidden bg-slate-100`}>
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-contain p-3 transition-transform duration-200 group-hover:scale-[1.03]"
+          />
+          {hasRating ? (
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 shadow-sm">
+              <span>{ratingLabel(ratingValue)}</span>
+              <Star size={10} className="fill-emerald-600 text-emerald-600" />
+            </span>
+          ) : null}
+        </Link>
+
+        <div className="flex flex-1 flex-col p-3">
+          <Link href={productHref} className="line-clamp-2 min-h-[42px] text-[17px] font-semibold leading-5 text-slate-800 hover:text-blue-700">
+            {product.name}
+          </Link>
+
+          {hasComparablePrice ? (
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.04em] text-emerald-700">{discountPercent}% OFF</p>
+          ) : null}
+
+          <div className="mt-1 flex items-baseline gap-1.5">
+            {hasComparablePrice ? (
+              <span className="text-l font-medium text-slate-400 line-through">{formatIndianCurrency(oldPriceValue)}</span>
+            ) : null}
+            <span className="text-[clamp(0.95rem,1.5vw,1.2rem)] font-semibold text-slate-900">{currentPriceLabel}
+            </span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleAddToCart(product)}
+              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border text-[12px] font-semibold transition ${
+                isProductInCart
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              }`}
+            >
+              {isProductInCart ? "Added" : "Add to Cart"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBuyNow(product)}
+              className="h-9 rounded-lg bg-blue-600 px-2 text-[12px] font-semibold text-white transition hover:bg-blue-700"
+            >
+              Buy Now
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <main className="px-3 sm:px-4 lg:px-6 pb-12">
@@ -501,47 +615,12 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </button>
                 </div>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {pagedFeatured.map((product) => {
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">                {pagedFeatured.map((product) => {
                   if (!product) {
                     return null;
                   }
 
-                  const productHref = buildProductHref(product);
-                  const isProductInCart = Boolean(addedToCartProductIds[product.id]);
-
-                  return (
-                    <div
-                      key={product.id}
-                      className="rounded-2xl bg-white overflow-hidden flex h-full flex-col card-hover"
-                    >
-                      <Link href={productHref} className="h-32 bg-slate-50 shrink-0 block">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="h-full w-full object-contain p-3"
-                        />
-                      </Link>
-                      <div className="p-3 flex flex-1 flex-col gap-2">
-                        <Link href={productHref} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
-                          {product.name}
-                        </Link>
-                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>
-                        <button
-                          type="button"
-                          onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
-                          className={`mt-auto h-10 w-full rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-2 ${
-                            isProductInCart
-                              ? "bg-emerald-600 hover:bg-emerald-700"
-                              : "bg-blue-600 btn-hover"
-                          }`}
-                        >
-                          <ShoppingCart size={14} />
-                          {isProductInCart ? "Go to Cart" : "Add to Cart"}
-                        </button>
-                      </div>
-                    </div>
-                  );
+                  return renderFlipkartStyleProductCard(product, "h-44");
                 })}
               </div>
             </section>
@@ -574,47 +653,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
                     </button>
                   </div>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {pagedTrending.map((product) => {
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {pagedTrending.map((product) => {
                   if (!product) {
                     return null;
                   }
 
-                  const productHref = buildProductHref(product);
-                  const isProductInCart = Boolean(addedToCartProductIds[product.id]);
-
-                  return (
-                    <div
-                      key={product.id}
-                      className="rounded-2xl bg-white overflow-hidden flex h-full flex-col card-hover"
-                    >
-                      <Link href={productHref} className="h-32 bg-slate-50 shrink-0 block">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="h-full w-full object-contain p-3"
-                        />
-                      </Link>
-                      <div className="p-3 flex flex-1 flex-col gap-2">
-                        <Link href={productHref} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
-                          {product.name}
-                        </Link>
-                        <div className="text-sm font-semibold text-blue-700">{product.price}</div>
-                        <button
-                          type="button"
-                          onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
-                          className={`mt-auto h-10 w-full rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-2 ${
-                            isProductInCart
-                              ? "bg-emerald-600 hover:bg-emerald-700"
-                              : "bg-blue-600 btn-hover"
-                          }`}
-                        >
-                          <ShoppingCart size={14} />
-                          {isProductInCart ? "Go to Cart" : "Add to Cart"}
-                        </button>
-                      </div>
-                    </div>
-                  );
+                  return renderFlipkartStyleProductCard(product, "h-44");
                 })}
               </div>
             </section>
@@ -629,45 +674,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <option>Price: High to Low</option>
                 </select>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {data.products.map((product) => (
-                  (() => {
-                    const isProductInCart = Boolean(addedToCartProductIds[product.id]);
-
-                    return (
-                      <div
-                        key={product.id}
-                        className="rounded-2xl bg-white overflow-hidden flex h-full flex-col card-hover"
-                      >
-                        <Link href={buildProductHref(product)} className="h-40 bg-slate-50 shrink-0 block">
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="h-full w-full object-contain p-4"
-                          />
-                        </Link>
-                        <div className="p-4 flex flex-1 flex-col gap-2">
-                          <Link href={buildProductHref(product)} className="text-sm font-semibold text-slate-800 line-clamp-2 hover:text-blue-700">
-                            {product.name}
-                          </Link>
-                          <div className="text-sm font-semibold text-blue-700">{product.price}</div>
-                          <button
-                            type="button"
-                            onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCart(product))}
-                            className={`mt-auto h-10 w-full rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 ${
-                              isProductInCart
-                                ? "bg-emerald-600 hover:bg-emerald-700"
-                                : "bg-blue-600 btn-hover"
-                            }`}
-                          >
-                            <ShoppingCart size={14} />
-                            {isProductInCart ? "Go to Cart" : "Add to Cart"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })()
-                ))}
+<div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">  
+                    {data.products.map((product) => renderFlipkartStyleProductCard(product, "h-48"))}
               </div>
             </section>
 

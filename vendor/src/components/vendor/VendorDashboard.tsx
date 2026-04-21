@@ -244,6 +244,7 @@ const NOTIFICATION_DISMISS_STORAGE_KEY_PREFIX = "winkget_vendor_notification_dis
 const MAX_NOTIFICATIONS_IN_POPUP = 20;
 const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const VENDOR_PRODUCT_STATUSES: VendorProductRecord["status"][] = ["draft", "pending", "live", "rejected", "archived"];
 const PRODUCT_VARIANT_LINE_HINT = "size|color|mrp|sellingPrice|stock|image";
 const STORE_PLACEMENT_OPTIONS: Array<{ value: VendorProductFormState["storePlacement"]; label: string }> = [
@@ -2809,11 +2810,12 @@ export default function VendorDashboard() {
       }
 
       setVendorOrdersLoading(true);
+      const vendorCategoryId = String(session.businessCategory?.id || "").trim();
       const [reviewSnapshot, inquiriesSnapshot, ordersSnapshot, categoriesSnapshot, productsSnapshot] = await Promise.all([
         fetchVendorReviewSnapshot(session.id),
         fetchVendorInquiries({ limit: 200 }),
         fetchVendorOrders({ limit: 300 }),
-        fetchVendorCategories(),
+        fetchVendorCategories({ categoryId: vendorCategoryId }),
         fetchVendorProducts({ limit: 300 }),
       ]);
 
@@ -2948,7 +2950,9 @@ export default function VendorDashboard() {
     try {
       const [productsSnapshot, categoriesSnapshot] = await Promise.all([
         fetchVendorProducts({ limit: 300 }),
-        includeCategories ? fetchVendorCategories() : Promise.resolve([] as VendorCatalogCategory[]),
+        includeCategories
+          ? fetchVendorCategories({ categoryId: String(vendor.businessCategory?.id || "").trim() })
+          : Promise.resolve([] as VendorCatalogCategory[]),
       ]);
 
       setVendorProducts(productsSnapshot);
@@ -3162,6 +3166,28 @@ export default function VendorDashboard() {
   }, [reviews.summary.rating, vendor?.serviceTags]);
 
   const isRestaurantVendor = useMemo(() => isRestaurantVendorProfile(vendor), [vendor]);
+  const scopedVendorCategories = useMemo(() => {
+    if (!Array.isArray(vendorCategories) || vendorCategories.length === 0) {
+      return [] as VendorCatalogCategory[];
+    }
+
+    const vendorCategoryId = String(vendor?.businessCategory?.id || "").trim();
+    const vendorCategoryName = String(vendor?.businessCategory?.name || "").trim().toLowerCase();
+
+    if (!vendorCategoryId && !vendorCategoryName) {
+      return vendorCategories;
+    }
+
+    const categoryById = OBJECT_ID_REGEX.test(vendorCategoryId)
+      ? vendorCategories.find((category) => String(category.id || "").trim() === vendorCategoryId)
+      : null;
+    const categoryByName = !categoryById && vendorCategoryName
+      ? vendorCategories.find((category) => String(category.name || "").trim().toLowerCase() === vendorCategoryName)
+      : null;
+    const resolvedCategory = categoryById || categoryByName;
+
+    return resolvedCategory ? [resolvedCategory] : vendorCategories;
+  }, [vendor?.businessCategory?.id, vendor?.businessCategory?.name, vendorCategories]);
 
   const notifications = useMemo<VendorNotification[]>(() => {
     const inquiryNotifications = inquiryData.inquiries.map((inquiry) => ({
@@ -4148,7 +4174,7 @@ export default function VendorDashboard() {
           vendorCategoryName={vendor.businessCategory?.name}
           vendorSubcategoryId={vendor.businessSubcategory?.id}
           vendorSubcategoryName={vendor.businessSubcategory?.name}
-          categories={vendorCategories}
+          categories={scopedVendorCategories}
           products={filteredVendorProducts}
           editingProduct={editingProduct}
           productsLoading={vendorProductsLoading}

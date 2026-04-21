@@ -1,4 +1,5 @@
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
 type ApiEnvelope<T> = {
   ok: boolean;
@@ -926,8 +927,15 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
   };
 };
 
-export async function fetchVendorCategories(): Promise<VendorCatalogCategory[]> {
+export async function fetchVendorCategories(options?: { categoryId?: string }): Promise<VendorCatalogCategory[]> {
   try {
+    const normalizedCategoryId = String(options?.categoryId || "").trim();
+    const shouldFilterByCategory = OBJECT_ID_REGEX.test(normalizedCategoryId);
+    const subcategoryQuery = new URLSearchParams();
+    if (shouldFilterByCategory) {
+      subcategoryQuery.set("categoryId", normalizedCategoryId);
+    }
+
     const [categoryPayload, subcategoryPayload] = await Promise.all([
       requestJson<{
         categories?: Array<{ id?: string; name?: string; slug?: string }>;
@@ -940,10 +948,16 @@ export async function fetchVendorCategories(): Promise<VendorCatalogCategory[]> 
           category?: { id?: string; name?: string; slug?: string };
           parentSubcategory?: { id?: string; name?: string };
         }>;
-      }>("/api/subcategories"),
+      }>(`/api/subcategories${subcategoryQuery.toString() ? `?${subcategoryQuery.toString()}` : ""}`),
     ]);
 
-    const categories = Array.isArray(categoryPayload.categories) ? categoryPayload.categories : [];
+    const categories = (Array.isArray(categoryPayload.categories) ? categoryPayload.categories : []).filter((category) => {
+      if (!shouldFilterByCategory) {
+        return true;
+      }
+
+      return String(category.id || "").trim() === normalizedCategoryId;
+    });
     const subcategories = Array.isArray(subcategoryPayload.subcategories) ? subcategoryPayload.subcategories : [];
 
     const map = new Map<string, VendorCatalogCategory>();
