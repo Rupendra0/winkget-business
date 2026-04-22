@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -17,11 +17,32 @@ import {
 } from "lucide-react";
 import { buildProductSlug } from "@/data/productSlug";
 import type { ProductDetailModel, RelatedProductModel } from "@/lib/storeCatalog";
+import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import {
+  fetchBusinessReviews,
+  submitBusinessReview,
+  updateBusinessReview,
+  type BusinessReview,
+  type BusinessReviewSummary,
+} from "@/lib/reviewStore";
 import { addToCart, isWishlisted, makeStoreProduct, setBuyNowSelection, toggleWishlist } from "@/lib/shopStorage";
 
 type ProductDetailPageClientProps = {
   product: ProductDetailModel;
   relatedProducts?: RelatedProductModel[];
+};
+
+const formatReviewDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 export default function ProductDetailPageClient({
@@ -43,9 +64,26 @@ export default function ProductDetailPageClient({
   const [isAboutOpen, setIsAboutOpen] = useState(true);
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [isSpecsOpen, setIsSpecsOpen] = useState(true);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [productReviews, setProductReviews] = useState<BusinessReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
+  const [reviewRatingInput, setReviewRatingInput] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const productHref = `/product/${encodeURIComponent(buildProductSlug(product))}`;
   const storeProduct = useMemo(() => makeStoreProduct(product, productHref), [product, productHref]);
+  const productReviewBusinessId = useMemo(() => {
+    const normalizedProductId = String(product.id || "")
+      .trim()
+      .replace(/[^a-zA-Z0-9:_-]/g, "-")
+      .slice(0, 96);
+
+    return `product:${normalizedProductId || "unknown"}`;
+  }, [product.id]);
 
   const discountText = useMemo(() => {
     const discount = Number(product.discount) || 0; 
@@ -65,8 +103,16 @@ export default function ProductDetailPageClient({
   const hasPrice = currentPrice > 0;
   const oldPrice = Number(product.oldPrice) || currentPrice;
   const totalPrice = currentPrice * quantity;
-  const reviewCount = Number(product.reviews || 0);
-  const ratingValue = Number(product.rating || 0);
+  const baseReviewCount = Math.max(0, Number(product.reviews || 0));
+  const baseRatingValue = Number(product.rating || 0);
+  const [productReviewSummary, setProductReviewSummary] = useState<BusinessReviewSummary>({
+    rating: Number.isFinite(baseRatingValue) ? baseRatingValue : 0,
+    reviews: baseReviewCount,
+  });
+  const reviewCount = Math.max(0, Number(productReviewSummary.reviews || 0));
+  const ratingValue = Number.isFinite(Number(productReviewSummary.rating || 0))
+    ? Number(productReviewSummary.rating || 0)
+    : 0;
 
   const hasSpecifications = Array.isArray(product.specifications) && product.specifications.length > 0;
   const hasKeyAttributes = Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0;
@@ -105,6 +151,83 @@ export default function ProductDetailPageClient({
     const index = galleryImages.findIndex((image) => image === activeImage);
     return index >= 0 ? index : 0;
   }, [activeImage, galleryImages]);
+
+  useEffect(() => {
+    let active = true;
+
+    const syncCurrentUser = async () => {
+      setAuthLoading(true);
+      const user = await fetchCurrentUser();
+      if (!active) return;
+
+      setCurrentUser(user);
+      setAuthLoading(false);
+    };
+
+    void syncCurrentUser();
+
+    const authChangedHandler = () => {
+      void syncCurrentUser();
+    };
+
+    window.addEventListener("auth:changed", authChangedHandler);
+    return () => {
+      active = false;
+      window.removeEventListener("auth:changed", authChangedHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProductReviews = async () => {
+      setReviewsLoading(true);
+      setViewerHasReviewed(false);
+
+      const result = await fetchBusinessReviews(productReviewBusinessId, 30);
+      if (!active) return;
+
+      if (result.ok) {
+        setProductReviews(result.reviews);
+        setProductReviewSummary(result.summary);
+        setViewerHasReviewed(result.viewerHasReviewed);
+      } else {
+        setProductReviews([]);
+        setProductReviewSummary({
+          rating: Number.isFinite(baseRatingValue) ? baseRatingValue : 0,
+          reviews: baseReviewCount,
+        });
+      }
+
+      setReviewsLoading(false);
+    };
+
+    void loadProductReviews();
+
+    return () => {
+      active = false;
+    };
+  }, [baseRatingValue, baseReviewCount, productReviewBusinessId]);
+
+  const ownReview = useMemo(() => {
+    if (!currentUser?.id) {
+      return null;
+    }
+
+    return productReviews.find((review) => review.reviewerId === currentUser.id) || null;
+  }, [currentUser?.id, productReviews]);
+  const isSubmitBlockedByExistingReview = viewerHasReviewed && !ownReview;
+
+  useEffect(() => {
+    if (!ownReview) {
+      setReviewRatingInput(5);
+      setReviewText("");
+      return;
+    }
+
+    setReviewRatingInput(Math.max(1, Math.min(5, Number(ownReview.rating || 5))));
+    setReviewText(String(ownReview.comment || ""));
+  }, [ownReview]);
 
   const showPrevImage = () => {
     if (galleryImages.length <= 1) {
@@ -158,6 +281,88 @@ export default function ProductDetailPageClient({
     } catch {
       // Ignore browser share failures.
     }
+  };
+
+  const handleSubmitProductReview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (authLoading) {
+      setReviewFormMessage("Checking login status...");
+      return;
+    }
+
+    if (!currentUser) {
+      setReviewFormMessage("Please login to submit your rating.");
+      return;
+    }
+
+    if (isSubmitBlockedByExistingReview) {
+      setReviewFormMessage("You already rated this product. Your existing review is being loaded.");
+      return;
+    }
+
+    const comment = reviewText.trim();
+    if (!comment || comment.length < 5) {
+      setReviewFormMessage("Please write a meaningful review (minimum 5 characters).");
+      return;
+    }
+
+    if (comment.length > 1200) {
+      setReviewFormMessage("Review must be 1200 characters or fewer.");
+      return;
+    }
+
+    const normalizedRating = Math.max(1, Math.min(5, Number(reviewRatingInput || 0)));
+    setIsSubmittingReview(true);
+    setReviewFormMessage(null);
+
+    if (ownReview) {
+      const updateResult = await updateBusinessReview({
+        reviewId: ownReview.id,
+        businessId: productReviewBusinessId,
+        rating: normalizedRating,
+        comment,
+      });
+
+      if (!updateResult.ok) {
+        setReviewFormMessage(updateResult.message);
+        setIsSubmittingReview(false);
+        return;
+      }
+
+      setProductReviews((previous) =>
+        previous.map((review) => (review.id === updateResult.review.id ? updateResult.review : review))
+      );
+      setProductReviewSummary(updateResult.summary);
+      setViewerHasReviewed(true);
+      setReviewFormMessage("Your rating has been updated.");
+      setIsSubmittingReview(false);
+      return;
+    }
+
+    const submitResult = await submitBusinessReview({
+      businessId: productReviewBusinessId,
+      rating: normalizedRating,
+      comment,
+      authorName: String(currentUser.name || "").trim() || "Winkget User",
+    });
+
+    if (!submitResult.ok) {
+      setReviewFormMessage(submitResult.message);
+      setIsSubmittingReview(false);
+      return;
+    }
+
+    setProductReviews((previous) => [
+      submitResult.review,
+      ...previous.filter((review) => review.id !== submitResult.review.id),
+    ]);
+    setProductReviewSummary(submitResult.summary);
+    setViewerHasReviewed(true);
+    setReviewRatingInput(5);
+    setReviewText("");
+    setReviewFormMessage("Thanks for rating this product.");
+    setIsSubmittingReview(false);
   };
 
   return (
@@ -736,6 +941,89 @@ export default function ProductDetailPageClient({
               {showFullBottomDescription ? "View Less" : "View More"}
             </button>
           ) : null}
+        </article>
+
+        <article className="bg-white p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-left text-base font-bold text-slate-900 sm:text-lg">Ratings &amp; Reviews</h2>
+            <p className="text-sm text-slate-600">
+              {reviewCount > 0 ? `${ratingValue.toFixed(1)} / 5 (${reviewCount} ratings)` : "No ratings yet"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmitProductReview} className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <p className="text-sm font-semibold text-slate-800">{ownReview ? "Update your rating" : "Rate this product"}</p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1">
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const starValue = index + 1;
+                  const isActive = starValue <= reviewRatingInput;
+
+                  return (
+                    <button
+                      key={`rating-input-${starValue}`}
+                      type="button"
+                      onClick={() => setReviewRatingInput(starValue)}
+                      className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-amber-50"
+                      aria-label={`Rate ${starValue} star${starValue > 1 ? "s" : ""}`}
+                    >
+                      <Star className={`h-5 w-5 ${isActive ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-sm font-semibold text-slate-700">{reviewRatingInput.toFixed(1)} / 5</span>
+            </div>
+
+            <textarea
+              value={reviewText}
+              onChange={(event) => setReviewText(event.target.value)}
+              rows={3}
+              maxLength={1200}
+              placeholder="Share your experience with this product"
+              className="mt-3 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={isSubmittingReview || isSubmitBlockedByExistingReview}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmittingReview ? "Saving..." : ownReview ? "Update Review" : "Submit Review"}
+              </button>
+
+              {reviewFormMessage ? <p className="text-sm font-medium text-slate-600">{reviewFormMessage}</p> : null}
+            </div>
+
+            {!currentUser && !authLoading ? (
+              <p className="mt-2 text-xs text-slate-500">Login to submit your rating and review.</p>
+            ) : null}
+          </form>
+
+          <div className="mt-4 space-y-3">
+            {reviewsLoading ? (
+              <p className="text-sm text-slate-500">Loading ratings...</p>
+            ) : productReviews.length > 0 ? (
+              productReviews.slice(0, 6).map((review) => (
+                <article key={review.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-800">{review.author || "Winkget User"}</p>
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+                      {Number(review.rating || 0).toFixed(1)}
+                      <Star className="h-3 w-3 fill-white text-white" aria-hidden="true" />
+                    </span>
+                  </div>
+
+                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">{review.comment}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatReviewDate(review.createdAt)}</p>
+                </article>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">Be the first to rate this product.</p>
+            )}
+          </div>
         </article>
       </section>
 

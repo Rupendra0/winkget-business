@@ -30,7 +30,7 @@ import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
-import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart } from "@/lib/shopStorage";
+import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setBuyNowSelection } from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -48,6 +48,15 @@ const CATEGORY_ICON_PALETTES = [
 ];
 const CATEGORY_ICON_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const CATEGORY_ICON_IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+
+const toProductReviewBusinessKey = (productId: string) => {
+  const normalizedProductId = String(productId || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]/g, "-")
+    .slice(0, 96);
+
+  return `product:${normalizedProductId || "unknown"}`;
+};
 
 const toPriceValue = (value: unknown): number => {
   if (typeof value === "number") {
@@ -171,10 +180,23 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
   const handleBuyNow = useCallback(
     (product: StoreProduct) => {
-      handleAddToCart(product);
-      router.push("/checkout");
+      const href = buildProductHref(product);
+      const storeProduct = makeStoreProduct(
+        {
+          ...product,
+          storeId: data.id,
+          sellerName: product.sellerName || data.storeName,
+          image: product.imageUrl,
+          oldPrice: product.oldPriceValue,
+          categoryLabel: product.categoryLabel || product.category,
+        },
+        href
+      );
+
+      setBuyNowSelection(storeProduct, 1);
+      router.push("/checkout?mode=buy-now");
     },
-    [handleAddToCart, router]
+    [buildProductHref, data.id, data.storeName, router]
   );
 
   const featuredProducts = data.featured.productIds
@@ -296,8 +318,18 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const renderFlipkartStyleProductCard = (product: StoreProduct, imageHeightClass: string) => {
     const productHref = buildProductHref(product);
     const isProductInCart = Boolean(addedToCartProductIds[product.id]);
-    const ratingValue = Number(product.rating || 0);
+    const productReviewSummary = getBusinessReviewAggregate(
+      toProductReviewBusinessKey(product.id),
+      Number(product.rating || 0),
+      Math.max(0, Number(product.reviews || 0))
+    );
+    const ratingValue = Number(productReviewSummary.rating || 0);
     const hasRating = Number.isFinite(ratingValue) && ratingValue > 0;
+    const reviewCountValue = Math.max(0, Math.round(Number(productReviewSummary.reviews || 0)));
+    const hasReviewCount = Number.isFinite(reviewCountValue) && reviewCountValue > 0;
+    const shouldShowRatingRow = hasRating && hasReviewCount;
+    const ratingDisplay = hasRating ? ratingLabel(ratingValue) : "0.0";
+    const reviewCountLabel = new Intl.NumberFormat("en-IN").format(reviewCountValue);
 
     const currentPriceValue = toPriceValue(product.price);
     const oldPriceValue = Number(product.oldPriceValue || 0);
@@ -323,18 +355,22 @@ export default function StorePage({ data }: { data: StorePageData }) {
             alt={product.name}
             className="h-full w-full object-contain p-3 transition-transform duration-200 group-hover:scale-[1.03]"
           />
-          {hasRating ? (
-            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 shadow-sm">
-              <span>{ratingLabel(ratingValue)}</span>
-              <Star size={10} className="fill-emerald-600 text-emerald-600" />
-            </span>
-          ) : null}
         </Link>
 
         <div className="flex flex-1 flex-col p-3">
-          <Link href={productHref} className="line-clamp-2 min-h-[42px] text-[17px] font-semibold leading-5 text-slate-800 hover:text-blue-700">
+          <Link href={productHref} className="block truncate text-[15px] font-semibold leading-5 text-slate-800 hover:text-blue-700">
             {product.name}
           </Link>
+
+          {shouldShowRatingRow ? (
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-emerald-600 px-1.5 py-[2px] text-[11px] font-semibold leading-none text-white">
+                {ratingDisplay}
+                <Star size={10} className="fill-white text-white" />
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">({reviewCountLabel} ratings)</span>
+            </div>
+          ) : null}
 
           {hasComparablePrice ? (
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.04em] text-emerald-700">{discountPercent}% OFF</p>
@@ -348,7 +384,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </span>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-auto grid grid-cols-2 gap-2 pt-3">
             <button
               type="button"
               onClick={() => handleAddToCart(product)}
@@ -589,7 +625,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <div className="space-y-8">
 
             {featuredProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5 card-hover">
+            <section className="rounded-2xl bg-white/80 p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
@@ -627,7 +663,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             ) : null}
 
             {trendingProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5 card-hover">
+            <section className="rounded-2xl bg-white/80 p-5">
                 <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
@@ -665,7 +701,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </section>
             ) : null}
 
-            <section className="rounded-2xl bg-white/80 p-5 card-hover">
+            <section className="rounded-2xl bg-white/80 p-5">
               <div className="flex items-center justify-between">
                 <div className="text-lg font-semibold text-slate-900">All Products</div>
                 <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -679,7 +715,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 p-5 card-hover">
+            <section className="rounded-2xl bg-white/80 p-5">
               <div className="text-lg font-semibold text-slate-900">{data.aboutTitle}</div>
               <div className="mt-3 text-sm text-slate-600">{data.aboutBody}</div>
             </section>
