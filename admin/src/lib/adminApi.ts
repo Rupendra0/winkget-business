@@ -428,7 +428,6 @@ export async function fetchActiveCategoriesForAds() {
 
 export async function createCategoryNode(input: {
   name: string;
-  image?: string;
   icon?: string;
   sortOrder?: number;
   isActive?: boolean;
@@ -455,7 +454,6 @@ export async function createSubcategoryNode(input: {
 
 export async function updateCategoryNode(categoryId: string, input: {
   name?: string;
-  image?: string;
   icon?: string;
   sortOrder?: number;
   isActive?: boolean;

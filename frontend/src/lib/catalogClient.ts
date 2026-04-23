@@ -3,8 +3,6 @@ import type { ListingProfile } from "@/data/listingData";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
-const DEFAULT_BANNER_IMAGE =
-  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=60";
 const DEFAULT_VENDOR_IMAGE =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=60";
 const DEFAULT_MAP_IMAGE =
@@ -419,6 +417,11 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
   const displayName = vendor.businessName || vendor.name || "Business Profile";
   const subcategoryLabel = vendor.subcategory || vendor.businessSubcategory?.name || vendor.businessCategory?.name || "";
   const subcategoryId = vendor.businessSubcategory?.id || (subcategoryLabel ? `name:${subcategoryLabel}` : undefined);
+  const normalizedTags = uniqueStrings(
+    [...(Array.isArray(vendor.tags) ? vendor.tags : []), ...(Array.isArray(vendor.serviceTags) ? vendor.serviceTags : [])].map(
+      (item) => String(item || "").trim()
+    )
+  );
 
   return {
     id: vendor.id,
@@ -449,7 +452,7 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
     ctaLabel: vendor.ctaLabel || "Inquiry",
     badges: Array.isArray(vendor.badges) ? vendor.badges : vendor.verified ? ["Verified"] : [],
     priceRange: vendor.priceRange,
-    tags: Array.isArray(vendor.tags) ? vendor.tags : Array.isArray(vendor.serviceTags) ? vendor.serviceTags : [],
+    tags: normalizedTags,
   };
 };
 
@@ -501,7 +504,7 @@ export function buildFallbackCategoryPageData(slug: string): CategoryPageData {
     banner: {
       title: `${prettyTitle} near you`,
       subtitle: "We are onboarding trusted vendors in your area.",
-      imageUrl: DEFAULT_BANNER_IMAGE,
+      imageUrl: "",
       cta: "Get notified",
     },
     subcategories: [],
@@ -558,11 +561,7 @@ export function toCategoryPageDataFromCatalog(input: {
     MEDIA_URL_REGEX.test(categoryBannerImageRaw) || IMAGE_DATA_URL_REGEX.test(categoryBannerImageRaw)
       ? categoryBannerImageRaw
       : "";
-  const vendorBannerImage =
-    uniqueStrings(input.vendors.map((vendor) => String(vendor.shopBannerImage || "").trim())).find(
-      (value) => MEDIA_URL_REGEX.test(value) || IMAGE_DATA_URL_REGEX.test(value)
-    ) || "";
-  const bannerImage = categoryBannerImage || vendorBannerImage || DEFAULT_BANNER_IMAGE;
+  const bannerImage = categoryBannerImage;
   const cityLabel = cityValues[0] || "Your City";
 
   return {

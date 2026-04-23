@@ -304,7 +304,6 @@ const toCategorySummary = (category) => ({
   name: category.name,
   slug: category.slug,
   description: category.description,
-  image: category.image,
   icon: category.icon,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
@@ -2152,7 +2151,7 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
 
     const categories = await Category.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug description image icon isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
+      .select("_id name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .lean();
 
     return res.status(200).json({
@@ -2168,7 +2167,6 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
-    const imageInput = String(req.body?.image || "").trim();
     const iconInput = String(req.body?.icon || "").trim();
     const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
@@ -2178,10 +2176,6 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "Category name is required" });
-    }
-
-    if (imageInput && !isValidCategoryMediaValue(imageInput)) {
-      return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
     }
 
     if (iconInput && !isValidCategoryMediaValue(iconInput)) {
@@ -2198,7 +2192,6 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
       name,
       slug,
       description: description || undefined,
-      image: imageInput || undefined,
       icon: iconInput || undefined,
       isActive,
       sortOrder: sortOrderRequest.value || 0,
@@ -2258,14 +2251,6 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
     if (req.body?.description !== undefined) {
       const description = String(req.body.description || "").trim();
       category.description = description || undefined;
-    }
-
-    if (req.body?.image !== undefined) {
-      const image = String(req.body.image || "").trim();
-      if (image && !isValidCategoryMediaValue(image)) {
-        return res.status(400).json({ ok: false, message: "Category banner image must be a valid URL or image data" });
-      }
-      category.image = image || undefined;
     }
 
     if (req.body?.icon !== undefined) {

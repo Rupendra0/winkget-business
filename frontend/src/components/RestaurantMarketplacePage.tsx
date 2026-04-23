@@ -558,7 +558,7 @@ export default function RestaurantMarketplacePage({
           {phoneDigits ? (
             <a
               href={`tel:${phoneDigits}`}
-              className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-sm font-semibold text-slate-900 shadow-[0_8px_16px_rgba(255,190,11,0.22)]"
+              className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-sm font-semibold text-black shadow-[0_8px_16px_rgba(255,190,11,0.22)]"
             >
               <PhoneCall size={16} />
               Call

@@ -109,7 +109,6 @@ export type AdminCategory = {
   name: string;
   slug: string;
   description?: string;
-  image?: string;
   icon?: string;
   isActive: boolean;
   sortOrder: number;
@@ -606,7 +605,6 @@ export async function updateHomeSponsorSection(input: {
 export async function createCategory(input: {
   name: string;
   description?: string;
-  image?: string;
   icon?: string;
   sortOrder?: number;
   isActive?: boolean;
@@ -627,7 +625,6 @@ export async function updateCategory(
   input: {
     name?: string;
     description?: string;
-    image?: string;
     icon?: string;
     sortOrder?: number;
     isActive?: boolean;

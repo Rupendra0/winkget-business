@@ -29,18 +29,18 @@ export default function ActionButtonsBottom({
           onClick={() => {
             onCallClick?.();
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-[#e6fbef] px-5 py-3 text-base font-semibold text-[#15803d] shadow-sm transition-colors duration-200 hover:bg-[#dff3e6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f0c5] focus-visible:ring-offset-2"
         >
-          <Phone size={16} />
+          <Phone size={16} className="text-[#15803d]" />
           Call
         </a>
       ) : (
         <button
           type="button"
           disabled
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-5 py-3 text-base font-semibold text-slate-400"
+          className="flex w-full items-center justify-center gap-2 rounded-full border border-[#dff3e6] bg-[#f4faf6] px-5 py-3 text-base font-semibold text-[#9ccfb3]"
         >
-          <Phone size={16} />
+          <Phone size={16} className="text-[#9ccfb3]" />
           Call
         </button>
       )}

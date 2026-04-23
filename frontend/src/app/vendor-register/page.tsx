@@ -1427,12 +1427,12 @@ export default function VendorRegisterPage() {
                   </label>
 
                   {effectiveCustomForm.fields.length > 0 ? (
-                    <div className="sm:col-span-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
+                    <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-800">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
                           {effectiveCustomForm.title || "Additional details"}
                         </p>
-                        <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-700">
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
                           {effectiveCustomForm.source}
                         </span>
                       </div>

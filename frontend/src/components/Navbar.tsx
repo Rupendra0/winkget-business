@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, Check } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
 import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
@@ -38,6 +38,9 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const desktopCityMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileCityMenuRef = useRef<HTMLDivElement | null>(null);
+  const [cityMenuOpen, setCityMenuOpen] = useState(false);
 
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
@@ -170,6 +173,22 @@ export default function Navbar() {
   }, [menuOpen]);
 
   useEffect(() => {
+    if (!cityMenuOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const clickedInsideDesktop = desktopCityMenuRef.current?.contains(target);
+      const clickedInsideMobile = mobileCityMenuRef.current?.contains(target);
+      if (!clickedInsideDesktop && !clickedInsideMobile) {
+        setCityMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [cityMenuOpen]);
+
+  useEffect(() => {
     const updateMobileSearchOnlyState = () => {
       const isMobileViewport = window.innerWidth < 768;
       if (!isMobileViewport) {
@@ -260,22 +279,45 @@ export default function Navbar() {
           {/* Center - Location and Search */}
           <div className="hidden md:flex flex-1 mx-6 items-center gap-4">
             {/* Location Selector */}
-            <div className="flex items-center gap-2 rounded-md border border-orange-100 bg-white/80 px-4 py-2 shadow-sm">
-              <MapPin size={18} className="text-orange-500" />
-              <select
-                value={selectedCity}
-                onChange={(event) => handleCityChange(event.target.value)}
+            <div ref={desktopCityMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                className="inline-flex items-center gap-2 rounded-md border border-orange-100 bg-white/80 px-4 py-2 shadow-sm transition hover:bg-white disabled:opacity-60"
               >
-                {loadingCities ? <option value="">Loading city...</option> : null}
-                {!loadingCities && cityOptions.length === 0 ? <option value="">No cities</option> : null}
-                {cityOptions.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
+                <MapPin size={18} className="text-orange-500" />
+                <span className="max-w-[120px] truncate text-sm font-medium text-slate-700">
+                  {loadingCities ? "Loading city..." : selectedCity || "Select city"}
+                </span>
+                <ChevronDown size={16} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {cityMenuOpen ? (
+                <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-orange-100 bg-white shadow-xl">
+                  <div className="max-h-72 overflow-y-auto py-1.5">
+                    {cityOptions.map((city) => {
+                      const active = city.name === selectedCity;
+                      return (
+                        <button
+                          key={city.id}
+                          type="button"
+                          onClick={() => {
+                            handleCityChange(city.name);
+                            setCityMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${
+                            active ? "bg-orange-50 text-orange-700" : "text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span>{city.name}</span>
+                          {active ? <Check size={14} className="text-orange-600" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Search Bar */}
@@ -383,23 +425,46 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden shrink-0 flex items-center gap-1.5">
-            <div className="flex items-center gap-1 rounded-md border border-orange-100 bg-white px-1.5 py-1.5 text-gray-800 shadow-sm">
-              <MapPin size={18} className="text-orange-500" />
-              <select
-                value={selectedCity}
-                onChange={(event) => handleCityChange(event.target.value)}
+            <div ref={mobileCityMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="max-w-20 sm:max-w-24 bg-transparent text-xs text-slate-700 outline-none"
+                className="inline-flex items-center gap-1 rounded-md border border-orange-100 bg-white px-1.5 py-1.5 text-gray-800 shadow-sm disabled:opacity-60"
                 aria-label="Current location"
               >
-                {loadingCities ? <option value="">City...</option> : null}
-                {!loadingCities && cityOptions.length === 0 ? <option value="">No city</option> : null}
-                {cityOptions.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
+                <MapPin size={18} className="text-orange-500" />
+                <span className="max-w-20 truncate text-xs text-slate-700">
+                  {loadingCities ? "City..." : selectedCity || "Select"}
+                </span>
+                <ChevronDown size={14} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {cityMenuOpen ? (
+                <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 overflow-hidden rounded-xl border border-orange-100 bg-white shadow-xl">
+                  <div className="max-h-60 overflow-y-auto py-1.5">
+                    {cityOptions.map((city) => {
+                      const active = city.name === selectedCity;
+                      return (
+                        <button
+                          key={city.id}
+                          type="button"
+                          onClick={() => {
+                            handleCityChange(city.name);
+                            setCityMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
+                            active ? "bg-orange-50 text-orange-700" : "text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span>{city.name}</span>
+                          {active ? <Check size={12} className="text-orange-600" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
             <Link
               href="/cart"

@@ -301,6 +301,10 @@ export default function ListingProfilePage({
   );
   const businessEmail = useMemo(() => String(profile.email || "").trim(), [profile.email]);
   const websiteHref = useMemo(() => sanitizeWebsite(profile.website), [profile.website]);
+  const directionsHref = useMemo(() => {
+    const address = String(fullAddress || "").trim();
+    return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "";
+  }, [fullAddress]);
   const emailHref = useMemo(() => {
     const email = String(profile.email || "").trim();
     return email ? `mailto:${email}` : "";
@@ -1263,12 +1267,14 @@ export default function ListingProfilePage({
               {phoneDigits ? (
                 <a
                   href={`tel:${phoneDigits}`}
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
+                  <Phone size={14} className="text-[#15803d] mr-1" />
                   Call
                 </a>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <Phone size={14} className="text-[#9ccfb3] mr-8" />
                   Call
                 </span>
               )}
@@ -1278,12 +1284,14 @@ export default function ListingProfilePage({
                   href={`https://wa.me/${whatsappDigits}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
+                  <MessageSquare size={14} className="mr-1 text-[#15803d]" />
                   WhatsApp
                 </a>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <MessageSquare size={14} className="mr-1 text-[#9ccfb3]" />
                   WhatsApp
                 </span>
               )}
@@ -1291,12 +1299,14 @@ export default function ListingProfilePage({
               {emailHref ? (
                 <a
                   href={emailHref}
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
+                  <Mail size={14} className="mr-1 text-[#15803d]" />
                   Email
                 </a>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <Mail size={14} className="mr-1 text-[#9ccfb3]" />
                   Email
                 </span>
               )}
@@ -1308,12 +1318,14 @@ export default function ListingProfilePage({
                   href={websiteHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
+                  <Store size={14} className="mr-1 text-[#15803d]" />
                   Website
                 </a>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <Store size={14} className="mr-1 text-[#9ccfb3]" />
                   Website
                 </span>
               )}
@@ -1322,44 +1334,43 @@ export default function ListingProfilePage({
                 <button
                   type="button"
                   onClick={openInquiryModal}
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
+                  <Pencil size={14} className="mr-1 text-[#15803d]" />
                   Inquiry
                 </button>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <Pencil size={14} className="mr-1 text-[#9ccfb3]" />
                   Inquiry
                 </span>
               )}
 
-              {websiteHref ? (
+              {directionsHref ? (
                 <a
-                  href={websiteHref}
+                  href={directionsHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
                 >
-                  Website
+                  <MapPin size={14} className="mr-1 text-[#15803d]" />
+                  Direction
                 </a>
               ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
-                  Website
+                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] border border-[#dff3e6] bg-[#f4faf6] px-2 text-[13px] font-semibold text-[#9ccfb3] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                  <MapPin size={14} className="mr-1 text-[#9ccfb3]" />
+                  Direction
                 </span>
               )}
 
-              {hasInquiryTarget ? (
-                <button
-                  type="button"
-                  onClick={openInquiryModal}
-                  className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf] md:min-h-11 md:rounded-[10px] md:text-sm"
-                >
-                  Enquiry
-                </button>
-              ) : (
-                <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e8e8ea] px-2 text-[13px] font-semibold text-[#3f3f40] opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
-                  Enquiry
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => scrollToSection("listing-reviews")}
+                className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#e6fbef] px-2 text-[13px] font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6] md:min-h-11 md:rounded-[10px] md:text-sm"
+              >
+                <Star size={14} className="mr-1 text-[#15803d]" />
+                Review
+              </button>
             </div>
           </div>
 
@@ -1450,12 +1461,14 @@ export default function ListingProfilePage({
                     {phoneDigits ? (
                       <a
                         href={`tel:${phoneDigits}`}
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
+                        <Phone size={14} className="text-[#15803d] mr-2" />
                         Call
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <Phone size={14} className="text-[#9ccfb3]" />
                         Call
                       </span>
                     )}
@@ -1465,12 +1478,14 @@ export default function ListingProfilePage({
                         href={`https://wa.me/${whatsappDigits}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
+                        <MessageSquare size={14} className="mr-2 text-[#15803d]" />
                         WhatsApp
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <MessageSquare size={14} className="mr-2 text-[#9ccfb3]" />
                         WhatsApp
                       </span>
                     )}
@@ -1478,12 +1493,14 @@ export default function ListingProfilePage({
                     {emailHref ? (
                       <a
                         href={emailHref}
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
+                        <Mail size={14} className="mr-2 text-[#15803d]" />
                         Email
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <Mail size={14} className="mr-2 text-[#9ccfb3]" />
                         Email
                       </span>
                     )}
@@ -1495,12 +1512,14 @@ export default function ListingProfilePage({
                         href={websiteHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
+                        <Store size={14} className="mr-2 text-[#15803d]" />
                         Website
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <Store size={14} className="mr-2 text-[#9ccfb3]" />
                         Website
                       </span>
                     )}
@@ -1509,44 +1528,43 @@ export default function ListingProfilePage({
                       <button
                         type="button"
                         onClick={openInquiryModal}
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
+                        <Pencil size={14} className="mr-2 text-[#15803d]" />
                         Inquiry
                       </button>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <Pencil size={14} className="mr-2 text-[#9ccfb3]" />
                         Inquiry
                       </span>
                     )}
 
-                    {websiteHref ? (
+                    {directionsHref ? (
                       <a
-                        href={websiteHref}
+                        href={directionsHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
                       >
-                        Website
+                        <MapPin size={14} className="mr-2 text-[#15803d]" />
+                        Direction
                       </a>
                     ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
-                        Website
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-[#dff3e6] bg-[#f4faf6] px-3 text-sm font-semibold text-[#9ccfb3] opacity-60">
+                        <MapPin size={14} className="mr-2 text-[#9ccfb3]" />
+                        Direction
                       </span>
                     )}
 
-                    {hasInquiryTarget ? (
-                      <button
-                        type="button"
-                        onClick={openInquiryModal}
-                        className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] transition-colors duration-150 hover:bg-[#dddddf]"
-                      >
-                        Enquiry
-                      </button>
-                    ) : (
-                      <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e8e8ea] px-3 text-sm font-semibold text-[#3f3f40] opacity-60">
-                        Enquiry
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection("listing-reviews")}
+                      className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#e6fbef] px-3 text-sm font-semibold text-[#15803d] transition-colors duration-150 hover:bg-[#dff3e6]"
+                    >
+                      <Star size={14} className="mr-2 text-[#15803d]" />
+                      Review
+                    </button>
                   </div>
 
                 </div>

@@ -160,7 +160,7 @@ export default function ExtraPage() {
 
     const sortOrder = Number(citySortOrder || "0");
     if (!Number.isFinite(sortOrder)) {
-      setError("City sort order must be numeric");
+      setError("City position must be a number");
       return;
     }
 
@@ -226,7 +226,7 @@ export default function ExtraPage() {
 
     const sortOrder = Number(editCitySortOrder || "0");
     if (!Number.isFinite(sortOrder)) {
-      setError("City sort order must be numeric");
+      setError("City position must be a number");
       return;
     }
 
@@ -395,7 +395,7 @@ export default function ExtraPage() {
               type="number"
               value={citySortOrder}
               onChange={(event) => setCitySortOrder(event.target.value)}
-              placeholder="Sort order (0 = last)"
+              placeholder="Position (0 = last)"
               step={1}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
             />
@@ -444,7 +444,7 @@ export default function ExtraPage() {
                       <div>
                         <p className="text-sm font-semibold text-(--text-strong)">{city.name}</p>
                         <p className="text-xs text-(--text-soft)">
-                          {city.state || "No state"} | Sort {city.sortOrder}
+                          {city.state || "No state"} | Position {city.sortOrder}
                         </p>
                       </div>
                       <span
@@ -553,12 +553,12 @@ export default function ExtraPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Sort order</span>
+                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Position</span>
                 <input
                   type="number"
                   value={editCitySortOrder}
                   onChange={(event) => setEditCitySortOrder(event.target.value)}
-                  placeholder="Sort order (0 = last)"
+                  placeholder="Position (0 = last)"
                   step={1}
                   className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
                 />
@@ -609,7 +609,7 @@ export default function ExtraPage() {
                   <span className="font-semibold text-(--text-strong)">Status:</span> {selectedCity.isActive ? "Active" : "Inactive"}
                 </p>
                 <p>
-                  <span className="font-semibold text-(--text-strong)">Sort order:</span> {selectedCity.sortOrder}
+                  <span className="font-semibold text-(--text-strong)">Position:</span> {selectedCity.sortOrder}
                 </p>
               </div>
 
@@ -645,7 +645,7 @@ export default function ExtraPage() {
                       >
                         <div>
                           <p className="text-sm font-medium text-(--text-strong)">{locality.name}</p>
-                          <p className="text-[11px] text-(--text-soft)">Sort {locality.sortOrder}</p>
+                          <p className="text-[11px] text-(--text-soft)">Position {locality.sortOrder}</p>
                         </div>
 
                         <div className="flex items-center gap-2">

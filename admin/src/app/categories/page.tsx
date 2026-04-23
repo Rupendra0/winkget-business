@@ -7,6 +7,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import Modal from "@/components/admin/Modal";
 import PageLayout from "@/components/admin/PageLayout";
 import TreeView, { type TreeNode } from "@/components/admin/TreeView";
+import DynamicVendorForm from "@/components/forms/DynamicVendorForm";
 import { findSidebarItem } from "@/data/adminNavigation";
 import {
   createCategoryNode,
@@ -97,6 +98,13 @@ const toFieldKey = (value: string) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 48);
+
+const parseDraftOptions = (value: string) =>
+  String(value || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .slice(0, 60);
 
 const createDraftCustomField = (index = 0): DraftCustomFormField => ({
   draftId: createDraftId(),
@@ -211,7 +219,6 @@ function CategoriesPageContent() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const [nameInput, setNameInput] = useState("");
-  const [bannerImageInput, setBannerImageInput] = useState("");
   const [iconImageInput, setIconImageInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("");
   const [activeInput, setActiveInput] = useState(true);
@@ -282,7 +289,6 @@ function CategoriesPageContent() {
       setEditingNodeRef(null);
       setEditingSubcategoryId(null);
       setNameInput("");
-      setBannerImageInput("");
       setIconImageInput("");
       setSortOrderInput("");
       setActiveInput(true);
@@ -391,7 +397,7 @@ function CategoriesPageContent() {
       id: `category:${category.id}`,
       label: category.name,
       type: "category",
-      mediaUrl: String(category.icon || category.image || "").trim() || undefined,
+      mediaUrl: String(category.icon || "").trim() || undefined,
       categoryId: category.id,
       sortOrder: category.sortOrder,
       isActive: category.isActive,
@@ -473,7 +479,6 @@ function CategoriesPageContent() {
         setEditingNodeRef({ type: "category", entityId });
         setEditingSubcategoryId(null);
         setNameInput(category.name || "");
-        setBannerImageInput(String(category.image || ""));
         setIconImageInput(String(category.icon || ""));
         setSortOrderInput(String(Number.isFinite(Number(category.sortOrder)) ? category.sortOrder : 0));
         setActiveInput(Boolean(category.isActive));
@@ -498,7 +503,6 @@ function CategoriesPageContent() {
         setEditingNodeRef({ type: "subcategory", entityId });
         setEditingSubcategoryId(entityId);
         setNameInput(subcategory.name || "");
-        setBannerImageInput("");
         setIconImageInput(String(subcategory.icon || ""));
         setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
         setActiveInput(Boolean(subcategory.isActive));
@@ -530,7 +534,7 @@ function CategoriesPageContent() {
       if (normalizedSortOrderInput) {
         const numericSortOrder = Number(normalizedSortOrderInput);
         if (!Number.isFinite(numericSortOrder) || !Number.isInteger(numericSortOrder)) {
-          throw new Error("Sort order must be a whole number");
+          throw new Error("Position must be a whole number");
         }
         parsedSortOrder = numericSortOrder;
       }
@@ -538,13 +542,8 @@ function CategoriesPageContent() {
       const customFormFields = toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput);
       const customFormEnabled = customFormEnabledInput && customFormFields.length > 0;
       const customFormTitle = customFormTitleInput.trim();
-      const categoryBannerImage = bannerImageInput.trim();
       const categoryIconImage = iconImageInput.trim();
       const subcategoryIconImage = iconImageInput.trim();
-
-      if (modalMode === "category" && !isValidCategoryMediaValue(categoryBannerImage)) {
-        throw new Error("Category banner must be a valid URL or uploaded image");
-      }
 
       if (modalMode === "category" && !isValidCategoryMediaValue(categoryIconImage)) {
         throw new Error("Category icon must be a valid URL or uploaded image");
@@ -558,7 +557,6 @@ function CategoriesPageContent() {
         if (modalMode === "category") {
           await createCategoryNode({
             name: cleanName,
-            image: categoryBannerImage || undefined,
             icon: categoryIconImage || undefined,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
@@ -601,7 +599,6 @@ function CategoriesPageContent() {
         if (editingNodeRef.type === "category") {
           await updateCategoryNode(editingNodeRef.entityId, {
             name: cleanName,
-            image: categoryBannerImage,
             icon: categoryIconImage,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
@@ -730,7 +727,7 @@ function CategoriesPageContent() {
       await mutate();
       setMessage("Order updated");
     } catch (reorderError) {
-      const messageText = reorderError instanceof Error ? reorderError.message : "Unable to update sort order";
+      const messageText = reorderError instanceof Error ? reorderError.message : "Unable to update position";
       setErrorText(messageText);
     }
   };
@@ -885,7 +882,6 @@ function CategoriesPageContent() {
         subcategories={subcategories}
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
-        bannerImageInput={bannerImageInput}
         iconImageInput={iconImageInput}
         activeInput={activeInput}
         customFormEnabledInput={customFormEnabledInput}
@@ -896,7 +892,6 @@ function CategoriesPageContent() {
         editingSubcategoryId={editingSubcategoryId}
         submitting={isSubmitting}
         onNameChange={setNameInput}
-        onBannerImageChange={setBannerImageInput}
         onIconImageChange={setIconImageInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
@@ -958,7 +953,6 @@ type CreateNodeModalProps = {
   categories: AdminCategory[];
   subcategories: AdminSubcategory[];
   nameInput: string;
-  bannerImageInput: string;
   iconImageInput: string;
   sortOrderInput: string;
   activeInput: boolean;
@@ -970,7 +964,6 @@ type CreateNodeModalProps = {
   editingSubcategoryId: string | null;
   submitting: boolean;
   onNameChange: (value: string) => void;
-  onBannerImageChange: (value: string) => void;
   onIconImageChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
@@ -990,7 +983,6 @@ function CreateNodeModal({
   categories,
   subcategories,
   nameInput,
-  bannerImageInput,
   iconImageInput,
   sortOrderInput,
   activeInput,
@@ -1002,7 +994,6 @@ function CreateNodeModal({
   editingSubcategoryId,
   submitting,
   onNameChange,
-  onBannerImageChange,
   onIconImageChange,
   onSortOrderChange,
   onActiveChange,
@@ -1014,12 +1005,11 @@ function CreateNodeModal({
   onClose,
   onSubmit,
 }: CreateNodeModalProps) {
-  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
   const [iconUploadError, setIconUploadError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
 
   useEffect(() => {
     if (open) {
-      setBannerUploadError(null);
       setIconUploadError(null);
     }
   }, [open]);
@@ -1039,6 +1029,47 @@ function CreateNodeModal({
     () => toCustomFormFieldsPayload(customFormEnabledInput, customFormFieldsInput).length,
     [customFormEnabledInput, customFormFieldsInput]
   );
+
+  const previewFields = useMemo(() => {
+    if (!customFormEnabledInput) return [] as CustomFormField[];
+
+    const usedKeys = new Set<string>();
+    const next: CustomFormField[] = [];
+
+    customFormFieldsInput.forEach((draftField, index) => {
+      const label = String(draftField.label || "").trim().slice(0, 80);
+      if (!label) return;
+
+      const desiredKey = toFieldKey(draftField.key || draftField.label) || `field_${index + 1}`;
+      let nextKey = desiredKey;
+      let suffix = 2;
+      while (usedKeys.has(nextKey)) {
+        nextKey = `${desiredKey}_${suffix}`;
+        suffix += 1;
+      }
+      usedKeys.add(nextKey);
+
+      const options =
+        draftField.type === "select" || draftField.type === "multi-select" ? parseDraftOptions(draftField.optionsText) : [];
+
+      next.push({
+        key: nextKey,
+        label,
+        type: draftField.type,
+        required: Boolean(draftField.required),
+        placeholder: String(draftField.placeholder || "").trim() || undefined,
+        helpText: String(draftField.helpText || "").trim() || undefined,
+        options,
+        span: draftField.span === 6 ? 6 : 12,
+        sortOrder: Number.isFinite(Number(draftField.sortOrder)) ? Number(draftField.sortOrder) : (index + 1) * 10,
+      });
+    });
+
+    return next.sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+      return left.label.localeCompare(right.label);
+    });
+  }, [customFormEnabledInput, customFormFieldsInput]);
 
   const modalTitle =
     intent === "create"
@@ -1066,44 +1097,35 @@ function CreateNodeModal({
     onCustomFormFieldsChange([...customFormFieldsInput, createDraftCustomField(customFormFieldsInput.length)]);
   };
 
-  const handleMediaFileUpload = async (
-    event: ChangeEvent<HTMLInputElement>,
-    target: "banner" | "icon"
-  ) => {
+  const handleMediaFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) return;
 
-    const label = target === "banner" ? "Banner image" : "Icon image";
-    const onMediaChange = target === "banner" ? onBannerImageChange : onIconImageChange;
-    const setMediaError = target === "banner" ? setBannerUploadError : setIconUploadError;
+    const label = "Icon image";
 
     if (!file.type.startsWith("image/")) {
-      setMediaError("Please upload an image file only.");
+      setIconUploadError("Please upload an image file only.");
       return;
     }
 
     if (file.size > MAX_CATEGORY_MEDIA_UPLOAD_BYTES) {
-      setMediaError(`${label} must be under 2MB.`);
+      setIconUploadError(`${label} must be under 2MB.`);
       return;
     }
 
     try {
       const imageData = await fileToDataUrl(file);
-      onMediaChange(imageData);
-      setMediaError(null);
+      onIconImageChange(imageData);
+      setIconUploadError(null);
     } catch {
-      setMediaError("Could not read the selected image. Please try again.");
+      setIconUploadError("Could not read the selected image. Please try again.");
     }
   };
 
-  const handleBannerFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    void handleMediaFileUpload(event, "banner");
-  };
-
   const handleIconFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    void handleMediaFileUpload(event, "icon");
+    void handleMediaFileUpload(event);
   };
 
   const updateCustomField = (draftId: string, patch: Partial<DraftCustomFormField>) => {
@@ -1111,7 +1133,7 @@ function CreateNodeModal({
       customFormFieldsInput.map((field) => {
         if (field.draftId !== draftId) return field;
         const nextField = { ...field, ...patch };
-        if (patch.label !== undefined && !nextField.key.trim()) {
+        if (patch.label !== undefined) {
           nextField.key = toFieldKey(nextField.label);
         }
         return nextField;
@@ -1135,6 +1157,7 @@ function CreateNodeModal({
       open={open}
       title={modalTitle}
       onClose={onClose}
+      panelClassName={customFormEnabledInput ? "!max-w-5xl" : undefined}
       footer={
         <>
           <button
@@ -1210,44 +1233,6 @@ function CreateNodeModal({
       {mode === "category" ? (
         <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="space-y-2">
-            <label className="block space-y-1 text-sm text-(--text-soft)">
-              Category banner image (URL or upload)
-              <input
-                value={bannerImageInput}
-                onChange={(event) => onBannerImageChange(event.target.value)}
-                className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
-                placeholder="https://cdn.example.com/category-banner.jpg"
-              />
-            </label>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                Upload Banner
-                <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileUpload} />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onBannerImageChange("");
-                  setBannerUploadError(null);
-                }}
-                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Clear
-              </button>
-            </div>
-
-            {bannerUploadError ? <p className="text-xs text-rose-700">{bannerUploadError}</p> : null}
-
-            {bannerImageInput.trim() && isValidCategoryMediaValue(bannerImageInput) ? (
-              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <img src={bannerImageInput} alt="Category banner preview" className="h-28 w-full object-cover" loading="lazy" />
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-2 border-t border-slate-200 pt-3">
             <label className="block space-y-1 text-sm text-(--text-soft)">
               Category icon image (URL or upload)
               <input
@@ -1330,7 +1315,7 @@ function CreateNodeModal({
       ) : null}
 
       <label className="block space-y-1 text-sm text-(--text-soft)">
-        Sort order (optional)
+        Position (optional)
         <input
           type="number"
           value={sortOrderInput}
@@ -1371,149 +1356,192 @@ function CreateNodeModal({
               />
             </label>
 
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-800">
-                Fields ({customFieldCount} valid)
-              </p>
-              <button
-                type="button"
-                onClick={addCustomField}
-                className="rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-xs font-semibold text-sky-800 hover:bg-sky-100"
-              >
-                Add field
-              </button>
-            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-800">
+                  Fields ({customFieldCount} valid)
+                </p>
 
-            {customFormFieldsInput.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-sky-300 bg-white px-3 py-2 text-xs text-sky-800">
-                Add at least one field to enable this custom form.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {customFormFieldsInput.map((field, index) => (
-                  <article key={field.draftId} className="space-y-2 rounded-lg border border-sky-200 bg-white p-2.5">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Label
-                        <input
-                          value={field.label}
-                          onChange={(event) => updateCustomField(field.draftId, { label: event.target.value })}
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                          placeholder="Field label"
-                        />
-                      </label>
+                {customFormFieldsInput.length === 0 ? (
+                  <div className="space-y-2">
+                    <p className="rounded-lg border border-dashed border-sky-300 bg-white px-3 py-2 text-xs text-sky-800">
+                      Add at least one field to enable this custom form.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={addCustomField}
+                      className="w-full rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
+                    >
+                      Add field
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {customFormFieldsInput.map((field, index) => (
+                      <article key={field.draftId} className="space-y-2 rounded-lg border border-sky-200 bg-white p-2.5">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="block space-y-1 text-xs text-slate-700">
+                            Label
+                            <input
+                              value={field.label}
+                              onChange={(event) => updateCustomField(field.draftId, { label: event.target.value })}
+                              className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                              placeholder="Field label"
+                            />
+                          </label>
 
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Key
-                        <input
-                          value={field.key}
-                          onChange={(event) => updateCustomField(field.draftId, { key: toFieldKey(event.target.value) })}
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                          placeholder="auto_from_label"
-                        />
-                      </label>
+                          <label className="block space-y-1 text-xs text-slate-700">
+                            Type
+                            <select
+                              value={field.type}
+                              onChange={(event) =>
+                                updateCustomField(field.draftId, {
+                                  type: event.target.value as CustomFormField["type"],
+                                })
+                              }
+                              className="w-full rounded-md border border-slate-200 px-2 py-1.5"
+                            >
+                              {CUSTOM_FIELD_TYPE_OPTIONS.map((typeOption) => (
+                                <option key={typeOption.value} value={typeOption.value}>
+                                  {typeOption.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Type
-                        <select
-                          value={field.type}
-                          onChange={(event) =>
-                            updateCustomField(field.draftId, {
-                              type: event.target.value as CustomFormField["type"],
-                            })
-                          }
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5"
-                        >
-                          {CUSTOM_FIELD_TYPE_OPTIONS.map((typeOption) => (
-                            <option key={typeOption.value} value={typeOption.value}>
-                              {typeOption.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          <label className="block space-y-1 text-xs text-slate-700">
+                            Position
+                            <input
+                              type="number"
+                              value={field.sortOrder}
+                              onChange={(event) => updateCustomField(field.draftId, { sortOrder: event.target.value })}
+                              className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                            />
+                          </label>
 
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Sort order
-                        <input
-                          type="number"
-                          value={field.sortOrder}
-                          onChange={(event) => updateCustomField(field.draftId, { sortOrder: event.target.value })}
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                        />
-                      </label>
+                          <label className="block space-y-1 text-xs text-slate-700">
+                            Row type
+                            <select
+                              value={field.span}
+                              onChange={(event) =>
+                                updateCustomField(field.draftId, {
+                                  span: event.target.value === "6" ? 6 : 12,
+                                })
+                              }
+                              className="w-full rounded-md border border-slate-200 px-2 py-1.5"
+                            >
+                              <option value="12">Full width</option>
+                              <option value="6">Half width</option>
+                            </select>
+                          </label>
 
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Row span
-                        <select
-                          value={field.span}
-                          onChange={(event) =>
-                            updateCustomField(field.draftId, {
-                              span: event.target.value === "6" ? 6 : 12,
-                            })
-                          }
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5"
-                        >
-                          <option value="12">Full row</option>
-                          <option value="6">Half row (same line)</option>
-                        </select>
-                      </label>
+                          <label className="flex items-end gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={field.required}
+                              onChange={(event) => updateCustomField(field.draftId, { required: event.target.checked })}
+                            />
+                            Required field
+                          </label>
+                        </div>
 
-                      <label className="flex items-end gap-2 text-xs text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={field.required}
-                          onChange={(event) => updateCustomField(field.draftId, { required: event.target.checked })}
-                        />
-                        Required field
-                      </label>
-                    </div>
+                        <label className="block space-y-1 text-xs text-slate-700">
+                          Placeholder
+                          <input
+                            value={field.placeholder}
+                            onChange={(event) => updateCustomField(field.draftId, { placeholder: event.target.value })}
+                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                            placeholder="Placeholder text"
+                          />
+                        </label>
 
-                    <label className="block space-y-1 text-xs text-slate-700">
-                      Placeholder
-                      <input
-                        value={field.placeholder}
-                        onChange={(event) => updateCustomField(field.draftId, { placeholder: event.target.value })}
-                        className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                        placeholder="Placeholder text"
-                      />
-                    </label>
+                        <label className="block space-y-1 text-xs text-slate-700">
+                          Help text
+                          <input
+                            value={field.helpText}
+                            onChange={(event) => updateCustomField(field.draftId, { helpText: event.target.value })}
+                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                            placeholder="Optional helper text"
+                          />
+                        </label>
 
-                    <label className="block space-y-1 text-xs text-slate-700">
-                      Help text
-                      <input
-                        value={field.helpText}
-                        onChange={(event) => updateCustomField(field.draftId, { helpText: event.target.value })}
-                        className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                        placeholder="Optional helper text"
-                      />
-                    </label>
+                        {field.type === "select" || field.type === "multi-select" ? (
+                          <label className="block space-y-1 text-xs text-slate-700">
+                            Options (comma separated)
+                            <input
+                              value={field.optionsText}
+                              onChange={(event) => updateCustomField(field.draftId, { optionsText: event.target.value })}
+                              className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
+                              placeholder="Option A, Option B, Option C"
+                            />
+                          </label>
+                        ) : null}
 
-                    {field.type === "select" || field.type === "multi-select" ? (
-                      <label className="block space-y-1 text-xs text-slate-700">
-                        Options (comma separated)
-                        <input
-                          value={field.optionsText}
-                          onChange={(event) => updateCustomField(field.draftId, { optionsText: event.target.value })}
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-sky-500"
-                          placeholder="Option A, Option B, Option C"
-                        />
-                      </label>
-                    ) : null}
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] text-slate-500">Field #{index + 1}</p>
+                          <button
+                            type="button"
+                            onClick={() => removeCustomField(field.draftId)}
+                            className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </article>
+                    ))}
 
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] text-slate-500">Field #{index + 1}</p>
+                    <button
+                      type="button"
+                      onClick={addCustomField}
+                      className="w-full rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
+                    >
+                      Add field
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              <aside className="space-y-3 self-start lg:sticky lg:top-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Live preview</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-500">Preview mode</span>
+                    <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                       <button
                         type="button"
-                        onClick={() => removeCustomField(field.draftId)}
-                        className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100"
+                        onClick={() => setPreviewMode("desktop")}
+                        className={`px-2.5 py-1 text-[11px] font-semibold ${
+                          previewMode === "desktop" ? "bg-white text-slate-800" : "text-slate-500 hover:text-slate-700"
+                        }`}
                       >
-                        Remove
+                        Desktop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("mobile")}
+                        className={`px-2.5 py-1 text-[11px] font-semibold ${
+                          previewMode === "mobile" ? "bg-white text-slate-800" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Mobile
                       </button>
                     </div>
-                  </article>
-                ))}
-              </div>
-            )}
+                  </div>
+                </div>
+
+                {previewFields.length > 0 ? (
+                  <DynamicVendorForm
+                    fields={previewFields}
+                    title={String(customFormTitleInput || "").trim() || "Additional details"}
+                    previewMode={previewMode}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-8 text-center text-xs text-slate-500">
+                    Add fields to see a preview.
+                  </div>
+                )}
+              </aside>
+            </div>
           </div>
         )}
       </section>

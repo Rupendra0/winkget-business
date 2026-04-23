@@ -82,7 +82,7 @@ export default function CategoriesWorkspacePage() {
     }
 
     if (!isValidNumericInput(newCategorySortOrder)) {
-      setError("Category sort order must be numeric");
+      setError("Category position must be a number");
       return;
     }
 
@@ -123,7 +123,7 @@ export default function CategoriesWorkspacePage() {
     }
 
     if (!isValidNumericInput(newSubcategorySortOrder)) {
-      setError("Subcategory sort order must be numeric");
+      setError("Subcategory position must be a number");
       return;
     }
 
@@ -250,7 +250,7 @@ export default function CategoriesWorkspacePage() {
               </label>
 
               <label className="block space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Sort order</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Position</span>
                 <input
                   type="number"
                   value={newCategorySortOrder}
@@ -311,7 +311,7 @@ export default function CategoriesWorkspacePage() {
               </label>
 
               <label className="block space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Sort order</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Position</span>
                 <input
                   type="number"
                   value={newSubcategorySortOrder}
@@ -355,7 +355,7 @@ export default function CategoriesWorkspacePage() {
                 <div key={category.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-800">{category.name}</p>
-                    <p className="text-[11px] text-slate-500">Sort: {category.sortOrder}</p>
+                    <p className="text-[11px] text-slate-500">Position: {category.sortOrder}</p>
                   </div>
                   <span
                     className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
@@ -391,7 +391,7 @@ export default function CategoriesWorkspacePage() {
                   <tr className="border-b border-slate-200 text-left text-[10px] uppercase tracking-[0.14em] text-slate-500">
                     <th className="px-2 py-1.5">Name</th>
                     <th className="px-2 py-1.5">Status</th>
-                    <th className="px-2 py-1.5">Sort</th>
+                    <th className="px-2 py-1.5">Position</th>
                     <th className="px-2 py-1.5">Action</th>
                   </tr>
                 </thead>
