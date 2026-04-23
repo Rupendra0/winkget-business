@@ -74,6 +74,7 @@ export type CheckoutOrder = {
   paymentMethod: PaymentMethod;
   paymentStatus: "pending" | "paid" | "cod_pending";
   orderStatus: "placed" | "confirmed";
+  status: "Pending" | "Disputed" | "Completed";
 };
 
 type AddressStore = Record<string, { selectedAddressId?: string; addresses: SavedAddress[] }>;
@@ -373,6 +374,12 @@ const normalizeCheckoutOrder = (value: unknown, fallbackUserId: string): Checkou
     paymentMethod: normalizePaymentMethod(raw.paymentMethod),
     paymentStatus: normalizePaymentStatus(raw.paymentStatus),
     orderStatus: normalizeOrderStatus(raw.orderStatus),
+    status:
+      normalizeString((raw as any).status) === "Completed"
+        ? "Completed"
+        : normalizeString((raw as any).status) === "Disputed"
+          ? "Disputed"
+          : "Pending",
   };
 };
 

@@ -289,6 +289,23 @@ export async function fetchOrders(status?: "Pending" | "Disputed"): Promise<Orde
   }
 }
 
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderRecord["status"]
+): Promise<OrderRecord> {
+  const normalizedId = String(orderId || "").trim();
+  if (!normalizedId) {
+    throw new Error("Order id is required");
+  }
+
+  const payload = await requestJson<{ order: OrderRecord }>(`/api/orders/${encodeURIComponent(normalizedId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+  return payload.order;
+}
+
 export async function fetchProducts(): Promise<ProductRecord[]> {
   try {
     const payload = await requestJson<{ products: ProductRecord[] }>("/api/products");

@@ -23,17 +23,16 @@ const formatDateTime = (value: string) => {
   });
 };
 
-const formatStatus = (value: CheckoutOrder["orderStatus"]) =>
-  String(value || "placed")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (token) => token.toUpperCase());
+const formatStatus = (value: CheckoutOrder["status"]) => value;
 
-const statusClassName = (value: CheckoutOrder["orderStatus"]) => {
-  if (value === "confirmed") {
+const statusClassName = (value: CheckoutOrder["status"]) => {
+  if (value === "Completed") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-
-  return "border-blue-200 bg-blue-50 text-blue-700";
+  if (value === "Disputed") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-800";
 };
 
 export default function OrderDetailPage() {
@@ -108,8 +107,8 @@ export default function OrderDetailPage() {
             Back to My Orders
           </Link>
 
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusClassName(order.orderStatus)}`}>
-            {formatStatus(order.orderStatus)}
+          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusClassName(order.status)}`}>
+            {formatStatus(order.status)}
           </span>
         </div>
 
@@ -220,7 +219,7 @@ export default function OrderDetailPage() {
                     Order Type: <span className="font-semibold">{order.mode === "buy-now" ? "Buy Now" : "Cart Order"}</span>
                   </p>
                   <p>
-                    Order Status: <span className="font-semibold">{formatStatus(order.orderStatus)}</span>
+                    Order Status: <span className="font-semibold">{formatStatus(order.status)}</span>
                   </p>
                 </div>
               </article>

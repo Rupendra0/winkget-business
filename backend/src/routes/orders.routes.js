@@ -289,6 +289,7 @@ const toStorefrontCartItem = (item, index) => {
 
 const toCustomerOrder = (order) => {
   const orderData = order && typeof order === "object" ? order : {};
+  const status = normalizeString(orderData.status);
 
   return {
     id: String(orderData._id || orderData.id || ""),
@@ -309,6 +310,7 @@ const toCustomerOrder = (order) => {
     paymentMethod: normalizeString(orderData.paymentMethod) || "cod",
     paymentStatus: normalizeString(orderData.paymentStatus) || "pending",
     orderStatus: normalizeString(orderData.orderStatus) || "placed",
+    status: ADMIN_STATUS_VALUES.has(status) ? status : "Pending",
   };
 };
 
@@ -587,6 +589,34 @@ router.get("/orders/vendor", requireAuthenticated, requireVendor, async (req, re
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendor orders", error: error.message });
+  }
+});
+
+router.patch("/orders/:orderId/status", requireAuthenticated, requireAdmin, async (req, res) => {
+  try {
+    const orderId = normalizeString(req.params.orderId);
+    const nextStatus = normalizeString(req.body?.status);
+
+    if (!isObjectId(orderId)) {
+      return res.status(400).json({ ok: false, message: "Invalid order id" });
+    }
+
+    if (!ADMIN_STATUS_VALUES.has(nextStatus)) {
+      return res.status(400).json({ ok: false, message: "Invalid order status" });
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(orderId, { $set: { status: nextStatus } }, { new: true }).lean();
+    if (!updatedOrder) {
+      return res.status(404).json({ ok: false, message: "Order not found" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Order status updated",
+      order: toAdminOrderSummary(updatedOrder),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update order status", error: error.message });
   }
 });
 

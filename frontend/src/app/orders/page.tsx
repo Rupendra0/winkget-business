@@ -8,17 +8,16 @@ import { buildAuthHref } from "@/lib/authRedirect";
 import { paymentMethodLabel, readOrders, type CheckoutOrder } from "@/lib/checkoutStore";
 
 const formatPrice = (value: number) => `Rs. ${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
-const statusLabel = (value: CheckoutOrder["orderStatus"]) =>
-  String(value || "placed")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (token) => token.toUpperCase());
+const statusLabel = (value: CheckoutOrder["status"]) => value;
 
-const statusClassName = (value: CheckoutOrder["orderStatus"]) => {
-  if (value === "confirmed") {
+const statusClassName = (value: CheckoutOrder["status"]) => {
+  if (value === "Completed") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-
-  return "border-blue-200 bg-blue-50 text-blue-700";
+  if (value === "Disputed") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-800";
 };
 
 const formatDate = (value: string) => {
@@ -137,11 +136,9 @@ export default function OrdersPage() {
 
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">{leadItem?.product?.name || "Order Items"}</p>
-                        <span
-                        className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusClassName(order.orderStatus)}`}
-                      >
-                        {statusLabel(order.orderStatus)}
-                      </span>
+                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusClassName(order.status)}`}>
+                          {statusLabel(order.status)}
+                        </span>
                       <span className="px-2.5 py-1 text-[11px] font-bold">
                       {paymentMethodLabel(order.paymentMethod)}
                     </span>

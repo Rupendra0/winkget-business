@@ -8,7 +8,7 @@ import PageLayout from "@/components/admin/PageLayout";
 import StatusBadge from "@/components/admin/StatusBadge";
 import Table, { type TableColumn } from "@/components/admin/Table";
 import { findSidebarItem } from "@/data/adminNavigation";
-import { fetchOrders, type OrderRecord } from "@/lib/adminApi";
+import { fetchOrders, updateOrderStatus, type OrderRecord } from "@/lib/adminApi";
 import { formatDate } from "@/lib/adminUi";
 
 type OrderFilter = "All" | "Pending" | "Disputed";
@@ -32,8 +32,10 @@ function OrdersPageContent() {
   );
   const [searchInput, setSearchInput] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
-  const { data, error, isLoading } = useSWR(["orders", statusFilter], () =>
+  const { data, error, isLoading, mutate } = useSWR(["orders", statusFilter], () =>
     fetchOrders(statusFilter === "All" ? undefined : statusFilter)
   );
 
@@ -68,10 +70,35 @@ function OrdersPageContent() {
       key: "status",
       label: "Status",
       render: (row) => (
-        <StatusBadge
-          label={row.status}
-          tone={row.status === "Pending" ? "warning" : row.status === "Disputed" ? "danger" : "success"}
-        />
+        <div className="flex items-center gap-2">
+          <StatusBadge
+            label={row.status}
+            tone={row.status === "Pending" ? "warning" : row.status === "Disputed" ? "danger" : "success"}
+          />
+          <select
+            value={row.status}
+            disabled={updatingOrderId === row.id}
+            onChange={async (event) => {
+              const nextStatus = event.target.value as OrderRecord["status"];
+              setUpdatingOrderId(row.id);
+              setUpdateError(null);
+              try {
+                await updateOrderStatus(row.id, nextStatus);
+                await mutate();
+              } catch (err) {
+                setUpdateError(err instanceof Error ? err.message : "Failed to update order status");
+              } finally {
+                setUpdatingOrderId(null);
+              }
+            }}
+            className="rounded-lg border border-(--border) bg-(--surface-muted) px-2 py-1 text-xs text-(--text-soft)"
+            aria-label="Update order status"
+          >
+            <option value="Pending">Pending</option>
+            <option value="Disputed">Disputed</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
       ),
     },
     {
@@ -131,6 +158,12 @@ function OrdersPageContent() {
           />
         </section>
 
+        {updateError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {updateError}
+          </p>
+        ) : null}
+
         {error ? (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error instanceof Error ? error.message : "Unable to load orders"}
@@ -162,6 +195,32 @@ function OrdersPageContent() {
                   <p className="mt-2 text-sm text-(--text-soft)">{row.customer}</p>
                   <p className="mt-1 text-sm text-(--text-soft)">Rs {row.amount.toLocaleString()}</p>
                   <p className="mt-1 text-xs text-(--text-soft)">{formatDate(row.createdAt)}</p>
+
+                  <div className="mt-3">
+                    <select
+                      value={row.status}
+                      disabled={updatingOrderId === row.id}
+                      onChange={async (event) => {
+                        const nextStatus = event.target.value as OrderRecord["status"];
+                        setUpdatingOrderId(row.id);
+                        setUpdateError(null);
+                        try {
+                          await updateOrderStatus(row.id, nextStatus);
+                          await mutate();
+                        } catch (err) {
+                          setUpdateError(err instanceof Error ? err.message : "Failed to update order status");
+                        } finally {
+                          setUpdatingOrderId(null);
+                        }
+                      }}
+                      className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-2 py-2 text-sm"
+                      aria-label="Update order status"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Disputed">Disputed</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
                 </article>
               ))
             )}

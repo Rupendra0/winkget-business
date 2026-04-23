@@ -24,6 +24,8 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Plus,
+  Store,
   Trash2,
   Upload,
   X,
@@ -62,7 +64,17 @@ import {
 } from "@/lib/vendorApi";
 import VendorAddProductForm from "@/components/vendor/VendorAddProductForm";
 
-type SidebarLabel = "Overview" | "Enquiries" | "Calls" | "Reviews" | "Orders" | "Posts" | "Shop" | "Products" | "Settings";
+type SidebarLabel =
+  | "Overview"
+  | "Enquiries"
+  | "Calls"
+  | "Reviews"
+  | "Orders"
+  | "Posts"
+  | "Shop"
+  | "MyStore"
+  | "Products"
+  | "Settings";
 
 type SidebarItem = {
   label: SidebarLabel;
@@ -167,6 +179,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Calls", icon: PhoneCall },
   { label: "Orders", icon: ShoppingBag },
   { label: "Shop", icon: ImagePlus },
+  { label: "MyStore", icon: Store },
   { label: "Enquiries", icon: MessageSquare },
   { label: "Reviews", icon: Star },
   { label: "Posts", icon: Megaphone },
@@ -174,13 +187,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 ];
 
 const MOBILE_BAR_ITEMS: Array<{
-  label: "Overview" | "Enquiries" | "Calls" | "Shop" | "Products" | "Settings";
+  label: "Overview" | "Enquiries" | "Calls" | "Shop" | "MyStore" | "Products" | "Settings";
   icon: SidebarItem["icon"];
 }> = [
   { label: "Overview", icon: LayoutDashboard },
   { label: "Enquiries", icon: MessageSquare },
   { label: "Calls", icon: PhoneCall },
   { label: "Shop", icon: ImagePlus },
+  { label: "MyStore", icon: Store },
   { label: "Products", icon: ClipboardList },
   { label: "Settings", icon: Settings },
 ];
@@ -212,6 +226,10 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
   },
   Shop: {
     title: "Shop Profile",
+    subtitle: "",
+  },
+  MyStore: {
+    title: "MyStore",
     subtitle: "",
   },
   Products: {
@@ -632,37 +650,6 @@ function EmptyState({ title, body }: { title: string; body: string }) {
       <CircleDot className="mx-auto h-5 w-5 text-gray-400" aria-hidden="true" />
       <p className="mt-2 text-sm font-semibold text-gray-700">{title}</p>
       <p className="mt-1 text-xs text-gray-500">{body}</p>
-    </div>
-  );
-}
-
-function ShopStoreSwitch({
-  active,
-  onChange,
-}: {
-  active: "Shop" | "MyStore";
-  onChange: (value: "Shop" | "MyStore") => void;
-}) {
-  return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1">
-      <button
-        type="button"
-        onClick={() => onChange("Shop")}
-        className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-          active === "Shop" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
-        }`}
-      >
-        Shop
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("MyStore")}
-        className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-          active === "MyStore" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
-        }`}
-      >
-        MyStore
-      </button>
     </div>
   );
 }
@@ -1968,18 +1955,11 @@ function VendorProductsSection({
   const subcategories = selectedCategory ? selectedCategory.subcategories : [];
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 pb-16">
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-lg font-semibold text-gray-900">{`My ${productEntityLabel}`}</h3>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={isProductFormVisible ? handleCloseProductForm : handleOpenCreateForm}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-            >
-              {isProductFormVisible ? `Close ${addActionLabel}` : addActionLabel}
-            </button>
             <button
               type="button"
               onClick={onRefresh}
@@ -2109,6 +2089,18 @@ function VendorProductsSection({
           )}
         </div>
       </article>
+
+      {!isProductFormVisible ? (
+        <button
+          type="button"
+          onClick={handleOpenCreateForm}
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(30,64,175,0.22)] transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+          aria-label={addActionLabel}
+        >
+          <Plus className="h-5 w-5" aria-hidden="true" />
+          {addActionLabel}
+        </button>
+      ) : null}
 
       {isProductFormVisible ? (
         <section
@@ -2748,7 +2740,7 @@ export default function VendorDashboard() {
   const [storeStatusSaving, setStoreStatusSaving] = useState(false);
   const [storeStatusMessage, setStoreStatusMessage] = useState<string | null>(null);
   const [storeStatusError, setStoreStatusError] = useState<string | null>(null);
-  const [shopTabMode, setShopTabMode] = useState<"Shop" | "MyStore">("Shop");
+  // Shop and MyStore are separate sidebar sections now.
   const [cityOptions, setCityOptions] = useState<VendorCity[]>([]);
   const [cityOptionsError, setCityOptionsError] = useState<string | null>(null);
   const [inquiryStatusDraftById, setInquiryStatusDraftById] = useState<Record<string, InquiryStatus>>({});
@@ -3303,6 +3295,7 @@ export default function VendorDashboard() {
       Orders: 0,
       Posts: 0,
       Shop: 0,
+      MyStore: 0,
       Products: 0,
       Settings: 0,
     };
@@ -4122,41 +4115,36 @@ export default function VendorDashboard() {
 
     if (activeNav === "Shop") {
       return (
-        <section className="space-y-4">
-          <ShopStoreSwitch
-            active={shopTabMode}
-            onChange={setShopTabMode}
-          />
+        <ShopProfileSection
+          form={shopProfileForm}
+          businessName={businessName}
+          onChange={handleShopProfileChange}
+          onSubmit={handleShopProfileSubmit}
+          onUploadSingle={handleShopProfileSingleUpload}
+          onUploadGallery={handleShopProfileGalleryUpload}
+          onRemoveImage={handleShopProfileRemoveImage}
+          onRemoveGalleryItem={handleShopProfileRemoveGalleryItem}
+          saving={shopProfileSaving}
+          message={shopProfileMessage}
+          error={shopProfileError}
+        />
+      );
+    }
 
-          {shopTabMode === "Shop" ? (
-            <ShopProfileSection
-              form={shopProfileForm}
-              businessName={businessName}
-              onChange={handleShopProfileChange}
-              onSubmit={handleShopProfileSubmit}
-              onUploadSingle={handleShopProfileSingleUpload}
-              onUploadGallery={handleShopProfileGalleryUpload}
-              onRemoveImage={handleShopProfileRemoveImage}
-              onRemoveGalleryItem={handleShopProfileRemoveGalleryItem}
-              saving={shopProfileSaving}
-              message={shopProfileMessage}
-              error={shopProfileError}
-            />
-          ) : (
-            <MyStorePreviewSection
-              businessName={businessName}
-              profileImage={myStoreMediaForm.image}
-              bannerImage={myStoreMediaForm.bannerImage}
-              address={shopProfileForm.businessAddress}
-              description={shopProfileForm.businessDescription}
-              savingField={myStoreMediaSavingField}
-              message={myStoreMediaMessage}
-              error={myStoreMediaError}
-              onUpload={handleMyStoreMediaUpload}
-              onRemove={handleMyStoreMediaRemove}
-            />
-          )}
-        </section>
+    if (activeNav === "MyStore") {
+      return (
+        <MyStorePreviewSection
+          businessName={businessName}
+          profileImage={myStoreMediaForm.image}
+          bannerImage={myStoreMediaForm.bannerImage}
+          address={shopProfileForm.businessAddress}
+          description={shopProfileForm.businessDescription}
+          savingField={myStoreMediaSavingField}
+          message={myStoreMediaMessage}
+          error={myStoreMediaError}
+          onUpload={handleMyStoreMediaUpload}
+          onRemove={handleMyStoreMediaRemove}
+        />
       );
     }
 
@@ -4254,7 +4242,7 @@ export default function VendorDashboard() {
             shouldShowQuickAnalytics ? "xl:grid-cols-[248px_minmax(0,1fr)_320px]" : ""
           }`}
         >
-          <aside className="hidden h-[calc(100vh-3rem)] flex-col rounded-3xl border-r border-blue-100/80 bg-white/72 p-4 backdrop-blur-md lg:flex">
+          <aside className="hidden self-start lg:sticky lg:top-6 lg:flex lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:overflow-y-auto rounded-3xl border-r border-blue-100/80 bg-white/72 p-4 backdrop-blur-md">
             <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
@@ -4307,7 +4295,7 @@ export default function VendorDashboard() {
           </aside>
 
           <section className="min-w-0 space-y-5">
-            <article className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md xl:hidden">
+            <article className="sticky top-4 z-20 rounded-2xl border border-blue-100/80 bg-white/90 p-4 shadow-sm backdrop-blur-md xl:hidden">
               <h3 className="font-display text-lg font-semibold text-gray-900">Quick Controls</h3>
 
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -4404,7 +4392,7 @@ export default function VendorDashboard() {
               </div>
             </article>
 
-            <header className="rounded-2xl border border-blue-100/80 bg-white/78 p-4 shadow-sm backdrop-blur-md">
+            <header className="sticky top-4 z-10 rounded-2xl border border-blue-100/80 bg-white/90 p-4 shadow-sm backdrop-blur-md">
               <DashboardSummaryCards stats={stats} onStatClick={handleOverviewStatClick} />
             </header>
 
@@ -4412,7 +4400,7 @@ export default function VendorDashboard() {
           </section>
 
           {shouldShowQuickAnalytics ? (
-            <aside className="hidden space-y-4 xl:block">
+            <aside className="hidden self-start xl:sticky xl:top-6 xl:block xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto space-y-4">
               <article className="rounded-2xl border border-blue-100/70 bg-white/62 p-5 backdrop-blur-md">
                 <h3 className="font-display text-lg font-semibold text-gray-900">Quick Controls</h3>
 
