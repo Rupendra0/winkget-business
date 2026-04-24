@@ -111,19 +111,44 @@ export type VendorOrderItem = {
   name: string;
   quantity: number;
   price: number;
+  oldPrice?: number;
   image?: string;
+};
+
+export type VendorOrderAddress = {
+  fullName: string;
+  phone?: string;
+  line1: string;
+  line2?: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
+export type VendorOrderTotals = {
+  mrp: number;
+  subtotal: number;
+  savings: number;
+  shippingFee: number;
+  platformFee: number;
+  total: number;
 };
 
 export type VendorOrderRecord = {
   id: string;
   orderNo: string;
   customer: string;
+  customerEmail?: string;
+  customerPhone?: string;
   amount: number;
   status: VendorOrderStatus;
   paymentMethod: string;
   paymentStatus: string;
   createdAt: string;
   itemCount: number;
+  address?: VendorOrderAddress;
+  totals?: VendorOrderTotals;
   items: VendorOrderItem[];
 };
 
@@ -599,6 +624,7 @@ export async function fetchVendorOrders(options?: {
                 name: String(item.name || "Product").trim() || "Product",
                 quantity: Number.isFinite(Number(item.quantity)) ? Math.max(1, Number(item.quantity)) : 1,
                 price: Number.isFinite(Number(item.price)) ? Math.max(0, Number(item.price)) : 0,
+                oldPrice: Number.isFinite(Number(item.oldPrice)) ? Math.max(0, Number(item.oldPrice)) : 0,
                 image: String(item.image || "").trim() || undefined,
               }))
             : [];
@@ -609,6 +635,8 @@ export async function fetchVendorOrders(options?: {
             id: String(order.id || `order-${index}`),
             orderNo: String(order.orderNo || `#ORD-${index + 1}`).trim(),
             customer: String(order.customer || "Customer").trim() || "Customer",
+            customerEmail: String(order.customerEmail || "").trim() || undefined,
+            customerPhone: String(order.customerPhone || "").trim() || undefined,
             amount: Number.isFinite(Number(order.amount)) ? Math.max(0, Number(order.amount)) : 0,
             status: normalizedStatus,
             paymentMethod: String(order.paymentMethod || "cod").trim().toLowerCase() || "cod",
@@ -617,6 +645,30 @@ export async function fetchVendorOrders(options?: {
             itemCount: Number.isFinite(Number(order.itemCount))
               ? Math.max(0, Number(order.itemCount))
               : itemCountFromItems,
+            address:
+              order.address && typeof order.address === "object"
+                ? {
+                    fullName: String(order.address.fullName || "Customer").trim() || "Customer",
+                    phone: String(order.address.phone || "").trim() || undefined,
+                    line1: String(order.address.line1 || "").trim(),
+                    line2: String(order.address.line2 || "").trim() || undefined,
+                    landmark: String(order.address.landmark || "").trim() || undefined,
+                    city: String(order.address.city || "").trim(),
+                    state: String(order.address.state || "").trim(),
+                    postalCode: String(order.address.postalCode || "").trim(),
+                  }
+                : undefined,
+            totals:
+              order.totals && typeof order.totals === "object"
+                ? {
+                    mrp: Number.isFinite(Number(order.totals.mrp)) ? Math.max(0, Number(order.totals.mrp)) : 0,
+                    subtotal: Number.isFinite(Number(order.totals.subtotal)) ? Math.max(0, Number(order.totals.subtotal)) : 0,
+                    savings: Number.isFinite(Number(order.totals.savings)) ? Math.max(0, Number(order.totals.savings)) : 0,
+                    shippingFee: Number.isFinite(Number(order.totals.shippingFee)) ? Math.max(0, Number(order.totals.shippingFee)) : 0,
+                    platformFee: Number.isFinite(Number(order.totals.platformFee)) ? Math.max(0, Number(order.totals.platformFee)) : 0,
+                    total: Number.isFinite(Number(order.totals.total)) ? Math.max(0, Number(order.totals.total)) : 0,
+                  }
+                : undefined,
             items: normalizedItems,
           };
         })

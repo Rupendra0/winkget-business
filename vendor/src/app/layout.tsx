@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import FrontendFailureLogger from "@/components/FrontendFailureLogger";
 
 const bodyFont = Manrope({
   variable: "--font-vendor-sans",
@@ -28,7 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <FrontendFailureLogger />
+        {children}
+      </body>
     </html>
   );
 }

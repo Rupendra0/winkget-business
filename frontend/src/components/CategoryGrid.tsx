@@ -169,7 +169,7 @@ export default function CategoryGrid() {
   }, [searchQuery, sortedCategories]);
 
   return (
-    <section className="px-0 pt-1 pb-3 md:px-4 md:pt-2 md:pb-4 lg:px-6 lg:pt-2 lg:pb-6 xl:px-8">
+    <section className="px-0 pt-1 pb-0 md:px-4 md:pt-2 md:pb-0 lg:px-6 lg:pt-2 lg:pb-0 xl:px-8">
       <div className="w-full">
         {/* Category Grid */}
         <div className="pb-2">

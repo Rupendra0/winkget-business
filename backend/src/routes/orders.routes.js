@@ -322,6 +322,21 @@ const toAdminOrderSummary = (order) => {
   };
 };
 
+const toVendorOrderAddress = (address) => {
+  const addressData = address && typeof address === "object" ? address : {};
+
+  return {
+    fullName: normalizeString(addressData.fullName) || "Customer",
+    phone: normalizePhone(addressData.phone),
+    line1: normalizeString(addressData.line1),
+    line2: normalizeString(addressData.line2),
+    landmark: normalizeString(addressData.landmark),
+    city: normalizeString(addressData.city),
+    state: normalizeString(addressData.state),
+    postalCode: normalizeString(addressData.postalCode),
+  };
+};
+
 const toVendorOrderSummary = (order, vendorId) => {
   const orderData = order && typeof order === "object" ? order : {};
   const rawItems = Array.isArray(orderData.items) ? orderData.items : [];
@@ -335,13 +350,22 @@ const toVendorOrderSummary = (order, vendorId) => {
     return null;
   }
 
-  const amount = vendorItems.reduce(
+  const subtotal = vendorItems.reduce(
     (sum, item) => sum + toNonNegativeNumber(item.price, 0) * toPositiveInteger(item.quantity, 1),
     0
   );
+  const mrp = vendorItems.reduce((sum, item) => {
+    const effectiveMrp = toNonNegativeNumber(item.oldPrice, 0) > 0 ? toNonNegativeNumber(item.oldPrice, 0) : toNonNegativeNumber(item.price, 0);
+    return sum + effectiveMrp * toPositiveInteger(item.quantity, 1);
+  }, 0);
+  const savings = Math.max(0, mrp - subtotal);
 
   const itemCount = vendorItems.reduce((sum, item) => sum + toPositiveInteger(item.quantity, 1), 0);
   const status = normalizeString(orderData.status);
+  const vendorCount = Array.isArray(orderData.vendors) ? orderData.vendors.length : 0;
+  const shippingFee = vendorCount <= 1 ? toNonNegativeNumber(orderData.totals?.shippingFee, 0) : 0;
+  const platformFee = vendorCount <= 1 ? toNonNegativeNumber(orderData.totals?.platformFee, 0) : 0;
+  const amount = Math.round(Math.max(0, subtotal + shippingFee + platformFee));
 
   return {
     id: String(orderData._id || orderData.id || ""),
@@ -350,17 +374,29 @@ const toVendorOrderSummary = (order, vendorId) => {
       normalizeString(orderData.customerSnapshot?.name) ||
       normalizeString(orderData.customerName) ||
       "Customer",
+    customerEmail: normalizeString(orderData.customerSnapshot?.email),
+    customerPhone: normalizePhone(orderData.customerSnapshot?.phone),
     amount: Math.round(amount),
     status: ADMIN_STATUS_VALUES.has(status) ? status : "Pending",
     paymentMethod: normalizeString(orderData.paymentMethod) || "cod",
     paymentStatus: normalizeString(orderData.paymentStatus) || "pending",
     createdAt: orderData.createdAt,
     itemCount,
+    address: toVendorOrderAddress(orderData.address),
+    totals: {
+      mrp: Math.round(mrp),
+      subtotal: Math.round(subtotal),
+      savings: Math.round(savings),
+      shippingFee: Math.round(shippingFee),
+      platformFee: Math.round(platformFee),
+      total: amount,
+    },
     items: vendorItems.map((item) => ({
       id: normalizeString(item.productId || (item.product ? String(item.product) : "")),
       name: normalizeString(item.name) || "Product",
       quantity: toPositiveInteger(item.quantity, 1),
       price: Math.round(toNonNegativeNumber(item.price, 0)),
+      oldPrice: Math.round(toNonNegativeNumber(item.oldPrice, 0)),
       image: normalizeString(item.image) || "",
     })),
   };

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
+import FrontendFailureLogger from "@/components/FrontendFailureLogger";
 
 const displayFont = Inter({
   variable: "--font-admin-display",
@@ -32,6 +33,7 @@ export default function RootLayout({
       className={`${displayFont.variable} ${monoFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <FrontendFailureLogger />
         <Suspense fallback={<div className="min-h-screen bg-(--bg)" />}>
           {children}
         </Suspense>

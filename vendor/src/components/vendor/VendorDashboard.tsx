@@ -17,7 +17,11 @@ import {
   LogOut,
   Megaphone,
   MessageSquare,
+  Mail,
+  MessageCircle,
+  Minus,
   PhoneCall,
+  Download,
   RefreshCcw,
   Save,
   Settings,
@@ -70,6 +74,8 @@ type SidebarLabel =
   | "Calls"
   | "Reviews"
   | "Orders"
+  | "Billing"
+  | "Inventory"
   | "Posts"
   | "Shop"
   | "MyStore"
@@ -178,6 +184,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: "Products", icon: ClipboardList },
   { label: "Calls", icon: PhoneCall },
   { label: "Orders", icon: ShoppingBag },
+  { label: "Billing", icon: Building2 },
+  { label: "Inventory", icon: Store },
   { label: "Shop", icon: ImagePlus },
   { label: "MyStore", icon: Store },
   { label: "Enquiries", icon: MessageSquare },
@@ -218,6 +226,14 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
   },
   Orders: {
     title: "Orders",
+    subtitle: "",
+  },
+  Billing: {
+    title: "Billing",
+    subtitle: "",
+  },
+  Inventory: {
+    title: "Inventory",
     subtitle: "",
   },
   Posts: {
@@ -264,6 +280,7 @@ const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const VENDOR_PRODUCT_STATUSES: VendorProductRecord["status"][] = ["draft", "pending", "live", "rejected", "archived"];
+const WINKGET_EXPRESS_ADDRESS = "Winkget Express, Transport Nagar, Lucknow, Uttar Pradesh 226012";
 const PRODUCT_VARIANT_LINE_HINT = "size|color|mrp|sellingPrice|stock|image";
 const STORE_PLACEMENT_OPTIONS: Array<{ value: VendorProductFormState["storePlacement"]; label: string }> = [
   { value: "none", label: "None" },
@@ -450,6 +467,257 @@ function formatDateTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatFullDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatCurrencyInr(value: number) {
+  return `₹${Math.max(0, Math.round(Number(value) || 0)).toLocaleString("en-IN")}`;
+}
+
+function normalizeWhatsappPhone(value: string) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length === 10 ? `91${digits}` : digits;
+}
+
+function escapeHtml(value: string) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildVendorProductUpsertFromRecord(
+  product: VendorProductRecord,
+  overrides: Partial<VendorProductUpsertInput> = {}
+): VendorProductUpsertInput {
+  return {
+    categorySlug: product.categorySlug,
+    categoryLabel: product.categoryLabel,
+    subcategorySlug: product.subcategorySlug,
+    subcategoryName: product.subcategoryName,
+    productName: product.productName,
+    shortDescription: product.shortDescription,
+    description: product.description,
+    image: product.image,
+    heroImage: product.heroImage,
+    subcategoryImage: product.subcategoryImage,
+    gallery: Array.isArray(product.gallery) ? [...product.gallery] : [],
+    price: Number(product.price || 0),
+    oldPrice: Number(product.oldPrice || 0),
+    inventory: Number(product.inventory || 0),
+    moq: Number(product.moq || 0),
+    badge: product.badge,
+    brand: product.brand,
+    sellerName: product.sellerName,
+    vendorSource: product.vendorSource,
+    rating: Number(product.rating || 0),
+    reviews: Number(product.reviews || 0),
+    deliveryByText: product.deliveryByText,
+    shippingLabel: product.shippingLabel,
+    shippingTimeline: product.shippingTimeline,
+    isCancellable: Boolean(product.isCancellable),
+    isReturnable: Boolean(product.isReturnable),
+    highlights: Array.isArray(product.highlights) ? [...product.highlights] : [],
+    keyAttributes: Array.isArray(product.keyAttributes) ? product.keyAttributes.map((item) => ({ ...item })) : [],
+    specifications: Array.isArray(product.specifications) ? product.specifications.map((item) => ({ ...item })) : [],
+    tags: Array.isArray(product.tags) ? [...product.tags] : [],
+    variantData: Array.isArray(product.variantData) ? product.variantData.map((item) => ({ ...item })) : [],
+    detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks)
+      ? product.detailedDescriptionBlocks.map((item) => ({ ...item }))
+      : [],
+    status: product.status,
+    storePlacement: product.storePlacement,
+    sourcePlatform: product.sourcePlatform,
+    sourceRecordId: product.sourceRecordId,
+    ...overrides,
+  };
+}
+
+function getOrdersForProduct(orders: VendorOrderRecord[], productId: string): VendorOrderRecord[] {
+  const normalizedProductId = String(productId || "").trim();
+  if (!normalizedProductId) {
+    return [];
+  }
+
+  return orders.filter(
+    (order) => Array.isArray(order.items) && order.items.some((item) => String(item.id || "").trim() === normalizedProductId)
+  );
+}
+
+function buildInvoiceNumber(order: VendorOrderRecord, fallbackId?: string): string {
+  const rawValue = String(order.orderNo || fallbackId || order.id || "").replace(/[^A-Za-z0-9]/g, "");
+  return `INV-${(rawValue.slice(-10) || "WINKGET").toUpperCase()}`;
+}
+
+function resolveSellerDetails(vendorProfile: VendorSession | null, fallbackSellerName?: string) {
+  return {
+    sellerName: String(vendorProfile?.businessName || vendorProfile?.name || fallbackSellerName || "Vendor Store").trim(),
+    sellerAddress:
+      String(vendorProfile?.businessAddress || "").trim() ||
+      [vendorProfile?.sublocality, vendorProfile?.city, vendorProfile?.state, vendorProfile?.postalCode].filter(Boolean).join(", "),
+    sellerEmail: String(vendorProfile?.businessEmail || vendorProfile?.email || "").trim() || undefined,
+    sellerPhone: String(vendorProfile?.businessPhone || vendorProfile?.phone || "").trim() || undefined,
+  };
+}
+
+function openInvoicePrintWindow(params: {
+  invoiceNo: string;
+  order: VendorOrderRecord;
+  sellerName: string;
+  sellerAddress: string;
+  sellerEmail?: string;
+  sellerPhone?: string;
+  sellerGst?: string;
+}) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const { invoiceNo, order, sellerName, sellerAddress, sellerEmail, sellerPhone, sellerGst } = params;
+  const popup = window.open("", "_blank", "width=980,height=1200");
+  if (!popup) {
+    return;
+  }
+
+  const addressLines = [
+    order.address?.line1,
+    order.address?.line2,
+    order.address?.landmark,
+    [order.address?.city, order.address?.state].filter(Boolean).join(", "),
+    order.address?.postalCode,
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  const itemsMarkup = (Array.isArray(order.items) ? order.items : [])
+    .map(
+      (item, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.quantity}</td>
+          <td>${escapeHtml(formatCurrencyInr(Number(item.price || 0)))}</td>
+          <td>${escapeHtml(formatCurrencyInr(Number(item.price || 0) * Number(item.quantity || 1)))}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  popup.document.write(`<!doctype html>
+  <html>
+    <head>
+      <title>${escapeHtml(invoiceNo)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #0f172a; }
+        .sheet { width: 880px; margin: 24px auto; background: white; border: 1px solid #dbe4f0; border-radius: 18px; overflow: hidden; }
+        .header { padding: 28px 32px; background: linear-gradient(135deg,#0f4fd6,#3b82f6); color: white; }
+        .brand { font-size: 28px; font-weight: 800; }
+        .sub { margin-top: 6px; font-size: 13px; opacity: 0.92; }
+        .section { padding: 24px 32px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .card { border: 1px solid #dbe4f0; border-radius: 14px; padding: 16px; background: #fbfdff; }
+        .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+        .value { font-size: 14px; line-height: 1.7; }
+        .title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #e5edf7; text-align: left; font-size: 13px; }
+        th { background: #f8fbff; color: #475569; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+        .totals { width: 320px; margin-left: auto; margin-top: 18px; }
+        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+        .totals-row.total { border-top: 1px solid #dbe4f0; margin-top: 4px; padding-top: 12px; font-size: 20px; font-weight: 800; }
+        .footer { padding: 0 32px 28px; color: #64748b; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="sheet">
+        <div class="header">
+          <div class="brand">Winkget Express</div>
+          <div class="sub">${escapeHtml(WINKGET_EXPRESS_ADDRESS)}</div>
+        </div>
+        <div class="section">
+          <div class="grid">
+            <div class="card">
+              <div class="label">Billed By</div>
+              <div class="title">${escapeHtml(sellerName || "Vendor Store")}</div>
+              <div class="value">
+                ${escapeHtml(sellerAddress || "Address unavailable")}<br />
+                ${sellerPhone ? `Phone: ${escapeHtml(sellerPhone)}<br />` : ""}
+                ${sellerEmail ? `Email: ${escapeHtml(sellerEmail)}<br />` : ""}
+                ${sellerGst ? `GSTIN: ${escapeHtml(sellerGst)}` : ""}
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Invoice Details</div>
+              <div class="value">
+                <strong>Invoice No:</strong> ${escapeHtml(invoiceNo)}<br />
+                <strong>Order No:</strong> ${escapeHtml(order.orderNo)}<br />
+                <strong>Order Date:</strong> ${escapeHtml(formatFullDateTime(order.createdAt))}<br />
+                <strong>Payment Mode:</strong> ${escapeHtml(String(order.paymentMethod || "").toUpperCase())}<br />
+                <strong>Payment Status:</strong> ${escapeHtml(order.paymentStatus || "pending")}
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Customer</div>
+              <div class="title">${escapeHtml(order.customer || "Customer")}</div>
+              <div class="value">
+                ${order.customerPhone ? `Phone: ${escapeHtml(order.customerPhone)}<br />` : ""}
+                ${order.customerEmail ? `Email: ${escapeHtml(order.customerEmail)}<br />` : ""}
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Shipping Address</div>
+              <div class="value">${escapeHtml(addressLines.join(", ") || "Address unavailable")}</div>
+            </div>
+          </div>
+          <div style="margin-top: 22px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>${itemsMarkup}</tbody>
+            </table>
+            <div class="totals">
+              <div class="totals-row"><span>MRP</span><strong>${escapeHtml(formatCurrencyInr(order.totals?.mrp || 0))}</strong></div>
+              <div class="totals-row"><span>Subtotal</span><strong>${escapeHtml(formatCurrencyInr(order.totals?.subtotal || 0))}</strong></div>
+              <div class="totals-row"><span>Savings</span><strong>${escapeHtml(formatCurrencyInr(order.totals?.savings || 0))}</strong></div>
+              <div class="totals-row"><span>Shipping Fee</span><strong>${escapeHtml(formatCurrencyInr(order.totals?.shippingFee || 0))}</strong></div>
+              <div class="totals-row"><span>Platform Fee</span><strong>${escapeHtml(formatCurrencyInr(order.totals?.platformFee || 0))}</strong></div>
+              <div class="totals-row total"><span>Total</span><span>${escapeHtml(formatCurrencyInr(order.totals?.total || order.amount || 0))}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          This is a computer-generated Winkget Express invoice.
+        </div>
+      </div>
+      <script>
+        window.onload = function() { window.print(); };
+      </script>
+    </body>
+  </html>`);
+
+  popup.document.close();
 }
 
 function isRestaurantVendorProfile(vendor: VendorSession | null): boolean {
@@ -705,9 +973,6 @@ function MyStorePreviewSection({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore DP</p>
-              <div className="mt-2 h-[116px] w-[116px] overflow-hidden rounded-full border-2 border-white bg-white shadow-sm lg:h-[126px] lg:w-[126px]">
-                <img src={displayAvatar} alt="MyStore DP preview" className="h-full w-full object-cover" loading="lazy" />
-              </div>
               <div className="mt-2 flex items-center gap-2">
                 <label
                   className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
@@ -741,9 +1006,6 @@ function MyStorePreviewSection({
 
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore Banner</p>
-              <div className="mt-2 h-44 overflow-hidden rounded-xl bg-gray-100 sm:h-52 lg:h-60">
-                <img src={displayBanner} alt="MyStore banner preview" className="h-full w-full object-cover" loading="lazy" />
-              </div>
               <div className="mt-2 flex items-center gap-2">
                 <label
                   className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
@@ -1619,9 +1881,6 @@ function ShopProfileSection({
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Display Photo</p>
-              <div className="mt-2 h-[116px] w-[116px] overflow-hidden rounded-full border-2 border-white bg-white shadow-sm lg:h-[126px] lg:w-[126px]">
-                <img src={avatarImage} alt="Shop display" className="h-full w-full object-cover" loading="lazy" />
-              </div>
               <button
                 type="button"
                 onClick={() => onRemoveImage("image")}
@@ -1633,9 +1892,6 @@ function ShopProfileSection({
 
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Banner</p>
-              <div className="mt-2 h-44 overflow-hidden rounded-xl bg-white sm:h-52 lg:h-60">
-                <img src={bannerImage} alt="Shop banner" className="h-full w-full object-cover" loading="lazy" />
-              </div>
               <button
                 type="button"
                 onClick={() => onRemoveImage("shopBannerImage")}
@@ -1821,6 +2077,675 @@ function ShopProfileSection({
   );
 }
 
+function BillingSection({
+  vendorProfile,
+  orders,
+  selectedOrderId,
+  onSelectOrder,
+  loading,
+  error,
+}: {
+  vendorProfile: VendorSession | null;
+  orders: VendorOrderRecord[];
+  selectedOrderId: string | null;
+  onSelectOrder: (orderId: string) => void;
+  loading: boolean;
+  error: string | null;
+}) {
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const filteredOrders = useMemo(() => {
+    const query = invoiceSearch.trim().toLowerCase();
+    if (!query) {
+      return orders;
+    }
+
+    return orders.filter((order) =>
+      [order.customer, order.orderNo, order.id, order.status]
+        .map((value) => String(value || "").toLowerCase())
+        .some((value) => value.includes(query))
+    );
+  }, [invoiceSearch, orders]);
+  const selectedOrder = orders.find((order) => order.id === selectedOrderId) || orders[0] || null;
+  const billingSummary = useMemo(
+    () => ({
+      total: orders.length,
+      revenue: orders.reduce((sum, order) => sum + Number(order.totals?.total || order.amount || 0), 0),
+      pending: orders.filter((order) => order.status === "Pending").length,
+      completed: orders.filter((order) => order.status === "Completed").length,
+    }),
+    [orders]
+  );
+
+  const handleDownloadInvoice = () => {
+    if (!selectedOrder) return;
+
+    const sellerDetails = resolveSellerDetails(vendorProfile);
+    openInvoicePrintWindow({
+      invoiceNo: buildInvoiceNumber(selectedOrder),
+      order: selectedOrder,
+      ...sellerDetails,
+    });
+  };
+
+  const handleSendInvoiceEmail = () => {
+    if (!selectedOrder?.customerEmail) return;
+
+    const subject = encodeURIComponent(`Invoice ${selectedOrder.orderNo} from Winkget Express`);
+    const body = [
+      `Hello ${selectedOrder.customer},`,
+      "",
+      "Please find your invoice details below:",
+      `Order No: ${selectedOrder.orderNo}`,
+      `Date: ${formatFullDateTime(selectedOrder.createdAt)}`,
+      `Total: ${formatCurrencyInr(selectedOrder.totals?.total || selectedOrder.amount)}`,
+      `Payment: ${String(selectedOrder.paymentMethod || "").toUpperCase()} (${selectedOrder.paymentStatus})`,
+      "",
+      "Regards,",
+      "Winkget Express",
+    ].join("%0D%0A");
+
+    window.open(`mailto:${encodeURIComponent(selectedOrder.customerEmail)}?subject=${subject}&body=${body}`, "_blank", "noopener");
+  };
+
+  const handleSendInvoiceWhatsapp = () => {
+    const customerPhone = normalizeWhatsappPhone(selectedOrder?.customerPhone || selectedOrder?.address?.phone || "");
+    if (!selectedOrder || !customerPhone) return;
+
+    const message = [
+      `Hello ${selectedOrder.customer}, your Winkget Express invoice is ready.`,
+      `Order No: ${selectedOrder.orderNo}`,
+      `Total: ${formatCurrencyInr(selectedOrder.totals?.total || selectedOrder.amount)}`,
+      `Payment: ${String(selectedOrder.paymentMethod || "").toUpperCase()} (${selectedOrder.paymentStatus})`,
+    ].join("%0A");
+
+    window.open(`https://wa.me/${customerPhone}?text=${message}`, "_blank", "noopener,noreferrer");
+  };
+
+  if (loading) {
+    return <p className="text-sm text-gray-600">Loading billing records...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-rose-700">{error}</p>;
+  }
+
+  if (orders.length === 0) {
+    return (
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <p className="text-lg font-semibold text-slate-900">No billing records yet.</p>
+        <p className="mt-2 text-sm text-slate-500">As soon as vendors receive orders, invoices will appear here automatically.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <article className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-slate-500">Invoices</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{billingSummary.total}</p>
+        </article>
+        <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-emerald-700">Collected</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-900">{formatCurrencyInr(billingSummary.revenue)}</p>
+        </article>
+        <article className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-amber-700">Pending</p>
+          <p className="mt-1 text-2xl font-bold text-amber-900">{billingSummary.pending}</p>
+        </article>
+        <article className="rounded-2xl border border-violet-200 bg-violet-50 p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-violet-700">Completed</p>
+          <p className="mt-1 text-2xl font-bold text-violet-900">{billingSummary.completed}</p>
+        </article>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Vendor invoices</p>
+              <h3 className="mt-1 text-lg font-bold text-slate-900">Orders received</h3>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{filteredOrders.length}</span>
+          </div>
+
+          <div className="mt-4">
+            <input
+              type="text"
+              value={invoiceSearch}
+              onChange={(event) => setInvoiceSearch(event.target.value)}
+              placeholder="Search invoices"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white"
+            />
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {filteredOrders.map((order) => {
+              const isActive = selectedOrder?.id === order.id;
+              return (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => onSelectOrder(order.id)}
+                  className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                    isActive
+                      ? "border-blue-300 bg-blue-50 shadow-[0_16px_28px_rgba(37,99,235,0.12)]"
+                      : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{order.customer}</p>
+                      <p className="mt-1 text-xs text-slate-500">{order.orderNo}</p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        order.status === "Completed"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : order.status === "Disputed"
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <span>{formatFullDateTime(order.createdAt)}</span>
+                    <span className="font-semibold text-slate-900">{formatCurrencyInr(order.totals?.total || order.amount)}</span>
+                  </div>
+                </button>
+              );
+            })}
+            {filteredOrders.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                No invoices match your search.
+              </div>
+            ) : null}
+          </div>
+        </article>
+
+        {selectedOrder ? (
+          <article className="overflow-hidden rounded-3xl border border-[#dbe6fb] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] shadow-[0_20px_50px_rgba(15,23,42,0.10)]">
+            <div className="border-b border-[#dbe6fb] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-6 py-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#d9e2f2] bg-[#f1f6ff]">
+                    <Building2 className="h-5 w-5 text-[#355c9a]" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold leading-none text-slate-900">Winkget Express</p>
+                    <p className="mt-1 max-w-2xl text-sm text-slate-500">{WINKGET_EXPRESS_ADDRESS}</p>
+                  </div>
+                </div>
+                <div className="min-w-[190px] rounded-2xl border border-[#d9e2f2] bg-[#f8fbff] px-4 py-3 text-right">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5b6f95]">Invoice</p>
+                  <p className="mt-1 text-lg font-bold text-[#355c9a]">{buildInvoiceNumber(selectedOrder)}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatFullDateTime(selectedOrder.createdAt)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 bg-[linear-gradient(180deg,#fbfdff_0%,#ffffff_100%)] px-6 py-5 lg:grid-cols-[1fr_1fr]">
+              <div className="rounded-2xl border border-[#dbe6fb] bg-[#f9fbff] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Billed By</p>
+                <p className="mt-2 text-lg font-bold text-slate-900">{resolveSellerDetails(vendorProfile).sellerName}</p>
+                <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
+                  <p>{resolveSellerDetails(vendorProfile).sellerAddress || "Seller address unavailable"}</p>
+                  {resolveSellerDetails(vendorProfile).sellerPhone ? <p>Phone: {resolveSellerDetails(vendorProfile).sellerPhone}</p> : null}
+                  {resolveSellerDetails(vendorProfile).sellerEmail ? <p>Email: {resolveSellerDetails(vendorProfile).sellerEmail}</p> : null}
+                  {vendorProfile?.gstNumber ? <p>GSTIN: {vendorProfile.gstNumber}</p> : null}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#e4e8fb] bg-[#fcfbff] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Customer & Delivery</p>
+                <p className="mt-2 text-lg font-bold text-slate-900">{selectedOrder.customer}</p>
+                <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
+                  {selectedOrder.customerPhone ? <p>Phone: {selectedOrder.customerPhone}</p> : null}
+                  {selectedOrder.customerEmail ? <p>Email: {selectedOrder.customerEmail}</p> : null}
+                  <p>
+                    {[
+                      selectedOrder.address?.line1,
+                      selectedOrder.address?.line2,
+                      selectedOrder.address?.landmark,
+                      [selectedOrder.address?.city, selectedOrder.address?.state].filter(Boolean).join(", "),
+                      selectedOrder.address?.postalCode,
+                    ]
+                      .map((item) => String(item || "").trim())
+                      .filter(Boolean)
+                      .join(", ") || "Address unavailable"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 pb-6">
+              <div className="overflow-hidden rounded-2xl border border-[#dbe6fb] bg-white">
+                <table className="w-full border-collapse">
+                  <thead className="bg-[linear-gradient(180deg,#f8fbff_0%,#f2f7ff_100%)]">
+                    <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      <th className="px-4 py-3">Item</th>
+                      <th className="px-4 py-3">Qty</th>
+                      <th className="px-4 py-3">Unit Price</th>
+                      <th className="px-4 py-3">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOrder.items.map((item) => (
+                      <tr key={`billing-item-${item.id}-${item.name}`} className="border-t border-[#e5edf8] text-sm text-slate-700">
+                        <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
+                        <td className="px-4 py-3">{item.quantity}</td>
+                        <td className="px-4 py-3">{formatCurrencyInr(item.price)}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">{formatCurrencyInr(item.price * item.quantity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadInvoice}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(37,99,235,0.24)] transition hover:bg-blue-700"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendInvoiceWhatsapp}
+                    disabled={!normalizeWhatsappPhone(selectedOrder.customerPhone || selectedOrder.address?.phone || "")}
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Send on Number
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendInvoiceEmail}
+                    disabled={!selectedOrder.customerEmail}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Send Email
+                  </button>
+                </div>
+
+                <div className="w-full rounded-2xl border border-[#dbe6fb] bg-[linear-gradient(180deg,#fbfdff_0%,#f5f9ff_100%)] p-4 lg:max-w-sm">
+                  <div className="space-y-2 text-sm text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span>MRP</span>
+                      <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedOrder.totals?.mrp || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Subtotal</span>
+                      <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedOrder.totals?.subtotal || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Savings</span>
+                      <span className="font-semibold text-emerald-700">{formatCurrencyInr(selectedOrder.totals?.savings || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Shipping Fee</span>
+                      <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedOrder.totals?.shippingFee || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Platform Fee</span>
+                      <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedOrder.totals?.platformFee || 0)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+                    <span className="text-base font-semibold text-slate-700">Total</span>
+                    <span className="text-2xl font-extrabold text-slate-900">
+                      {formatCurrencyInr(selectedOrder.totals?.total || selectedOrder.amount)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Payment: {String(selectedOrder.paymentMethod || "").toUpperCase()} / {selectedOrder.paymentStatus}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function InventorySection({
+  products,
+  vendorOrders,
+  isRestaurantVendor,
+  search,
+  statusFilter,
+  onSearchChange,
+  onStatusFilterChange,
+  onBatchUpsert,
+  loading,
+  error,
+}: {
+  products: VendorProductRecord[];
+  vendorOrders: VendorOrderRecord[];
+  isRestaurantVendor: boolean;
+  search: string;
+  statusFilter: VendorProductRecord["status"] | "all";
+  onSearchChange: (value: string) => void;
+  onStatusFilterChange: (value: VendorProductRecord["status"] | "all") => void;
+  onBatchUpsert: (updates: Array<{ productId: string; payload: VendorProductUpsertInput }>) => Promise<void>;
+  loading: boolean;
+  error: string | null;
+}) {
+  const [inventoryActionMessage, setInventoryActionMessage] = useState<string | null>(null);
+  const [inventoryActionError, setInventoryActionError] = useState<string | null>(null);
+  const [inventorySavingTarget, setInventorySavingTarget] = useState<string | null>(null);
+  const [draftInventoryByProductId, setDraftInventoryByProductId] = useState<Record<string, number>>({});
+  const [draftVariantInventoryByProductId, setDraftVariantInventoryByProductId] = useState<Record<string, Record<number, number>>>({});
+  const productEntityLabel = isRestaurantVendor ? "menu item" : "product";
+
+  useEffect(() => {
+    setDraftInventoryByProductId((current) => {
+      const next: Record<string, number> = {};
+      products.forEach((product) => {
+        next[product.id] =
+          typeof current[product.id] === "number" && Number.isFinite(current[product.id])
+            ? current[product.id]
+            : Math.max(0, Math.round(Number(product.inventory || 0)));
+      });
+      return next;
+    });
+  }, [products]);
+
+  useEffect(() => {
+    setDraftVariantInventoryByProductId((current) => {
+      const next: Record<string, Record<number, number>> = {};
+
+      products.forEach((product) => {
+        const currentProductDrafts = current[product.id] || {};
+        const nextProductDrafts: Record<number, number> = {};
+        (Array.isArray(product.variantData) ? product.variantData : []).forEach((variant, index) => {
+          nextProductDrafts[index] =
+            typeof currentProductDrafts[index] === "number" && Number.isFinite(currentProductDrafts[index])
+              ? currentProductDrafts[index]
+              : Math.max(0, Math.round(Number(variant.stock || 0)));
+        });
+        next[product.id] = nextProductDrafts;
+      });
+
+      return next;
+    });
+  }, [products]);
+
+  const getDraftInventory = (product: VendorProductRecord) =>
+    typeof draftInventoryByProductId[product.id] === "number"
+      ? draftInventoryByProductId[product.id]
+      : Math.max(0, Math.round(Number(product.inventory || 0)));
+
+  const getDraftVariantInventory = (product: VendorProductRecord, variantIndex: number) => {
+    const variantDrafts = draftVariantInventoryByProductId[product.id] || {};
+    const fallbackStock = Math.max(0, Math.round(Number(product.variantData?.[variantIndex]?.stock || 0)));
+    return typeof variantDrafts[variantIndex] === "number" ? variantDrafts[variantIndex] : fallbackStock;
+  };
+
+  const handleInventoryDraftChange = (productId: string, nextInventory: number) => {
+    const safeInventory = Math.max(0, Math.round(nextInventory));
+    setDraftInventoryByProductId((current) => ({
+      ...current,
+      [productId]: safeInventory,
+    }));
+  };
+
+  const handleVariantInventoryDraftChange = (productId: string, variantIndex: number, nextInventory: number) => {
+    const safeInventory = Math.max(0, Math.round(nextInventory));
+    setDraftVariantInventoryByProductId((current) => ({
+      ...current,
+      [productId]: {
+        ...(current[productId] || {}),
+        [variantIndex]: safeInventory,
+      },
+    }));
+  };
+
+  const pendingProducts = products.filter((product) => {
+    const inventoryChanged = getDraftInventory(product) !== Math.max(0, Math.round(Number(product.inventory || 0)));
+    const variantChanged = (Array.isArray(product.variantData) ? product.variantData : []).some(
+      (variant, index) => getDraftVariantInventory(product, index) !== Math.max(0, Math.round(Number(variant.stock || 0)))
+    );
+
+    return inventoryChanged || variantChanged;
+  });
+
+  const handleInventoryBatchSave = async () => {
+    if (pendingProducts.length === 0) {
+      setInventoryActionMessage("No stock changes to update.");
+      setInventoryActionError(null);
+      return;
+    }
+
+    setInventorySavingTarget("batch");
+    setInventoryActionMessage(null);
+    setInventoryActionError(null);
+
+    try {
+      const updates = pendingProducts.map((product) => {
+        const nextInventory = getDraftInventory(product);
+        const nextVariants = (Array.isArray(product.variantData) ? product.variantData : []).map((variant, index) => ({
+          ...variant,
+          stock: getDraftVariantInventory(product, index),
+        }));
+
+        return {
+          productId: product.id,
+          payload: buildVendorProductUpsertFromRecord(product, {
+            inventory: nextInventory,
+            variantData: nextVariants,
+          }),
+        };
+      });
+
+      await onBatchUpsert(updates);
+
+      setInventoryActionMessage(
+        `Updated stock for ${pendingProducts.length} ${pendingProducts.length === 1 ? productEntityLabel : `${productEntityLabel}s`}.`
+      );
+    } catch (saveError) {
+      setInventoryActionError(saveError instanceof Error ? saveError.message : `Could not update ${productEntityLabel} stock.`);
+    } finally {
+      setInventorySavingTarget(null);
+    }
+  };
+
+  return (
+    <section className="space-y-5">
+      <article className="rounded-3xl bg-white p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder={isRestaurantVendor ? "Search menu items for inventory" : "Search products for inventory"}
+            className="min-w-[220px] flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none ring-0 transition focus:border-blue-300"
+          />
+          <select
+            value={statusFilter}
+            onChange={(event) => onStatusFilterChange(event.target.value as VendorProductRecord["status"] | "all")}
+            className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-300"
+          >
+            <option value="all">All statuses</option>
+            {VENDOR_PRODUCT_STATUSES.map((status) => (
+              <option key={`inventory-status-${status}`} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+      </article>
+
+      {inventoryActionMessage ? <p className="text-sm font-medium text-emerald-700">{inventoryActionMessage}</p> : null}
+      {inventoryActionError ? <p className="text-sm font-medium text-rose-700">{inventoryActionError}</p> : null}
+
+      {loading ? (
+        <p className="text-sm text-gray-600">Loading inventory...</p>
+      ) : error ? (
+        <p className="text-sm text-rose-700">{error}</p>
+      ) : products.length === 0 ? (
+        <article className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+          <p className="text-lg font-semibold text-slate-900">No inventory items found.</p>
+          <p className="mt-2 text-sm text-slate-500">Add products first, then manage stock independently from this tab.</p>
+        </article>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          {products.map((product) => {
+            const relatedOrders = getOrdersForProduct(vendorOrders, product.id);
+            const draftInventory = getDraftInventory(product);
+            const hasProductInventoryChange = draftInventory !== Math.max(0, Math.round(Number(product.inventory || 0)));
+            const manualProductSoldUnits = Math.max(0, Math.max(0, Math.round(Number(product.inventory || 0))) - draftInventory);
+            const manualVariantSoldUnits = (Array.isArray(product.variantData) ? product.variantData : []).reduce((sum, variant, index) => {
+              const originalStock = Math.max(0, Math.round(Number(variant.stock || 0)));
+              const draftStock = getDraftVariantInventory(product, index);
+              return sum + Math.max(0, originalStock - draftStock);
+            }, 0);
+            const soldUnits = relatedOrders.reduce(
+              (sum, order) =>
+                sum +
+                order.items.reduce(
+                  (itemSum, item) => itemSum + (String(item.id || "").trim() === product.id ? Number(item.quantity || 0) : 0),
+                  0
+                ),
+              0
+            ) + manualProductSoldUnits + manualVariantSoldUnits;
+
+            return (
+              <article
+                key={product.id}
+                className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]"
+              >
+                <div className="flex gap-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                    {product.image ? (
+                      <img src={product.image} alt={product.productName} className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-xs text-slate-400">No image</div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-bold text-slate-900">{product.productName}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {product.categoryLabel} / {product.subcategoryName || "General"}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{product.status}</span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                      <span className={`rounded-full px-3 py-1 ${hasProductInventoryChange ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
+                        Stock {draftInventory}
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">Received orders {relatedOrders.length}</span>
+                      <span className="rounded-full bg-violet-50 px-3 py-1 text-violet-700">Sold units {soldUnits}</span>
+                      {hasProductInventoryChange ? <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">Unsaved</span> : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Available stock</p>
+                    <p className="truncate text-xs text-slate-500">Last updated: {formatDateTime(product.updatedAt)}</p>
+                  </div>
+                  <div className="inline-flex h-9 shrink-0 items-stretch overflow-hidden rounded-xl border border-emerald-300 bg-emerald-600 text-white">
+                    <button
+                      type="button"
+                      onClick={() => handleInventoryDraftChange(product.id, Math.max(0, draftInventory - 1))}
+                      disabled={inventorySavingTarget === "batch"}
+                      className="grid w-9 place-items-center transition hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <div className="grid min-w-[54px] place-items-center px-2 text-sm font-bold">{draftInventory}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleInventoryDraftChange(product.id, draftInventory + 1)}
+                      disabled={inventorySavingTarget === "batch"}
+                      className="grid w-9 place-items-center transition hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {Array.isArray(product.variantData) && product.variantData.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {product.variantData.map((variant, index) => (
+                      (() => {
+                        const draftVariantInventory = getDraftVariantInventory(product, index);
+                        const hasVariantInventoryChange =
+                          draftVariantInventory !== Math.max(0, Math.round(Number(variant.stock || 0)));
+
+                        return (
+                      <div
+                        key={`inventory-variant-${product.id}-${index}`}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {variant.size || "Standard"} {variant.color ? `/ ${variant.color}` : ""}
+                          </p>
+                          <p className="truncate mt-1 text-xs text-slate-500">
+                            MRP {formatCurrencyInr(variant.mrp)} / Selling {formatCurrencyInr(variant.sellingPrice)}
+                          </p>
+                          {hasVariantInventoryChange ? <p className="mt-1 text-[11px] font-semibold text-blue-700">Unsaved variant stock</p> : null}
+                        </div>
+
+                        <div className="inline-flex h-9 shrink-0 items-stretch overflow-hidden rounded-xl border border-blue-300 bg-blue-600 text-white">
+                          <button
+                            type="button"
+                            onClick={() => handleVariantInventoryDraftChange(product.id, index, Math.max(0, draftVariantInventory - 1))}
+                            disabled={inventorySavingTarget === "batch"}
+                            className="grid w-9 place-items-center transition hover:bg-blue-700 disabled:opacity-60"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="grid min-w-[52px] place-items-center px-2 text-sm font-bold">{draftVariantInventory}</div>
+                          <button
+                            type="button"
+                            onClick={() => handleVariantInventoryDraftChange(product.id, index, draftVariantInventory + 1)}
+                            disabled={inventorySavingTarget === "batch"}
+                            className="grid w-9 place-items-center transition hover:bg-blue-700 disabled:opacity-60"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                        );
+                      })()
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={handleInventoryBatchSave}
+        disabled={inventorySavingTarget === "batch" || pendingProducts.length === 0}
+        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(30,64,175,0.22)] transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Save className="h-5 w-5" aria-hidden="true" />
+        {inventorySavingTarget === "batch" ? "Updating..." : `Update Stock${pendingProducts.length > 0 ? ` (${pendingProducts.length})` : ""}`}
+      </button>
+    </section>
+  );
+}
+
 function VendorProductsSection({
   form,
   sellerName,
@@ -1831,6 +2756,8 @@ function VendorProductsSection({
   vendorSubcategoryName,
   categories,
   products,
+  vendorOrders,
+  vendorProfile,
   editingProduct,
   productsLoading,
   productsError,
@@ -1860,6 +2787,8 @@ function VendorProductsSection({
   vendorSubcategoryName?: string;
   categories: VendorCatalogCategory[];
   products: VendorProductRecord[];
+  vendorOrders: VendorOrderRecord[];
+  vendorProfile: VendorSession | null;
   editingProduct: VendorProductRecord | null;
   productsLoading: boolean;
   productsError: string | null;
@@ -1881,6 +2810,12 @@ function VendorProductsSection({
   onQuickUpsert: (payload: VendorProductUpsertInput, productId?: string | null) => Promise<void>;
 }) {
   const [showProductForm, setShowProductForm] = useState(false);
+  const [managedProductId, setManagedProductId] = useState<string | null>(null);
+  const [activeManageTab, setActiveManageTab] = useState<"billing" | "inventory">("billing");
+  const [selectedOrderIdByProduct, setSelectedOrderIdByProduct] = useState<Record<string, string>>({});
+  const [inventoryActionMessage, setInventoryActionMessage] = useState<string | null>(null);
+  const [inventoryActionError, setInventoryActionError] = useState<string | null>(null);
+  const [inventorySavingTarget, setInventorySavingTarget] = useState<string | null>(null);
   const isProductFormVisible = showProductForm || Boolean(editingProductId);
   const productEntityLabel = isRestaurantVendor ? "Menu" : "Products";
   const addActionLabel = isRestaurantVendor ? "Add Menu Item" : "Add Product";
@@ -1953,6 +2888,118 @@ function VendorProductsSection({
 
   const selectedCategory = categories.find((category) => category.slug === form.categorySlug) || null;
   const subcategories = selectedCategory ? selectedCategory.subcategories : [];
+  const managedProduct = managedProductId ? products.find((product) => product.id === managedProductId) || null : null;
+  const managedProductOrders = useMemo(() => {
+    if (!managedProduct) {
+      return [];
+    }
+
+    return vendorOrders.filter((order) =>
+      Array.isArray(order.items) && order.items.some((item) => String(item.id || "").trim() === managedProduct.id)
+    );
+  }, [managedProduct, vendorOrders]);
+  const selectedManagedOrder =
+    (managedProduct
+      ? managedProductOrders.find((order) => order.id === selectedOrderIdByProduct[managedProduct.id])
+      : null) ||
+    managedProductOrders[0] ||
+    null;
+
+  const closeManageModal = () => {
+    setManagedProductId(null);
+    setInventoryActionMessage(null);
+    setInventoryActionError(null);
+    setInventorySavingTarget(null);
+  };
+
+  const handleManagedInventorySave = async (nextInventory: number) => {
+    if (!managedProduct) return;
+
+    const safeInventory = Math.max(0, Math.round(nextInventory));
+    setInventorySavingTarget("inventory");
+    setInventoryActionMessage(null);
+    setInventoryActionError(null);
+
+    try {
+      await onQuickUpsert(
+        buildVendorProductUpsertFromRecord(managedProduct, {
+          inventory: safeInventory,
+        }),
+        managedProduct.id
+      );
+      setInventoryActionMessage(`Stock updated to ${safeInventory}.`);
+    } catch (error) {
+      setInventoryActionError(error instanceof Error ? error.message : "Could not update stock.");
+    } finally {
+      setInventorySavingTarget(null);
+    }
+  };
+
+  const handleManagedVariantInventorySave = async (variantIndex: number, nextInventory: number) => {
+    if (!managedProduct || !Array.isArray(managedProduct.variantData) || !managedProduct.variantData[variantIndex]) return;
+
+    const safeInventory = Math.max(0, Math.round(nextInventory));
+    const nextVariants = managedProduct.variantData.map((variant, index) =>
+      index === variantIndex ? { ...variant, stock: safeInventory } : { ...variant }
+    );
+
+    setInventorySavingTarget(`variant-${variantIndex}`);
+    setInventoryActionMessage(null);
+    setInventoryActionError(null);
+
+    try {
+      await onQuickUpsert(
+        buildVendorProductUpsertFromRecord(managedProduct, {
+          variantData: nextVariants,
+        }),
+        managedProduct.id
+      );
+      setInventoryActionMessage("Variant stock updated.");
+    } catch (error) {
+      setInventoryActionError(error instanceof Error ? error.message : "Could not update variant stock.");
+    } finally {
+      setInventorySavingTarget(null);
+    }
+  };
+
+  const handleDownloadInvoice = () => {
+    if (!selectedManagedOrder || !managedProduct) return;
+
+    const invoiceNo = `INV-${String(selectedManagedOrder.orderNo || managedProduct.id).replace(/[^A-Za-z0-9]/g, "").slice(-10) || managedProduct.id.slice(-8).toUpperCase()}`;
+    openInvoicePrintWindow({
+      invoiceNo,
+      order: selectedManagedOrder,
+      sellerName: String(vendorProfile?.businessName || vendorProfile?.name || managedProduct.sellerName || "Vendor Store").trim(),
+      sellerAddress:
+        String(vendorProfile?.businessAddress || "").trim() ||
+        [vendorProfile?.sublocality, vendorProfile?.city, vendorProfile?.state, vendorProfile?.postalCode].filter(Boolean).join(", "),
+      sellerEmail: String(vendorProfile?.businessEmail || vendorProfile?.email || "").trim() || undefined,
+      sellerPhone: String(vendorProfile?.businessPhone || vendorProfile?.phone || "").trim() || undefined,
+      sellerGst: String(vendorProfile?.gstNumber || "").trim() || undefined,
+    });
+  };
+
+  const handleSendInvoiceEmail = () => {
+    if (!selectedManagedOrder?.customerEmail) return;
+
+    const subject = encodeURIComponent(`Winkget Express invoice ${selectedManagedOrder.orderNo}`);
+    const body = encodeURIComponent(
+      `Hello ${selectedManagedOrder.customer},%0D%0A%0D%0APlease find your invoice details below:%0D%0AOrder No: ${selectedManagedOrder.orderNo}%0D%0ADate: ${formatFullDateTime(selectedManagedOrder.createdAt)}%0D%0ATotal: ${formatCurrencyInr(selectedManagedOrder.totals?.total || selectedManagedOrder.amount)}%0D%0APayment: ${String(selectedManagedOrder.paymentMethod || "").toUpperCase()} (${selectedManagedOrder.paymentStatus})%0D%0A%0D%0ARegards,%0D%0AWinkget Express`
+    );
+
+    window.location.href = `mailto:${encodeURIComponent(selectedManagedOrder.customerEmail)}?subject=${subject}&body=${body}`;
+  };
+
+  const handleSendInvoiceWhatsapp = () => {
+    const customerPhone = normalizeWhatsappPhone(selectedManagedOrder?.customerPhone || selectedManagedOrder?.address?.phone || "");
+    if (!customerPhone || !selectedManagedOrder) return;
+
+    const text = encodeURIComponent(
+      `Hello ${selectedManagedOrder.customer}, your Winkget Express invoice is ready.%0AOrder No: ${selectedManagedOrder.orderNo}%0ATotal: ${formatCurrencyInr(selectedManagedOrder.totals?.total || selectedManagedOrder.amount)}%0APayment: ${String(selectedManagedOrder.paymentMethod || "").toUpperCase()} (${selectedManagedOrder.paymentStatus})`
+    );
+
+    window.open(`https://wa.me/${customerPhone}?text=${text}`, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <section className="space-y-4 pb-16">
@@ -2089,6 +3136,354 @@ function VendorProductsSection({
           )}
         </div>
       </article>
+
+      {managedProduct ? (
+        <section className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 sm:p-6" aria-label="Manage product">
+          <button type="button" onClick={closeManageModal} className="fixed inset-0" aria-label="Close product manager" />
+
+          <div className="relative mx-auto max-w-6xl rounded-[28px] border border-slate-200 bg-[#f7faff] shadow-[0_30px_90px_rgba(15,23,42,0.26)]">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Product Manager</p>
+                <h3 className="mt-1 truncate text-xl font-bold text-slate-900">{managedProduct.productName}</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {managedProduct.categoryLabel} / {managedProduct.subcategoryName || "General"} / Stock {managedProduct.inventory}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {(["billing", "inventory"] as const).map((tab) => (
+                  <button
+                    key={`manage-tab-${tab}`}
+                    type="button"
+                    onClick={() => setActiveManageTab(tab)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      activeManageTab === tab
+                        ? "bg-blue-600 text-white shadow-[0_12px_24px_rgba(37,99,235,0.24)]"
+                        : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {tab === "billing" ? "Billing" : "Inventory"}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={closeManageModal}
+                  className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-700"
+                  aria-label="Close product manager"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[82vh] overflow-y-auto p-5 sm:p-6">
+              {activeManageTab === "billing" ? (
+                <div className="space-y-5">
+                  {managedProductOrders.length > 1 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {managedProductOrders.map((order) => (
+                        <button
+                          key={`order-chip-${order.id}`}
+                          type="button"
+                          onClick={() =>
+                            setSelectedOrderIdByProduct((current) => ({
+                              ...current,
+                              [managedProduct.id]: order.id,
+                            }))
+                          }
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                            selectedManagedOrder?.id === order.id
+                              ? "bg-blue-600 text-white"
+                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {order.orderNo}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {selectedManagedOrder ? (
+                    <div className="space-y-5">
+                      <div className="rounded-[28px] border border-[#dbe6fb] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                        <div className="rounded-t-[28px] bg-gradient-to-r from-[#0f4fd6] via-[#1d62f0] to-[#3b82f6] px-6 py-5 text-white">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <p className="text-[28px] font-extrabold leading-none">Winkget Express</p>
+                              <p className="mt-2 max-w-2xl text-sm text-blue-50">{WINKGET_EXPRESS_ADDRESS}</p>
+                            </div>
+                            <div className="rounded-2xl bg-white/12 px-4 py-3 text-right backdrop-blur-sm">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">Invoice</p>
+                              <p className="mt-1 text-lg font-bold text-white">
+                                INV-{String(selectedManagedOrder.orderNo || managedProduct.id).replace(/[^A-Za-z0-9]/g, "").slice(-10) || managedProduct.id.slice(-8).toUpperCase()}
+                              </p>
+                              <p className="mt-1 text-xs text-blue-100">{formatFullDateTime(selectedManagedOrder.createdAt)}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 px-6 py-5 lg:grid-cols-[1fr_1fr]">
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Billed By</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">
+                              {String(vendorProfile?.businessName || vendorProfile?.name || managedProduct.sellerName || "Vendor Store").trim()}
+                            </p>
+                            <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
+                              <p>
+                                {String(vendorProfile?.businessAddress || "").trim() ||
+                                  [vendorProfile?.sublocality, vendorProfile?.city, vendorProfile?.state, vendorProfile?.postalCode]
+                                    .filter(Boolean)
+                                    .join(", ") ||
+                                  "Seller address unavailable"}
+                              </p>
+                              {vendorProfile?.businessPhone || vendorProfile?.phone ? (
+                                <p>Phone: {String(vendorProfile?.businessPhone || vendorProfile?.phone || "").trim()}</p>
+                              ) : null}
+                              {vendorProfile?.businessEmail || vendorProfile?.email ? (
+                                <p>Email: {String(vendorProfile?.businessEmail || vendorProfile?.email || "").trim()}</p>
+                              ) : null}
+                              {vendorProfile?.gstNumber ? <p>GSTIN: {vendorProfile.gstNumber}</p> : null}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Customer & Delivery</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">{selectedManagedOrder.customer}</p>
+                            <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
+                              {selectedManagedOrder.customerPhone ? <p>Phone: {selectedManagedOrder.customerPhone}</p> : null}
+                              {selectedManagedOrder.customerEmail ? <p>Email: {selectedManagedOrder.customerEmail}</p> : null}
+                              <p>
+                                {[
+                                  selectedManagedOrder.address?.line1,
+                                  selectedManagedOrder.address?.line2,
+                                  selectedManagedOrder.address?.landmark,
+                                  [selectedManagedOrder.address?.city, selectedManagedOrder.address?.state]
+                                    .filter(Boolean)
+                                    .join(", "),
+                                  selectedManagedOrder.address?.postalCode,
+                                ]
+                                  .map((item) => String(item || "").trim())
+                                  .filter(Boolean)
+                                  .join(", ") || "Address unavailable"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="px-6 pb-6">
+                          <div className="overflow-hidden rounded-2xl border border-slate-200">
+                            <table className="w-full border-collapse">
+                              <thead className="bg-slate-50">
+                                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  <th className="px-4 py-3">Item</th>
+                                  <th className="px-4 py-3">Qty</th>
+                                  <th className="px-4 py-3">Unit Price</th>
+                                  <th className="px-4 py-3">Line Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedManagedOrder.items.map((item) => (
+                                  <tr key={`invoice-item-${item.id}-${item.name}`} className="border-t border-slate-200 text-sm text-slate-700">
+                                    <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
+                                    <td className="px-4 py-3">{item.quantity}</td>
+                                    <td className="px-4 py-3">{formatCurrencyInr(item.price)}</td>
+                                    <td className="px-4 py-3 font-semibold text-slate-900">
+                                      {formatCurrencyInr(item.price * item.quantity)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={handleDownloadInvoice}
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(37,99,235,0.24)] transition hover:bg-blue-700"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download PDF
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSendInvoiceWhatsapp}
+                                disabled={!normalizeWhatsappPhone(selectedManagedOrder.customerPhone || selectedManagedOrder.address?.phone || "")}
+                                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                                Send on Number
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSendInvoiceEmail}
+                                disabled={!selectedManagedOrder.customerEmail}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Mail className="h-4 w-4" />
+                                Send Email
+                              </button>
+                            </div>
+
+                            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:max-w-sm">
+                              <div className="space-y-2 text-sm text-slate-600">
+                                <div className="flex items-center justify-between">
+                                  <span>MRP</span>
+                                  <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedManagedOrder.totals?.mrp || 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Subtotal</span>
+                                  <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedManagedOrder.totals?.subtotal || 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Savings</span>
+                                  <span className="font-semibold text-emerald-700">{formatCurrencyInr(selectedManagedOrder.totals?.savings || 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Shipping Fee</span>
+                                  <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedManagedOrder.totals?.shippingFee || 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Platform Fee</span>
+                                  <span className="font-semibold text-slate-900">{formatCurrencyInr(selectedManagedOrder.totals?.platformFee || 0)}</span>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+                                <span className="text-base font-semibold text-slate-700">Total</span>
+                                <span className="text-2xl font-extrabold text-slate-900">
+                                  {formatCurrencyInr(selectedManagedOrder.totals?.total || selectedManagedOrder.amount)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-xs text-slate-500">
+                                Payment: {String(selectedManagedOrder.paymentMethod || "").toUpperCase()} / {selectedManagedOrder.paymentStatus}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="px-1 text-xs text-slate-500">
+                        `Download PDF` opens a print-friendly invoice window so it can be saved as PDF from the browser.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                      <p className="text-lg font-semibold text-slate-900">No billing records for this product yet.</p>
+                      <p className="mt-2 text-sm text-slate-500">Once an order includes this product, the bill will appear here with customer details and invoice actions.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+                      <div className="flex gap-4">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                          {managedProduct.image ? (
+                            <img src={managedProduct.image} alt={managedProduct.productName} className="h-full w-full object-contain" />
+                          ) : (
+                            <div className="grid h-full w-full place-items-center text-xs text-slate-400">No image</div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Inventory Control</p>
+                          <h4 className="mt-1 text-2xl font-bold text-slate-900">{managedProduct.productName}</h4>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{managedProduct.categoryLabel}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{managedProduct.subcategoryName || "General"}</span>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{managedProduct.status}</span>
+                          </div>
+                          <p className="mt-3 text-sm text-slate-500">Update stock instantly for this product and its variants. Changes are saved to the live vendor product record.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Available Stock</p>
+                      <div className="mt-3 inline-flex h-12 items-stretch overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-600 text-white shadow-[0_12px_28px_rgba(22,163,74,0.22)]">
+                        <button
+                          type="button"
+                          onClick={() => handleManagedInventorySave(Math.max(0, managedProduct.inventory - 1))}
+                          disabled={inventorySavingTarget === "inventory"}
+                          className="grid w-12 place-items-center text-xl font-bold transition hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <div className="grid min-w-[72px] place-items-center bg-emerald-600 px-4 text-lg font-extrabold text-white">
+                          {managedProduct.inventory}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleManagedInventorySave(managedProduct.inventory + 1)}
+                          disabled={inventorySavingTarget === "inventory"}
+                          className="grid w-12 place-items-center text-xl font-bold transition hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-500">Last updated: {formatDateTime(managedProduct.updatedAt)}</p>
+                      {inventoryActionMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{inventoryActionMessage}</p> : null}
+                      {inventoryActionError ? <p className="mt-3 text-sm font-medium text-rose-700">{inventoryActionError}</p> : null}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-lg font-bold text-slate-900">Variant Stock</h4>
+                        <p className="mt-1 text-sm text-slate-500">Update stock variant by variant without opening the full edit form.</p>
+                      </div>
+                    </div>
+
+                    {Array.isArray(managedProduct.variantData) && managedProduct.variantData.length > 0 ? (
+                      <div className="mt-4 grid gap-3">
+                        {managedProduct.variantData.map((variant, index) => (
+                          <div key={`variant-stock-${managedProduct.id}-${index}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {variant.size || "Standard"} {variant.color ? `/ ${variant.color}` : ""}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                MRP {formatCurrencyInr(variant.mrp)} / Selling {formatCurrencyInr(variant.sellingPrice)}
+                              </p>
+                            </div>
+
+                            <div className="inline-flex h-11 items-stretch overflow-hidden rounded-2xl border border-blue-300 bg-blue-600 text-white">
+                              <button
+                                type="button"
+                                onClick={() => handleManagedVariantInventorySave(index, Math.max(0, variant.stock - 1))}
+                                disabled={inventorySavingTarget === `variant-${index}`}
+                                className="grid w-11 place-items-center transition hover:bg-blue-700 disabled:opacity-60"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <div className="grid min-w-[64px] place-items-center px-3 text-base font-bold">{variant.stock}</div>
+                              <button
+                                type="button"
+                                onClick={() => handleManagedVariantInventorySave(index, variant.stock + 1)}
+                                disabled={inventorySavingTarget === `variant-${index}`}
+                                className="grid w-11 place-items-center transition hover:bg-blue-700 disabled:opacity-60"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                        This product has no variants. Use the main stock control above to manage availability.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {!isProductFormVisible ? (
         <button
@@ -2725,6 +4120,7 @@ export default function VendorDashboard() {
   const [updatingVendorOrderId, setUpdatingVendorOrderId] = useState<string | null>(null);
   const [vendorOrderActionMessage, setVendorOrderActionMessage] = useState<string | null>(null);
   const [vendorOrderActionError, setVendorOrderActionError] = useState<string | null>(null);
+  const [selectedBillingOrderId, setSelectedBillingOrderId] = useState<string | null>(null);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<InquiryStatusFilter>("All");
   const [inquirySearch, setInquirySearch] = useState("");
   const [settingsForm, setSettingsForm] = useState<SettingsFormState>(() => buildSettingsForm(null));
@@ -2854,6 +4250,16 @@ export default function VendorDashboard() {
   }, [vendorOrderData.orders]);
 
   useEffect(() => {
+    setSelectedBillingOrderId((current) => {
+      if (current && vendorOrderData.orders.some((order) => order.id === current)) {
+        return current;
+      }
+
+      return vendorOrderData.orders[0]?.id || null;
+    });
+  }, [vendorOrderData.orders]);
+
+  useEffect(() => {
     const vendorId = String(vendor?.id || "").trim();
     if (!vendorId) {
       setNotificationReadMap({});
@@ -2962,7 +4368,7 @@ export default function VendorDashboard() {
   };
 
   useEffect(() => {
-    if (activeNav !== "Products" || !vendor?.id || vendorProductsLoading || vendorProductsLoaded) {
+    if (!["Products", "Inventory"].includes(activeNav) || !vendor?.id || vendorProductsLoading || vendorProductsLoaded) {
       return;
     }
 
@@ -3295,6 +4701,8 @@ export default function VendorDashboard() {
       Calls: 0,
       Reviews: 0,
       Orders: 0,
+      Billing: 0,
+      Inventory: 0,
       Posts: 0,
       Shop: 0,
       MyStore: 0,
@@ -3311,7 +4719,7 @@ export default function VendorDashboard() {
   }, [notificationsWithRead]);
 
   const sectionMeta = SECTION_META[activeNav];
-  const shouldShowQuickAnalytics = activeNav !== "Products";
+  const shouldShowQuickAnalytics = !["Products", "Billing", "Inventory"].includes(activeNav);
   const businessName = String(vendor?.businessName || "Your Business").trim() || "Your Business";
   const vendorName = String(vendor?.name || "Vendor").trim() || "Vendor";
   const location = [vendor?.city, vendor?.state].filter(Boolean).join(", ") || "Location not set";
@@ -4003,6 +5411,51 @@ export default function VendorDashboard() {
     }
   };
 
+  const handleVendorProductBatchUpsert = async (updates: Array<{ productId: string; payload: VendorProductUpsertInput }>) => {
+    if (!vendor || productFormSaving) {
+      throw new Error(isRestaurantVendor ? "Unable to save menu items right now" : "Unable to save products right now");
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    setProductFormSaving(true);
+    setProductFormMessage(null);
+    setProductFormError(null);
+
+    try {
+      const updatedProducts = await Promise.all(
+        updates.map(async ({ productId, payload }) => {
+          if (!payload.categorySlug || !payload.productName || !payload.image) {
+            throw new Error("Category, product name, and image are required.");
+          }
+
+          if (!Number.isFinite(payload.price) || payload.price <= 0) {
+            throw new Error("Price must be greater than 0.");
+          }
+
+          return updateVendorProduct(productId, payload);
+        })
+      );
+
+      const updatedById = new Map(updatedProducts.map((product) => [product.id, product]));
+      setVendorProducts((current) => current.map((product) => updatedById.get(product.id) || product));
+      setProductFormMessage(
+        isRestaurantVendor
+          ? `${updatedProducts.length} menu item stock updates saved.`
+          : `${updatedProducts.length} product stock updates saved.`
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : isRestaurantVendor ? "Failed to save menu item stock" : "Failed to save product stock";
+      setProductFormError(message);
+      throw error;
+    } finally {
+      setProductFormSaving(false);
+    }
+  };
+
   const handleVendorProductEdit = (product: VendorProductRecord) => {
     setEditingProductId(product.id);
     setProductForm(toProductFormState(product, vendor));
@@ -4100,6 +5553,36 @@ export default function VendorDashboard() {
       );
     }
 
+    if (activeNav === "Billing") {
+      return (
+        <BillingSection
+          vendorProfile={vendor}
+          orders={vendorOrderData.orders}
+          selectedOrderId={selectedBillingOrderId}
+          onSelectOrder={setSelectedBillingOrderId}
+          loading={vendorOrdersLoading}
+          error={vendorOrdersError}
+        />
+      );
+    }
+
+    if (activeNav === "Inventory") {
+      return (
+        <InventorySection
+          products={filteredVendorProducts}
+          vendorOrders={vendorOrderData.orders}
+          isRestaurantVendor={isRestaurantVendor}
+          search={productSearch}
+          statusFilter={productStatusFilter}
+          onSearchChange={setProductSearch}
+          onStatusFilterChange={setProductStatusFilter}
+          onBatchUpsert={handleVendorProductBatchUpsert}
+          loading={vendorProductsLoading}
+          error={vendorProductsError}
+        />
+      );
+    }
+
     if (activeNav === "Posts") {
       return (
         <PostsSection
@@ -4166,6 +5649,8 @@ export default function VendorDashboard() {
           vendorSubcategoryName={vendor.businessSubcategory?.name}
           categories={scopedVendorCategories}
           products={filteredVendorProducts}
+          vendorOrders={vendorOrderData.orders}
+          vendorProfile={vendor}
           editingProduct={editingProduct}
           productsLoading={vendorProductsLoading}
           productsError={vendorProductsError}
@@ -4244,7 +5729,7 @@ export default function VendorDashboard() {
             shouldShowQuickAnalytics ? "xl:grid-cols-[248px_minmax(0,1fr)_320px]" : ""
           }`}
         >
-          <aside className="hidden self-start lg:sticky lg:top-6 lg:flex lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:overflow-y-auto rounded-3xl border-r border-blue-100/80 bg-white/72 p-4 backdrop-blur-md">
+          <aside className="hidden self-start lg:sticky lg:top-4 lg:flex lg:min-h-[calc(100vh-2rem)] lg:flex-col rounded-3xl border-r border-blue-100/80 bg-white/72 p-4 backdrop-blur-md">
             <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">

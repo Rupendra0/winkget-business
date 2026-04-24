@@ -7,6 +7,7 @@ import BackToTop from "@/components/BackToTop";
 import GlobalNavigationLoader from "@/components/GlobalNavigationLoader";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ImageProtection from "@/components/ImageProtection";
+import FrontendFailureLogger from "@/components/FrontendFailureLogger";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} ${inter.variable} ${poppins.variable} ${rajdhani.variable} antialiased`}
       >
+        <FrontendFailureLogger />
         <ImageProtection />
         <Suspense fallback={null}>
           <GlobalNavigationLoader />

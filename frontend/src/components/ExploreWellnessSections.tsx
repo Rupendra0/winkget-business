@@ -253,7 +253,7 @@ export default function ExploreWellnessSections() {
   }
 
   return (
-    <section className="space-y-4 px-0 py-4 sm:px-4 lg:px-6 xl:px-8">
+    <section className="space-y-4 px-0 py-0 sm:px-4 lg:px-6 xl:px-8">
       {exploreCards.length > 0 ? (
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
           <div className="mb-3">
