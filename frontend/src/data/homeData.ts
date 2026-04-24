@@ -478,10 +478,11 @@ export const footerData = {
     "Packers & Movers",
     "Painting Contractors",
   ],
-  navigation: ["Plans", "My Account", "My Order", "FAQ", "Support"],
+  navigation: ["Plans", "My Account", "My Order", "FAQ", "Support", "Sell on Winkget"],
   policies: ["Return Policy", "Privacy Policy", "Terms & Conditions"],
   quickLinks: [
     "Feedback",
+    "Join as Vendor",
     "Free Listing",
     "Add Your Business",
     "Advertise",

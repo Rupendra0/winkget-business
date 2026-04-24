@@ -23,6 +23,7 @@ type CityOption = {
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -337,9 +338,12 @@ export default function Navbar() {
 
           {/* Right Navigation */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="rounded-md border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-orange-50 btn-hover shadow-sm">
-              Explore
-            </button>
+            <a
+              href={VENDOR_REGISTRATION_URL}
+              className="rounded-md border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+            >
+              Sell on Winkget
+            </a>
             <button className="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>

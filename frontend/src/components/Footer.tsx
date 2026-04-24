@@ -16,6 +16,8 @@ const linkTextClass = "text-[0.95rem] leading-[1.35] text-[#111827] transition-c
 const footerRouteMap: Record<string, string> = {
   "My Account": "/profile",
   "My Order": "/orders",
+  "Sell on Winkget": VENDOR_REGISTRATION_URL,
+  "Join as Vendor": VENDOR_REGISTRATION_URL,
   "Free Listing": VENDOR_REGISTRATION_URL,
   "Add Your Business": VENDOR_REGISTRATION_URL,
   B2B: VENDOR_REGISTRATION_URL,
