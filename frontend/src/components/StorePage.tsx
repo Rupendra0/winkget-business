@@ -539,48 +539,53 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
 
           <div className="hidden gap-2.5 sm:grid sm:grid-cols-4">
-            <article className="rounded-xl px-18 py-1">
+            <article className="rounded-2xl border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ratings</p>
-              <p className="mt-1.5 text-base font-semibold leading-tight text-slate-900 sm:text-lg">{ratingSummary}</p>
-              <div className="mt-1.5 flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <Star
-                    key={`store-rating-star-${index}`}
-                    size={15}
-                    className={index < ratingStars ? "fill-amber-400 text-amber-400" : "text-slate-300"}
-                    aria-hidden="true"
-                  />
-                ))}
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star
+                      key={`store-rating-star-${index}`}
+                      size={15}
+                      className={index < ratingStars ? "fill-amber-400 text-amber-400" : "text-slate-300"}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold leading-none text-slate-900">{ratingLabel(storeReviewStats.rating)}</p>
+                  <p className="mt-1 text-[11px] font-medium leading-none text-slate-500">{storeReviewStats.reviews} reviews</p>
+                </div>
               </div>
             </article>
 
-            <article className={`rounded-xl px-4 py-3 ${availabilityCardClass}`}>
+            <article className={`rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ${availabilityCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Availability</p>
-              <div className="mt-1.5 flex items-center gap-2">
-                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${availabilityToneClass}`}>
+              <div className="mt-2 flex items-center gap-2.5">
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-current/10 bg-emerald-50 ${availabilityToneClass}`}>
                   <Truck size={17} aria-hidden="true" />
                 </span>
                 <p className={`text-base font-semibold leading-tight sm:text-lg ${availabilityToneClass}`}>{availabilityLabel}</p>
               </div>
             </article>
 
-            <article className={`rounded-xl px-4 py-3 ${statusCardClass}`}>
+            <article className={`rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ${statusCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
-              <div className="mt-1.5 flex items-center gap-2">
-                <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${statusToneClass}`}>
+              <div className="mt-2 flex items-center gap-2.5">
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-current/10 bg-emerald-50 ${statusToneClass}`}>
                   <Store size={17} aria-hidden="true" />
                 </span>
                 <p className={`text-base font-semibold leading-tight sm:text-lg ${statusToneClass}`}>{statusLabel}</p>
               </div>
             </article>
 
-            <article className="rounded-xl px-4 py-3">
+            <article className="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Shipping</p>
-              <div className="mt-1.5 flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 text-emerald-700">
+              <div className="mt-2 flex items-center gap-2.5">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
                   <CheckCircle2 size={17} aria-hidden="true" />
                 </span>
-                <p className="text-lg font-semibold leading-tight text-emerald-700 sm:text-xl">{shippingValue}</p>
+                <p className="text-base font-semibold leading-tight text-emerald-700 sm:text-lg">{shippingValue}</p>
               </div>
             </article>
           </div>

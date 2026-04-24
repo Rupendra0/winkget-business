@@ -257,6 +257,12 @@ export default function ProductDetailPageClient({
     router.push("/checkout");
   };
 
+  const breadcrumbCategoryLabel = String(product.categoryLabel || "").trim() || "Category";
+  const breadcrumbVendorLabel = String(product.sellerName || product.vendorSource || "").trim() || "Vendor";
+  const breadcrumbStoreLabel = "My Store";
+  const breadcrumbProductLabel = String(product.name || "").trim() || "Product";
+  const storeHref = product.storeId ? `/store/${encodeURIComponent(product.storeId)}` : "";
+
   return (
     <div className="space-y-0.5">
       <nav className="-mx-2 border border-slate-200 bg-white px-4 py-1.5 text-sm text-slate-600 sm:-mx-3">
@@ -265,10 +271,20 @@ export default function ProductDetailPageClient({
         </Link>
         <span className="px-2">/</span>
         <Link href={`/category/${encodeURIComponent(product.categorySlug || "")}`} className="hover:text-blue-700">
-          {product.categoryLabel || "Category"}
+          {breadcrumbCategoryLabel}
         </Link>
         <span className="px-2">/</span>
-        <span className="text-slate-800">{product.subcategoryName || "Products"}</span>
+        <span className="text-slate-700">{breadcrumbVendorLabel}</span>
+        <span className="px-2">/</span>
+        {storeHref ? (
+          <Link href={storeHref} className="hover:text-blue-700">
+            {breadcrumbStoreLabel}
+          </Link>
+        ) : (
+          <span className="text-slate-700">{breadcrumbStoreLabel}</span>
+        )}
+        <span className="px-2">/</span>
+        <span className="text-slate-800">{breadcrumbProductLabel}</span>
       </nav>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
