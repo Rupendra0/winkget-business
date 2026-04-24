@@ -19,9 +19,9 @@ const {
   resolveEffectiveCustomForm,
   validateCustomFormData,
 } = require("../lib/customForm");
+const { resolveTokenFromRequest } = require("../lib/authCookies");
 
 const router = express.Router();
-const AUTH_COOKIE_NAME = "winkget_auth";
 const VENDOR_STATUS_VALUES = new Set(["pending", "approved", "rejected"]);
 const VENDOR_LIST_STATUS_VALUES = new Set(["all", "pending", "approved", "rejected"]);
 const USER_LIST_ROLE_VALUES = new Set(["all", "admin", "customer", "vendor"]);
@@ -255,18 +255,6 @@ const validateHomeSectionCards = async (cards, options = {}) => {
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
   return jwt.verify(token, secret);
-};
-
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
 };
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -790,7 +778,7 @@ const toUserDetail = (user) => ({
 
 const requireAdmin = async (req, res, next) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, "admin");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }

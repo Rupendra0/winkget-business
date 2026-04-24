@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
-import { CART_UPDATED_EVENT, readCart } from "@/lib/shopStorage";
+import { CART_UPDATED_EVENT, readCart, setCartItemQuantity } from "@/lib/shopStorage";
 import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
 type RestaurantMarketplacePageProps = {
@@ -141,7 +141,7 @@ export default function RestaurantMarketplacePage({
   const [quickViewProduct, setQuickViewProduct] = useState<StoreProduct | null>(null);
   const [quickViewImage, setQuickViewImage] = useState("");
   const [quickViewSaved, setQuickViewSaved] = useState(false);
-  const [addedToCartProductIds, setAddedToCartProductIds] = useState<Record<string, boolean>>({});
+  const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     return subscribeVendorStoreStatus(String(data.id || ""), (payload) => {
@@ -151,15 +151,15 @@ export default function RestaurantMarketplacePage({
 
   useEffect(() => {
     const syncCartState = () => {
-      const next: Record<string, boolean> = {};
+      const next: Record<string, number> = {};
       readCart().forEach((item) => {
         const productId = String(item?.product?.id || "").trim();
         if (productId) {
-          next[productId] = true;
+          next[productId] = Math.max(1, Number(item.quantity || 1));
         }
       });
 
-      setAddedToCartProductIds(next);
+      setCartQuantities(next);
     };
 
     syncCartState();
@@ -364,7 +364,7 @@ export default function RestaurantMarketplacePage({
         quickViewProduct?.subcategoryName ||
         "Food & Beverages"
     ).trim() || "Food & Beverages";
-  const isQuickViewInCart = quickViewProduct ? Boolean(addedToCartProductIds[quickViewProduct.id]) : false;
+  const quickViewCartQuantity = quickViewProduct ? Math.max(0, Number(cartQuantities[quickViewProduct.id] || 0)) : 0;
 
   const openQuickView = (product: StoreProduct) => {
     const primaryImage =
@@ -384,23 +384,14 @@ export default function RestaurantMarketplacePage({
 
   const handleAddToCartWithFeedback = useCallback(
     (product: StoreProduct) => {
-      const alreadyInCart = readCart().some((item) => item.product.id === product.id);
-      if (alreadyInCart) {
-        setAddedToCartProductIds((previous) => ({
-          ...previous,
-          [product.id]: true,
-        }));
-        return;
-      }
-
       onAddToCart(product);
-      setAddedToCartProductIds((previous) => ({
-        ...previous,
-        [product.id]: true,
-      }));
     },
     [onAddToCart]
   );
+
+  const updateCartQuantity = useCallback((productId: string, nextQuantity: number) => {
+    setCartItemQuantity(productId, nextQuantity);
+  }, []);
 
   useEffect(() => {
     if (!quickViewProduct || typeof window === "undefined") {
@@ -681,7 +672,7 @@ export default function RestaurantMarketplacePage({
                 const oldPriceValue = Number(product.oldPriceValue || 0);
                 const hasDiscount = oldPriceValue > priceValue;
                 const discountPercent = hasDiscount ? Math.round(((oldPriceValue - priceValue) / oldPriceValue) * 100) : 0;
-                const isProductInCart = Boolean(addedToCartProductIds[product.id]);
+                const productCartQuantity = Math.max(0, Number(cartQuantities[product.id] || 0));
 
                 return (
                   <article
@@ -735,18 +726,38 @@ export default function RestaurantMarketplacePage({
 
                       <p className="mt-2 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
 
-                      <button
-                        type="button"
-                        onClick={() => (isProductInCart ? router.push("/cart") : handleAddToCartWithFeedback(product))}
-                        className={`mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl text-sm font-semibold text-white ${
-                          isProductInCart
-                            ? "bg-emerald-600 shadow-[0_8px_16px_rgba(5,150,105,0.26)] hover:bg-emerald-700"
-                            : "bg-[#fb6a3d] shadow-[0_8px_16px_rgba(251,106,61,0.28)]"
-                        }`}
-                      >
-                        <ShoppingCart size={14} />
-                        {isProductInCart ? "Go to Cart" : "Add to Cart"}
-                      </button>
+                      {productCartQuantity > 0 ? (
+                        <div className="mt-auto inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.22)]">
+                          <button
+                            type="button"
+                            onClick={() => updateCartQuantity(product.id, productCartQuantity - 1)}
+                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#27873a]"
+                            aria-label={`Decrease quantity for ${product.name}`}
+                          >
+                            -
+                          </button>
+                          <div className="grid min-w-0 flex-1 place-items-center bg-[#2f9e44] text-sm font-extrabold text-white">
+                            {productCartQuantity}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateCartQuantity(product.id, productCartQuantity + 1)}
+                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#27873a]"
+                            aria-label={`Increase quantity for ${product.name}`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCartWithFeedback(product)}
+                          className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#2f9e44] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(47,158,68,0.28)] hover:bg-[#27873a]"
+                        >
+                          <ShoppingCart size={14} />
+                          Add to Cart
+                        </button>
+                      )}
                     </div>
                   </article>
                 );
@@ -897,20 +908,38 @@ export default function RestaurantMarketplacePage({
                   <p className="mt-2 text-[16px] leading-snug text-slate-600 md:text-[18px]">{quickViewDescription}</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => (isQuickViewInCart ? router.push("/cart") : handleAddToCartWithFeedback(quickViewProduct))}
-                  className={`mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] text-base font-semibold text-white ${
-                    isQuickViewInCart
-                      ? "bg-emerald-600 shadow-[0_10px_22px_rgba(5,150,105,0.33)] hover:bg-emerald-700"
-                      : "bg-[#fb6a3d] shadow-[0_10px_22px_rgba(251,106,61,0.35)]"
-                  }`}
-                >
-                  <ShoppingCart size={16} />
-                  {isQuickViewInCart
-                    ? "Go to Cart"
-                    : `Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
-                </button>
+                {quickViewCartQuantity > 0 ? (
+                  <div className="mt-5 inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_10px_22px_rgba(47,158,68,0.3)]">
+                    <button
+                      type="button"
+                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
+                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#27873a]"
+                      aria-label={`Decrease quantity for ${quickViewProduct.name}`}
+                    >
+                      -
+                    </button>
+                    <div className="grid min-w-0 flex-1 place-items-center bg-[#2f9e44] text-base font-extrabold text-white">
+                      {quickViewCartQuantity}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
+                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#27873a]"
+                      aria-label={`Increase quantity for ${quickViewProduct.name}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
+                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#2f9e44] text-base font-semibold text-white shadow-[0_10px_22px_rgba(47,158,68,0.35)] hover:bg-[#27873a]"
+                  >
+                    <ShoppingCart size={16} />
+                    {`Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
+                  </button>
+                )}
 
                 <button
                   type="button"

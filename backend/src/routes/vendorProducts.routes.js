@@ -2,10 +2,10 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const VendorProduct = require("../models/VendorProduct");
+const { resolveTokenFromRequest } = require("../lib/authCookies");
 
 const router = express.Router();
 
-const AUTH_COOKIE_NAME = "winkget_auth";
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const STATUS_VALUES = new Set(["draft", "pending", "live", "rejected", "archived"]);
 const STORE_PLACEMENT_VALUES = new Set(["featured", "trending"]);
@@ -19,21 +19,9 @@ const verifyToken = (token) => {
   return jwt.verify(token, secret);
 };
 
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
-};
-
 const requireVendor = async (req, res, next) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, "vendor");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -154,6 +142,30 @@ const toVariantArray = (input) => {
     .filter(Boolean);
 };
 
+const toDescriptionBlockArray = (input) => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      const image = normalizeMediaValue(item?.image);
+      const headline = normalizeString(item?.headline);
+      const text = normalizeString(item?.text);
+
+      if (!image && !headline && !text) {
+        return null;
+      }
+
+      if (image && !isValidMediaValue(image)) {
+        return null;
+      }
+
+      return { image, headline, text };
+    })
+    .filter(Boolean);
+};
+
 const toProductSummary = (product) => ({
   id: String(product._id),
   vendorId: String(product.vendor),
@@ -189,6 +201,7 @@ const toProductSummary = (product) => ({
   specifications: Array.isArray(product.specifications) ? product.specifications : [],
   tags: Array.isArray(product.tags) ? product.tags : [],
   variantData: Array.isArray(product.variantData) ? product.variantData : [],
+  detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks) ? product.detailedDescriptionBlocks : [],
   status: product.status,
   storePlacement: product.storePlacement,
   sourcePlatform: product.sourcePlatform,
@@ -244,6 +257,9 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
   const highlights = toStringArray(body?.highlights ?? existingProduct?.highlights);
   const tags = toStringArray(body?.tags ?? existingProduct?.tags);
   const variantData = toVariantArray(body?.variantData ?? existingProduct?.variantData);
+  const detailedDescriptionBlocks = toDescriptionBlockArray(
+    body?.detailedDescriptionBlocks ?? existingProduct?.detailedDescriptionBlocks
+  );
 
   const payload = {
     categorySlug,
@@ -287,6 +303,7 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     specifications,
     tags,
     variantData,
+    detailedDescriptionBlocks,
     status,
     storePlacement,
     sourcePlatform: normalizeString(body?.sourcePlatform || existingProduct?.sourcePlatform || "vendor-panel"),

@@ -70,7 +70,7 @@ export default function OrderDetailPage() {
   if (loading || !user) {
     return (
       <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto h-72 max-w-6xl animate-pulse rounded-3xl border border-white/80 bg-white/80 shadow-xl" />
+        <div className="mx-auto h-72 w-full max-w-none animate-pulse rounded-3xl border border-white/80 bg-white/80 shadow-xl" />
       </main>
     );
   }
@@ -78,7 +78,7 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-7 shadow-lg">
+        <div className="mx-auto w-full max-w-none rounded-3xl border border-slate-200 bg-white p-7 shadow-lg">
           <p className="text-xl font-bold text-slate-900">Order not found</p>
           <p className="mt-2 text-sm text-slate-600">This order is unavailable or does not belong to your account.</p>
           <Link
@@ -98,7 +98,7 @@ export default function OrderDetailPage() {
 
   return (
     <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="mx-auto w-full max-w-none space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/orders"

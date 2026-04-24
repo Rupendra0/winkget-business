@@ -82,6 +82,7 @@ export default function CheckoutPaymentPage() {
   const [cardCvv, setCardCvv] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const userId = user?.id || "";
 
   useEffect(() => {
     let active = true;
@@ -101,21 +102,23 @@ export default function CheckoutPaymentPage() {
   }, []);
 
   const checkoutDraft = useMemo(() => {
-    if (!user?.id) {
+    if (!userId) {
       return null;
     }
 
-    return readCheckoutDraft(user.id);
-  }, [user?.id]);
+    return readCheckoutDraft(userId);
+  }, [userId]);
+
+  const selectedAddressId = checkoutDraft?.addressId || "";
 
   const selectedAddress = useMemo(() => {
-    if (!user?.id || !checkoutDraft?.addressId) {
+    if (!userId || !selectedAddressId) {
       return null;
     }
 
-    const { addresses } = readAddresses(user.id);
-    return addresses.find((item) => item.id === checkoutDraft.addressId) || null;
-  }, [checkoutDraft?.addressId, user?.id]);
+    const { addresses } = readAddresses(userId);
+    return addresses.find((item) => item.id === selectedAddressId) || null;
+  }, [selectedAddressId, userId]);
 
   const canPlaceOrder = Boolean(user && checkoutDraft && selectedAddress && !placingOrder);
 
@@ -167,7 +170,7 @@ export default function CheckoutPaymentPage() {
 
   return (
     <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-3 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-[1180px] space-y-4">
+      <div className="mx-auto w-full max-w-none space-y-4">
         <header className="rounded-2xl border border-[#d6e0fb] bg-white shadow-sm">
           <div className=" px-4 py-3 text-black">
             <p className="brand-wordmark text-lg">Complete Payment</p>

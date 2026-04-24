@@ -32,7 +32,9 @@ export default function ProfilePage() {
     try {
       await fetch(`${AUTH_BACKEND_URL}/api/auth/logout`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ authContext: "customer" }),
       });
     } catch {
       // Ignore logout API failures in UI flow.

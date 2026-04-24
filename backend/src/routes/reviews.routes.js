@@ -2,10 +2,10 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const Review = require("../models/Review");
 const User = require("../models/User");
+const { resolveTokenFromRequest, hasScopedAuthCookie } = require("../lib/authCookies");
 
 const router = express.Router();
 
-const AUTH_COOKIE_NAME = "winkget_auth";
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const BUSINESS_KEY_REGEX = /^[a-zA-Z0-9:_-]{1,120}$/;
 const PUBLIC_GET_MAX_AGE_SECONDS = Math.max(Number(process.env.PUBLIC_GET_MAX_AGE_SECONDS || 300), 1);
@@ -13,18 +13,6 @@ const PUBLIC_GET_MAX_AGE_SECONDS = Math.max(Number(process.env.PUBLIC_GET_MAX_AG
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
   return jwt.verify(token, secret);
-};
-
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
 };
 
 const normalizeBusinessId = (value) => String(value || "").trim();
@@ -132,7 +120,7 @@ const requireAuth = async (req, res, next) => {
 
 router.get("/reviews", async (req, res) => {
   try {
-    const hasAuthContext = Boolean(resolveTokenFromRequest(req));
+    const hasAuthContext = Boolean(req.headers.authorization || hasScopedAuthCookie(req, "customer"));
     if (hasAuthContext) {
       res.set("Cache-Control", "private, no-store");
     } else {

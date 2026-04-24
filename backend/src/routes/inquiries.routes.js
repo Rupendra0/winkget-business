@@ -2,9 +2,9 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const Inquiry = require("../models/Inquiry");
 const User = require("../models/User");
+const { resolveTokenFromRequest } = require("../lib/authCookies");
 
 const router = express.Router();
-const AUTH_COOKIE_NAME = "winkget_auth";
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
@@ -16,23 +16,11 @@ const verifyToken = (token) => {
   return jwt.verify(token, secret);
 };
 
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
-};
-
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const requireAdmin = async (req, res, next) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, "admin");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -52,7 +40,7 @@ const requireAdmin = async (req, res, next) => {
 
 const requireVendor = async (req, res, next) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, "vendor");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }

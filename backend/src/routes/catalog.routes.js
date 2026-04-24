@@ -8,10 +8,10 @@ const User = require("../models/User");
 const Review = require("../models/Review");
 const { sanitizeCustomFormFields } = require("../lib/customForm");
 const { toStoreStatusSummary } = require("../lib/storeStatus");
+const { hasScopedAuthCookie } = require("../lib/authCookies");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
-const AUTH_COOKIE_NAME = "winkget_auth";
 const HOME_PLACEMENT_KEY = "home-placements";
 const HOME_PROMO_SECTION_KEY = "home-promo-cards";
 const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
@@ -77,7 +77,7 @@ const setCachedRouteEntry = (key, statusCode, payload, ttlSeconds = PUBLIC_ROUTE
 };
 
 const withPublicGetCache = (handler, ttlSeconds = PUBLIC_ROUTE_CACHE_TTL_SECONDS) => async (req, res, next) => {
-  const hasAuthContext = Boolean(req.headers.authorization || req.cookies?.[AUTH_COOKIE_NAME]);
+  const hasAuthContext = Boolean(req.headers.authorization || hasScopedAuthCookie(req, "customer"));
   if (hasAuthContext) {
     res.set("Cache-Control", "private, no-store");
     return handler(req, res, next);
@@ -286,6 +286,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
 
   return {
     id: String(vendor._id),
+    createdAt: vendor.createdAt,
     name: vendor.name,
     businessName: vendor.businessName,
     businessPhone: vendor.businessPhone,
@@ -737,7 +738,7 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
+        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")

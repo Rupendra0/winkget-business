@@ -30,7 +30,7 @@ import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
-import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setBuyNowSelection } from "@/lib/shopStorage";
+import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setBuyNowSelection, setCartItemQuantity } from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -93,7 +93,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [addedToCartProductIds, setAddedToCartProductIds] = useState<Record<string, boolean>>({});
+  const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -105,15 +105,15 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
   useEffect(() => {
     const syncCartState = () => {
-      const next: Record<string, boolean> = {};
+      const next: Record<string, number> = {};
       readCart().forEach((item) => {
         const productId = String(item?.product?.id || "").trim();
         if (productId) {
-          next[productId] = true;
+          next[productId] = Math.max(1, Number(item.quantity || 1));
         }
       });
 
-      setAddedToCartProductIds(next);
+      setCartQuantities(next);
     };
 
     syncCartState();
@@ -169,14 +169,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
         addToCart(storeProduct, 1);
       }
-
-      setAddedToCartProductIds((previous) => ({
-        ...previous,
-        [product.id]: true,
-      }));
     },
     [buildProductHref, data.id, data.storeName]
   );
+
+  const updateProductCartQuantity = useCallback((productId: string, nextQuantity: number) => {
+    setCartItemQuantity(productId, nextQuantity);
+  }, []);
 
   const handleBuyNow = useCallback(
     (product: StoreProduct) => {
@@ -261,6 +260,32 @@ export default function StorePage({ data }: { data: StorePageData }) {
   }, [shippingLabel]);
   const availabilityCompactValue = isStoreClosed ? "No" : "Yes";
   const shippingCompactValue = /free/i.test(shippingValue) ? "Free" : "Yes";
+  const joinedLabel = useMemo(() => {
+    const createdAtValue = String(data.createdAt || "").trim();
+    if (createdAtValue) {
+      const parsedDate = new Date(createdAtValue);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+        });
+      }
+    }
+
+    if (Number.isFinite(Number(data.establishmentYear)) && Number(data.establishmentYear) > 0) {
+      return `Since ${Number(data.establishmentYear)}`;
+    }
+
+    return "Recently Added";
+  }, [data.createdAt, data.establishmentYear]);
+  const locationLabel = useMemo(() => {
+    const locality = String(data.sublocality || "").trim();
+    const city = String(data.city || "").trim();
+    const address = String(data.address || "").trim();
+
+    return locality || city || address || "Location unavailable";
+  }, [data.address, data.city, data.sublocality]);
   const categoryItems = useMemo(() => {
     const fallbackItems = ["Appliances", "Agri Inputs", "Auto Components", "Beauty & Personal Care", "Electronics"];
     const sourceItems: Array<{ id: string; label: string; iconImage?: string }> =
@@ -317,12 +342,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
   const renderFlipkartStyleProductCard = (product: StoreProduct, imageHeightClass: string) => {
     const productHref = buildProductHref(product);
-    const isProductInCart = Boolean(addedToCartProductIds[product.id]);
-    const productReviewSummary = getBusinessReviewAggregate(
-      toProductReviewBusinessKey(product.id),
-      Number(product.rating || 0),
-      Math.max(0, Number(product.reviews || 0))
-    );
+    const productCartQuantity = Math.max(0, Number(cartQuantities[product.id] || 0));
+    const productReviewSummary = isReviewHydrated
+      ? getBusinessReviewAggregate(
+          toProductReviewBusinessKey(product.id),
+          Number(product.rating || 0),
+          Math.max(0, Number(product.reviews || 0))
+        )
+      : {
+          rating: Number(product.rating || 0),
+          reviews: Math.max(0, Number(product.reviews || 0)),
+        };
     const ratingValue = Number(productReviewSummary.rating || 0);
     const hasRating = Number.isFinite(ratingValue) && ratingValue > 0;
     const reviewCountValue = Math.max(0, Math.round(Number(productReviewSummary.reviews || 0)));
@@ -385,17 +415,37 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
 
           <div className="mt-auto grid grid-cols-2 gap-2 pt-3">
-            <button
-              type="button"
-              onClick={() => handleAddToCart(product)}
-              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border text-[12px] font-semibold transition ${
-                isProductInCart
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-              }`}
-            >
-              {isProductInCart ? "Added" : "Add to Cart"}
-            </button>
+            {productCartQuantity > 0 ? (
+              <div className="inline-flex h-9 items-stretch overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)]">
+                <button
+                  type="button"
+                  onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
+                  className="grid w-9 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  aria-label={`Decrease quantity for ${product.name}`}
+                >
+                  -
+                </button>
+                <div className="grid min-w-[40px] place-items-center bg-[#2f9e44] px-2 text-[12px] font-extrabold text-white">
+                  {productCartQuantity}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
+                  className="grid w-9 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  aria-label={`Increase quantity for ${product.name}`}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleAddToCart(product)}
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-slate-400"
+              >
+                Add to Cart
+              </button>
+            )}
 
             <button
               type="button"
@@ -421,14 +471,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
               className="h-full w-full object-cover"
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-800/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/82 via-slate-900/40 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent sm:hidden" />
             <div className="absolute bottom-3 left-6 right-3 flex items-end gap-3 sm:hidden">
-              <div className="h-[120px] w-[120px] shrink-0 rounded-full overflow-hidden bg-white">
+              <div className="h-[120px] w-[120px] shrink-0 overflow-hidden rounded-full border-4 border-white bg-white shadow-[0_12px_26px_rgba(15,23,42,0.35)]">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
               </div>
 
-              <div className="min-w-0 flex-1 pb-1 text-white">
+              <div className="min-w-0 flex-1 pb-1 text-white [text-shadow:0_3px_14px_rgba(15,23,42,0.75)]">
                 <div className="line-clamp-2 text-[28px] font-extrabold leading-[0.95] tracking-tight">{data.storeName}</div>
                 {/* <div className="mt-0.5 truncate text-[14px] font-semibold text-white/90">{data.tagline}</div> */}
                 <div className="mt-1 flex items-center gap-1.5 text-[13px] font-medium text-white/90">
@@ -437,11 +487,11 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 </div>
               </div>
             </div>
-            <div className="absolute bottom-10 left-25 hidden items-center gap-4 sm:flex">
-              <div className="h-[108px] w-[108px] rounded-full overflow-hidden bg-white">
+            <div className="absolute bottom-8 left-16 hidden items-end gap-5 sm:flex">
+              <div className="h-[108px] w-[108px] overflow-hidden rounded-full border-4 border-white bg-white shadow-[0_14px_32px_rgba(15,23,42,0.38)]">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
               </div>
-              <div className="text-white">
+              <div className="pb-1 text-white [text-shadow:0_4px_16px_rgba(15,23,42,0.82)]">
                 <div className="max-w-[780px] text-[2.45rem] font-extrabold leading-[0.95] tracking-tight">{data.storeName}</div>
                 {/* <div className="mt-0.5 text-base font-semibold text-white/90">{data.tagline}</div> */}
                 <div className="mt-1.5 flex items-center gap-2 text-sm font-medium text-white/90">
@@ -715,12 +765,71 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white/80 p-5">
-              <div className="text-lg font-semibold text-slate-900">{data.aboutTitle}</div>
-              <div className="mt-3 text-sm text-slate-600">{data.aboutBody}</div>
+            
+          </div>
+          </div>
+
+          <section className="mt-8 rounded-[26px] border border-[#d9e2f1] bg-white px-5 py-6 shadow-[0_4px_16px_rgba(15,23,42,0.04)] sm:px-6">
+              <div>
+                <h2 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">{data.aboutTitle}</h2>
+                <div className="mt-3 h-[3px] w-[56px] rounded-full bg-[#5b7cff]" />
+              </div>
+
+              <div className="mt-8 grid gap-4 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:grid-rows-2">
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Rating</p>
+                  <div className="mt-7">
+                    <div className="flex items-center gap-1 text-[18px] leading-none text-[#ffcc00] sm:text-[20px]">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <span key={`about-rating-star-${index}`}>{index < Math.round(data.rating) ? "★" : "☆"}</span>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-[18px] font-semibold text-[#344054]">{ratingLabel(storeReviewStats.rating)}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Reviews</p>
+                  <p className="mt-10 text-[20px] font-semibold leading-none text-[#344054] sm:text-[22px]">
+                    {new Intl.NumberFormat("en-IN").format(Math.max(0, Number(storeReviewStats.reviews || 0)))}
+                  </p>
+                </div>
+
+                <div className="rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:row-span-2 xl:min-h-[380px]">
+                  <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
+                  <div className="mt-5 text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px]">
+                    {data.aboutBody}
+                  </div>
+                  <div className="mt-8">
+                    {data.contactPhone ? (
+                      <a
+                        href={`tel:${data.contactPhone}`}
+                        className="inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff] transition hover:bg-[#f5f8ff]"
+                      >
+                        Contact Seller
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff]"
+                      >
+                        Contact Seller
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
+                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{joinedLabel}</p>
+                </div>
+
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
+                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{locationLabel}</p>
+                </div>
+              </div>
             </section>
-          </div>
-          </div>
         </section>
 
         {!isMobileFiltersOpen ? (

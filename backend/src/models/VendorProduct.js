@@ -29,6 +29,18 @@ const variantSchema = new Schema(
   }
 );
 
+const descriptionBlockSchema = new Schema(
+  {
+    image: { type: String, trim: true },
+    headline: { type: String, trim: true },
+    text: { type: String, trim: true },
+  },
+  {
+    _id: false,
+    versionKey: false,
+  }
+);
+
 const vendorProductSchema = new Schema(
   {
     vendor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -72,6 +84,7 @@ const vendorProductSchema = new Schema(
     specifications: { type: [labelValueSchema], default: [] },
     tags: [{ type: String, trim: true }],
     variantData: { type: [variantSchema], default: [] },
+    detailedDescriptionBlocks: { type: [descriptionBlockSchema], default: [] },
 
     status: { type: String, enum: STATUS_VALUES, default: "draft" },
     storePlacement: { type: String, enum: STORE_PLACEMENT_VALUES },

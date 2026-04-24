@@ -218,7 +218,9 @@ export default function Navbar() {
     try {
       await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ authContext: "customer" }),
       });
     } catch {
       // Ignore logout API failure on UI; local state will still reset.

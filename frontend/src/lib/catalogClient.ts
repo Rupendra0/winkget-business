@@ -72,6 +72,7 @@ export type CatalogSubcategory = {
 
 export type CatalogVendorSummary = {
   id: string;
+  createdAt?: string;
   name?: string;
   businessName?: string;
   businessPhone?: string;
@@ -141,6 +142,9 @@ export type CatalogVendorProduct = {
   productName: string;
   shortDescription?: string;
   description?: string;
+  detailedDescription?: string;
+  originCountry?: string;
+  supplierName?: string;
   image?: string;
   heroImage?: string;
   subcategoryImage?: string;
@@ -165,8 +169,20 @@ export type CatalogVendorProduct = {
   specifications?: CatalogVendorProductAttribute[];
   tags?: string[];
   variantData?: CatalogVendorProductVariant[];
+  detailedDescriptionBlocks?: Array<{
+    image?: string;
+    headline?: string;
+    text?: string;
+  }>;
   status?: "draft" | "pending" | "live" | "rejected" | "archived";
   storePlacement?: "featured" | "trending";
+  showDeliveryBadge?: boolean;
+  showTopBrand?: boolean;
+  showFreeDelivery?: boolean;
+  showSecureTransaction?: boolean;
+  showCashOnDelivery?: boolean;
+  show7DaySupport?: boolean;
+  showAssured?: boolean;
   sourcePlatform?: string;
   sourceRecordId?: string;
   publishedAt?: string;
@@ -655,6 +671,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     state: vendor.state,
     postalCode: vendor.postalCode,
     gstNumber: vendor.gstNumber,
+    createdAt: vendor.createdAt,
     establishmentYear: vendor.establishmentYear,
     yearsInBusiness: vendor.yearsInBusiness,
     shopOpeningTime: vendor.shopOpeningTime,

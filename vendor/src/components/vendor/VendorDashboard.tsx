@@ -2104,13 +2104,13 @@ function VendorProductsSection({
 
       {isProductFormVisible ? (
         <section
-          className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-gray-900/40 p-0"
+          className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/40 p-0"
           aria-label="Product form popup"
         >
           <button
             type="button"
             onClick={handleCloseProductForm}
-            className="absolute inset-0"
+            className="fixed inset-0 z-0"
             aria-label="Close product form popup"
           />
 
@@ -2495,20 +2495,22 @@ function VendorProductsSection({
           </div>
           </form>
           ) : (
-            <VendorAddProductForm
-              key={editingProduct?.id ? `edit-${editingProduct.id}` : "create-product"}
-              mode={editingProduct ? "edit" : "create"}
-              initialProduct={editingProduct}
-              categories={categories}
-              lockedCategory={lockedCategory}
-              sellerName={sellerName}
-              compactMode={isRestaurantVendor}
-              saving={saving}
-              actionMessage={actionMessage}
-              actionError={actionError}
-              onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
-              onClose={handleCloseProductForm}
-            />
+            <div className="relative z-10 min-h-full w-full">
+              <VendorAddProductForm
+                key={editingProduct?.id ? `edit-${editingProduct.id}` : "create-product"}
+                mode={editingProduct ? "edit" : "create"}
+                initialProduct={editingProduct}
+                categories={categories}
+                lockedCategory={lockedCategory}
+                sellerName={sellerName}
+                compactMode={isRestaurantVendor}
+                saving={saving}
+                actionMessage={actionMessage}
+                actionError={actionError}
+                onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
+                onClose={handleCloseProductForm}
+              />
+            </div>
           )}
         </section>
       ) : null}

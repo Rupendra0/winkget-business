@@ -233,6 +233,12 @@ export type VendorProductVariant = {
   image: string;
 };
 
+export type VendorProductDescriptionBlock = {
+  image?: string;
+  headline?: string;
+  text?: string;
+};
+
 export type VendorProductRecord = {
   id: string;
   vendorId: string;
@@ -268,6 +274,7 @@ export type VendorProductRecord = {
   specifications: VendorProductAttribute[];
   tags: string[];
   variantData: VendorProductVariant[];
+  detailedDescriptionBlocks?: VendorProductDescriptionBlock[];
   status: "draft" | "pending" | "live" | "rejected" | "archived";
   storePlacement?: "featured" | "trending";
   sourcePlatform?: string;
@@ -310,6 +317,7 @@ export type VendorProductUpsertInput = {
   specifications?: VendorProductAttribute[];
   tags?: string[];
   variantData?: VendorProductVariant[];
+  detailedDescriptionBlocks?: VendorProductDescriptionBlock[];
   status?: "draft" | "pending" | "live" | "rejected" | "archived";
   storePlacement?: "featured" | "trending";
   sourcePlatform?: string;
@@ -362,6 +370,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiEnve
   const method = init?.method || "GET";
   const headers = {
     Accept: "application/json",
+    "X-Auth-Context": "vendor",
     ...(method === "GET" ? {} : { "Content-Type": "application/json" }),
     ...(init?.headers || {}),
   };
@@ -384,7 +393,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiEnve
 
 export async function fetchVendorSession(): Promise<VendorSession | null> {
   try {
-    const payload = await requestJson<{ user: VendorSession }>("/api/auth/me");
+    const payload = await requestJson<{ user: VendorSession }>("/api/auth/me?context=vendor");
     return normalizeVendorSession(payload.user);
   } catch {
     return null;
@@ -408,6 +417,7 @@ export async function loginVendor(identifier: string, password: string): Promise
 export async function logoutVendor(): Promise<void> {
   await requestJson<Record<string, never>>("/api/auth/logout", {
     method: "POST",
+    body: JSON.stringify({ authContext: "vendor" }),
   });
 }
 
@@ -865,6 +875,16 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
       }))
     : [];
 
+  const detailedDescriptionBlocks = Array.isArray(input.detailedDescriptionBlocks)
+    ? input.detailedDescriptionBlocks
+        .map((block) => ({
+          image: String(block?.image || "").trim() || undefined,
+          headline: String(block?.headline || "").trim() || undefined,
+          text: String(block?.text || "").trim() || undefined,
+        }))
+        .filter((block) => block.image || block.headline || block.text)
+    : [];
+
   const statusInput = String(input.status || "draft").trim().toLowerCase();
   const status =
     statusInput === "pending" ||
@@ -917,6 +937,7 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
     specifications,
     tags: Array.isArray(input.tags) ? input.tags.map((value) => String(value || "").trim()).filter(Boolean) : [],
     variantData,
+    detailedDescriptionBlocks,
     status,
     storePlacement,
     sourcePlatform: String(input.sourcePlatform || "").trim() || undefined,

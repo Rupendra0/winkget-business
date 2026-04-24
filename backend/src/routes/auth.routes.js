@@ -24,6 +24,12 @@ const {
   toStoreStatusSummary,
 } = require("../lib/storeStatus");
 const { emitVendorStoreStatus } = require("../lib/realtime");
+const {
+  normalizeAuthContext,
+  setAuthCookie,
+  clearAuthCookie,
+  resolveTokenFromRequest,
+} = require("../lib/authCookies");
 
 const router = express.Router();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +41,6 @@ const ID_PROOF_TYPES = new Set(["aadhaar", "pan", "driving_license", "passport",
 const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
 const MAX_MEDIA_VALUE_LENGTH = 3000000;
-const AUTH_COOKIE_NAME = "winkget_auth";
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -105,41 +110,6 @@ const verifyToken = (token) => {
   return jwt.verify(token, secret);
 };
 
-const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === "production";
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: 24 * 60 * 60 * 1000,
-    path: "/",
-  };
-};
-
-const setAuthCookie = (res, token) => {
-  res.cookie(AUTH_COOKIE_NAME, token, getCookieOptions());
-};
-
-const clearAuthCookie = (res) => {
-  const clearOptions = {
-    ...getCookieOptions(),
-    maxAge: 0,
-  };
-  res.clearCookie(AUTH_COOKIE_NAME, clearOptions);
-};
-
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
-};
-
 router.post("/auth/signup", async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
@@ -194,7 +164,7 @@ router.post("/auth/signup", async (req, res) => {
     });
 
     const token = createToken(user);
-    setAuthCookie(res, token);
+    setAuthCookie(res, token, "customer");
 
     return res.status(201).json({
       ok: true,
@@ -225,6 +195,7 @@ router.post("/auth/login", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim();
     const password = String(req.body?.password || "");
+    const authContext = normalizeAuthContext(req.body?.authContext, "customer");
 
     if (!identifier || !password) {
       return res.status(400).json({ ok: false, message: "Identifier and password are required" });
@@ -260,8 +231,16 @@ router.post("/auth/login", async (req, res) => {
       return res.status(401).json({ ok: false, message: "Invalid credentials" });
     }
 
+    if (authContext === "admin" && user.role !== "admin") {
+      return res.status(403).json({ ok: false, message: "Admin account required" });
+    }
+
+    if (authContext === "customer" && user.role !== "customer") {
+      return res.status(403).json({ ok: false, message: "Customer account required. Use the vendor or admin panel for staff access." });
+    }
+
     const token = createToken(user);
-    setAuthCookie(res, token);
+    setAuthCookie(res, token, authContext);
 
     return res.status(200).json({
       ok: true,
@@ -656,7 +635,7 @@ router.post("/auth/vendor/login", async (req, res) => {
     }
 
     const token = createToken(user);
-    setAuthCookie(res, token);
+    setAuthCookie(res, token, "vendor");
 
     return res.status(200).json({
       ok: true,
@@ -703,7 +682,8 @@ router.post("/auth/vendor/login", async (req, res) => {
 
 router.get("/auth/me", async (req, res) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const authContext = normalizeAuthContext(req.query?.context || req.headers["x-auth-context"], "customer");
+    const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -718,7 +698,7 @@ router.get("/auth/me", async (req, res) => {
       .lean();
 
     if (!user) {
-      clearAuthCookie(res);
+      clearAuthCookie(res, authContext);
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
@@ -776,19 +756,21 @@ router.get("/auth/me", async (req, res) => {
       },
     });
   } catch (_error) {
-    clearAuthCookie(res);
+    clearAuthCookie(res, normalizeAuthContext(req.query?.context || req.headers["x-auth-context"], "customer"));
     return res.status(401).json({ ok: false, message: "Session expired" });
   }
 });
 
-router.post("/auth/logout", (_req, res) => {
-  clearAuthCookie(res);
+router.post("/auth/logout", (req, res) => {
+  const authContext = req.body?.authContext || req.query?.context || req.headers["x-auth-context"];
+  clearAuthCookie(res, authContext ? normalizeAuthContext(authContext, "customer") : undefined);
   return res.status(200).json({ ok: true, message: "Logged out successfully" });
 });
 
 router.put("/auth/me", async (req, res) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const authContext = normalizeAuthContext(req.body?.authContext || req.query?.context || req.headers["x-auth-context"], "customer");
+    const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -796,7 +778,7 @@ router.put("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub);
     if (!user) {
-      clearAuthCookie(res);
+      clearAuthCookie(res, authContext);
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
@@ -1281,7 +1263,7 @@ router.put("/auth/me", async (req, res) => {
 
 router.patch("/vendor/store-status", async (req, res) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, "vendor");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -1292,7 +1274,7 @@ router.patch("/vendor/store-status", async (req, res) => {
     );
 
     if (!user) {
-      clearAuthCookie(res);
+      clearAuthCookie(res, "vendor");
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
@@ -1350,7 +1332,8 @@ router.patch("/vendor/store-status", async (req, res) => {
 
 router.post("/auth/change-password", async (req, res) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const authContext = normalizeAuthContext(req.body?.authContext || req.query?.context || req.headers["x-auth-context"], "customer");
+    const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -1358,7 +1341,7 @@ router.post("/auth/change-password", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub);
     if (!user) {
-      clearAuthCookie(res);
+      clearAuthCookie(res, authContext);
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 

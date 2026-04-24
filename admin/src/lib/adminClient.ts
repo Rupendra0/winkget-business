@@ -297,6 +297,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiResp
   const execute = async (): Promise<{ response: Response; payload: ApiResponse<T> | null }> => {
     const headers = new Headers(init?.headers);
     headers.set("Accept", "application/json");
+    headers.set("X-Auth-Context", "admin");
     const token = readAuthToken();
 
     if (init?.body && !headers.has("Content-Type")) {
@@ -352,7 +353,7 @@ export async function fetchAdminSession(): Promise<AdminUser | null> {
 export async function loginAsAdmin(identifier: string, password: string): Promise<AdminUser> {
   const payload = await requestJson<{ user: AdminUser; token?: string }>("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password, authContext: "admin" }),
   });
 
   const user = payload.user;
@@ -372,7 +373,10 @@ export async function loginAsAdmin(identifier: string, password: string): Promis
 
 export async function logoutAdmin(): Promise<void> {
   try {
-    await requestJson<Record<string, never>>("/api/auth/logout", { method: "POST" });
+    await requestJson<Record<string, never>>("/api/auth/logout", {
+      method: "POST",
+      body: JSON.stringify({ authContext: "admin" }),
+    });
   } finally {
     writeAuthToken(undefined);
   }

@@ -64,14 +64,14 @@ export default function OrdersPage() {
   if (loading || !user) {
     return (
       <main className="min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-5xl mx-auto animate-pulse rounded-3xl bg-white/80 border border-white/80 shadow-xl p-6 h-64" />
+        <div className="mx-auto h-64 w-full max-w-none animate-pulse rounded-3xl border border-white/80 bg-white/80 p-6 shadow-xl" />
       </main>
     );
   }
 
   return (
     <main className="min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8 py-8">
-      <div className="max-w-6xl mx-auto rounded-3xl border border-blue-100/80 bg-white/88 shadow-[0_18px_42px_rgba(30,64,175,0.12)] p-5 sm:p-7">
+      <div className="mx-auto w-full max-w-none rounded-3xl border border-blue-100/80 bg-white/88 p-5 shadow-[0_18px_42px_rgba(30,64,175,0.12)] sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-s sm:text-3xl font-bold text-slate-900">My Orders</h2>

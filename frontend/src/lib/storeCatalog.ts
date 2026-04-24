@@ -29,6 +29,8 @@ export type ProductDetailModel = {
   priceText: string;
   oldPriceText: string;
   description: string;
+  shortDescription?: string;
+  detailedDescription?: string;
   keyAttributes: Array<[string, string]>;
   highlights: string[];
   specifications: Array<[string, string]>;
@@ -36,6 +38,8 @@ export type ProductDetailModel = {
   categoryLabel: string;
   subcategoryName: string;
   sellerName: string;
+  supplierName?: string;
+  originCountry?: string;
   vendorSource?: string;
   rating: number;
   reviews: number;
@@ -43,6 +47,14 @@ export type ProductDetailModel = {
   deliveryByText?: string;
   isCancellable?: boolean;
   isReturnable?: boolean;
+  detailedDescriptionBlocks?: Array<{ image: string; headline: string; text: string }>;
+  showDeliveryBadge?: boolean;
+  showTopBrand?: boolean;
+  showFreeDelivery?: boolean;
+  showSecureTransaction?: boolean;
+  showCashOnDelivery?: boolean;
+  show7DaySupport?: boolean;
+  showAssured?: boolean;
 };
 
 export type RelatedProductModel = {
@@ -266,10 +278,13 @@ const toStoreProductsFromVendorProducts = (
       subcategoryName: subcategoryName || undefined,
       shortDescription: normalizeString(product.shortDescription) || undefined,
       description: normalizeString(product.description) || undefined,
+      detailedDescription: normalizeString(product.detailedDescription) || undefined,
       gallery: Array.isArray(product.gallery) ? uniqueStrings(product.gallery.map((value) => normalizeString(value))) : [],
       oldPriceValue,
       inventory: Number.isFinite(Number(product.inventory)) ? Number(product.inventory) : undefined,
       moq: Number.isFinite(Number(product.moq)) ? Number(product.moq) : undefined,
+      originCountry: normalizeString(product.originCountry) || undefined,
+      supplierName: normalizeString(product.supplierName) || undefined,
       sellerName: normalizeString(product.sellerName || profile.name) || profile.name,
       vendorSource: normalizeString(product.vendorSource) || undefined,
       rating: Number.isFinite(Number(product.rating)) ? Number(product.rating) : undefined,
@@ -299,6 +314,22 @@ const toStoreProductsFromVendorProducts = (
             .filter((item) => item.label && item.value)
         : undefined,
       tags: Array.isArray(product.tags) ? uniqueStrings(product.tags.map((value) => normalizeString(value))) : undefined,
+      detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks)
+        ? product.detailedDescriptionBlocks
+            .map((item) => ({
+              image: normalizeString(item?.image) || undefined,
+              headline: normalizeString(item?.headline) || undefined,
+              text: normalizeString(item?.text) || undefined,
+            }))
+            .filter((item) => item.image || item.headline || item.text)
+        : undefined,
+      showDeliveryBadge: product.showDeliveryBadge === true,
+      showTopBrand: product.showTopBrand === true,
+      showFreeDelivery: product.showFreeDelivery === true,
+      showSecureTransaction: product.showSecureTransaction === true,
+      showCashOnDelivery: product.showCashOnDelivery === true,
+      show7DaySupport: product.show7DaySupport === true,
+      showAssured: product.showAssured === true,
       storePlacement,
     };
   });
@@ -376,7 +407,7 @@ const toSpecifications = (product: StoreProduct) => {
 };
 
 const toProductDescription = (product: StoreProduct) => {
-  const explicitDescription = normalizeString(product.description || product.shortDescription);
+  const explicitDescription = normalizeString(product.description);
   if (explicitDescription) {
     return explicitDescription;
   }
@@ -415,6 +446,8 @@ const toProductModel = (
     priceText: formatPriceText(price),
     oldPriceText: formatPriceText(oldPrice > 0 ? oldPrice : price),
     description: toProductDescription(product),
+    shortDescription: normalizeString(product.shortDescription) || undefined,
+    detailedDescription: normalizeString(product.detailedDescription) || undefined,
     keyAttributes: toKeyAttributes(product, storeData),
     highlights: toHighlights(product),
     specifications: toSpecifications(product),
@@ -422,6 +455,8 @@ const toProductModel = (
     categoryLabel,
     subcategoryName: normalizeString(product.subcategoryName || product.category),
     sellerName,
+    supplierName: normalizeString(product.supplierName) || undefined,
+    originCountry: normalizeString(product.originCountry) || undefined,
     vendorSource: normalizeString(product.vendorSource) || undefined,
     rating,
     reviews,
@@ -429,6 +464,22 @@ const toProductModel = (
     deliveryByText: normalizeString(product.deliveryByText) || undefined,
     isCancellable: typeof product.isCancellable === "boolean" ? product.isCancellable : undefined,
     isReturnable: typeof product.isReturnable === "boolean" ? product.isReturnable : undefined,
+    detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks)
+      ? product.detailedDescriptionBlocks
+          .map((item) => ({
+            image: normalizeString(item?.image),
+            headline: normalizeString(item?.headline),
+            text: normalizeString(item?.text),
+          }))
+          .filter((item) => item.image || item.headline || item.text)
+      : undefined,
+    showDeliveryBadge: product.showDeliveryBadge === true,
+    showTopBrand: product.showTopBrand === true,
+    showFreeDelivery: product.showFreeDelivery === true,
+    showSecureTransaction: product.showSecureTransaction === true,
+    showCashOnDelivery: product.showCashOnDelivery === true,
+    show7DaySupport: product.show7DaySupport === true,
+    showAssured: product.showAssured === true,
   };
 };
 
@@ -469,7 +520,7 @@ const findProductInStore = (storeData: StorePageData, productToken: string) => {
 
   const relatedProducts = storeData.products
     .filter((candidate) => candidate.id !== product.id)
-    .slice(0, 6)
+    .slice(0, 12)
     .map((candidate) => toRelatedProductModel(candidate, storeData));
 
   return {
@@ -574,6 +625,7 @@ export const toStoreDataFromProfile = (
   return {
     id: storeId,
     storeName: profileName,
+    createdAt: normalizeString(profile.createdAt) || undefined,
     tagline: "Shop by category",
     bannerImage: imageUrl,
     logoImage: normalizeString(profile.logoImage) || imageUrl,
@@ -592,7 +644,9 @@ export const toStoreDataFromProfile = (
     rating: Number(profile.rating || 0),
     reviews: Number(profile.reviews || 0),
     address: addressLabel,
+    city: normalizeString(profile.city) || undefined,
     sublocality: sublocalityLabel || undefined,
+    establishmentYear: profile.establishmentYear,
     categories,
     categoryBarItems: categoryBarItems.length > 0 ? categoryBarItems : undefined,
     filters: [

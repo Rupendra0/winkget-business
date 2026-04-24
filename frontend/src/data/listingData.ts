@@ -11,6 +11,7 @@ export type ListingReview = {
 export type ListingProfile = {
   id: string;
   storeId?: string;
+  createdAt?: string;
   name: string;
   category: string;
   coverImage: string;
@@ -73,10 +74,13 @@ export type StoreProduct = {
   subcategoryName?: string;
   shortDescription?: string;
   description?: string;
+  detailedDescription?: string;
   gallery?: string[];
   oldPriceValue?: number;
   inventory?: number;
   moq?: number;
+  originCountry?: string;
+  supplierName?: string;
   sellerName?: string;
   vendorSource?: string;
   rating?: number;
@@ -90,6 +94,14 @@ export type StoreProduct = {
   keyAttributes?: Array<{ label: string; value: string }>;
   specifications?: Array<{ label: string; value: string }>;
   tags?: string[];
+  detailedDescriptionBlocks?: Array<{ image?: string; headline?: string; text?: string }>;
+  showDeliveryBadge?: boolean;
+  showTopBrand?: boolean;
+  showFreeDelivery?: boolean;
+  showSecureTransaction?: boolean;
+  showCashOnDelivery?: boolean;
+  show7DaySupport?: boolean;
+  showAssured?: boolean;
   storePlacement?: "featured" | "trending";
 };
 
@@ -108,6 +120,7 @@ export type StoreCategoryBarItem = {
 export type StorePageData = {
   id: string;
   storeName: string;
+  createdAt?: string;
   tagline: string;
   bannerImage: string;
   logoImage: string;
@@ -126,7 +139,9 @@ export type StorePageData = {
   rating: number;
   reviews: number;
   address: string;
+  city?: string;
   sublocality?: string;
+  establishmentYear?: number;
   categories: string[];
   categoryBarItems?: StoreCategoryBarItem[];
   filters: { label: string; options: string[] }[];

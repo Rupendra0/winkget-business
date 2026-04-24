@@ -192,6 +192,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiEnve
   const execute = async (): Promise<{ response: Response; payload: ApiEnvelope<T> | null }> => {
     const headers = new Headers(init?.headers);
     headers.set("Accept", "application/json");
+    headers.set("X-Auth-Context", "admin");
     const token = readAuthToken();
 
     if (init?.body && !headers.has("Content-Type")) {

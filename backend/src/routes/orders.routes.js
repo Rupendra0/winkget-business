@@ -4,10 +4,10 @@ const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const VendorProduct = require("../models/VendorProduct");
+const { resolveTokenFromRequest } = require("../lib/authCookies");
 
 const router = express.Router();
 
-const AUTH_COOKIE_NAME = "winkget_auth";
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ORDER_MODE_VALUES = new Set(["cart", "buy-now"]);
 const PAYMENT_METHOD_VALUES = new Set(["cod", "razorpay", "upi", "card", "netbanking", "wallet"]);
@@ -16,18 +16,6 @@ const ADMIN_STATUS_VALUES = new Set(["Pending", "Disputed", "Completed"]);
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
   return jwt.verify(token, secret);
-};
-
-const resolveTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-
-  return "";
 };
 
 const normalizeString = (value) => String(value || "").trim();
@@ -86,9 +74,9 @@ const computeTotals = (items) => {
   };
 };
 
-const requireAuthenticated = async (req, res, next) => {
+const requireAuthenticated = (authContext) => async (req, res, next) => {
   try {
-    const token = resolveTokenFromRequest(req);
+    const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
@@ -390,7 +378,7 @@ const buildOrderNo = async () => {
   return `#WG${Date.now().toString(36).toUpperCase()}`;
 };
 
-router.post("/orders", requireAuthenticated, requireCustomer, async (req, res) => {
+router.post("/orders", requireAuthenticated("customer"), requireCustomer, async (req, res) => {
   try {
     const modeInput = normalizeString(req.body?.mode).toLowerCase();
     const paymentMethodInput = normalizeString(req.body?.paymentMethod).toLowerCase();
@@ -445,7 +433,7 @@ router.post("/orders", requireAuthenticated, requireCustomer, async (req, res) =
   }
 });
 
-router.get("/orders/my", requireAuthenticated, requireCustomer, async (req, res) => {
+router.get("/orders/my", requireAuthenticated("customer"), requireCustomer, async (req, res) => {
   try {
     const limit = Math.min(Math.max(Number(req.query.limit || 120), 1), 300);
 
@@ -463,7 +451,7 @@ router.get("/orders/my", requireAuthenticated, requireCustomer, async (req, res)
   }
 });
 
-router.get("/orders/my/:orderId", requireAuthenticated, requireCustomer, async (req, res) => {
+router.get("/orders/my/:orderId", requireAuthenticated("customer"), requireCustomer, async (req, res) => {
   try {
     const orderId = normalizeString(req.params.orderId);
     if (!isObjectId(orderId)) {
@@ -488,7 +476,7 @@ router.get("/orders/my/:orderId", requireAuthenticated, requireCustomer, async (
   }
 });
 
-router.get("/orders", requireAuthenticated, requireAdmin, async (req, res) => {
+router.get("/orders", requireAuthenticated("admin"), requireAdmin, async (req, res) => {
   try {
     const statusInput = normalizeString(req.query.status);
     const searchInput = normalizeString(req.query.search);
@@ -526,7 +514,7 @@ router.get("/orders", requireAuthenticated, requireAdmin, async (req, res) => {
   }
 });
 
-router.get("/orders/vendor", requireAuthenticated, requireVendor, async (req, res) => {
+router.get("/orders/vendor", requireAuthenticated("vendor"), requireVendor, async (req, res) => {
   try {
     const vendorId = String(req.authUser._id);
     const statusInput = normalizeString(req.query.status);
@@ -592,7 +580,7 @@ router.get("/orders/vendor", requireAuthenticated, requireVendor, async (req, re
   }
 });
 
-router.patch("/orders/:orderId/status", requireAuthenticated, requireAdmin, async (req, res) => {
+router.patch("/orders/:orderId/status", requireAuthenticated("admin"), requireAdmin, async (req, res) => {
   try {
     const orderId = normalizeString(req.params.orderId);
     const nextStatus = normalizeString(req.body?.status);
@@ -620,7 +608,7 @@ router.patch("/orders/:orderId/status", requireAuthenticated, requireAdmin, asyn
   }
 });
 
-router.patch("/orders/vendor/:orderId/status", requireAuthenticated, requireVendor, async (req, res) => {
+router.patch("/orders/vendor/:orderId/status", requireAuthenticated("vendor"), requireVendor, async (req, res) => {
   try {
     const vendorId = String(req.authUser._id);
     const orderId = normalizeString(req.params.orderId);

@@ -275,7 +275,7 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-3 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-[1180px] space-y-4">
+      <div className="mx-auto w-full max-w-none space-y-4">
         <header className="overflow-hidden rounded-2xl border border-[#d6e0fb] bg-white shadow-sm">
           <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
