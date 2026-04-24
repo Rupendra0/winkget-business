@@ -17,7 +17,7 @@ const footerRouteMap: Record<string, string> = {
   "My Order": "/orders",
   "Free Listing": "/vendor-register",
   "Add Your Business": "/vendor-register",
-  B2B: "/vendor",
+  B2B: "/vendor-register",
   Explore: "/",
   Payment: "/cart",
   "Pay Now": "/cart",

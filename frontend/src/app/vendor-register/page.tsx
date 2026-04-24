@@ -1150,6 +1150,15 @@ export default function VendorRegisterPage() {
         throw new Error(payload.message || "Vendor registration failed");
       }
 
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ authContext: "vendor" }),
+      }).catch(() => {
+        // Ignore logout cleanup failure after successful signup.
+      });
+
       setSubmitted(true);
       setForm({
         ...INITIAL_FORM,
@@ -1233,18 +1242,9 @@ export default function VendorRegisterPage() {
         </div>
 
         {submitted ? (
-          <>
-            <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              Registration submitted successfully. Your account is now pending admin approval.
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/vendor-login")}
-              className="mt-4 w-full rounded-xl border border-blue-200 bg-blue-50 text-blue-800 py-3 text-sm font-semibold hover:bg-blue-100 btn-hover"
-            >
-              Go to Vendor Login
-            </button>
-          </>
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            Registration submitted successfully. Your account is now pending admin approval.
+          </div>
         ) : (
           <form className="mt-6" onSubmit={handleSubmit}>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
