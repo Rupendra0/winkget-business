@@ -8,6 +8,7 @@ import { resolvePostAuthRoute } from "@/lib/authRedirect";
 type AuthMode = "signin" | "signup";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -315,7 +316,7 @@ export default function AuthPage() {
           <button
             type="button"
             className="w-full rounded-xl border border-orange-200 bg-orange-50 text-orange-800 py-3 text-sm font-semibold hover:bg-orange-100 btn-hover flex items-center justify-center gap-2"
-            onClick={() => router.push("/vendor-register")}
+            onClick={() => window.location.assign(VENDOR_REGISTRATION_URL)}
           >
             <Store size={16} /> Register as Vendor / Shopkeeper
           </button>

@@ -8,6 +8,7 @@ import { fetchCategories, type CatalogCategory } from "@/lib/catalogClient";
 const MIN_CATEGORY_COLUMN_COUNT = 3;
 const MAX_CATEGORY_COLUMN_COUNT = 4;
 const ITEMS_PER_COLUMN = 10;
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 
 const sectionTitleClass = "text-[0.95rem] font-semibold leading-tight text-[#1f2937]";
 const linkTextClass = "text-[0.95rem] leading-[1.35] text-[#111827] transition-colors hover:text-[#111827]/80";
@@ -15,13 +16,13 @@ const linkTextClass = "text-[0.95rem] leading-[1.35] text-[#111827] transition-c
 const footerRouteMap: Record<string, string> = {
   "My Account": "/profile",
   "My Order": "/orders",
-  "Free Listing": "/vendor-register",
-  "Add Your Business": "/vendor-register",
-  B2B: "/vendor-register",
+  "Free Listing": VENDOR_REGISTRATION_URL,
+  "Add Your Business": VENDOR_REGISTRATION_URL,
+  B2B: VENDOR_REGISTRATION_URL,
   Explore: "/",
   Payment: "/cart",
   "Pay Now": "/cart",
-  "Become a partner": "/vendor-register",
+  "Become a partner": VENDOR_REGISTRATION_URL,
   "Order your meal": "/search",
   "Find what you need": "/search",
 };
@@ -62,6 +63,14 @@ const renderMappedLink = (label: string, className: string) => {
   const href = footerRouteMap[label];
   if (!href) {
     return <span className={className}>{label}</span>;
+  }
+
+  if (/^https?:\/\//i.test(href)) {
+    return (
+      <a href={href} className={className}>
+        {label}
+      </a>
+    );
   }
 
   return (

@@ -7,11 +7,13 @@ import { Briefcase, Home, LayoutGrid, ShoppingBag, UserRound } from "lucide-reac
 import { buildAuthHref } from "@/lib/authRedirect";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 
 type BottomTab = {
   key: string;
   label: string;
   href: string;
+  external?: boolean;
   isActive: boolean;
   Icon: typeof Home;
 };
@@ -96,7 +98,8 @@ export default function MobileBottomNav() {
       {
         key: "b2b",
         label: "B2B",
-        href: "/vendor-register",
+        href: VENDOR_REGISTRATION_URL,
+        external: true,
         isActive: onVendor,
         Icon: Briefcase,
       },
@@ -125,6 +128,20 @@ export default function MobileBottomNav() {
       <div className="mx-auto grid h-[74px] max-w-screen-sm grid-cols-5 items-center px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
         {tabs.map((tab) => {
           const activeClasses = tab.isActive ? "text-slate-900" : "text-slate-500";
+
+          if (tab.external) {
+            return (
+              <a
+                key={tab.key}
+                href={tab.href}
+                className={`flex h-full flex-col items-center justify-center gap-1 ${activeClasses}`}
+                aria-current={tab.isActive ? "page" : undefined}
+              >
+                <tab.Icon size={30} strokeWidth={tab.isActive ? 2.2 : 1.9} />
+                <span className="text-[12px] font-semibold leading-none">{tab.label}</span>
+              </a>
+            );
+          }
 
           return (
             <Link

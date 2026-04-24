@@ -267,8 +267,6 @@ const getNavLabel = (label: SidebarLabel, isRestaurantVendor: boolean): string =
   return label;
 };
 
-const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_MAIN_WEBSITE_URL || "http://localhost:3000";
-const VENDOR_REGISTRATION_URL = `${MAIN_WEBSITE_URL.replace(/\/$/, "")}/vendor-register`;
 const DEFAULT_VENDOR_AVATAR =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&q=60";
 const DEFAULT_VENDOR_BANNER =
@@ -5729,12 +5727,12 @@ export default function VendorDashboard() {
             >
               Vendor Login
             </Link>
-            <a
-              href={VENDOR_REGISTRATION_URL}
+            <Link
+              href="/register"
               className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             >
               Register as Vendor
-            </a>
+            </Link>
           </div>
         </section>
       </main>

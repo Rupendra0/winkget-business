@@ -6,9 +6,6 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, Building2, KeyRound, UserPlus } from "lucide-react";
 import { fetchVendorSession, loginVendor } from "@/lib/vendorApi";
 
-const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_MAIN_WEBSITE_URL || "http://localhost:3000";
-const VENDOR_REGISTRATION_URL = `${MAIN_WEBSITE_URL.replace(/\/$/, "")}/vendor-register`;
-
 export default function VendorLoginPage() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
@@ -136,13 +133,13 @@ export default function VendorLoginPage() {
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
           <p className="text-sm text-gray-700">New to Winkget vendor?</p>
-          <a
-            href={VENDOR_REGISTRATION_URL}
+          <Link
+            href="/register"
             className="mt-2 inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-100"
           >
             <UserPlus className="h-4 w-4" aria-hidden="true" />
             Register as Vendor
-          </a>
+          </Link>
         </div>
       </section>
     </main>

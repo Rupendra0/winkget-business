@@ -1,6 +1,8 @@
 import React from 'react';
 import { registerCta } from '@/data/homeData';
 
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || 'http://localhost:3002').replace(/\/$/, '')}/register`;
+
 export default function RegisterBusiness() {
   return (
     <section className="px-4 sm:px-6 lg:px-8 pb-16">
@@ -11,9 +13,12 @@ export default function RegisterBusiness() {
               {registerCta.title}
             </div>
             <p className="text-gray-600 mt-2">{registerCta.subtitle}</p>
-            <button className="mt-5 px-6 py-3 rounded-xl bg-blue-900 text-white font-semibold hover:bg-blue-800 btn-hover">
+            <a
+              href={VENDOR_REGISTRATION_URL}
+              className="mt-5 inline-flex px-6 py-3 rounded-xl bg-blue-900 text-white font-semibold hover:bg-blue-800 btn-hover"
+            >
               {registerCta.button}
-            </button>
+            </a>
           </div>
           <div className="min-h-50 bg-white/30">
             <img
