@@ -134,6 +134,7 @@ type ShopProfileFormState = {
   shopGalleryText: string;
   businessAddress: string;
   website: string;
+  establishmentYear: string;
   businessDescription: string;
   instagramUrl: string;
   facebookUrl: string;
@@ -801,6 +802,10 @@ function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormStat
     shopGalleryText: cleanedGallery.join("\n"),
     businessAddress: String(vendor?.businessAddress || "").trim(),
     website: String(vendor?.website || "").trim(),
+    establishmentYear:
+      vendor?.establishmentYear !== undefined && vendor?.establishmentYear !== null
+        ? String(vendor.establishmentYear)
+        : "",
     businessDescription: String(vendor?.businessDescription || "").trim(),
     instagramUrl: String(vendor?.instagramUrl || "").trim(),
     facebookUrl: String(vendor?.facebookUrl || "").trim(),
@@ -1989,6 +1994,20 @@ function ShopProfileSection({
                 onChange={(event) => onChange("website", event.target.value)}
                 className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                 placeholder="https://..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">Establishment Year</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1800"
+                max="3000"
+                value={form.establishmentYear}
+                onChange={(event) => onChange("establishmentYear", event.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                className="w-full rounded-xl bg-gray-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="e.g. 2018"
               />
             </label>
 
@@ -5100,6 +5119,9 @@ export default function VendorDashboard() {
         ),
         businessAddress: shopProfileForm.businessAddress,
         website: shopProfileForm.website,
+        establishmentYear: shopProfileForm.establishmentYear.trim()
+          ? Number(shopProfileForm.establishmentYear.trim())
+          : undefined,
         businessDescription: shopProfileForm.businessDescription,
         instagramUrl: shopProfileForm.instagramUrl,
         facebookUrl: shopProfileForm.facebookUrl,

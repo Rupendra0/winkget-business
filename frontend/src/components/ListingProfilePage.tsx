@@ -1608,32 +1608,32 @@ export default function ListingProfilePage({
               </section>
 
               <section className="rounded-[12px] bg-white p-4">
-                <div className="flex items-center gap-7 border-b border-[#d8dadd] pb-2">
+                <div className="flex items-center gap-7 pb-2">
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-services")}
-                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="text-[1.02rem] font-semibold text-[#4a4a50]"
                   >
                     Services
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-gallery")}
-                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="text-[1.02rem] font-semibold text-[#4a4a50]"
                   >
                     Photo
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-footer")}
-                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="text-[1.02rem] font-semibold text-[#4a4a50]"
                   >
                     Address
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-reviews")}
-                    className="text-[1.02rem] font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="text-[1.02rem] font-semibold text-[#4a4a50]"
                   >
                     Reviews
                   </button>
@@ -1703,32 +1703,32 @@ export default function ListingProfilePage({
               </div>
 
               <section className="w-full rounded-[12px] border border-[#e8edf5] bg-white p-4 lg:hidden">
-                <div className="flex items-center gap-4 overflow-x-auto border-b border-[#d8dadd] pb-2">
+                <div className="flex items-center gap-4 overflow-x-auto pb-2">
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-services-mobile")}
-                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50]"
                   >
                     Services
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-gallery-mobile")}
-                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50]"
                   >
                     Photo
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-contact-details-mobile")}
-                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50]"
                   >
                     Address
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToSection("listing-reviews")}
-                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50] underline underline-offset-4"
+                    className="whitespace-nowrap text-sm font-semibold text-[#4a4a50]"
                   >
                     Reviews
                   </button>

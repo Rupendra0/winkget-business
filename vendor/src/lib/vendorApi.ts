@@ -193,6 +193,7 @@ export type VendorProfileUpdateInput = {
   gstDocument?: string;
   shopOpeningTime?: string;
   shopClosingTime?: string;
+  establishmentYear?: number;
   storeStatusMode?: "auto" | "manual";
   manualStoreStatus?: "open" | "closed";
   serviceTags?: string[];
