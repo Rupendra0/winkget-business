@@ -83,6 +83,7 @@ type ImagePreview = {
 
 const MAX_PRODUCT_NAME_WORDS = 10;
 const MAX_SHORT_DESCRIPTION_WORDS = 50;
+const MAX_KEY_ATTRIBUTES = 6;
 
 const HIGHLIGHT_OPTIONS = [
   { key: "isCancellable", label: "Cancellable" },
@@ -298,7 +299,15 @@ function parseLabelValueLines(value: string): Array<{ label: string; value: stri
 
       return { label, value: lineValue };
     })
-    .filter((item): item is { label: string; value: string } => Boolean(item));
+    .filter((item): item is { label: string; value: string } => Boolean(item))
+    .slice(0, MAX_KEY_ATTRIBUTES);
+}
+
+function limitAttributeInput(value: string): string {
+  return String(value || "")
+    .split(/\r?\n/)
+    .slice(0, MAX_KEY_ATTRIBUTES)
+    .join("\n");
 }
 
 const findNestedSubcategoryMatch = (
@@ -1216,7 +1225,8 @@ export default function VendorAddProductForm({
               <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
               <label className="mt-3 block text-sm text-slate-700">
                 Key Attributes
-                <textarea value={fieldValues.attributesText} onChange={(event) => updateField("attributesText", event.target.value)} className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]" placeholder="Material: Cotton" />
+                <textarea value={fieldValues.attributesText} onChange={(event) => updateField("attributesText", limitAttributeInput(event.target.value))} className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]" placeholder="Material: Cotton" />
+                <p className="mt-1 text-xs text-slate-500">Maximum 6 attributes.</p>
               </label>
             </section>
 

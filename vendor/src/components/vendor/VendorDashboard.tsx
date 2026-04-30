@@ -3834,10 +3834,11 @@ function VendorProductsSection({
             <span className="mb-1 block text-xs font-semibold text-gray-600">Key Attributes (Label: Value)</span>
             <textarea
               value={form.keyAttributesText}
-              onChange={(event) => onFormChange("keyAttributesText", event.target.value)}
+              onChange={(event) => onFormChange("keyAttributesText", limitAttributeInput(event.target.value))}
               className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
               placeholder="Skin Type: All"
             />
+            <span className="mt-1 block text-[11px] text-gray-500">Maximum 6 attributes.</span>
           </label>
 
           <label className="block">
@@ -6188,6 +6189,15 @@ function splitLineItems(value: string): string[] {
     .filter(Boolean);
 }
 
+const MAX_KEY_ATTRIBUTES = 6;
+
+function limitAttributeInput(value: string): string {
+  return String(value || "")
+    .split(/\r?\n/)
+    .slice(0, MAX_KEY_ATTRIBUTES)
+    .join("\n");
+}
+
 function parseAttributeLines(value: string): Array<{ label: string; value: string }> {
   return splitLineItems(value)
     .map((line) => {
@@ -6204,7 +6214,8 @@ function parseAttributeLines(value: string): Array<{ label: string; value: strin
 
       return { label, value: attrValue };
     })
-    .filter((item): item is { label: string; value: string } => Boolean(item));
+    .filter((item): item is { label: string; value: string } => Boolean(item))
+    .slice(0, MAX_KEY_ATTRIBUTES);
 }
 
 function parseVariantLines(value: string): VendorProductUpsertInput["variantData"] {

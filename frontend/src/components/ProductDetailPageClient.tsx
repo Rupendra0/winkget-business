@@ -20,7 +20,7 @@ type ProductDetailPageClientProps = {
   relatedProducts?: RelatedProductModel[];
 };
 
-const KEY_ATTRIBUTE_PREVIEW_COUNT = 5;
+const KEY_ATTRIBUTE_PREVIEW_COUNT = 6;
 
 const normalizePairs = (items: Array<[string, string]> | undefined) =>
   (Array.isArray(items) ? items : [])
@@ -97,7 +97,6 @@ export default function ProductDetailPageClient({
 
   const [activeImage, setActiveImage] = useState(galleryImages[0] || product.image || "");
   const [showFullTabDescription, setShowFullTabDescription] = useState(false);
-  const [showAllAttributes, setShowAllAttributes] = useState(false);
   const [activeInfoTab, setActiveInfoTab] = useState("product-details");
   const [cartQuantity, setCartQuantity] = useState(0);
   const quantity = 1;
@@ -358,25 +357,13 @@ export default function ProductDetailPageClient({
                       Key Attributes
                     </div>
                     <div className="grid grid-cols-[170px_1fr] gap-x-3 gap-y-2 px-3 py-3 text-[15px]">
-                      {(showAllAttributes
-                        ? resolvedKeyAttributes
-                        : resolvedKeyAttributes.slice(0, KEY_ATTRIBUTE_PREVIEW_COUNT)
-                      ).map(([label, value]) => (
+                      {resolvedKeyAttributes.slice(0, KEY_ATTRIBUTE_PREVIEW_COUNT).map(([label, value]) => (
                         <div key={label} className="contents">
                           <p className="font-semibold text-slate-700">{label}</p>
                           <p className="text-slate-700">{value}</p>
                         </div>
                       ))}
                     </div>
-                    {resolvedKeyAttributes.length > KEY_ATTRIBUTE_PREVIEW_COUNT ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllAttributes((previous) => !previous)}
-                        className="px-3 pb-3 text-sm font-semibold text-blue-700"
-                      >
-                        {showAllAttributes ? "View less attributes" : "View full attributes"}
-                      </button>
-                    ) : null}
                   </div>
                 ) : null}
               </div>
