@@ -20,9 +20,9 @@ type BannerTile = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 const BANNER_LAYOUT: BannerTile[] = [
-  { key: "leftImage", title: "Main Banner", className: "md:col-span-2 lg:col-span-4" },
+  { key: "leftImage", title: "Main Banner", className: "md:col-span-2 lg:col-span-5" },
   { key: "middleImage", title: "Secondary Banner", className: "lg:col-span-3" },
-  { key: "rightImage", title: "Secondary Banner", className: "lg:col-span-3" },
+  { key: "rightImage", title: "Secondary Banner", className: "lg:col-span-2" },
 ];
 
 const BANNER_HEIGHT_CLASS = "h-[170px] sm:h-[190px] lg:h-[200px]";
@@ -139,7 +139,7 @@ export default function BannerSection() {
   };
 
   return (
-    <section className="mt-4 px-0 py-3 sm:px-4 lg:px-6 xl:px-8">
+    <section className="mt-4 px-0 py-3 sm:px-3 lg:px-3 xl:px-3">
       <div className="md:hidden">
         <div
           className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm`}

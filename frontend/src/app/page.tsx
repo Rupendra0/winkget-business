@@ -13,10 +13,10 @@ export default function Home() {
       <section id="mobile-home-categories">
         <CategoryGrid />
       </section>
+      <CityStrip />
       <section id="mobile-home-shop">
         <PromoBanners />
       </section>
-      <CityStrip />
       <ExploreWellnessSections />
       <PartnersSection />
       <Footer />
