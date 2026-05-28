@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, Check } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
 import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
@@ -38,10 +39,11 @@ export default function Navbar() {
   const [loadingCities, setLoadingCities] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const desktopCityMenuRef = useRef<HTMLDivElement | null>(null);
-  const mobileCityMenuRef = useRef<HTMLDivElement | null>(null);
+  const cityModalRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
+  const [citySearchQuery, setCitySearchQuery] = useState("");
 
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
@@ -177,10 +179,7 @@ export default function Navbar() {
     if (!cityMenuOpen) return;
 
     const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const clickedInsideDesktop = desktopCityMenuRef.current?.contains(target);
-      const clickedInsideMobile = mobileCityMenuRef.current?.contains(target);
-      if (!clickedInsideDesktop && !clickedInsideMobile) {
+      if (!cityModalRef.current?.contains(event.target as Node)) {
         setCityMenuOpen(false);
       }
     };
@@ -188,6 +187,16 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [cityMenuOpen]);
+
+  useEffect(() => {
+    if (!cityMenuOpen) return;
+    setCitySearchQuery("");
+  }, [cityMenuOpen]);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   useEffect(() => {
     const updateMobileSearchOnlyState = () => {
@@ -251,22 +260,89 @@ export default function Navbar() {
     router.replace(target, { scroll: false });
   };
 
+  const filteredCityOptions = useMemo(() => {
+    const query = citySearchQuery.trim().toLowerCase();
+    if (!query) return cityOptions;
+    return cityOptions.filter((city) => city.name.toLowerCase().includes(query));
+  }, [cityOptions, citySearchQuery]);
+
+  const cityModal = cityMenuOpen && isMounted
+    ? createPortal(
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/20 backdrop-blur-[1px] px-4 py-6">
+          <div
+            ref={cityModalRef}
+            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl sm:p-6"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Select Your City</h2>
+              <button
+                type="button"
+                onClick={() => setCityMenuOpen(false)}
+                className="rounded-full p-1 text-slate-500 transition hover:text-slate-700"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="relative mt-4">
+              <input
+                type="text"
+                value={citySearchQuery}
+                onChange={(event) => setCitySearchQuery(event.target.value)}
+                placeholder="Search for city..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+              <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+
+            <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-100">
+              {filteredCityOptions.length > 0 ? (
+                filteredCityOptions.map((city) => {
+                  const active = city.name === selectedCity;
+                  return (
+                    <button
+                      key={city.id}
+                      type="button"
+                      onClick={() => {
+                        handleCityChange(city.name);
+                        setCityMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm ${
+                        active ? "bg-sky-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{city.name}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-6 text-sm text-slate-500">No cities found.</div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
-    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-orange-100/80 shadow-sm font-medium">
-      <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
-        <div
-          className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
-            isMobileSearchOnly
-              ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-3 md:opacity-100"
-              : "max-h-24 py-3 opacity-100"
-          }`}
-        >
+    <>
+      <nav className="sticky top-0 z-50 mt-2 bg-white/70 backdrop-blur-md font-medium">
+        <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
+          <div
+            className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
+              isMobileSearchOnly
+                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-3 md:opacity-100"
+                : "max-h-24 py-3 opacity-100"
+            }`}
+          >
           {/* Logo */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-3">
             {showBack ? (
               <button
                 type="button"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white border border-orange-100 text-orange-600 flex items-center justify-center btn-hover"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white text-orange-600 flex items-center justify-center btn-hover shadow-sm"
                 onClick={() => router.back()}
                 aria-label="Go back"
               >
@@ -282,45 +358,22 @@ export default function Navbar() {
           {/* Center - Location and Search */}
           <div className="hidden md:flex flex-1 mx-6 items-center gap-4">
             {/* Location Selector */}
-            <div ref={desktopCityMenuRef} className="relative">
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-2 rounded-md border border-orange-100 bg-white/80 px-4 py-2 shadow-sm transition hover:bg-white disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
-                <span className="max-w-[120px] truncate text-sm font-medium text-slate-700">
-                  {loadingCities ? "Loading city..." : selectedCity || "Select city"}
-                </span>
+                <div className="flex flex-col items-start leading-tight">
+                  <span className="text-[11px] font-semibold text-slate-500">Your Location</span>
+                  <span className="max-w-[140px] truncate text-sm font-semibold text-blue-600">
+                    {loadingCities ? "Loading city..." : selectedCity || "Select city"}
+                  </span>
+                </div>
                 <ChevronDown size={16} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
               </button>
-
-              {cityMenuOpen ? (
-                <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-orange-100 bg-white shadow-xl">
-                  <div className="max-h-72 overflow-y-auto py-1.5">
-                    {cityOptions.map((city) => {
-                      const active = city.name === selectedCity;
-                      return (
-                        <button
-                          key={city.id}
-                          type="button"
-                          onClick={() => {
-                            handleCityChange(city.name);
-                            setCityMenuOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${
-                            active ? "bg-orange-50 text-orange-700" : "text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span>{city.name}</span>
-                          {active ? <Check size={14} className="text-orange-600" /> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
             </div>
 
             {/* Search Bar */}
@@ -340,16 +393,16 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="rounded-md border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="rounded-md bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
             >
               Sell on Winkget
             </a>
-            <button className="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
+            <button className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
             <Link
               href="/cart"
-              className="relative rounded-md border border-orange-100 bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative rounded-md bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -366,7 +419,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                  className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
                   <span className="text-sm max-w-[130px] truncate">{displayName}</span>
@@ -422,8 +475,8 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded-md border border-orange-100 bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm">
-                <LogIn size={18} />
+              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
+                <LogIn size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
             )}
@@ -431,50 +484,27 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden shrink-0 flex items-center gap-1.5">
-            <div ref={mobileCityMenuRef} className="relative">
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-1 rounded-md border border-orange-100 bg-white px-1.5 py-1.5 text-gray-800 shadow-sm disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
                 aria-label="Current location"
               >
-                <MapPin size={18} className="text-orange-500" />
-                <span className="max-w-20 truncate text-xs text-slate-700">
-                  {loadingCities ? "City..." : selectedCity || "Select"}
-                </span>
-                <ChevronDown size={14} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {cityMenuOpen ? (
-                <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 overflow-hidden rounded-xl border border-orange-100 bg-white shadow-xl">
-                  <div className="max-h-60 overflow-y-auto py-1.5">
-                    {cityOptions.map((city) => {
-                      const active = city.name === selectedCity;
-                      return (
-                        <button
-                          key={city.id}
-                          type="button"
-                          onClick={() => {
-                            handleCityChange(city.name);
-                            setCityMenuOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
-                            active ? "bg-orange-50 text-orange-700" : "text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span>{city.name}</span>
-                          {active ? <Check size={12} className="text-orange-600" /> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <MapPin size={16} className="text-orange-500" />
+                <div className="flex flex-col items-start leading-tight">
+                  <span className="text-[10px] font-semibold text-slate-500">Your Location</span>
+                  <span className="max-w-20 truncate text-xs font-semibold text-blue-600">
+                    {loadingCities ? "City..." : selectedCity || "Select"}
+                  </span>
                 </div>
-              ) : null}
+                <ChevronDown size={12} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
+              </button>
             </div>
             <Link
               href="/cart"
-              className="relative rounded-md border border-orange-100 bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative rounded-md bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -489,7 +519,7 @@ export default function Navbar() {
             ) : user ? (
               <Link
                 href="/profile"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-orange-500 bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
                 aria-label="Profile"
               >
                 <UserRound size={16} />
@@ -498,10 +528,10 @@ export default function Navbar() {
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-orange-500 bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 sm:px-3 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
                 aria-label="Login"
               >
-                <LogIn size={16} />
+                <LogIn size={16} className="text-white" />
                 <span className="hidden sm:inline text-sm">Login</span>
               </Link>
             )}
@@ -518,7 +548,10 @@ export default function Navbar() {
             />
           </div>
         </div>
-      </div>
-    </nav>
+
+        </div>
+      </nav>
+      {cityModal}
+    </>
   );
 }

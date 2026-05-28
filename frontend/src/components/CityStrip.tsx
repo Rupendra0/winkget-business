@@ -138,8 +138,8 @@ export default function CityStrip() {
 
   if (isLoading) {
     return (
-      <section className="px-0 py-0 sm:px-4 lg:px-6 xl:px-8">
-        <div className="w-full animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
+        <div className="w-full animate-pulse rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
@@ -167,8 +167,8 @@ export default function CityStrip() {
   }
 
   return (
-    <section className="px-0 py-0 sm:px-4 lg:px-6 xl:px-8">
-      <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+    <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
+      <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
         <div className="mb-4">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
           <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>

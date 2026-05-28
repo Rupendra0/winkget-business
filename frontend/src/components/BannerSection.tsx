@@ -25,7 +25,7 @@ const BANNER_LAYOUT: BannerTile[] = [
   { key: "rightImage", title: "Secondary Banner", className: "lg:col-span-2" },
 ];
 
-const BANNER_HEIGHT_CLASS = "h-[170px] sm:h-[190px] lg:h-[200px]";
+const BANNER_HEIGHT_CLASS = "h-[180px] sm:h-[200px] lg:h-[250px]";
 
 const normalizeImage = (value?: string) => String(value || "").trim();
 
@@ -139,7 +139,7 @@ export default function BannerSection() {
   };
 
   return (
-    <section className="mt-4 px-0 py-3 sm:px-3 lg:px-3 xl:px-3">
+    <section className="mt-2 px-0 py-2 sm:px-3 lg:px-3 xl:px-3">
       <div className="md:hidden">
         <div
           className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm`}

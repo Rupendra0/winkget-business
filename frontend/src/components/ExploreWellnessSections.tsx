@@ -253,9 +253,9 @@ export default function ExploreWellnessSections() {
   }
 
   return (
-    <section className="space-y-4 px-0 py-0 sm:px-4 lg:px-6 xl:px-8">
+    <section className="space-y-4 px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
       {exploreCards.length > 0 ? (
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+        <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
           <div className="mb-3">
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
           </div>
@@ -306,7 +306,7 @@ export default function ExploreWellnessSections() {
       ) : null}
 
       {wellnessCards.length > 0 ? (
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+        <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
           <div className="mb-3">
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
           </div>
@@ -357,7 +357,7 @@ export default function ExploreWellnessSections() {
       ) : null}
 
       {loadError && exploreCards.length === 0 && wellnessCards.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
+        <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
       ) : null}
     </section>
   );

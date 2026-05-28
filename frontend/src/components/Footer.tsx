@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
+import { Facebook, Instagram, MessageCircle, Twitter } from "lucide-react";
 import { footerData } from "@/data/homeData";
 import { fetchCategories, type CatalogCategory } from "@/lib/catalogClient";
 
@@ -10,8 +11,9 @@ const MAX_CATEGORY_COLUMN_COUNT = 4;
 const ITEMS_PER_COLUMN = 10;
 const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 
-const sectionTitleClass = "text-[0.95rem] font-semibold leading-tight text-[#1f2937]";
-const linkTextClass = "text-[0.95rem] leading-[1.35] text-[#111827] transition-colors hover:text-[#111827]/80";
+const sectionTitleClass = "text-[0.85rem] font-semibold leading-tight text-[#1f2937]";
+const linkTextClass = "text-[0.85rem] leading-[1.3] text-[#111827] transition-colors hover:text-[#111827]/80";
+const inlineLinkClass = "text-[0.85rem] text-[#111827] transition-colors hover:text-[#111827]/80";
 
 const footerRouteMap: Record<string, string> = {
   "My Account": "/profile",
@@ -25,8 +27,23 @@ const footerRouteMap: Record<string, string> = {
   Payment: "/cart",
   "Pay Now": "/cart",
   "Become a partner": VENDOR_REGISTRATION_URL,
+  "List a Job": "/search",
   "Order your meal": "/search",
   "Find what you need": "/search",
+};
+
+const socialIconMap: Record<string, React.ElementType> = {
+  Instagram,
+  Facebook,
+  Twitter,
+  WhatsApp: MessageCircle,
+};
+
+const socialColorMap: Record<string, string> = {
+  Instagram: "bg-[#e1306c]",
+  Facebook: "bg-[#1877f2]",
+  Twitter: "bg-[#1da1f2]",
+  WhatsApp: "bg-[#25d366]",
 };
 
 const toCategorySlug = (value: string) =>
@@ -173,6 +190,10 @@ export default function Footer() {
   );
 
   const quickLinkItems = useMemo(() => padColumn(footerData.quickLinks, ITEMS_PER_COLUMN), []);
+  const inlineQuickLinkRows = useMemo(() => {
+    const midpoint = Math.ceil(footerData.quickLinks.length / 2);
+    return [footerData.quickLinks.slice(0, midpoint), footerData.quickLinks.slice(midpoint)];
+  }, []);
 
   return (
     <footer id="listing-footer" className="hidden border-t border-[#d5d7db] bg-white md:block">
@@ -192,7 +213,7 @@ export default function Footer() {
                 {column.map((category, itemIndex) => {
                   if (isLoadingCategories && columnIndex === 0 && itemIndex === 0) {
                     return (
-                      <p key="category-loading" className="text-[0.9rem] text-[#4b5563]">
+                      <p key="category-loading" className="text-[0.8rem] text-[#4b5563]">
                         Loading categories...
                       </p>
                     );
@@ -200,7 +221,7 @@ export default function Footer() {
 
                   if (!isLoadingCategories && dbCategories.length === 0 && columnIndex === 0 && itemIndex === 0) {
                     return (
-                      <p key="category-empty" className="text-[0.9rem] text-[#4b5563]">
+                      <p key="category-empty" className="text-[0.8rem] text-[#4b5563]">
                         No categories available.
                       </p>
                     );
@@ -261,6 +282,55 @@ export default function Footer() {
               )}
             </div>
           </section>
+        </div>
+
+        <div className="border-b border-[#cfd4dc] py-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-12">
+            <div className="flex items-center gap-4">
+              <span className={sectionTitleClass}>Follow us on</span>
+              <div className="flex items-center gap-3">
+                {footerData.social.map((item) => {
+                  const Icon = socialIconMap[item.name] || MessageCircle;
+                  const colorClass = socialColorMap[item.name] || "bg-slate-600";
+                  return (
+                    <a
+                      key={`footer-social-${item.name}`}
+                      href={item.url || "#"}
+                      aria-label={item.name}
+                      className={`${colorClass} flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm transition-transform hover:-translate-y-0.5`}
+                    >
+                      <Icon size={18} />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="lg:ml-auto lg:pl-8">
+              <div className={sectionTitleClass}>Quicklinks</div>
+              <div className="mt-2 space-y-2">
+                {inlineQuickLinkRows.map((row, rowIndex) => (
+                  <div key={`footer-quick-inline-row-${rowIndex}`} className="flex flex-wrap gap-x-6 gap-y-2">
+                    {row.map((item) => (
+                      <div key={`footer-quick-inline-${rowIndex}-${item}`}>{renderMappedLink(item, inlineLinkClass)}</div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-b border-[#cfd4dc] py-6">
+          <p className="text-[0.85rem] text-[#111827]">{footerData.copyright}</p>
+        </div>
+
+        <div className="py-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {footerData.bottomLinks.map((item) => (
+              <div key={`footer-bottom-${item}`}>{renderMappedLink(item, inlineLinkClass)}</div>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

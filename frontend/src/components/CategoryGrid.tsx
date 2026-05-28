@@ -49,13 +49,13 @@ function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
   return (
     <div className="flex flex-col items-center justify-center">
       <div
-        className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-300 bg-white md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]"
+        className="flex h-18 w-18 items-center justify-center overflow-hidden rounded-xl border border-slate-300 bg-white md:h-[4.25rem] md:w-[4.25rem] lg:h-[4.75rem] lg:w-[4.75rem]"
       >
         {mediaUrl ? (
           <img
             src={mediaUrl}
             alt={name}
-            className="h-12 w-12 object-contain scale-110 md:h-[3.25rem] md:w-[3.25rem] lg:h-16 lg:w-16"
+            className="h-16 w-16 object-contain scale-110 md:h-[3.5rem] md:w-[3.5rem] lg:h-[3.75rem] lg:w-[3.75rem]"
             loading="lazy"
           />
         ) : (
@@ -64,7 +64,7 @@ function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
           </div>
         )}
       </div>
-      <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">{name}</h3>
+      <h3 className="mt-2 max-w-[96px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[104px] lg:max-w-[120px]">{name}</h3>
     </div>
   );
 }
@@ -169,7 +169,7 @@ export default function CategoryGrid() {
   }, [searchQuery, sortedCategories]);
 
   return (
-    <section className="px-0 pt-1 pb-0 md:px-4 md:pt-2 md:pb-0 lg:px-6 lg:pt-2 lg:pb-0 xl:px-8">
+    <section className="px-0 pt-1 pb-0 sm:px-3 md:pt-2 lg:px-3 xl:px-3">
       <div className="w-full">
         {/* Category Grid */}
         <div className="pb-2">
@@ -186,7 +186,7 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="grid grid-cols-4 justify-items-center gap-4 md:grid-cols-5 lg:grid-cols-10 lg:gap-x-8 lg:gap-y-7">
+          <div className="grid grid-cols-4 justify-items-center gap-3 md:grid-cols-5 lg:grid-cols-10 lg:gap-x-6 lg:gap-y-6">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link
@@ -222,7 +222,7 @@ export default function CategoryGrid() {
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-300 bg-white text-blue-600 md:h-16 md:w-16 lg:h-[4.5rem] lg:w-[4.5rem]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-300 bg-white text-blue-600 md:h-[4.25rem] md:w-[4.25rem] lg:h-[4.75rem] lg:w-[4.75rem]">
                 <ChevronRight size={20} />
               </div>
               <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">View All</h3>
