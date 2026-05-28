@@ -227,15 +227,15 @@ export default function PartnersSection() {
   };
 
   return (
-    <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
+    <section className="px-0 pt-0 pb-10 sm:px-3 lg:px-3 xl:px-3">
       <div className="w-full">
-        <div className="mb-4 pl-3 sm:pl-0">
+        <div className="mb-4 text-center">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
           <p className="mt-1 text-sm text-gray-600">{PARTNER_SUBHEADING}</p>
         </div>
 
         {/* Mobile: Scrollable carousel showing 3 cards */}
-        <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex w-full justify-between gap-4 overflow-x-auto pb-2 md:hidden no-scrollbar">
           {cards.map((card) => (
             <div key={`sponsor-mobile-${card.cardId}`} className="shrink-0 basis-[calc((100%-2rem)/3)]">
               {renderSponsorCard(
@@ -247,7 +247,7 @@ export default function PartnersSection() {
         </div>
 
         {/* Desktop: Grid layout */}
-        <div className="hidden grid-cols-2 gap-3 sm:gap-4 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
+        <div className="hidden w-full justify-between gap-8 overflow-x-auto pb-2 md:flex no-scrollbar">
           {cards.map((card) => (
             <div key={`sponsor-desktop-${card.cardId}`}>
               {renderSponsorCard(
