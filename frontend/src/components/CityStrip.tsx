@@ -131,9 +131,9 @@ export default function CityStrip() {
   const sectionSubtitle = useMemo(() => {
     const city = String(selectedCity || "").trim();
     if (!city) {
-      return "Recently registered vendors, regardless of category";
+      return "Discover top-rated businesses across popular categories.";
     }
-    return `Recently added vendors in ${city}`;
+    return `Discover top-rated businesses in ${city}.`;
   }, [selectedCity]);
 
   if (isLoading) {

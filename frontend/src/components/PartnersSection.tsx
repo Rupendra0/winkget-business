@@ -29,6 +29,7 @@ type SponsorCard = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const SPONSOR_DEFAULT_HEADING = "Brand Partners";
 const SPONSOR_LIMIT = 7;
+const PARTNER_SUBHEADING = "Trusted brands and partners across categories.";
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
@@ -230,6 +231,7 @@ export default function PartnersSection() {
       <div className="w-full">
         <div className="mb-4 pl-3 sm:pl-0">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
+          <p className="mt-1 text-sm text-gray-600">{PARTNER_SUBHEADING}</p>
         </div>
 
         {/* Mobile: Scrollable carousel showing 3 cards */}

@@ -32,6 +32,7 @@ type PromoCard = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const DEFAULT_HEADING = "Featured Offers";
+const PROMO_SUBHEADING = "Handpicked offers from trusted local businesses.";
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
@@ -213,6 +214,7 @@ export default function PromoBanners() {
       <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
+          <p className="mt-1 text-sm text-gray-600">{PROMO_SUBHEADING}</p>
         </div>
 
         {/* Mobile: Scrollable carousel showing 3 cards */}
