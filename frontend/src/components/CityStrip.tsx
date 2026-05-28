@@ -142,13 +142,13 @@ export default function CityStrip() {
         <div className="w-full animate-pulse rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`city-partner-skeleton-${index}`}
-                className="shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)]"
+                className="my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
               >
-                <div className="h-32 w-full bg-slate-200/70" />
+                <div className="h-32 w-full bg-slate-200/70 lg:h-[10vw]" />
                 <div className="space-y-2 p-3">
                   <div className="h-4 w-2/3 rounded bg-slate-200/70" />
                   <div className="h-3 w-1/2 rounded bg-slate-200/70" />
@@ -174,26 +174,26 @@ export default function CityStrip() {
           <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+        <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2 no-scrollbar">
           {partners.map((partner) => (
             <Link
               key={partner.id}
               href={partner.href}
-              className="relative shrink-0 basis-[calc((100%-1rem)/2)] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5"
+              className="relative my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
             >
               {partner.isNew ? (
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>
               ) : null}
 
-              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full border-b border-slate-100 object-cover" loading="lazy" />
+              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full rounded-t-[10px] border-b border-slate-100 object-cover lg:h-[10vw]" loading="lazy" />
 
-              <div className="p-3.5">
+              <div className="p-[10px]">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">
-                  <div className="min-w-0 text-sm font-semibold text-gray-900 md:line-clamp-1">{partner.name}</div>
+                  <div className="h-10 min-w-0 overflow-hidden text-sm font-semibold text-gray-900">{partner.name}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
                 <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
-                <div className="mt-1.5 text-xs text-gray-500 line-clamp-2">{partner.address}</div>
+                <div className="mt-1.5 h-[37px] overflow-hidden break-words text-xs text-gray-500">{partner.address}</div>
               </div>
             </Link>
           ))}
