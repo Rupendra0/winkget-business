@@ -35,8 +35,8 @@ const MOBILE_COLUMNS = 4;
 const MOBILE_ROWS = 4;
 const MOBILE_TILE_COUNT = MOBILE_COLUMNS * MOBILE_ROWS;
 const MOBILE_CATEGORY_COUNT = MOBILE_TILE_COUNT - 1;
-const DESKTOP_COLUMNS = 10;
-const DESKTOP_ROWS = 2;
+const DESKTOP_COLUMNS = 9;
+const DESKTOP_ROWS = 3;
 const DESKTOP_TILE_COUNT = DESKTOP_COLUMNS * DESKTOP_ROWS;
 const DESKTOP_CATEGORY_COUNT = DESKTOP_TILE_COUNT - 1;
 
@@ -47,15 +47,15 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="w-full rounded-[10px] bg-white p-[5px]">
       <div
-        className="flex h-18 w-18 items-center justify-center overflow-hidden rounded-xl border border-slate-300 bg-white md:h-[4.25rem] md:w-[4.25rem] lg:h-[4.75rem] lg:w-[4.75rem]"
+        className="flex h-[18vw] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] lg:h-[6.2vw]"
       >
         {mediaUrl ? (
           <img
             src={mediaUrl}
             alt={name}
-            className="h-16 w-16 object-contain scale-110 md:h-[3.5rem] md:w-[3.5rem] lg:h-[3.75rem] lg:w-[3.75rem]"
+            className="h-full w-full rounded-[10px] object-cover"
             loading="lazy"
           />
         ) : (
@@ -64,7 +64,7 @@ function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
           </div>
         )}
       </div>
-      <h3 className="mt-2 max-w-[96px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[104px] lg:max-w-[120px]">{name}</h3>
+      <h3 className="mt-[5px] text-center text-[13px] font-medium leading-tight text-gray-700 line-clamp-2">{name}</h3>
     </div>
   );
 }
@@ -186,13 +186,13 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="grid grid-cols-4 justify-items-center gap-3 md:grid-cols-5 lg:grid-cols-10 lg:gap-x-6 lg:gap-y-6">
+          <div className="flex flex-wrap gap-[2%] p-5">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link
                   key={category.id}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="flex flex-col items-center justify-center"
+                  className="my-[5px] w-[23.5%] rounded-[10px] md:w-[18.4%] lg:w-[9.33%]"
                 >
                   <CategoryCard
                     name={category.name}
@@ -207,7 +207,7 @@ export default function CategoryGrid() {
                 <Link
                   key={`desktop-${category.id}`}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="hidden lg:flex lg:flex-col lg:items-center lg:justify-center"
+                  className="my-[5px] hidden w-[9.33%] rounded-[10px] lg:block"
                 >
                   <CategoryCard
                     name={category.name}
@@ -218,14 +218,14 @@ export default function CategoryGrid() {
             })}
 
             <button
-              className="flex flex-col items-center justify-center"
+              className="my-[5px] w-[23.5%] rounded-[10px] p-[5px] md:w-[18.4%] lg:w-[9.33%]"
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-300 bg-white text-blue-600 md:h-[4.25rem] md:w-[4.25rem] lg:h-[4.75rem] lg:w-[4.75rem]">
+              <div className="flex h-[18vw] w-full items-center justify-center rounded-[10px] border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] lg:h-[6.2vw]">
                 <ChevronRight size={20} />
               </div>
-              <h3 className="mt-2 max-w-[88px] text-center text-xs font-bold leading-tight text-gray-700 line-clamp-2 md:max-w-[96px] lg:max-w-[110px]">View All</h3>
+              <h3 className="mt-[5px] text-center text-[13px] font-medium leading-tight text-gray-700 line-clamp-2">View All</h3>
             </button>
           </div>
           ) : null}
