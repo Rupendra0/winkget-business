@@ -196,10 +196,10 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer id="listing-footer" className="hidden border-t border-[#d5d7db] bg-white md:block">
+    <footer id="listing-footer" className="hidden bg-white md:block">
       <div className="mx-auto w-full max-w-[1600px] px-8 py-10 lg:px-12">
         <div
-          className={`grid border-b border-[#cfd4dc] pb-10 ${footerGridColumnClass} lg:divide-x lg:divide-[#cfd4dc]`}
+          className={`grid pb-10 ${footerGridColumnClass}`}
         >
           {categoryColumns.map((column, columnIndex) => (
             <section key={`category-column-${columnIndex}`} className="px-6">
@@ -284,7 +284,7 @@ export default function Footer() {
           </section>
         </div>
 
-        <div className="border-b border-[#cfd4dc] py-8">
+        <div className="py-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-12">
             <div className="flex items-center gap-4">
               <span className={sectionTitleClass}>Follow us on</span>
@@ -321,7 +321,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-b border-[#cfd4dc] py-6">
+        <div className="py-6">
           <p className="text-[0.85rem] text-[#111827]">{footerData.copyright}</p>
         </div>
 

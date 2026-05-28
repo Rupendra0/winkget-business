@@ -327,7 +327,7 @@ export default function ExploreWellnessSections() {
                 <img
                   src={card.image}
                   alt={card.categoryName || "Health and wellness"}
-                  className="h-[170px] w-full object-cover"
+                  className="h-[46vw] min-h-[170px] w-full object-cover"
                   loading="lazy"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
@@ -337,18 +337,18 @@ export default function ExploreWellnessSections() {
             ))}
           </div>
 
-          {/* Desktop: Grid layout */}
-          <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+          {/* Desktop: Strip layout */}
+          <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex no-scrollbar">
             {wellnessCards.map((card) => (
               <Link
                 key={`wellness-desktop-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="group relative h-[23vw] w-[18.4%] shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition hover:shadow-md"
               >
                 <img
                   src={card.image}
                   alt={card.categoryName || "Health and wellness"}
-                  className="h-[280px] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                   loading="lazy"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">

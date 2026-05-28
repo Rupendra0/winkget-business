@@ -217,44 +217,19 @@ export default function PromoBanners() {
           <p className="mt-1 text-sm text-gray-600">{PROMO_SUBHEADING}</p>
         </div>
 
-        {/* Mobile: Scrollable carousel showing 3 cards */}
-        <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-center no-scrollbar">
           {visibleCards.map((card) => (
             <Link
               key={card.cardId}
               href={buildCategoryHref(card.categorySlug)}
-              className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl bg-white transition"
+              className="relative inline-block h-[42vw] min-h-[150px] w-[46%] shrink-0 overflow-hidden rounded-md bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition md:h-[18vw] md:w-[18.4%] md:min-w-0"
             >
               <img
                 src={card.image}
                 alt={card.categoryName || "Promotion"}
-                className="h-[140px] w-full object-cover sm:h-[215px]"
+                className="h-full w-full object-cover"
                 loading="lazy"
               />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Desktop: Grid layout */}
-        <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
-          {visibleCards.map((card) => (
-            <Link
-              key={card.cardId}
-              href={buildCategoryHref(card.categorySlug)}
-              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-            >
-              <img
-                src={card.image}
-                alt={card.categoryName || "Promotion"}
-                className="h-[200px] w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-[215px]"
-                loading="lazy"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-              </div>
             </Link>
           ))}
         </div>
