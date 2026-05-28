@@ -43,11 +43,12 @@ const DESKTOP_CATEGORY_COUNT = DESKTOP_TILE_COUNT - 1;
 interface CategoryCardProps {
   name: string;
   mediaUrl?: string;
+  className?: string;
 }
 
-function CategoryCard({ name, mediaUrl }: CategoryCardProps) {
+function CategoryCard({ name, mediaUrl, className = "bg-white" }: CategoryCardProps) {
   return (
-    <div className="w-full rounded-[10px] bg-white p-[5px]">
+    <div className={`w-full rounded-[10px] p-[5px] ${className}`}>
       <div
         className="flex h-[18vw] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] lg:h-[6.2vw]"
       >
@@ -239,7 +240,7 @@ export default function CategoryGrid() {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="w-full max-w-4xl rounded-xl border border-white/40 bg-white/80 p-6 shadow-md relative max-h-[80vh] overflow-y-auto backdrop-blur-md">
+            <div className="w-full max-w-6xl rounded-xl border border-white/40 bg-white/80 p-6 shadow-md relative max-h-[80vh] overflow-y-auto backdrop-blur-md">
               <button
                 className="absolute right-4 top-4 rounded-md border border-orange-500 bg-orange-500 p-2 text-white btn-hover"
                 onClick={() => setIsOpen(false)}
@@ -257,36 +258,22 @@ export default function CategoryGrid() {
                   className="w-full rounded-full border border-orange-100 bg-white px-4 py-2 text-sm text-gray-800 outline-none focus:border-orange-300"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9">
                 {filteredCategories.map((category) => {
                   return (
                     <Link
                       key={category.id}
                       href={buildCategoryHref(category.slug || slugify(category.name))}
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white/80 px-3 py-2 hover:bg-white"
+                      className="rounded-[10px] transition hover:-translate-y-0.5 hover:shadow-sm"
                     >
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white">
-                        {category.mediaUrl ? (
-                          <img
-                            src={category.mediaUrl}
-                            alt={category.name}
-                            className="h-full w-full object-contain"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-orange-50 text-orange-500">
-                            <span className="text-sm font-bold">{category.name.slice(0, 1).toUpperCase()}</span>
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-sm font-medium text-gray-800">{category.name}</span>
+                      <CategoryCard name={category.name} mediaUrl={category.mediaUrl} className="bg-transparent" />
                     </Link>
                   );
                 })}
 
                 {filteredCategories.length === 0 ? (
-                  <div className="rounded-lg border border-gray-200 bg-white/80 px-3 py-3 text-sm text-gray-500">
+                  <div className="col-span-full rounded-lg border border-gray-200 bg-white/80 px-3 py-3 text-sm text-gray-500">
                     No categories found.
                   </div>
                 ) : null}

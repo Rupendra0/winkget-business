@@ -328,13 +328,13 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 mt-2 bg-white/70 backdrop-blur-md font-medium">
-        <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
+      <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md font-medium">
+        <div className="w-full px-[10px]">
           <div
             className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
               isMobileSearchOnly
-                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-3 md:opacity-100"
-                : "max-h-24 py-3 opacity-100"
+                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-[10px] md:opacity-100"
+                : "max-h-24 py-[10px] opacity-100"
             }`}
           >
           {/* Logo */}
@@ -356,14 +356,14 @@ export default function Navbar() {
           </div>
 
           {/* Center - Location and Search */}
-          <div className="hidden md:flex flex-1 mx-6 items-center gap-4">
+          <div className="hidden md:flex flex-1 px-5 items-center gap-5">
             {/* Location Selector */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-[10px] border border-slate-100 bg-white px-[10px] py-1 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
                 <div className="flex flex-col items-start leading-tight">
@@ -378,7 +378,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative">
-              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
+              <div className="flex h-10 items-center gap-2 rounded-[14px] bg-gray-100 px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -390,19 +390,19 @@ export default function Navbar() {
           </div>
 
           {/* Right Navigation */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-[10px] px-[10px]">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="rounded-md bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
+              className="rounded px-[6px] py-1 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
             >
               Sell on Winkget
             </a>
-            <button className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
+            <button className="rounded bg-orange-500 px-[10px] py-[5px] text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
             <Link
               href="/cart"
-              className="relative rounded-md bg-white p-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative rounded bg-white px-[6px] py-1 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -419,7 +419,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                className="flex items-center gap-2 rounded bg-white px-[6px] py-1 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
                   <span className="text-sm max-w-[130px] truncate">{displayName}</span>
@@ -475,7 +475,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
+              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded bg-blue-600 px-[6px] py-1 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
                 <LogIn size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
