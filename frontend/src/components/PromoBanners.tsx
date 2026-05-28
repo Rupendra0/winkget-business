@@ -188,7 +188,7 @@ export default function PromoBanners() {
   if (isLoading) {
     return (
       <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-        <div className="w-full animate-pulse rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
+        <div className="w-full animate-pulse rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
           <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -211,8 +211,8 @@ export default function PromoBanners() {
 
   return (
     <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-      <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
-        <div className="mb-4">
+      <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        <div className="mb-3">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
           <p className="mt-1 text-sm text-gray-600">{PROMO_SUBHEADING}</p>
         </div>

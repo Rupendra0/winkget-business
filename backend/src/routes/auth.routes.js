@@ -24,6 +24,7 @@ const {
   toStoreStatusSummary,
 } = require("../lib/storeStatus");
 const { emitVendorStoreStatus } = require("../lib/realtime");
+const { scheduleVendorIndex } = require("../lib/search/indexer");
 const {
   normalizeAuthContext,
   setAuthCookie,
@@ -1194,6 +1195,10 @@ router.put("/auth/me", async (req, res) => {
 
     await user.save();
 
+    if (user.role === "vendor") {
+      scheduleVendorIndex(String(user._id));
+    }
+
     const updatedUser = await User.findById(user._id)
       .select(
         "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
@@ -1318,6 +1323,8 @@ router.patch("/vendor/store-status", async (req, res) => {
     }
 
     await user.save();
+
+    scheduleVendorIndex(String(user._id));
     emitVendorStoreStatus(user);
 
     return res.status(200).json({

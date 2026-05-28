@@ -139,7 +139,7 @@ export default function CityStrip() {
   if (isLoading) {
     return (
       <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-        <div className="w-full animate-pulse rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
+        <div className="w-full animate-pulse rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
@@ -168,8 +168,8 @@ export default function CityStrip() {
 
   return (
     <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-      <div className="w-full rounded-2xl bg-white p-4 sm:p-5 lg:p-6">
-        <div className="mb-4">
+      <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        <div className="mb-3">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
           <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>
         </div>
@@ -179,7 +179,7 @@ export default function CityStrip() {
             <Link
               key={partner.id}
               href={partner.href}
-              className="relative shrink-0 basis-[calc((100%-1rem)/2)] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,23,42,0.12)]"
+              className="relative shrink-0 basis-[calc((100%-1rem)/2)] sm:basis-[46%] md:basis-[31%] lg:basis-[calc((100%-6rem)/5)] overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5"
             >
               {partner.isNew ? (
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>

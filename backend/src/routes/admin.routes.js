@@ -20,6 +20,7 @@ const {
   validateCustomFormData,
 } = require("../lib/customForm");
 const { resolveTokenFromRequest } = require("../lib/authCookies");
+const { scheduleVendorIndex } = require("../lib/search/indexer");
 
 const router = express.Router();
 const VENDOR_STATUS_VALUES = new Set(["pending", "approved", "rejected"]);
@@ -951,6 +952,8 @@ router.patch("/admin/vendors/:id/status", requireAdmin, async (req, res) => {
     }
 
     await vendor.save();
+
+    scheduleVendorIndex(String(vendor._id));
 
     return res.status(200).json({
       ok: true,

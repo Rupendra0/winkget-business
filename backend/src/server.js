@@ -12,6 +12,7 @@ const City = require("./models/City");
 const FailureLog = require("./models/FailureLog");
 const VendorProduct = require("./models/VendorProduct");
 const Order = require("./models/Order");
+const { ensureSearchIndex, reindexSearchDocuments } = require("./lib/search/indexer");
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -40,6 +41,16 @@ async function startServer() {
     await FailureLog.syncIndexes();
     await VendorProduct.syncIndexes();
     await Order.syncIndexes();
+
+    try {
+      await ensureSearchIndex();
+      if (String(process.env.SEARCH_REINDEX_ON_START || "").toLowerCase() === "true") {
+        await reindexSearchDocuments();
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Search index init failed:", error.message);
+    }
 
     const envOrigins = String(process.env.CORS_ORIGIN || "")
       .split(",")

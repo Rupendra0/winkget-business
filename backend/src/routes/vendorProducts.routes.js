@@ -2,6 +2,11 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const VendorProduct = require("../models/VendorProduct");
+const {
+  scheduleProductDelete,
+  scheduleProductIndex,
+  scheduleVendorIndex,
+} = require("../lib/search/indexer");
 const { resolveTokenFromRequest } = require("../lib/authCookies");
 
 const router = express.Router();
@@ -366,6 +371,9 @@ router.post("/vendor/products", requireVendor, async (req, res) => {
       ...payload,
     });
 
+    scheduleProductIndex(String(created._id));
+    scheduleVendorIndex(String(req.vendorUser._id));
+
     return res.status(201).json({
       ok: true,
       message: "Product created",
@@ -458,6 +466,9 @@ router.patch("/vendor/products/:id", requireVendor, async (req, res) => {
     Object.assign(existing, payload);
     await existing.save();
 
+    scheduleProductIndex(String(existing._id));
+    scheduleVendorIndex(String(req.vendorUser._id));
+
     return res.status(200).json({
       ok: true,
       message: "Product updated",
@@ -488,6 +499,9 @@ router.delete("/vendor/products/:id", requireVendor, async (req, res) => {
     existing.isDeleted = true;
     existing.status = "archived";
     await existing.save();
+
+    scheduleProductDelete(String(existing._id));
+    scheduleVendorIndex(String(req.vendorUser._id));
 
     return res.status(200).json({ ok: true, message: "Product removed" });
   } catch (error) {

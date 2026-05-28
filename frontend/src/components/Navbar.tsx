@@ -378,7 +378,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative">
-              <div className="flex items-center gap-2 rounded-full border border-orange-100 bg-white px-5 py-2 shadow-sm">
+              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -539,7 +539,7 @@ export default function Navbar() {
         </div>
 
         <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3"}`}>
-          <div className="flex items-center gap-2 rounded-full border border-orange-100 bg-white px-5 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
             <Search size={18} className="text-orange-500" />
             <input
               type="text"
