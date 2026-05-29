@@ -180,45 +180,90 @@ router.get("/search/suggest", async (req, res) => {
     }
 
     const index = await ensureSearchIndex();
-    const response = await index.search(query, {
-      filter: buildSearchFilter({ city }),
-      limit: 12,
-      attributesToRetrieve: [
-        "type",
-        "vendorName",
-        "productName",
-        "categoryName",
-        "subcategoryName",
-        "vendorId",
-        "productId",
-        "categorySlug",
-        "subcategorySlug",
-        "city",
-      ],
-    });
+    const normalizedQuery = query.toLowerCase();
+    const containsQuery = (value) => String(value || "").toLowerCase().includes(normalizedQuery);
 
     const suggestions = [];
     const seen = new Set();
+    const addSuggestion = (label, type, payload = {}) => {
+      const key = `${type}:${label}`.toLowerCase();
+      if (!label || seen.has(key)) return;
+      seen.add(key);
+      suggestions.push({ label, type, ...payload });
+    };
 
-    response.hits.forEach((hit) => {
-      const addSuggestion = (label, type, payload = {}) => {
-        const key = `${type}:${label}`.toLowerCase();
-        if (!label || seen.has(key)) return;
-        seen.add(key);
-        suggestions.push({ label, type, ...payload });
-      };
-
-      addSuggestion(hit.productName, "product", { productId: hit.productId, vendorId: hit.vendorId });
-      addSuggestion(hit.vendorName, "vendor", { vendorId: hit.vendorId });
-      addSuggestion(hit.subcategoryName, "subcategory", { subcategorySlug: hit.subcategorySlug });
-      addSuggestion(hit.categoryName, "category", { categorySlug: hit.categorySlug });
+    const categoryResponse = await index.search(query, {
+      filter: buildSearchFilter({ city, type: "category" }),
+      limit: 5,
+      attributesToRetrieve: ["categoryName", "categorySlug"],
     });
+
+    const categoryHits = Array.isArray(categoryResponse.hits) ? categoryResponse.hits : [];
+    const primaryCategory = categoryHits.find((hit) => containsQuery(hit.categoryName));
+    const categorySlug = primaryCategory?.categorySlug || "";
+
+    if (primaryCategory && containsQuery(primaryCategory.categoryName)) {
+      addSuggestion(primaryCategory.categoryName, "category", { categorySlug });
+    }
+
+    const vendorResponse = await index.search(query, {
+      filter: buildSearchFilter({ city, type: "vendor" }),
+      limit: 12,
+      attributesToRetrieve: ["vendorName", "vendorId", "vendorImage", "categorySlug"],
+    });
+
+    const vendorHits = Array.isArray(vendorResponse.hits) ? vendorResponse.hits : [];
+    vendorHits
+      .filter((hit) => containsQuery(hit.vendorName))
+      .forEach((hit) =>
+        addSuggestion(hit.vendorName, "vendor", {
+          vendorId: hit.vendorId,
+          vendorImage: hit.vendorImage,
+        })
+      );
+
+    if (categorySlug) {
+      const vendorCategoryResponse = await index.search("", {
+        filter: buildSearchFilter({ city, type: "vendor", categorySlug }),
+        limit: 12,
+        attributesToRetrieve: ["vendorName", "vendorId", "vendorImage"],
+      });
+
+      const vendorCategoryHits = Array.isArray(vendorCategoryResponse.hits)
+        ? vendorCategoryResponse.hits
+        : [];
+      vendorCategoryHits.forEach((hit) =>
+        addSuggestion(hit.vendorName, "vendor", {
+          vendorId: hit.vendorId,
+          vendorImage: hit.vendorImage,
+        })
+      );
+
+      const productCategoryResponse = await index.search("", {
+        filter: buildSearchFilter({ city, type: "product", categorySlug }),
+        limit: 12,
+        attributesToRetrieve: ["productName", "productId", "productImage", "vendorId"],
+      });
+
+      const productCategoryHits = Array.isArray(productCategoryResponse.hits)
+        ? productCategoryResponse.hits
+        : [];
+      productCategoryHits.forEach((hit) =>
+        addSuggestion(hit.productName, "product", {
+          productId: hit.productId,
+          vendorId: hit.vendorId,
+          productImage: hit.productImage,
+        })
+      );
+    }
+
+    const ordered = suggestions.slice(0, 10);
 
     return res.status(200).json({
       ok: true,
       query,
       city,
-      suggestions: suggestions.slice(0, 10),
+      suggestions: ordered,
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Autocomplete failed", error: error.message });

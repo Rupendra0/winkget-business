@@ -8,6 +8,8 @@ import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Pa
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
 import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
+import { fetchSearchSuggestions, type SearchSuggestion } from '@/lib/searchClient';
+import { buildProductSlug } from '@/data/productSlug';
 
 type AuthUser = {
   id: string;
@@ -40,11 +42,17 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [isSuggestLoading, setIsSuggestLoading] = useState(false);
+  const [searchHasFocus, setSearchHasFocus] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cityModalRef = useRef<HTMLDivElement | null>(null);
+  const desktopSuggestRef = useRef<HTMLDivElement | null>(null);
+  const mobileSuggestRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
@@ -200,6 +208,22 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    if (!searchHasFocus) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isInsideDesktop = desktopSuggestRef.current?.contains(target);
+      const isInsideMobile = mobileSuggestRef.current?.contains(target);
+      if (!isInsideDesktop && !isInsideMobile) {
+        setSearchHasFocus(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [searchHasFocus]);
+
+  useEffect(() => {
     const updateMobileSearchOnlyState = () => {
       const isMobileViewport = window.innerWidth < 768;
       if (!isMobileViewport) {
@@ -219,6 +243,24 @@ export default function Navbar() {
       window.removeEventListener("resize", updateMobileSearchOnlyState);
     };
   }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query || !selectedCity) {
+      setSuggestions([]);
+      setIsSuggestLoading(false);
+      return;
+    }
+
+    setIsSuggestLoading(true);
+    const handle = window.setTimeout(() => {
+      fetchSearchSuggestions({ query, city: selectedCity })
+        .then((items) => setSuggestions(items))
+        .finally(() => setIsSuggestLoading(false));
+    }, 250);
+
+    return () => window.clearTimeout(handle);
+  }, [searchQuery, selectedCity]);
 
   const displayName = useMemo(() => {
     if (!user) return "";
@@ -269,8 +311,114 @@ export default function Navbar() {
     if (selectedCity) {
       params.set("city", selectedCity);
     }
+    setSearchHasFocus(false);
     router.push(`/search?${params.toString()}`);
   };
+
+  const handleSearchFocus = () => {
+    if (blurTimeoutRef.current) {
+      window.clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setSearchHasFocus(true);
+  };
+
+  const handleSearchBlur = () => {
+    blurTimeoutRef.current = window.setTimeout(() => {
+      setSearchHasFocus(false);
+    }, 150);
+  };
+
+  const suggestionLabel = (type: SearchSuggestion["type"]) => {
+    switch (type) {
+      case "product":
+        return "Product";
+      case "vendor":
+        return "Vendor";
+      case "category":
+        return "Category";
+      case "subcategory":
+        return "Subcategory";
+      default:
+        return "Result";
+    }
+  };
+
+  const getSuggestionHref = (item: SearchSuggestion) => {
+    if (item.type === "vendor" && item.vendorId) {
+      return `/listing/${encodeURIComponent(item.vendorId)}`;
+    }
+
+    if (item.type === "category" && item.categorySlug) {
+      const params = new URLSearchParams();
+      if (selectedCity) {
+        params.set("city", selectedCity);
+      }
+      const query = params.toString();
+      return `/category/${encodeURIComponent(item.categorySlug)}${query ? `?${query}` : ""}`;
+    }
+
+    if (item.type === "product" && item.productId && item.vendorId) {
+      const slug = buildProductSlug({
+        id: item.productId,
+        name: item.label,
+        storeId: item.vendorId,
+      });
+      return `/product/${encodeURIComponent(slug)}`;
+    }
+
+    return null;
+  };
+
+  const renderSuggestionRow = (item: SearchSuggestion, keySuffix: string) => {
+    const imageSrc = item.productImage || item.vendorImage || "";
+    const badge = suggestionLabel(item.type);
+    const badgeInitial = badge.charAt(0);
+
+    return (
+      <button
+        key={`${item.type}-${item.label}-${keySuffix}`}
+        type="button"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => {
+          const href = getSuggestionHref(item);
+          if (href) {
+            setSearchHasFocus(false);
+            router.push(href);
+            return;
+          }
+
+          setSearchQuery(item.label);
+          handleSearchSubmit(item.label);
+        }}
+        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="h-8 w-8 overflow-hidden rounded-full bg-slate-100">
+            {imageSrc ? (
+              <img
+                src={imageSrc}
+                alt={item.label}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-500">
+                {badgeInitial}
+              </div>
+            )}
+          </div>
+          <span className="truncate">{item.label}</span>
+        </div>
+        <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+          {badge}
+        </span>
+      </button>
+    );
+  };
+
+  const shouldShowSuggestions =
+    searchHasFocus && Boolean(searchQuery.trim()) && (isSuggestLoading || suggestions.length > 0);
 
   const filteredCityOptions = useMemo(() => {
     const query = citySearchQuery.trim().toLowerCase();
@@ -389,7 +537,7 @@ export default function Navbar() {
             </div>
 
             {/* Search Bar */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative" ref={desktopSuggestRef}>
               <div className="flex h-10 items-center gap-2 rounded-[14px] bg-gray-100 px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
@@ -397,6 +545,8 @@ export default function Navbar() {
                   placeholder="Search across 10 Lakh+ Business"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
+                  onFocus={handleSearchFocus}
+                  onBlur={handleSearchBlur}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       handleSearchSubmit(searchQuery);
@@ -405,6 +555,20 @@ export default function Navbar() {
                   className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
                 />
               </div>
+
+              {shouldShowSuggestions ? (
+                <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
+                  <div className="max-h-72 overflow-y-auto py-2">
+                    {isSuggestLoading && suggestions.length === 0 ? (
+                      <div className="px-4 py-2 text-xs text-slate-500">Searching...</div>
+                    ) : null}
+                    {suggestions.map((item) => renderSuggestionRow(item, "desktop"))}
+                    {!isSuggestLoading && suggestions.length === 0 ? (
+                      <div className="px-4 py-2 text-xs text-slate-500">No suggestions found.</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -558,20 +722,48 @@ export default function Navbar() {
         </div>
 
         <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3"}`}>
-          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
-            <Search size={18} className="text-orange-500" />
-            <input
-              type="text"
-              placeholder="Search businesses and services"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  handleSearchSubmit(searchQuery);
-                }
-              }}
-              className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
-            />
+          <div className="relative" ref={mobileSuggestRef}>
+            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
+              <Search size={18} className="text-orange-500" />
+              <input
+                type="text"
+                placeholder="Search businesses and services"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleSearchSubmit(searchQuery);
+                  }
+                }}
+                className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
+              />
+              {searchQuery.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => handleSearchSubmit(searchQuery)}
+                  className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm"
+                  aria-label="Search"
+                >
+                  Search
+                </button>
+              ) : null}
+            </div>
+
+            {shouldShowSuggestions ? (
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
+                <div className="max-h-72 overflow-y-auto py-2">
+                  {isSuggestLoading && suggestions.length === 0 ? (
+                    <div className="px-4 py-2 text-xs text-slate-500">Searching...</div>
+                  ) : null}
+                  {suggestions.map((item) => renderSuggestionRow(item, "mobile"))}
+                  {!isSuggestLoading && suggestions.length === 0 ? (
+                    <div className="px-4 py-2 text-xs text-slate-500">No suggestions found.</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

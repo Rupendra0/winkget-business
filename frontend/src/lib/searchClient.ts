@@ -56,6 +56,8 @@ export type SearchSuggestion = {
   productId?: string;
   categorySlug?: string;
   subcategorySlug?: string;
+  vendorImage?: string;
+  productImage?: string;
 };
 
 const toQueryString = (params: Record<string, string | number | boolean | undefined>) => {
