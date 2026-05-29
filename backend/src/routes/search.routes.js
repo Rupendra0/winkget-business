@@ -222,6 +222,23 @@ router.get("/search/suggest", async (req, res) => {
         })
       );
 
+    const productResponse = await index.search(query, {
+      filter: buildSearchFilter({ city, type: "product" }),
+      limit: 12,
+      attributesToRetrieve: ["productName", "productId", "productImage", "vendorId", "categorySlug"],
+    });
+
+    const productHits = Array.isArray(productResponse.hits) ? productResponse.hits : [];
+    productHits
+      .filter((hit) => containsQuery(hit.productName))
+      .forEach((hit) =>
+        addSuggestion(hit.productName, "product", {
+          productId: hit.productId,
+          vendorId: hit.vendorId,
+          productImage: hit.productImage,
+        })
+      );
+
     if (categorySlug) {
       const vendorCategoryResponse = await index.search("", {
         filter: buildSearchFilter({ city, type: "vendor", categorySlug }),
