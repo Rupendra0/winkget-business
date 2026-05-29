@@ -29,8 +29,9 @@ const normalizeType = (value) => {
 const escapeFilterValue = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 
 const buildCityFilter = (city) => {
-  if (!city) return "";
-  return `cities = \"${escapeFilterValue(city)}\"`;
+  const normalized = normalizeString(city).toLowerCase();
+  if (!normalized) return "";
+  return `cities = \"${escapeFilterValue(normalized)}\"`;
 };
 
 const buildSearchFilter = ({ city, type, openNow, minRating, categorySlug, subcategorySlug }) => {

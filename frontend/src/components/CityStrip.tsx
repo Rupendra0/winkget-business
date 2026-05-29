@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, Store } from "lucide-react";
 import { fetchVendors } from "@/lib/catalogClient";
 import { readSelectedCity, subscribeLocationCity } from "@/lib/locationStore";
 
@@ -24,6 +25,7 @@ const FALLBACK_VENDOR_IMAGES = [
   "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=60",
 ];
 
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
 const toObjectIdTimestamp = (id: string) => {
@@ -197,6 +199,23 @@ export default function CityStrip() {
               </div>
             </Link>
           ))}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold text-gray-900 sm:text-base">Want your business listed here?</p>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              Register as a vendor and reach local customers searching for trusted services near them.
+            </p>
+          </div>
+          <a
+            href={VENDOR_REGISTRATION_URL}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 sm:w-auto"
+          >
+            <Store size={16} />
+            Register as Vendor
+            <ArrowRight size={16} />
+          </a>
         </div>
       </div>
     </section>

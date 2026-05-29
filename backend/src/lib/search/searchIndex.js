@@ -28,10 +28,6 @@ const RANKING_RULES = [
   "attribute",
   "sort",
   "exactness",
-  "asc(rankGroup)",
-  "desc(rating)",
-  "desc(reviews)",
-  "desc(updatedAt)",
 ];
 
 const TYPO_TOLERANCE = {

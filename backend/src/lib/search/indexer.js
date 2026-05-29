@@ -78,10 +78,12 @@ const getVendorReviewSummaryMap = async (vendorIds) => {
 
 const addCityToMap = (map, key, city) => {
   if (!key || !city) return;
+  const normalizedCity = normalizeString(city).toLowerCase();
+  if (!normalizedCity) return;
   if (!map.has(key)) {
     map.set(key, new Set());
   }
-  map.get(key).add(city);
+  map.get(key).add(normalizedCity);
 };
 
 const ensureSearchIndex = async () => {
@@ -108,6 +110,7 @@ const buildVendorDocument = (vendor, options) => {
   const category = vendor.businessCategory || {};
   const subcategory = vendor.businessSubcategory || {};
   const city = normalizeString(vendor.city || "");
+  const cityToken = city.toLowerCase();
 
   const reviewSummary = options.reviewMap.get(vendorId) || { rating: 0, reviews: 0 };
   const storeStatus = toStoreStatusSummary(vendor);
@@ -122,7 +125,7 @@ const buildVendorDocument = (vendor, options) => {
     vendorName,
     vendorImage: normalizeString(vendor.myStoreImage || vendor.image || vendor.shopBannerImage || vendor.myStoreBannerImage || ""),
     city,
-    cities: city ? [city] : [],
+    cities: cityToken ? [cityToken] : [],
     categoryId: category._id ? String(category._id) : undefined,
     categoryName: normalizeString(category.name || vendor.businessCategoryName || ""),
     categorySlug: normalizeString(category.slug || vendor.businessCategorySlug || ""),
@@ -155,12 +158,14 @@ const buildProductDocument = (product, vendor) => {
 
   const vendorName = normalizeString(vendor.businessName || vendor.name || "Business");
   const city = normalizeString(vendor.city || "");
+  const cityToken = city.toLowerCase();
   const categoryName = normalizeString(product.categoryLabel || vendor.businessCategory?.name || "");
   const categorySlug = normalizeString(product.categorySlug || vendor.businessCategory?.slug || "");
   const subcategoryName = normalizeString(product.subcategoryName || vendor.businessSubcategory?.name || "");
   const subcategorySlug = normalizeString(product.subcategorySlug || vendor.businessSubcategory?.slug || "");
   const tags = uniqueStrings([...(product.tags || []), product.brand || ""]);
   const productName = normalizeString(product.productName || "");
+  const storeStatus = toStoreStatusSummary(vendor);
 
   return {
     id: `product_${productId}`,
@@ -173,7 +178,7 @@ const buildProductDocument = (product, vendor) => {
     vendorId,
     vendorName,
     city,
-    cities: city ? [city] : [],
+    cities: cityToken ? [cityToken] : [],
     categoryName,
     categorySlug,
     subcategoryName,
@@ -181,6 +186,8 @@ const buildProductDocument = (product, vendor) => {
     tags,
     rating: Number(product.rating || 0),
     reviews: Number(product.reviews || 0),
+    isStoreOpen: storeStatus.isStoreOpen,
+    storeStatusSource: storeStatus.storeStatusSource,
     updatedAt: product.updatedAt || product.createdAt || null,
     searchableText: toSearchableText([
       productName,
@@ -437,7 +444,10 @@ const upsertCategoryDocuments = async ({ categoryId, subcategoryId }) => {
         city: { $nin: [null, ""] },
       });
 
-      const doc = buildCategoryDocument(category, uniqueStrings(cities));
+      const doc = buildCategoryDocument(
+        category,
+        uniqueStrings(cities.map((city) => normalizeString(city).toLowerCase()))
+      );
       if (doc) {
         tasks.push(doc);
       }
@@ -458,7 +468,10 @@ const upsertCategoryDocuments = async ({ categoryId, subcategoryId }) => {
         city: { $nin: [null, ""] },
       });
 
-      const doc = buildSubcategoryDocument(subcategory, uniqueStrings(cities));
+      const doc = buildSubcategoryDocument(
+        subcategory,
+        uniqueStrings(cities.map((city) => normalizeString(city).toLowerCase()))
+      );
       if (doc) {
         tasks.push(doc);
       }

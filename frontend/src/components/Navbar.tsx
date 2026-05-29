@@ -39,6 +39,7 @@ export default function Navbar() {
   const [loadingCities, setLoadingCities] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cityModalRef = useRef<HTMLDivElement | null>(null);
@@ -260,6 +261,17 @@ export default function Navbar() {
     router.replace(target, { scroll: false });
   };
 
+  const handleSearchSubmit = (value: string) => {
+    const query = String(value || "").trim();
+    if (!query) return;
+    const params = new URLSearchParams();
+    params.set("q", query);
+    if (selectedCity) {
+      params.set("city", selectedCity);
+    }
+    router.push(`/search?${params.toString()}`);
+  };
+
   const filteredCityOptions = useMemo(() => {
     const query = citySearchQuery.trim().toLowerCase();
     if (!query) return cityOptions;
@@ -383,6 +395,13 @@ export default function Navbar() {
                 <input
                   type="text"
                   placeholder="Search across 10 Lakh+ Business"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleSearchSubmit(searchQuery);
+                    }
+                  }}
                   className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
                 />
               </div>
@@ -544,6 +563,13 @@ export default function Navbar() {
             <input
               type="text"
               placeholder="Search businesses and services"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleSearchSubmit(searchQuery);
+                }
+              }}
               className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
             />
           </div>
