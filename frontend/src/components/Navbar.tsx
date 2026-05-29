@@ -52,7 +52,7 @@ export default function Navbar() {
   const mobileSuggestRef = useRef<HTMLDivElement | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
-  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
 
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
