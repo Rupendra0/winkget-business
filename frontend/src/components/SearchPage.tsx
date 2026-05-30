@@ -277,9 +277,24 @@ export default function SearchPage() {
     return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">Hours vary</span>;
   };
 
+  const getRatingBadgeClass = (ratingValue: number) => {
+    if (ratingValue >= 4) {
+      return "bg-emerald-100 text-emerald-700";
+    }
+    if (ratingValue >= 3) {
+      return "bg-amber-100 text-amber-700";
+    }
+    if (ratingValue > 0) {
+      return "bg-rose-100 text-rose-700";
+    }
+    return "bg-slate-100 text-slate-500";
+  };
+
+  const cardToneClass = "border border-slate-100 bg-white shadow-sm";
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-white to-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-br from-orange-50 via-white to-sky-50">
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b border-slate-100 bg-white">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
@@ -302,7 +317,7 @@ export default function SearchPage() {
               {filterContent}
             </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-orange-50 via-white to-sky-50 p-4">
+            <div className="rounded-2xl border border-slate-100 bg-white p-4">
               <div className="text-sm font-semibold text-slate-700">Need ideas?</div>
               <p className="mt-2 text-xs text-slate-500">
                 Try searching for services like "dentist", "spa", or "electronics shop".
@@ -354,7 +369,7 @@ export default function SearchPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 {vendorHits.length > 0 ? (
                   vendorHits.map((hit) => (
-                    <div key={hit.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
                       <div className="flex gap-4">
                         <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
                           {hit.vendorImage ? (
@@ -365,22 +380,18 @@ export default function SearchPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <h3 className="text-base font-semibold text-slate-900">{hit.vendorName}</h3>
-                              <p className="text-xs text-slate-500">
-                                {hit.categoryName || ""}
-                                {hit.subcategoryName ? ` • ${hit.subcategoryName}` : ""}
-                              </p>
-                              <p className="text-xs text-slate-500">{hit.city}</p>
+                              <p className="text-xs text-slate-500">{hit.sublocality || hit.city}</p>
                             </div>
-                            {renderStatusBadge(hit)}
                           </div>
 
                           <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
-                            <span className="flex items-center gap-1 text-amber-600">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${getRatingBadgeClass(
+                                Number(hit.rating || 0)
+                              )}`}
+                            >
                               <Star size={14} /> {Number(hit.rating || 0).toFixed(1)} ({hit.reviews || 0})
                             </span>
-                            {hit.products && hit.products.length > 0 ? (
-                              <span className="text-slate-500">Popular: {hit.products.slice(0, 2).join(", ")}</span>
-                            ) : null}
                           </div>
 
                           <div className="mt-4 flex gap-2">
@@ -388,11 +399,24 @@ export default function SearchPage() {
                               href={`/listing/${hit.vendorId}`}
                               className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
                             >
-                              View details
+                              Visit
                             </Link>
-                            <button className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                              Get quote
-                            </button>
+                            {hit.vendorPhone ? (
+                              <a
+                                href={`tel:${hit.vendorPhone.replace(/[^\d+]/g, "")}`}
+                                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                              >
+                                Call
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-400"
+                              >
+                                Call
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -410,7 +434,7 @@ export default function SearchPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 {productHits.length > 0 ? (
                   productHits.map((hit) => (
-                    <div key={hit.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
                       <div className="flex gap-4">
                         <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
                           {hit.productImage ? (

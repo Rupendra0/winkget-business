@@ -48,9 +48,9 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, mediaUrl, className = "bg-white" }: CategoryCardProps) {
   return (
-    <div className={`w-full rounded-[10px] p-[5px] ${className}`}>
+    <div className={`w-full rounded-[10px] p-[2px] md:p-[5px] ${className}`}>
       <div
-        className="flex h-[18vw] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] lg:h-[6.2vw]"
+        className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] md:max-h-none lg:h-[6.2vw]"
       >
         {mediaUrl ? (
           <img
@@ -65,7 +65,7 @@ function CategoryCard({ name, mediaUrl, className = "bg-white" }: CategoryCardPr
           </div>
         )}
       </div>
-      <h3 className="mt-[5px] text-center text-[13px] font-medium leading-tight text-gray-700 line-clamp-2">{name}</h3>
+      <h3 className="mt-[3px] text-center text-[11px] font-medium leading-[1.05] text-gray-700 line-clamp-2 md:mt-[5px] md:text-[13px] md:leading-tight">{name}</h3>
     </div>
   );
 }
@@ -170,10 +170,10 @@ export default function CategoryGrid() {
   }, [searchQuery, sortedCategories]);
 
   return (
-    <section className="px-0 pt-1 pb-0 sm:px-3 md:pt-2 lg:px-3 xl:px-3">
+    <section className="px-0 pt-0 pb-0 sm:px-3 md:pt-2 lg:px-3 xl:px-3">
       <div className="w-full">
         {/* Category Grid */}
-        <div className="pb-2">
+        <div className="pb-0 md:pb-2">
           {isLoading ? (
             <p className="px-2 text-sm text-slate-500"></p>
           ) : null}
@@ -187,13 +187,13 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="flex flex-wrap gap-[2%] p-5">
+          <div className="flex flex-wrap gap-x-[2%] gap-y-1 px-2 pt-1 pb-0 sm:p-5">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link
                   key={category.id}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="my-[5px] w-[23.5%] rounded-[10px] md:w-[18.4%] lg:w-[9.33%]"
+                  className="my-[1px] w-[23.5%] rounded-[10px] md:my-[5px] md:w-[18.4%] lg:w-[9.33%]"
                 >
                   <CategoryCard
                     name={category.name}
@@ -219,14 +219,14 @@ export default function CategoryGrid() {
             })}
 
             <button
-              className="my-[5px] w-[23.5%] rounded-[10px] p-[5px] md:w-[18.4%] lg:w-[9.33%]"
+              className="my-[1px] w-[23.5%] rounded-[10px] p-[2px] md:my-[5px] md:w-[18.4%] md:p-[5px] lg:w-[9.33%]"
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="flex h-[18vw] w-full items-center justify-center rounded-[10px] border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] lg:h-[6.2vw]">
+              <div className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center rounded-[10px] border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] md:max-h-none lg:h-[6.2vw]">
                 <ChevronRight size={20} />
               </div>
-              <h3 className="mt-[5px] text-center text-[13px] font-medium leading-tight text-gray-700 line-clamp-2">View All</h3>
+              <h3 className="mt-[3px] text-center text-[11px] font-medium leading-[1.05] text-gray-700 line-clamp-2 md:mt-[5px] md:text-[13px] md:leading-tight">View All</h3>
             </button>
           </div>
           ) : null}

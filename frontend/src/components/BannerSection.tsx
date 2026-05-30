@@ -25,7 +25,7 @@ const BANNER_LAYOUT: BannerTile[] = [
   { key: "rightImage", title: "Secondary Banner", className: "lg:col-span-2" },
 ];
 
-const BANNER_HEIGHT_CLASS = "h-[180px] sm:h-[200px] lg:h-[250px]";
+const BANNER_HEIGHT_CLASS = "h-[110px] sm:h-[130px] md:h-[200px] lg:h-[250px]";
 
 const normalizeImage = (value?: string) => String(value || "").trim();
 
@@ -95,11 +95,6 @@ export default function BannerSection() {
     return () => window.clearInterval(timer);
   }, [mobileSlides.length]);
 
-  useEffect(() => {
-    if (mobileIndex < mobileSlides.length) return;
-    setMobileIndex(0);
-  }, [mobileIndex, mobileSlides.length]);
-
   const handleMobileTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     if (!touch) return;
@@ -142,7 +137,7 @@ export default function BannerSection() {
     <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
       <div className="md:hidden">
         <div
-          className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm`}
+          className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm`}
           aria-label="Homepage banners carousel"
           onTouchStart={handleMobileTouchStart}
           onTouchEnd={handleMobileTouchEnd}
@@ -173,7 +168,7 @@ export default function BannerSection() {
         </div>
 
         {mobileSlides.length > 1 ? (
-          <div className="mt-2 flex items-center justify-center gap-1.5" aria-hidden="true">
+          <div className="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
             {mobileSlides.map((slide, index) => (
               <span
                 key={`${slide.key}-dot`}

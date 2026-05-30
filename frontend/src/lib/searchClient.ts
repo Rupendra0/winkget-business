@@ -7,9 +7,11 @@ export type SearchHit = {
   type: SearchHitType;
   city?: string;
   cities?: string[];
+  sublocality?: string;
   vendorId?: string;
   vendorName?: string;
   vendorImage?: string;
+  vendorPhone?: string;
   productId?: string;
   productName?: string;
   productImage?: string;

@@ -111,6 +111,8 @@ const buildVendorDocument = (vendor, options) => {
   const subcategory = vendor.businessSubcategory || {};
   const city = normalizeString(vendor.city || "");
   const cityToken = city.toLowerCase();
+  const sublocality = normalizeString(vendor.sublocality || "");
+  const vendorPhone = normalizeString(vendor.businessPhone || vendor.phone || "");
 
   const reviewSummary = options.reviewMap.get(vendorId) || { rating: 0, reviews: 0 };
   const storeStatus = toStoreStatusSummary(vendor);
@@ -125,6 +127,8 @@ const buildVendorDocument = (vendor, options) => {
     vendorName,
     vendorImage: normalizeString(vendor.myStoreImage || vendor.image || vendor.shopBannerImage || vendor.myStoreBannerImage || ""),
     city,
+    sublocality,
+    vendorPhone,
     cities: cityToken ? [cityToken] : [],
     categoryId: category._id ? String(category._id) : undefined,
     categoryName: normalizeString(category.name || vendor.businessCategoryName || ""),
@@ -144,6 +148,7 @@ const buildVendorDocument = (vendor, options) => {
       vendorName,
       category.name,
       subcategory.name,
+      sublocality,
       ...products,
       ...tags,
       vendor.businessDescription,
@@ -246,7 +251,7 @@ const buildSubcategoryDocument = (subcategory, cities) => {
 const buildSearchDocuments = async () => {
   const vendors = await User.find({ role: "vendor", vendorStatus: "approved" })
     .select(
-      "_id name businessName businessCategory businessSubcategory city serviceTags businessDescription myStoreImage image shopBannerImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime updatedAt createdAt"
+      "_id name businessName businessCategory businessSubcategory city sublocality businessPhone phone serviceTags businessDescription myStoreImage image shopBannerImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime updatedAt createdAt"
     )
     .populate("businessCategory", "_id name slug")
     .populate("businessSubcategory", "_id name slug")
@@ -356,7 +361,7 @@ const upsertVendorDocument = async (vendorId) => {
   const index = await ensureSearchIndex();
   const vendor = await User.findOne({ _id: vendorId, role: "vendor" })
     .select(
-      "_id name businessName businessCategory businessSubcategory city serviceTags businessDescription myStoreImage image shopBannerImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime updatedAt createdAt"
+      "_id name businessName businessCategory businessSubcategory city sublocality businessPhone phone serviceTags businessDescription myStoreImage image shopBannerImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime updatedAt createdAt"
     )
     .populate("businessCategory", "_id name slug")
     .populate("businessSubcategory", "_id name slug")

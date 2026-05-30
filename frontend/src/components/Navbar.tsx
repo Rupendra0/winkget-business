@@ -493,8 +493,8 @@ export default function Navbar() {
           <div
             className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
               isMobileSearchOnly
-                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-24 md:overflow-visible md:py-[10px] md:opacity-100"
-                : "max-h-24 py-[10px] opacity-100"
+                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-28 md:overflow-visible md:py-4 md:opacity-100"
+                : "max-h-20 pt-1 pb-1 opacity-100 md:max-h-28 md:py-4"
             }`}
           >
           {/* Logo */}
@@ -523,7 +523,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-[10px] border border-slate-100 bg-white px-[10px] py-1 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-[10px] border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
                 <div className="flex flex-col items-start leading-tight">
@@ -538,7 +538,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
-              <div className="flex h-10 items-center gap-2 rounded-[14px] bg-gray-100 px-[15px] shadow-sm">
+              <div className="flex h-12 items-center gap-2 rounded-[14px] bg-gray-100 px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -576,16 +576,16 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-[10px] px-[10px]">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="rounded px-[6px] py-1 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
+              className="rounded px-3 py-2 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
             >
               Sell on Winkget
             </a>
-            <button className="rounded bg-orange-500 px-[10px] py-[5px] text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
+            <button className="rounded bg-orange-500 px-3 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
             <Link
               href="/cart"
-              className="relative rounded bg-white px-[6px] py-1 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative rounded bg-white px-3 py-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -602,7 +602,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded bg-white px-[6px] py-1 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                className="flex items-center gap-2 rounded bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
                   <span className="text-sm max-w-[130px] truncate">{displayName}</span>
@@ -658,7 +658,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded bg-blue-600 px-[6px] py-1 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
+              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
                 <LogIn size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
@@ -672,7 +672,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
                 aria-label="Current location"
               >
                 <MapPin size={16} className="text-orange-500" />
@@ -721,9 +721,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3"}`}>
+        <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 shadow-sm">
+            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 shadow-sm">
               <Search size={18} className="text-orange-500" />
               <input
                 type="text"

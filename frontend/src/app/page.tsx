@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <main className="w-full space-y-1 overflow-x-hidden bg-white">
+    <main className="w-full space-y-0 overflow-x-hidden bg-white md:space-y-1">
       <BannerSection />
       <section id="mobile-home-categories">
         <CategoryGrid />
