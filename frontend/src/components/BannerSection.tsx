@@ -166,19 +166,6 @@ export default function BannerSection() {
             ))}
           </div>
         </div>
-
-        {mobileSlides.length > 1 ? (
-          <div className="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
-            {mobileSlides.map((slide, index) => (
-              <span
-                key={`${slide.key}-dot`}
-                className={`h-1.5 rounded-full transition-all ${
-                  index === mobileIndex ? "w-5 bg-slate-700" : "w-2 bg-slate-300"
-                }`}
-              />
-            ))}
-          </div>
-        ) : null}
       </div>
 
       <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 lg:grid-cols-10">

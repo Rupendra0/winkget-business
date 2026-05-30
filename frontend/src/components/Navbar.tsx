@@ -666,7 +666,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu */}
-          <div className="md:hidden shrink-0 flex items-center gap-1.5">
+          <div className="md:hidden shrink-0 flex items-center gap-2.5">
             <div className="relative">
               <button
                 type="button"
@@ -716,7 +716,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
+        <div className={`-mx-[10px] md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
             <div className="flex h-13 items-center gap-2 rounded-full border border-slate-100 bg-white px-4 shadow-sm">
               <Search size={18} className="text-orange-500" />
