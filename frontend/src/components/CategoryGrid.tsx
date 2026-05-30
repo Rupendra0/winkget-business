@@ -170,7 +170,7 @@ export default function CategoryGrid() {
   }, [searchQuery, sortedCategories]);
 
   return (
-    <section className="px-0 pt-0 pb-0 sm:px-3 md:pt-2 lg:px-3 xl:px-3">
+    <section className="px-3 pt-4 pb-0 md:pt-2 lg:px-3 xl:px-3">
       <div className="w-full">
         {/* Category Grid */}
         <div className="pb-0 md:pb-2">
@@ -187,7 +187,7 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="flex flex-wrap gap-x-[2%] gap-y-2 px-2 pt-1 pb-0 sm:p-5">
+          <div className="flex flex-wrap gap-x-[2%] gap-y-2 px-0 pt-1 pb-0 sm:p-5">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link

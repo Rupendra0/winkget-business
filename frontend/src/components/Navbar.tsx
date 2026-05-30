@@ -491,7 +491,7 @@ export default function Navbar() {
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md font-medium">
         <div className="w-full px-[10px]">
           <div
-            className={`flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out ${
+            className={`mx-0.5 flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out md:mx-0 ${
               isMobileSearchOnly
                 ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-28 md:overflow-visible md:py-4 md:opacity-100"
                 : "max-h-20 pt-1 pb-1 opacity-100 md:max-h-28 md:py-4"
@@ -518,7 +518,7 @@ export default function Navbar() {
           {/* Center - Location and Search */}
           <div className="hidden md:flex flex-1 px-5 items-center gap-5">
             {/* Location Selector */}
-            <div className="relative">
+            <div className="relative -ml-1">
               <button
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
@@ -716,7 +716,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className={`-mx-[10px] md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
+        <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
             <div className="flex h-13 items-center gap-2 rounded-full border border-slate-100 bg-white px-4 shadow-sm">
               <Search size={18} className="text-orange-500" />
