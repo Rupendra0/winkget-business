@@ -38,6 +38,30 @@ const buildProductMap = (products: StorePageData["products"]) => {
   return new Map(products.map((product) => [product.id, product]));
 };
 
+const productRailRowClass =
+  "no-scrollbar grid w-full min-w-0 grid-flow-col auto-cols-[calc((100%_-_0.75rem)/2)] gap-3 overflow-x-auto overflow-y-hidden pb-2 sm:gap-4 lg:auto-cols-[calc((100%_-_3rem)/4)]";
+
+const splitProductsForTwoRowRail = <T,>(items: T[], columnsPerView: number) => {
+  const pageSize = columnsPerView * 2;
+  const rows: [T[], T[]] = [[], []];
+
+  for (let pageStart = 0; pageStart < items.length; pageStart += pageSize) {
+    const pageItems = items.slice(pageStart, pageStart + pageSize);
+
+    for (let columnIndex = 0; columnIndex < columnsPerView; columnIndex += 1) {
+      if (columnIndex < pageItems.length) {
+        rows[0].push(pageItems[columnIndex]);
+      }
+
+      if (columnIndex + columnsPerView < pageItems.length) {
+        rows[1].push(pageItems[columnIndex + columnsPerView]);
+      }
+    }
+  }
+
+  return rows;
+};
+
 const CATEGORY_ICON_PALETTES = [
   "text-indigo-700",
   "text-fuchsia-600",
@@ -97,10 +121,15 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setIsReviewHydrated(true);
-    return subscribeReviewUpdates(() => {
+    const hydrationTimer = window.setTimeout(() => setIsReviewHydrated(true), 0);
+    const unsubscribe = subscribeReviewUpdates(() => {
       setReviewUpdateVersion((prev) => prev + 1);
     });
+
+    return () => {
+      window.clearTimeout(hydrationTimer);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -205,19 +234,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
     .map((id) => productMap.get(id))
     .filter(Boolean);
 
-  const pageSize = 5;
-  const totalPages = Math.max(1, Math.ceil(featuredProducts.length / pageSize));
-  const [featuredPage, setFeaturedPage] = useState(0);
-  const pagedFeatured = useMemo(() => {
-    const start = featuredPage * pageSize;
-    return featuredProducts.slice(start, start + pageSize);
-  }, [featuredPage, featuredProducts]);
-  const trendingTotalPages = Math.max(1, Math.ceil(trendingProducts.length / pageSize));
-  const [trendingPage, setTrendingPage] = useState(0);
-  const pagedTrending = useMemo(() => {
-    const start = trendingPage * pageSize;
-    return trendingProducts.slice(start, start + pageSize);
-  }, [trendingPage, trendingProducts]);
   const ratingStars = Math.max(0, Math.min(5, Math.round(storeReviewStats.rating)));
   const ratingSummary = `${ratingLabel(storeReviewStats.rating)} (${storeReviewStats.reviews})`;
   const isStoreClosed = data.isStoreOpen === false;
@@ -460,6 +476,35 @@ export default function StorePage({ data }: { data: StorePageData }) {
     );
   };
 
+  const renderProductRail = (products: Array<StoreProduct | undefined>, imageHeightClass: string) => {
+    const validProducts = products.filter(Boolean) as StoreProduct[];
+    const mobileRows = splitProductsForTwoRowRail(validProducts, 2);
+    const desktopRows = splitProductsForTwoRowRail(validProducts, 4);
+
+    const renderRailRows = (rows: StoreProduct[][]) => (
+      <div className="space-y-5">
+        {rows
+          .filter((row) => row.length > 0)
+          .map((row, rowIndex) => (
+            <div key={`product-rail-row-${rowIndex}`} className={productRailRowClass}>
+              {row.map((product) => (
+                <div key={product.id}>
+                  {renderFlipkartStyleProductCard(product, imageHeightClass)}
+                </div>
+              ))}
+            </div>
+          ))}
+      </div>
+    );
+
+    return (
+      <div className="mt-5">
+        <div className="md:hidden">{renderRailRows(mobileRows)}</div>
+        <div className="hidden md:block">{renderRailRows(desktopRows)}</div>
+      </div>
+    );
+  };
+
   return (
     <main className="px-3 sm:px-4 lg:px-6 pb-12">
       <div className="max-w-[1400px] mx-auto space-y-10">
@@ -589,10 +634,10 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </article>
           </div>
-                  <div className="my-2 h-[1px] w-full bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+                  <div className="mt-1 mb-0 h-[1px] w-full bg-gradient-to-r from-transparent via-gray-300 to-transparent sm:my-2"></div>
         </section>
 
-        <section className="sm:-mt-6 -lg:-mt-1">
+        <section className="-mt-6 sm:-mt-6 lg:mt-0">
           <section className="mt-0 bg-transparent p-0 sm:-mt-5 lg:mt-0">
             <div className="mt-1.5 flex items-center gap-2 sm:gap-2.5">
               <button
@@ -653,7 +698,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </div>
           </section>
 
-          <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
+          <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:min-w-0 lg:grid-cols-[240px_minmax(0,1fr)]">
             <aside className="hidden rounded-2xl bg-white/80 p-5 space-y-6 h-fit lg:block lg:sticky lg:top-24">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Filter size={16} />
@@ -677,86 +722,31 @@ export default function StorePage({ data }: { data: StorePageData }) {
               ))}
             </aside>
 
-            <div className="space-y-8">
+            <div className="space-y-8 lg:min-w-0">
 
             {featuredProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5">
+            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="h-8 w-8 rounded-full text-slate-600 hover:text-blue-900 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
-                    onClick={() => setFeaturedPage((prev) => Math.max(0, prev - 1))}
-                    aria-label="Previous items"
-                    disabled={featuredPage === 0}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="h-8 w-8 rounded-full text-slate-600 hover:text-blue-900 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
-                    onClick={() => setFeaturedPage((prev) => Math.min(totalPages - 1, prev + 1))}
-                    aria-label="Next items"
-                    disabled={featuredPage >= totalPages - 1}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">                {pagedFeatured.map((product) => {
-                  if (!product) {
-                    return null;
-                  }
-
-                  return renderFlipkartStyleProductCard(product, "h-44");
-                })}
-              </div>
+              {renderProductRail(featuredProducts, "h-44")}
             </section>
             ) : null}
 
             {trendingProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5">
+            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
                 <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
                 </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="h-8 w-8 rounded-full text-slate-600 hover:text-blue-900 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
-                      onClick={() => setTrendingPage((prev) => Math.max(0, prev - 1))}
-                      aria-label="Previous items"
-                      disabled={trendingPage === 0}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="h-8 w-8 rounded-full text-slate-600 hover:text-blue-900 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed btn-hover"
-                      onClick={() => setTrendingPage((prev) => Math.min(trendingTotalPages - 1, prev + 1))}
-                      aria-label="Next items"
-                      disabled={trendingPage >= trendingTotalPages - 1}
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {pagedTrending.map((product) => {
-                  if (!product) {
-                    return null;
-                  }
-
-                  return renderFlipkartStyleProductCard(product, "h-44");
-                })}
-              </div>
+              {renderProductRail(trendingProducts, "h-44")}
             </section>
             ) : null}
 
-            <section className="rounded-2xl bg-white/80 p-5">
+            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
                 <div className="text-lg font-semibold text-slate-900">All Products</div>
                 <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -765,9 +755,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <option>Price: High to Low</option>
                 </select>
               </div>
-<div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">  
-                    {data.products.map((product) => renderFlipkartStyleProductCard(product, "h-48"))}
-              </div>
+              {renderProductRail(data.products, "h-48")}
             </section>
 
             
@@ -841,7 +829,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
           <button
             type="button"
             onClick={() => setIsMobileFiltersOpen(true)}
-            className="fixed bottom-40 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-white lg:hidden"
+            className="fixed bottom-[76px] right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-white lg:hidden"
           >
             <span className="inline-flex items-center gap-2 text-sm font-semibold">
               <SlidersHorizontal size={16} />
