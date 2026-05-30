@@ -538,7 +538,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
-              <div className="flex h-12 items-center gap-2 rounded-[14px] bg-gray-100 px-[15px] shadow-sm">
+              <div className="flex h-12 items-center gap-2 rounded-[14px] border border-slate-100 bg-white px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -672,17 +672,12 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
                 aria-label="Current location"
               >
-                <MapPin size={16} className="text-orange-500" />
-                <div className="flex flex-col items-start leading-tight">
-                  <span className="text-[10px] font-semibold text-slate-500">Your Location</span>
-                  <span className="max-w-20 truncate text-xs font-semibold text-blue-600">
-                    {loadingCities ? "City..." : selectedCity || "Select"}
-                  </span>
-                </div>
-                <ChevronDown size={12} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
+                <span className="max-w-24 truncate text-sm font-semibold text-blue-600">
+                  {loadingCities ? "City..." : selectedCity || "Select"}
+                </span>
               </button>
             </div>
             <Link
@@ -723,7 +718,7 @@ export default function Navbar() {
 
         <div className={`md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 shadow-sm">
+            <div className="flex h-13 items-center gap-2 rounded-full border border-slate-100 bg-white px-4 shadow-sm">
               <Search size={18} className="text-orange-500" />
               <input
                 type="text"
