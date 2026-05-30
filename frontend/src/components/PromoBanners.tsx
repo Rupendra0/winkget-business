@@ -32,7 +32,6 @@ type PromoCard = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const DEFAULT_HEADING = "Featured Offers";
-const PROMO_SUBHEADING = "Handpicked offers from trusted local businesses.";
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
@@ -214,7 +213,6 @@ export default function PromoBanners() {
       <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
         <div className="mb-3">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
-          <p className="mt-1 text-sm text-gray-600">{PROMO_SUBHEADING}</p>
         </div>
 
         <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-center no-scrollbar">

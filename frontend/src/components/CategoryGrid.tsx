@@ -187,7 +187,7 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="flex flex-wrap gap-x-[2%] gap-y-2 px-0 pt-1 pb-0 sm:p-5">
+          <div className="flex flex-wrap gap-x-[2%] gap-y-3 px-0 pt-1 pb-0 sm:p-5">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link

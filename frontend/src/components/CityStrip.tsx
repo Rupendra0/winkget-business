@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Store } from "lucide-react";
 import { fetchVendors } from "@/lib/catalogClient";
 import { readSelectedCity, subscribeLocationCity } from "@/lib/locationStore";
 
@@ -25,7 +24,6 @@ const FALLBACK_VENDOR_IMAGES = [
   "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=60",
 ];
 
-const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
 const toObjectIdTimestamp = (id: string) => {
@@ -130,20 +128,11 @@ export default function CityStrip() {
     };
   }, [selectedCity]);
 
-  const sectionSubtitle = useMemo(() => {
-    const city = String(selectedCity || "").trim();
-    if (!city) {
-      return "Discover top-rated businesses across popular categories.";
-    }
-    return `Discover top-rated businesses in ${city}.`;
-  }, [selectedCity]);
-
   if (isLoading) {
     return (
       <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
         <div className="w-full animate-pulse rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
-          <div className="mb-4 h-4 w-64 rounded bg-slate-200/70" />
           <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
@@ -173,7 +162,6 @@ export default function CityStrip() {
       <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
         <div className="mb-3">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
-          <p className="mt-1 text-sm text-gray-600">{sectionSubtitle}</p>
         </div>
 
         <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2 no-scrollbar">
@@ -199,23 +187,6 @@ export default function CityStrip() {
               </div>
             </Link>
           ))}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-gray-900 sm:text-base">Want your business listed here?</p>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              Register as a vendor and reach local customers searching for trusted services near them.
-            </p>
-          </div>
-          <a
-            href={VENDOR_REGISTRATION_URL}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 sm:w-auto"
-          >
-            <Store size={16} />
-            Register as Vendor
-            <ArrowRight size={16} />
-          </a>
         </div>
       </div>
     </section>

@@ -667,25 +667,25 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden shrink-0 flex items-center gap-2.5">
-            <div className="relative">
+            <div className="relative -ml-2">
               <button
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex w-[108px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
                 aria-label="Current location"
               >
-                <span className="max-w-24 truncate text-sm font-semibold text-blue-600">
+                <span className="w-full truncate text-center text-sm font-semibold text-blue-600">
                   {loadingCities ? "City..." : selectedCity || "Select"}
                 </span>
               </button>
             </div>
             <Link
               href="/cart"
-              className="relative rounded-md bg-white p-1.5 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
-              <ShoppingCart size={18} />
+              <ShoppingCart size={20} />
               {cartCount > 0 ? (
                 <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                   {cartCount > 9 ? "9+" : cartCount}
@@ -697,19 +697,19 @@ export default function Navbar() {
             ) : user ? (
               <Link
                 href="/profile"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-orange-500 px-2.5 sm:px-3 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 sm:px-3.5 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
                 aria-label="Profile"
               >
-                <UserRound size={16} />
+                <UserRound size={18} />
                 <span className="hidden sm:inline text-sm">Profile</span>
               </Link>
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 sm:px-3 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 sm:px-3.5 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
                 aria-label="Login"
               >
-                <LogIn size={16} className="text-white" />
+                <LogIn size={18} className="text-white" />
                 <span className="hidden sm:inline text-sm">Login</span>
               </Link>
             )}
@@ -718,7 +718,7 @@ export default function Navbar() {
 
         <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex h-13 items-center gap-2 rounded-full border border-slate-100 bg-white px-4 shadow-sm">
+            <div className="flex h-13 items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
               <Search size={18} className="text-orange-500" />
               <input
                 type="text"
