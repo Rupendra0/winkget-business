@@ -130,14 +130,14 @@ export default function CityStrip() {
 
   if (isLoading) {
     return (
-      <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-        <div className="w-full animate-pulse rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+      <section className="px-3 py-0">
+        <div className="w-full animate-pulse rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`city-partner-skeleton-${index}`}
-                className="my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
+                className="my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-xl border border-[#e7e7e7] bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
               >
                 <div className="h-32 w-full bg-slate-200/70 lg:h-[10vw]" />
                 <div className="space-y-2 p-3">
@@ -158,8 +158,8 @@ export default function CityStrip() {
   }
 
   return (
-    <section className="px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
-      <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+    <section className="px-3 py-0">
+      <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
         <div className="mb-3">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
         </div>
@@ -169,13 +169,13 @@ export default function CityStrip() {
             <Link
               key={partner.id}
               href={partner.href}
-              className="relative my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
+              className="relative my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-xl border border-[#e7e7e7] bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
             >
               {partner.isNew ? (
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>
               ) : null}
 
-              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full rounded-t-[10px] border-b border-slate-100 object-cover lg:h-[10vw]" loading="lazy" />
+              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full rounded-t-xl border-b border-slate-100 object-cover lg:h-[10vw]" loading="lazy" />
 
               <div className="p-[10px]">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">

@@ -253,9 +253,9 @@ export default function ExploreWellnessSections() {
   }
 
   return (
-    <section className="space-y-2 px-0 py-0 sm:px-3 lg:px-3 xl:px-3">
+    <section className="space-y-2 px-3 py-0">
       {exploreCards.length > 0 ? (
-        <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
           <div className="mb-3">
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
           </div>
@@ -266,7 +266,7 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`explore-mobile-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
               >
                 <img
@@ -288,7 +288,7 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`explore-desktop-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
               >
                 <img
                   src={card.image}
@@ -306,7 +306,7 @@ export default function ExploreWellnessSections() {
       ) : null}
 
       {wellnessCards.length > 0 ? (
-        <div className="w-full rounded-2xl bg-white px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
           <div className="mb-3">
             <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
           </div>
@@ -317,7 +317,7 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`wellness-mobile-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
               >
                 <img
@@ -339,7 +339,7 @@ export default function ExploreWellnessSections() {
               <Link
                 key={`wellness-desktop-${card.cardId}`}
                 href={buildCategoryHref(card.categorySlug)}
-                className="group relative h-[23vw] w-[18.4%] shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition hover:shadow-md"
+                className="group relative h-[23vw] w-[18.4%] shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition hover:shadow-md"
               >
                 <img
                   src={card.image}
@@ -357,7 +357,7 @@ export default function ExploreWellnessSections() {
       ) : null}
 
       {loadError && exploreCards.length === 0 && wellnessCards.length === 0 ? (
-        <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
+        <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
       ) : null}
     </section>
   );

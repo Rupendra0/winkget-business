@@ -523,7 +523,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-[10px] border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
                 <div className="flex flex-col items-start leading-tight">
@@ -538,7 +538,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
-              <div className="flex h-12 items-center gap-2 rounded-[14px] border border-slate-100 bg-white px-[15px] shadow-sm">
+              <div className="flex h-12 items-center gap-2 rounded-2xl border border-slate-100 bg-white px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -576,16 +576,16 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-[10px] px-[10px]">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="rounded px-3 py-2 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
+              className="inline-flex h-11 items-center rounded-2xl px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
             >
               Sell on Winkget
             </a>
-            <button className="rounded bg-orange-500 px-3 py-2 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
+            <button className="inline-flex h-11 items-center rounded-2xl bg-orange-500 px-3 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
             <Link
               href="/cart"
-              className="relative rounded bg-white px-3 py-2 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-11 items-center rounded-2xl bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -596,16 +596,16 @@ export default function Navbar() {
               ) : null}
             </Link>
             {authLoading ? (
-              <div className="h-10 w-28 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
+              <div className="h-11 w-28 rounded-2xl border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <div className="relative" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
-                  <span className="text-sm max-w-[130px] truncate">{displayName}</span>
+                  <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
                 </button>
 
                 {menuOpen ? (
@@ -618,7 +618,7 @@ export default function Navbar() {
                     <div className="pt-3 space-y-2">
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/profile");
@@ -628,7 +628,7 @@ export default function Navbar() {
                       </button>
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/orders");
@@ -638,7 +638,7 @@ export default function Navbar() {
                       </button>
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 btn-hover"
                         onClick={() => {
                           setMenuOpen(false);
                           router.push("/account-settings");
@@ -648,7 +648,7 @@ export default function Navbar() {
                       </button>
                       <button
                         type="button"
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 btn-hover"
+                        className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-red-600 hover:bg-red-50 btn-hover"
                         onClick={() => void handleLogout()}
                       >
                         <LogOut size={16} /> Logout
@@ -658,7 +658,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
+              <Link href={buildAuthHref(currentPath)} className="flex h-11 items-center gap-2 rounded-2xl bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
                 <LogIn size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
@@ -693,7 +693,7 @@ export default function Navbar() {
               ) : null}
             </Link>
             {authLoading ? (
-              <div className="h-9 w-9 rounded-md border border-orange-100 bg-white/70 animate-pulse" />
+              <div className="h-9 w-9 rounded-xl border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <Link
                 href="/profile"
@@ -738,7 +738,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => handleSearchSubmit(searchQuery)}
-                  className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm"
+                  className="rounded-xl bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm"
                   aria-label="Search"
                 >
                   Search

@@ -48,15 +48,15 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, mediaUrl, className = "bg-white" }: CategoryCardProps) {
   return (
-    <div className={`w-full rounded-[10px] p-[2px] md:p-[5px] ${className}`}>
+    <div className={`w-full rounded-2xl p-[2px] md:p-[5px] ${className}`}>
       <div
-        className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center overflow-hidden rounded-[10px] border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] md:max-h-none lg:h-[6.2vw]"
+        className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] md:max-h-none lg:h-[6.2vw]"
       >
         {mediaUrl ? (
           <img
             src={mediaUrl}
             alt={name}
-            className="h-full w-full rounded-[10px] object-cover"
+            className="h-full w-full rounded-2xl object-cover"
             loading="lazy"
           />
         ) : (
@@ -187,13 +187,13 @@ export default function CategoryGrid() {
           ) : null}
 
           {sortedCategories.length > 0 ? (
-          <div className="flex flex-wrap gap-x-[2%] gap-y-3 px-0 pt-1 pb-0 sm:p-5">
+          <div className="flex flex-wrap gap-x-[2%] gap-y-3 px-0 pt-1 pb-0 sm:px-0 sm:py-5">
             {mobileVisibleCategories.map((category, index) => {
               return (
                 <Link
                   key={category.id}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="my-[1px] w-[23.5%] rounded-[10px] md:my-[5px] md:w-[18.4%] lg:w-[9.33%]"
+                  className="my-[1px] w-[23.5%] rounded-2xl md:my-[5px] md:w-[18.4%] lg:w-[9.33%]"
                 >
                   <CategoryCard
                     name={category.name}
@@ -208,7 +208,7 @@ export default function CategoryGrid() {
                 <Link
                   key={`desktop-${category.id}`}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="my-[5px] hidden w-[9.33%] rounded-[10px] lg:block"
+                  className="my-[5px] hidden w-[9.33%] rounded-2xl lg:block"
                 >
                   <CategoryCard
                     name={category.name}
@@ -219,11 +219,11 @@ export default function CategoryGrid() {
             })}
 
             <button
-              className="my-[1px] w-[23.5%] rounded-[10px] p-[2px] md:my-[5px] md:w-[18.4%] md:p-[5px] lg:w-[9.33%]"
+              className="my-[1px] w-[23.5%] rounded-2xl p-[2px] md:my-[5px] md:w-[18.4%] md:p-[5px] lg:w-[9.33%]"
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center rounded-[10px] border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] md:max-h-none lg:h-[6.2vw]">
+              <div className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center rounded-2xl border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] md:max-h-none lg:h-[6.2vw]">
                 <ChevronRight size={20} />
               </div>
               <h3 className="mt-[3px] text-center text-[11px] font-medium leading-[1.05] text-gray-700 line-clamp-2 md:mt-[5px] md:text-[13px] md:leading-tight">View All</h3>
@@ -240,9 +240,9 @@ export default function CategoryGrid() {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="w-full max-w-6xl rounded-xl border border-white/40 bg-white/80 p-6 shadow-md relative max-h-[80vh] overflow-y-auto backdrop-blur-md">
+            <div className="w-full max-w-6xl rounded-2xl border border-white/40 bg-white/80 p-6 shadow-md relative max-h-[80vh] overflow-y-auto backdrop-blur-md">
               <button
-                className="absolute right-4 top-4 rounded-md border border-orange-500 bg-orange-500 p-2 text-white btn-hover"
+                className="absolute right-4 top-4 rounded-xl border border-orange-500 bg-orange-500 p-2 text-white btn-hover"
                 onClick={() => setIsOpen(false)}
                 type="button"
               >
@@ -255,7 +255,7 @@ export default function CategoryGrid() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search categories"
-                  className="w-full rounded-full border border-orange-100 bg-white px-4 py-2 text-sm text-gray-800 outline-none focus:border-orange-300"
+                  className="w-full rounded-xl border border-orange-100 bg-white px-4 py-2 text-sm text-gray-800 outline-none focus:border-orange-300"
                 />
               </div>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9">
@@ -265,7 +265,7 @@ export default function CategoryGrid() {
                       key={category.id}
                       href={buildCategoryHref(category.slug || slugify(category.name))}
                       onClick={() => setIsOpen(false)}
-                      className="rounded-[10px] transition hover:-translate-y-0.5 hover:shadow-sm"
+                      className="rounded-xl transition hover:-translate-y-0.5 hover:shadow-sm"
                     >
                       <CategoryCard name={category.name} mediaUrl={category.mediaUrl} className="bg-transparent" />
                     </Link>
@@ -273,7 +273,7 @@ export default function CategoryGrid() {
                 })}
 
                 {filteredCategories.length === 0 ? (
-                  <div className="col-span-full rounded-lg border border-gray-200 bg-white/80 px-3 py-3 text-sm text-gray-500">
+                  <div className="col-span-full rounded-xl border border-gray-200 bg-white/80 px-3 py-3 text-sm text-gray-500">
                     No categories found.
                   </div>
                 ) : null}
