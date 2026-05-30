@@ -25,7 +25,7 @@ const BANNER_LAYOUT: BannerTile[] = [
   { key: "rightImage", title: "Secondary Banner", className: "lg:col-span-2" },
 ];
 
-const BANNER_HEIGHT_CLASS = "h-[110px] sm:h-[130px] md:h-[200px] lg:h-[250px]";
+const BANNER_HEIGHT_CLASS = "h-[125px] sm:h-[145px] md:h-[200px] lg:h-[250px]";
 
 const normalizeImage = (value?: string) => String(value || "").trim();
 
