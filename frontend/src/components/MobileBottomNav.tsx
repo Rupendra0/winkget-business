@@ -125,7 +125,7 @@ export default function MobileBottomNav() {
       aria-label="Mobile bottom navigation"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-slate-50/95 backdrop-blur-sm md:hidden"
     >
-      <div className="mx-auto grid h-[74px] max-w-screen-sm grid-cols-5 items-center px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
+      <div className="mx-auto grid h-[62px] max-w-screen-sm grid-cols-5 items-center px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
         {tabs.map((tab) => {
           const activeClasses = tab.isActive ? "text-slate-900" : "text-slate-500";
 
@@ -134,11 +134,11 @@ export default function MobileBottomNav() {
               <a
                 key={tab.key}
                 href={tab.href}
-                className={`flex h-full flex-col items-center justify-center gap-1 ${activeClasses}`}
+                className={`flex h-full flex-col items-center justify-center gap-0.5 ${activeClasses}`}
                 aria-current={tab.isActive ? "page" : undefined}
               >
-                <tab.Icon size={30} strokeWidth={tab.isActive ? 2.2 : 1.9} />
-                <span className="text-[12px] font-semibold leading-none">{tab.label}</span>
+                <tab.Icon size={24} strokeWidth={tab.isActive ? 2.2 : 1.9} />
+                <span className="text-[10px] font-semibold leading-none">{tab.label}</span>
               </a>
             );
           }
@@ -147,11 +147,11 @@ export default function MobileBottomNav() {
             <Link
               key={tab.key}
               href={tab.href}
-              className={`flex h-full flex-col items-center justify-center gap-1 ${activeClasses}`}
+              className={`flex h-full flex-col items-center justify-center gap-0.5 ${activeClasses}`}
               aria-current={tab.isActive ? "page" : undefined}
             >
-              <tab.Icon size={30} strokeWidth={tab.isActive ? 2.2 : 1.9} />
-              <span className="text-[12px] font-semibold leading-none">{tab.label}</span>
+              <tab.Icon size={24} strokeWidth={tab.isActive ? 2.2 : 1.9} />
+              <span className="text-[10px] font-semibold leading-none">{tab.label}</span>
             </Link>
           );
         })}

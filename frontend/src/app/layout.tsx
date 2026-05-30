@@ -57,7 +57,7 @@ export default function RootLayout({
         >
           <Navbar />
         </Suspense>
-        <div className="pb-[calc(74px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        <div className="pb-[calc(62px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
         <MobileBottomNav />
         <BackToTop />
       </body>
