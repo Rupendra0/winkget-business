@@ -488,7 +488,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md font-medium">
+      <nav className="sticky top-0 z-50 bg-white/70 pt-[calc(env(safe-area-inset-top)+0.5rem)] font-medium backdrop-blur-md md:pt-0">
         <div className="w-full px-[10px]">
           <div
             className={`mx-0.5 flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out md:mx-0 ${
