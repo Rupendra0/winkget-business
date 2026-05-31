@@ -551,7 +551,7 @@ export default function Navbar() {
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
               <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-100 bg-white px-[15px] shadow-sm">
-                <Search size={20} className="text-orange-500" />
+                {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
                 <input
                   type="text"
                   placeholder="Search across 10 Lakh+ Business"
@@ -566,6 +566,16 @@ export default function Navbar() {
                   }}
                   className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
                 />
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSearchSubmit(searchQuery)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
+                    aria-label="Search"
+                  >
+                    <Search size={16} strokeWidth={2.4} />
+                  </button>
+                ) : null}
               </div>
 
               {shouldShowSuggestions ? (
@@ -704,7 +714,7 @@ export default function Navbar() {
         <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
             <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
-              <Search size={18} className="text-orange-500" />
+              {!searchQuery.trim() ? <Search size={18} className="text-orange-500" /> : null}
               <input
                 type="text"
                 placeholder="Search businesses and services"
@@ -723,10 +733,10 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => handleSearchSubmit(searchQuery)}
-                  className="rounded-xl bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-sm"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
                   aria-label="Search"
                 >
-                  Search
+                  <Search size={16} strokeWidth={2.4} />
                 </button>
               ) : null}
             </div>

@@ -294,19 +294,18 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-white">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <section aria-label={summaryText} className="border-b border-slate-100 bg-white">
+        <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
           <div className="max-w-3xl">
             <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
               {hasQuery ? `Results for "${queryLabel}"` : "Search results"}
             </h1>
-            <p className="mt-2 text-base text-slate-600">{summaryText}</p>
           </div>
 
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
           <aside className="hidden lg:block space-y-5">
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -320,23 +319,21 @@ export default function SearchPage() {
             <div className="rounded-2xl border border-slate-100 bg-white p-4">
               <div className="text-sm font-semibold text-slate-700">Need ideas?</div>
               <p className="mt-2 text-xs text-slate-500">
-                Try searching for services like "dentist", "spa", or "electronics shop".
+                Try searching for services like &quot;dentist&quot;, &quot;spa&quot;, or &quot;electronics shop&quot;.
               </p>
             </div>
           </aside>
 
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-2 lg:hidden">
+          <div className="space-y-5">
+            <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm lg:hidden"
               >
-                <SlidersHorizontal size={16} className="text-orange-500" />
+                <SlidersHorizontal size={14} className="text-orange-500" />
                 Filters
               </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
               {([
                 { key: "vendors", label: "Vendors" },
                 { key: "products", label: "Products" },
@@ -346,7 +343,7 @@ export default function SearchPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition sm:px-4 sm:text-sm ${
                     activeTab === tab.key
                       ? "bg-slate-900 text-white"
                       : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
@@ -371,7 +368,7 @@ export default function SearchPage() {
                   vendorHits.map((hit) => (
                     <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
                       <div className="flex gap-4">
-                        <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
+                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-16 sm:w-16">
                           {hit.vendorImage ? (
                             <img src={hit.vendorImage} alt={hit.vendorName || "Vendor"} className="h-full w-full object-cover" />
                           ) : null}
@@ -436,7 +433,7 @@ export default function SearchPage() {
                   productHits.map((hit) => (
                     <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
                       <div className="flex gap-4">
-                        <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
+                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-16 sm:w-16">
                           {hit.productImage ? (
                             <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full object-cover" />
                           ) : null}
@@ -545,11 +542,11 @@ export default function SearchPage() {
       </section>
       {isFilterOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/30 px-4 py-6 lg:hidden"
+          className="fixed inset-0 z-50 flex items-end bg-black/30 px-4 pb-[calc(84px+env(safe-area-inset-bottom))] pt-6 lg:hidden"
           onClick={() => setIsFilterOpen(false)}
         >
           <div
-            className="w-full rounded-2xl bg-white p-5 shadow-xl"
+            className="max-h-[calc(100vh-128px-env(safe-area-inset-bottom))] w-full overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between">
