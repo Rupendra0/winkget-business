@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X, Menu } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
 import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
@@ -502,17 +502,29 @@ export default function Navbar() {
             {showBack ? (
               <button
                 type="button"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white text-orange-600 flex items-center justify-center btn-hover shadow-sm"
+                className="hidden h-8 w-8 items-center justify-center rounded-full bg-white text-orange-600 shadow-sm btn-hover md:flex sm:h-9 sm:w-9"
                 onClick={() => router.back()}
                 aria-label="Go back"
               >
                 <ChevronLeft size={18} />
               </button>
             ) : null}
-            <Link href="/" className="min-w-0 flex items-baseline gap-1 sm:gap-2">
-              <span className="brand-wordmark text-lg sm:text-2xl font-bold tracking-[0.4px] text-orange-600">Winkget</span>
-              <span className="brand-wordmark hidden sm:inline text-lg sm:text-xl font-bold tracking-[0.3px] text-gray-800">Business</span>
+            <Link href="/" className="brand-wordmark flex min-w-0 flex-col items-start gap-0 leading-none md:flex-row md:items-baseline md:gap-2">
+              <span className="text-[10px] font-bold tracking-[0.2px] text-slate-900 md:text-2xl md:tracking-[0.4px] md:text-orange-600">Winkget</span>
+              <span className="text-lg font-bold tracking-[0.2px] text-orange-600 md:text-xl md:tracking-[0.3px] md:text-gray-800">Business</span>
             </Link>
+            <button
+              type="button"
+              onClick={() => setCityMenuOpen((prev) => !prev)}
+              disabled={loadingCities || cityOptions.length === 0}
+              className="inline-flex h-8 w-[116px] items-center justify-center gap-1 rounded border border-slate-200 bg-white px-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60 md:hidden"
+              aria-label="Current location"
+            >
+              <span className="min-w-0 truncate text-center text-[11px] font-bold text-blue-700">
+                {loadingCities ? "Location" : selectedCity || "Location"}
+              </span>
+              <ChevronDown size={13} strokeWidth={2.6} className="shrink-0 text-blue-700" />
+            </button>
           </div>
 
           {/* Center - Location and Search */}
@@ -523,7 +535,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
                 <div className="flex flex-col items-start leading-tight">
@@ -538,7 +550,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
-              <div className="flex h-12 items-center gap-2 rounded-2xl border border-slate-100 bg-white px-[15px] shadow-sm">
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-100 bg-white px-[15px] shadow-sm">
                 <Search size={20} className="text-orange-500" />
                 <input
                   type="text"
@@ -576,16 +588,16 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-[10px] px-[10px]">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="inline-flex h-11 items-center rounded-2xl px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
+              className="inline-flex h-11 items-center rounded-lg px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
             >
               Sell on Winkget
             </a>
-            <button className="inline-flex h-11 items-center rounded-2xl bg-orange-500 px-3 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
+            <button className="inline-flex h-11 items-center rounded-lg bg-orange-500 px-3 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
               Winkget
             </button>
             <Link
               href="/cart"
-              className="relative inline-flex h-11 items-center rounded-2xl bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-11 items-center rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={18} />
@@ -596,13 +608,13 @@ export default function Navbar() {
               ) : null}
             </Link>
             {authLoading ? (
-              <div className="h-11 w-28 rounded-2xl border border-orange-100 bg-white/70 animate-pulse" />
+              <div className="h-11 w-28 rounded-lg border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <div className="relative" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
                 >
                   <UserRound size={18} />
                   <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
@@ -658,7 +670,7 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex h-11 items-center gap-2 rounded-2xl bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
+              <Link href={buildAuthHref(currentPath)} className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
                 <LogIn size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
@@ -666,59 +678,32 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu */}
-          <div className="md:hidden shrink-0 flex items-center gap-2.5">
-            <div className="relative -ml-2">
-              <button
-                type="button"
-                onClick={() => setCityMenuOpen((prev) => !prev)}
-                disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex w-[108px] items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
-                aria-label="Current location"
-              >
-                <span className="w-full truncate text-center text-sm font-semibold text-blue-600">
-                  {loadingCities ? "City..." : selectedCity || "Select"}
-                </span>
-              </button>
-            </div>
+          <div className="md:hidden shrink-0 flex items-center gap-1.5">
             <Link
               href="/cart"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
-              <ShoppingCart size={20} />
+              <ShoppingCart size={18} strokeWidth={2.4} />
               {cartCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] items-center justify-center rounded-full bg-orange-500 px-1 text-[8px] font-bold text-white">
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               ) : null}
             </Link>
-            {authLoading ? (
-              <div className="h-9 w-9 rounded-lg border border-orange-100 bg-white/70 animate-pulse" />
-            ) : user ? (
-              <Link
-                href="/profile"
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 sm:px-3.5 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
-                aria-label="Profile"
-              >
-                <UserRound size={18} />
-                <span className="hidden sm:inline text-sm">Profile</span>
-              </Link>
-            ) : (
-              <Link
-                href={buildAuthHref(currentPath)}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 sm:px-3.5 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
-                aria-label="Login"
-              >
-                <LogIn size={18} className="text-white" />
-                <span className="hidden sm:inline text-sm">Login</span>
-              </Link>
-            )}
+            <Link
+              href={user ? "/profile" : buildAuthHref(currentPath)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
+              aria-label={user ? "Profile" : "Login"}
+            >
+              <Menu size={19} strokeWidth={2.4} />
+            </Link>
           </div>
         </div>
 
         <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex h-13 items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
+            <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
               <Search size={18} className="text-orange-500" />
               <input
                 type="text"
