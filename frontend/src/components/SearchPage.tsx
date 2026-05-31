@@ -290,7 +290,7 @@ export default function SearchPage() {
     return "bg-slate-100 text-slate-500";
   };
 
-  const cardToneClass = "border border-slate-100 bg-white shadow-sm";
+  const cardToneClass = "bg-white";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -366,42 +366,42 @@ export default function SearchPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 {vendorHits.length > 0 ? (
                   vendorHits.map((hit) => (
-                    <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
-                      <div className="flex gap-4">
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-16 sm:w-16">
+                    <div key={hit.id} className={`overflow-hidden rounded-2xl ${cardToneClass}`}>
+                      <div className="flex min-h-28 sm:min-h-32">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden bg-slate-100 sm:h-32 sm:w-32">
                           {hit.vendorImage ? (
                             <img src={hit.vendorImage} alt={hit.vendorName || "Vendor"} className="h-full w-full object-cover" />
                           ) : null}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 p-3 sm:p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h3 className="text-base font-semibold text-slate-900">{hit.vendorName}</h3>
-                              <p className="text-xs text-slate-500">{hit.sublocality || hit.city}</p>
+                              <h3 className="text-sm font-semibold text-slate-900 sm:text-base">{hit.vendorName}</h3>
+                              <p className="text-[11px] text-slate-500 sm:text-xs">{hit.sublocality || "Locality unavailable"}</p>
                             </div>
                           </div>
 
-                          <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
+                          <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 sm:mt-3">
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${getRatingBadgeClass(
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:text-xs ${getRatingBadgeClass(
                                 Number(hit.rating || 0)
                               )}`}
                             >
-                              <Star size={14} /> {Number(hit.rating || 0).toFixed(1)} ({hit.reviews || 0})
+                              <Star size={12} /> {Number(hit.rating || 0).toFixed(1)} ({hit.reviews || 0})
                             </span>
                           </div>
 
-                          <div className="mt-4 flex gap-2">
+                          <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
                               href={`/listing/${hit.vendorId}`}
-                              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
+                              className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white sm:px-3 sm:py-1.5 sm:text-xs"
                             >
                               Visit
                             </Link>
                             {hit.vendorPhone ? (
                               <a
                                 href={`tel:${hit.vendorPhone.replace(/[^\d+]/g, "")}`}
-                                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                                className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:px-3 sm:py-1.5 sm:text-xs"
                               >
                                 Call
                               </a>
@@ -409,7 +409,7 @@ export default function SearchPage() {
                               <button
                                 type="button"
                                 disabled
-                                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-400"
+                                className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-400 sm:px-3 sm:py-1.5 sm:text-xs"
                               >
                                 Call
                               </button>
@@ -431,30 +431,30 @@ export default function SearchPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 {productHits.length > 0 ? (
                   productHits.map((hit) => (
-                    <div key={hit.id} className={`rounded-2xl border p-4 shadow-sm ${cardToneClass}`}>
-                      <div className="flex gap-4">
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-16 sm:w-16">
+                    <div key={hit.id} className={`overflow-hidden rounded-2xl ${cardToneClass}`}>
+                      <div className="flex min-h-28 sm:min-h-32">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden bg-slate-100 sm:h-32 sm:w-32">
                           {hit.productImage ? (
                             <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full object-cover" />
                           ) : null}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-base font-semibold text-slate-900">{hit.productName}</h3>
-                          <p className="text-xs text-slate-500">{hit.vendorName}</p>
-                          <p className="text-xs text-slate-500">{hit.categoryName}</p>
-                          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex-1 p-3 sm:p-4">
+                          <h3 className="text-sm font-semibold text-slate-900 sm:text-base">{hit.productName}</h3>
+                          <p className="text-[11px] text-slate-500 sm:text-xs">{hit.vendorName}</p>
+                          <p className="text-[11px] text-slate-500 sm:text-xs">{hit.categoryName}</p>
+                          <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500 sm:mt-3 sm:text-xs">
                             <span>{hit.city}</span>
                             {hit.price ? <span className="font-semibold text-slate-700">Rs {hit.price}</span> : null}
                             {renderStatusBadge(hit)}
                           </div>
-                          <div className="mt-4 flex gap-2">
+                          <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
                               href={`/listing/${hit.vendorId}`}
-                              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
+                              className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white sm:px-3 sm:py-1.5 sm:text-xs"
                             >
                               View vendor
                             </Link>
-                            <button className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                            <button className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:px-3 sm:py-1.5 sm:text-xs">
                               Ask price
                             </button>
                           </div>
@@ -495,7 +495,7 @@ export default function SearchPage() {
                         : undefined,
                     })),
                   ].map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <div key={item.id} className="rounded-2xl bg-white p-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
                           <Clock size={20} />
