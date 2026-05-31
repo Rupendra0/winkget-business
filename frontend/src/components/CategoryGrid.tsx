@@ -48,15 +48,15 @@ interface CategoryCardProps {
 
 function CategoryCard({ name, mediaUrl, className = "bg-white" }: CategoryCardProps) {
   return (
-    <div className={`w-full rounded-2xl p-[2px] md:p-[5px] ${className}`}>
+    <div className={`w-full rounded-lg p-[2px] md:rounded-2xl md:p-[5px] ${className}`}>
       <div
-        className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] md:max-h-none lg:h-[6.2vw]"
+        className="flex h-[16vw] min-h-[54px] max-h-[68px] w-full items-center justify-center overflow-hidden rounded-lg border border-[#e7e7e7] bg-[#f0f0f0] md:h-[10vw] md:max-h-none md:rounded-2xl lg:h-[6.2vw]"
       >
         {mediaUrl ? (
           <img
             src={mediaUrl}
             alt={name}
-            className="h-full w-full rounded-2xl object-cover"
+            className="h-full w-full rounded-lg object-cover md:rounded-2xl"
             loading="lazy"
           />
         ) : (
@@ -193,7 +193,7 @@ export default function CategoryGrid() {
                 <Link
                   key={category.id}
                   href={buildCategoryHref(category.slug || slugify(category.name))}
-                  className="my-[1px] w-[23.5%] rounded-2xl md:my-[5px] md:w-[18.4%] lg:w-[9.33%]"
+                  className="my-[1px] w-[23.5%] rounded-lg md:my-[5px] md:w-[18.4%] md:rounded-2xl lg:w-[9.33%]"
                 >
                   <CategoryCard
                     name={category.name}
@@ -219,11 +219,11 @@ export default function CategoryGrid() {
             })}
 
             <button
-              className="my-[1px] w-[23.5%] rounded-2xl p-[2px] md:my-[5px] md:w-[18.4%] md:p-[5px] lg:w-[9.33%]"
+              className="my-[1px] w-[23.5%] rounded-lg p-[2px] md:my-[5px] md:w-[18.4%] md:rounded-2xl md:p-[5px] lg:w-[9.33%]"
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <div className="flex h-[13vw] min-h-[44px] max-h-[56px] w-full items-center justify-center rounded-2xl border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] md:max-h-none lg:h-[6.2vw]">
+              <div className="flex h-[16vw] min-h-[54px] max-h-[68px] w-full items-center justify-center rounded-lg border border-[#e7e7e7] bg-white text-blue-600 md:h-[10vw] md:max-h-none md:rounded-2xl lg:h-[6.2vw]">
                 <ChevronRight size={20} />
               </div>
               <h3 className="mt-[3px] text-center text-[11px] font-medium leading-[1.05] text-gray-700 line-clamp-2 md:mt-[5px] md:text-[13px] md:leading-tight">View All</h3>

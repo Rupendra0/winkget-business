@@ -672,7 +672,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex w-[108px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex w-[108px] items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
                 aria-label="Current location"
               >
                 <span className="w-full truncate text-center text-sm font-semibold text-blue-600">
@@ -682,7 +682,7 @@ export default function Navbar() {
             </div>
             <Link
               href="/cart"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
               <ShoppingCart size={20} />
@@ -693,11 +693,11 @@ export default function Navbar() {
               ) : null}
             </Link>
             {authLoading ? (
-              <div className="h-9 w-9 rounded-xl border border-orange-100 bg-white/70 animate-pulse" />
+              <div className="h-9 w-9 rounded-lg border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
               <Link
                 href="/profile"
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 sm:px-3.5 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 sm:px-3.5 text-white font-semibold hover:bg-orange-600 btn-hover shadow-sm"
                 aria-label="Profile"
               >
                 <UserRound size={18} />
@@ -706,7 +706,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 sm:px-3.5 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 sm:px-3.5 text-white font-semibold hover:bg-blue-700 btn-hover shadow-sm"
                 aria-label="Login"
               >
                 <LogIn size={18} className="text-white" />
