@@ -115,6 +115,7 @@ export type StoreCategoryBarItem = {
   id: string;
   label: string;
   iconImage?: string;
+  filterLabels?: string[];
 };
 
 export type StorePageData = {

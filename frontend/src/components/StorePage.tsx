@@ -112,12 +112,18 @@ const formatIndianCompactCurrency = (value: number): string => {
   return formatIndianCurrency(amount);
 };
 
+const normalizeFilterToken = (value: unknown) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
 export default function StorePage({ data }: { data: StorePageData }) {
   const router = useRouter();
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
+  const [selectedCategoryBarItemId, setSelectedCategoryBarItemId] = useState("");
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -227,10 +233,11 @@ export default function StorePage({ data }: { data: StorePageData }) {
     [buildProductHref, data.id, data.storeName, router]
   );
 
-  const featuredProducts = data.featured.productIds
+  const allProducts = data.products;
+  const rawFeaturedProducts = data.featured.productIds
     .map((id) => productMap.get(id))
     .filter(Boolean);
-  const trendingProducts = data.trending.productIds
+  const rawTrendingProducts = data.trending.productIds
     .map((id) => productMap.get(id))
     .filter(Boolean);
 
@@ -304,13 +311,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
   }, [data.address, data.city, data.sublocality]);
   const categoryItems = useMemo(() => {
     const fallbackItems = ["Appliances", "Agri Inputs", "Auto Components", "Beauty & Personal Care", "Electronics"];
-    const sourceItems: Array<{ id: string; label: string; iconImage?: string }> =
+    const sourceItems: Array<{ id: string; label: string; iconImage?: string; filterLabels?: string[] }> =
       Array.isArray(data.categoryBarItems) && data.categoryBarItems.length > 0
         ? data.categoryBarItems
         : (data.categories.length > 0 ? data.categories : fallbackItems).map((label, index) => ({
             id: `category-pill-fallback-${index}`,
             label,
             iconImage: undefined,
+            filterLabels: [label],
           }));
 
     return sourceItems.map((categoryItemSource, index) => {
@@ -338,12 +346,62 @@ export default function StorePage({ data }: { data: StorePageData }) {
         id: String(categoryItemSource.id || `category-pill-${index}-${label}`),
         label,
         iconImage,
+        filterLabels: Array.from(
+          new Set(
+            [label, ...(Array.isArray(categoryItemSource.filterLabels) ? categoryItemSource.filterLabels : [])]
+              .map((value) => String(value || "").trim())
+              .filter(Boolean)
+          )
+        ),
         IconComponent,
         paletteClass: CATEGORY_ICON_PALETTES[index % CATEGORY_ICON_PALETTES.length],
       };
     });
   }, [data.categories, data.categoryBarItems]);
   const shouldCenterCategoryRail = categoryItems.length <= 3;
+  const selectedCategoryBarItem = useMemo(
+    () => categoryItems.find((categoryItem) => categoryItem.id === selectedCategoryBarItemId),
+    [categoryItems, selectedCategoryBarItemId]
+  );
+  const selectedCategoryFilterLabels = useMemo(
+    () =>
+      new Set(
+        (selectedCategoryBarItem?.filterLabels?.length
+          ? selectedCategoryBarItem.filterLabels
+          : [selectedCategoryBarItem?.label]
+        )
+          .map(normalizeFilterToken)
+          .filter(Boolean)
+      ),
+    [selectedCategoryBarItem]
+  );
+  const matchesSelectedCategoryFilter = useCallback(
+    (product: StoreProduct | undefined) => {
+      if (!product) return false;
+      if (selectedCategoryFilterLabels.size === 0) return true;
+
+      return [
+        product.subcategoryName,
+        product.categoryLabel,
+        product.category,
+        product.categorySlug,
+        ...(Array.isArray(product.tags) ? product.tags : []),
+      ].some((value) => selectedCategoryFilterLabels.has(normalizeFilterToken(value)));
+    },
+    [selectedCategoryFilterLabels]
+  );
+  const featuredProducts = useMemo(
+    () => rawFeaturedProducts.filter(matchesSelectedCategoryFilter),
+    [matchesSelectedCategoryFilter, rawFeaturedProducts]
+  );
+  const trendingProducts = useMemo(
+    () => rawTrendingProducts.filter(matchesSelectedCategoryFilter),
+    [matchesSelectedCategoryFilter, rawTrendingProducts]
+  );
+  const visibleProducts = useMemo(
+    () => allProducts.filter(matchesSelectedCategoryFilter),
+    [allProducts, matchesSelectedCategoryFilter]
+  );
 
   const scrollCategoryRail = useCallback((direction: "left" | "right") => {
     const rail = categoryRailRef.current;
@@ -653,17 +711,26 @@ export default function StorePage({ data }: { data: StorePageData }) {
               >
                 {categoryItems.map((categoryItem) => {
                   const IconComponent = categoryItem.IconComponent;
+                  const isSelected = selectedCategoryBarItemId === categoryItem.id;
                   return (
                     <button
                       key={categoryItem.id}
                       type="button"
+                      onClick={() =>
+                        setSelectedCategoryBarItemId((current) => (current === categoryItem.id ? "" : categoryItem.id))
+                      }
                       className="group min-w-[72px] shrink-0 snap-start text-center sm:min-w-[108px] lg:min-w-[128px]"
+                      aria-pressed={isSelected}
                     >
                       <span
-                        className={`mx-auto inline-flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white transition-transform duration-200 group-hover:-translate-y-0.5 sm:h-[68px] sm:w-[68px] lg:h-[86px] lg:w-[86px] ${categoryItem.paletteClass}`}
+                        className={`mx-auto inline-flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full border transition duration-200 group-hover:-translate-y-0.5 sm:h-[68px] sm:w-[68px] lg:h-[86px] lg:w-[86px] ${
+                          isSelected
+                            ? "border-pink-200 bg-pink-50 shadow-[0_8px_18px_rgba(236,72,153,0.16)]"
+                            : "border-slate-200 bg-white"
+                        } ${categoryItem.paletteClass}`}
                       >
                         {categoryItem.iconImage ? (
-                          <span className="inline-flex h-[74%] w-[74%] items-center justify-center rounded-full bg-white p-1">
+                          <span className={`inline-flex h-[74%] w-[74%] items-center justify-center rounded-full p-1 ${isSelected ? "bg-pink-50" : "bg-white"}`}>
                             <img
                               src={categoryItem.iconImage}
                               alt={`${categoryItem.label} icon`}
@@ -675,7 +742,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                           <IconComponent className="h-5 w-5 sm:h-7 sm:w-7" strokeWidth={1.8} />
                         )}
                       </span>
-                      <span className="mt-1.5 block line-clamp-2 text-[11px] font-semibold leading-tight text-slate-700 sm:mt-2 sm:text-[13px]">
+                      <span className={`mt-1.5 block line-clamp-2 text-[11px] font-semibold leading-tight sm:mt-2 sm:text-[13px] ${isSelected ? "text-pink-700" : "text-slate-700"}`}>
                         {categoryItem.label}
                       </span>
                     </button>
@@ -720,6 +787,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
             <div className="space-y-8 lg:min-w-0">
 
+            {selectedCategoryBarItem && visibleProducts.length === 0 ? (
+            <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
+              <p className="text-sm font-semibold text-slate-700">
+                No products found for {selectedCategoryBarItem.label}.
+              </p>
+            </section>
+            ) : null}
+
             {featuredProducts.length > 0 ? (
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
@@ -751,7 +826,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <option>Price: High to Low</option>
                 </select>
               </div>
-              {renderProductRail(data.products, "h-36 sm:h-48")}
+              {renderProductRail(visibleProducts, "h-36 sm:h-48")}
             </section>
 
             

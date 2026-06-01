@@ -118,6 +118,16 @@ const uniqueStrings = (values: Array<string | undefined>) => {
 
 const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
   const source = Array.isArray(subcategories) ? [...subcategories] : [];
+  const childrenByParent = new Map<string, CatalogSubcategory[]>();
+
+  source.forEach((subcategory) => {
+    const parentId = normalizeString(subcategory.parentSubcategory?.id);
+    if (!parentId) return;
+
+    const children = childrenByParent.get(parentId) || [];
+    children.push(subcategory);
+    childrenByParent.set(parentId, children);
+  });
 
   source.sort((left, right) => {
     const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
@@ -127,6 +137,19 @@ const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
     }
     return String(left.name || "").localeCompare(String(right.name || ""));
   });
+
+  const collectDescendantLabels = (subcategoryId: string, lineage = new Set<string>()): string[] => {
+    const normalizedId = normalizeString(subcategoryId);
+    if (!normalizedId || lineage.has(normalizedId)) return [];
+
+    const nextLineage = new Set(lineage);
+    nextLineage.add(normalizedId);
+
+    return (childrenByParent.get(normalizedId) || []).flatMap((child) => [
+      normalizeString(child.name),
+      ...collectDescendantLabels(normalizeString(child.id), nextLineage),
+    ]);
+  };
 
   return source
     .filter((subcategory) => !subcategory.parentSubcategory?.id)
@@ -142,9 +165,10 @@ const toStoreCategoryBarItems = (subcategories: CatalogSubcategory[]) => {
         id,
         label,
         iconImage: iconImage || undefined,
+        filterLabels: uniqueStrings([label, ...collectDescendantLabels(id)]),
       };
     })
-    .filter((item): item is { id: string; label: string; iconImage: string | undefined } => Boolean(item))
+    .filter((item): item is { id: string; label: string; iconImage: string | undefined; filterLabels: string[] } => Boolean(item))
     .slice(0, 12);
 };
 
