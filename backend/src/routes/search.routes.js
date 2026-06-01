@@ -1,4 +1,5 @@
 const express = require("express");
+const User = require("../models/User");
 const {
   ensureSearchIndex,
   reindexSearchDocuments,
@@ -55,6 +56,44 @@ const clampNumber = (value, fallback, min, max) => {
   return Math.min(Math.max(Math.floor(numeric), min), max);
 };
 
+const hydrateVendorLocations = async (hits) => {
+  if (!Array.isArray(hits) || hits.length === 0) {
+    return [];
+  }
+
+  const vendorIds = Array.from(
+    new Set(
+      hits
+        .map((hit) => normalizeString(hit.vendorId || ""))
+        .filter(Boolean)
+    )
+  );
+
+  if (vendorIds.length === 0) {
+    return hits;
+  }
+
+  const vendors = await User.find({ _id: { $in: vendorIds }, role: "vendor" })
+    .select("_id city sublocality")
+    .lean();
+  const vendorById = new Map(vendors.map((vendor) => [String(vendor._id), vendor]));
+
+  return hits.map((hit) => {
+    const vendor = vendorById.get(normalizeString(hit.vendorId || ""));
+    if (!vendor) {
+      return hit;
+    }
+
+    const city = normalizeString(vendor.city || hit.city || "");
+    const sublocality = normalizeString(vendor.sublocality || hit.sublocality || "");
+    return {
+      ...hit,
+      city,
+      sublocality,
+    };
+  });
+};
+
 const requireSearchAdmin = (req, res, next) => {
   const token = normalizeString(req.headers["x-search-token"] || req.query.token || "");
   const expected = normalizeString(process.env.SEARCH_ADMIN_TOKEN || "");
@@ -96,13 +135,14 @@ router.get("/search", async (req, res) => {
         offset,
         facets: ["categorySlug", "subcategorySlug"],
       });
+      const hits = type === "vendor" || type === "product" ? await hydrateVendorLocations(response.hits) : response.hits;
 
       return res.status(200).json({
         ok: true,
         query,
         city,
         type,
-        hits: response.hits,
+        hits,
         total: response.estimatedTotalHits,
         facets: response.facetDistribution || {},
       });
@@ -155,8 +195,8 @@ router.get("/search", async (req, res) => {
       query,
       city,
       sections: {
-        products: { hits: products.hits, total: products.estimatedTotalHits },
-        vendors: { hits: vendors.hits, total: vendors.estimatedTotalHits },
+        products: { hits: await hydrateVendorLocations(products.hits), total: products.estimatedTotalHits },
+        vendors: { hits: await hydrateVendorLocations(vendors.hits), total: vendors.estimatedTotalHits },
         categories: { hits: categories.hits, total: categories.estimatedTotalHits },
         subcategories: { hits: subcategories.hits, total: subcategories.estimatedTotalHits },
       },
