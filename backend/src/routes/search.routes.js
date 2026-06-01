@@ -204,21 +204,35 @@ const buildChildSubcategoryHits = async (categoryHits) => {
   });
 
   const ordered = [];
-  const walk = (categoryId, parentId, depth, lineage) => {
+  const addLevel = (categoryId, parentIds, depth, lineage) => {
     const categoryGroup = byCategory.get(categoryId);
-    const siblings = categoryGroup?.get(parentId) || [];
-    siblings.forEach((subcategory) => {
-      const subcategoryId = String(subcategory._id);
-      if (lineage.has(subcategoryId)) return;
+    if (!categoryGroup || parentIds.length === 0) return;
 
+    const currentLevel = [];
+    const nextLineage = new Set(lineage);
+
+    parentIds.forEach((parentId) => {
+      const siblings = categoryGroup.get(parentId) || [];
+      siblings.forEach((subcategory) => {
+        const subcategoryId = String(subcategory._id);
+        if (nextLineage.has(subcategoryId)) return;
+
+        nextLineage.add(subcategoryId);
+        currentLevel.push(subcategory);
+      });
+    });
+
+    currentLevel.forEach((subcategory) => {
       const categoryHit = categoryById.get(categoryId) || {};
       ordered.push(buildSubcategoryHit(subcategory, categoryHit, depth));
-      walk(categoryId, subcategoryId, depth + 1, new Set([...lineage, subcategoryId]));
     });
+
+    const nextParentIds = currentLevel.map((subcategory) => String(subcategory._id));
+    addLevel(categoryId, nextParentIds, depth + 1, nextLineage);
   };
 
   categoryIds.forEach((categoryId) => {
-    walk(categoryId, "", 1, new Set());
+    addLevel(categoryId, [""], 1, new Set());
   });
 
   return ordered;
