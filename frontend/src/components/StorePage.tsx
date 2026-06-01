@@ -401,6 +401,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
             alt={product.name}
             className="h-full w-full object-contain p-3 transition-transform duration-200 group-hover:scale-[1.03]"
           />
+          {hasComparablePrice ? (
+            <span className="absolute left-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white shadow-sm sm:hidden">
+              {discountPercent}% OFF
+            </span>
+          ) : null}
+          {shouldShowRatingRow ? (
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-amber-950 shadow-sm sm:hidden">
+              {ratingDisplay}
+              <Star size={9} className="fill-amber-950 text-amber-950" />
+            </span>
+          ) : null}
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3">
@@ -409,17 +420,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </Link>
 
           {shouldShowRatingRow ? (
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-1.5 hidden items-center gap-2 sm:flex">
               <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-emerald-600 px-1.5 py-[2px] text-[11px] font-semibold leading-none text-white">
                 {ratingDisplay}
                 <Star size={10} className="fill-white text-white" />
               </span>
-              <span className="text-[11px] font-medium text-slate-500">({reviewCountLabel} ratings)</span>
+              <span className="text-[11px] font-medium text-slate-500">({reviewCountLabel})</span>
             </div>
           ) : null}
 
           {hasComparablePrice ? (
-            <p className="mt-1.5 text-[11px] font-semibold uppercase text-emerald-700 sm:mt-2 sm:text-xs sm:tracking-[0.04em]">{discountPercent}% OFF</p>
+            <p className="hidden sm:mt-2 sm:block sm:text-xs sm:font-semibold sm:uppercase sm:tracking-[0.04em] sm:text-emerald-700">{discountPercent}% OFF</p>
           ) : null}
 
           <div className="mt-1 flex min-w-0 items-baseline gap-1">
@@ -432,22 +443,22 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-auto grid grid-cols-2 gap-1.5 pt-2.5 sm:gap-2 sm:pt-3">
             {productCartQuantity > 0 ? (
-              <div className="col-span-2 inline-grid h-8 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:col-span-1 sm:h-9">
+              <div className="inline-grid h-8 min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-9">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-base font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
                   aria-label={`Decrease quantity for ${product.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-[11px] font-extrabold text-white sm:text-[12px]">
+                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-0.5 text-[10px] font-extrabold text-white sm:px-1 sm:text-[12px]">
                   {productCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-base font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
                   aria-label={`Increase quantity for ${product.name}`}
                 >
                   +
@@ -457,7 +468,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="col-span-2 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 sm:col-span-1 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-1 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
               >
                 Add to Cart
               </button>
@@ -466,7 +477,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <button
               type="button"
               onClick={() => handleBuyNow(product)}
-              className="col-span-2 h-8 rounded-lg bg-blue-600 px-1.5 text-[11px] font-semibold text-white transition hover:bg-blue-700 sm:col-span-1 sm:h-9 sm:px-2 sm:text-[12px]"
+              className="h-8 rounded-lg bg-blue-600 px-1 text-[10px] font-semibold text-white transition hover:bg-blue-700 sm:h-9 sm:px-2 sm:text-[12px]"
             >
               Buy Now
             </button>
