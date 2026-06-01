@@ -368,9 +368,9 @@ export default function SearchPage() {
                   vendorHits.map((hit) => (
                     <div key={hit.id} className={`overflow-hidden rounded-2xl ${cardToneClass}`}>
                       <div className="flex min-h-28 sm:min-h-32">
-                        <div className="h-28 w-28 shrink-0 overflow-hidden bg-slate-100 sm:h-32 sm:w-32">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-bl-2xl bg-slate-100 sm:h-32 sm:w-32">
                           {hit.vendorImage ? (
-                            <img src={hit.vendorImage} alt={hit.vendorName || "Vendor"} className="h-full w-full object-cover" />
+                            <img src={hit.vendorImage} alt={hit.vendorName || "Vendor"} className="h-full w-full rounded-bl-2xl object-cover" />
                           ) : null}
                         </div>
                         <div className="flex-1 p-3 sm:p-4">
@@ -433,9 +433,9 @@ export default function SearchPage() {
                   productHits.map((hit) => (
                     <div key={hit.id} className={`overflow-hidden rounded-2xl ${cardToneClass}`}>
                       <div className="flex min-h-28 sm:min-h-32">
-                        <div className="h-28 w-28 shrink-0 overflow-hidden bg-slate-100 sm:h-32 sm:w-32">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-bl-2xl bg-slate-100 sm:h-32 sm:w-32">
                           {hit.productImage ? (
-                            <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full object-cover" />
+                            <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full rounded-bl-2xl object-cover" />
                           ) : null}
                         </div>
                         <div className="flex-1 p-3 sm:p-4">
