@@ -1478,6 +1478,10 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       customFormData: role === "vendor" && Object.keys(customFormData).length > 0 ? customFormData : undefined,
     });
 
+    if (user.role === "vendor") {
+      scheduleVendorIndex(String(user._id));
+    }
+
     return res.status(201).json({
       ok: true,
       message: "User created",
@@ -1963,6 +1967,11 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
     }
 
     await user.save();
+
+    if (user.role === "vendor") {
+      scheduleVendorIndex(String(user._id));
+    }
+
     await user.populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields");
     await user.populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
 
