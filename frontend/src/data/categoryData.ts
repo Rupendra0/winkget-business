@@ -46,6 +46,7 @@ export type CategoryPageData = {
   city: string;
   selectedCity?: string;
   selectedSublocality?: string;
+  selectedSubcategoryId?: string;
   availableCities?: string[];
   localitiesByCity?: Record<string, string[]>;
   banner: CategoryBanner;

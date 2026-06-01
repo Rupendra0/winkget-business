@@ -18,6 +18,7 @@ import {
   type SearchResponse,
 } from "@/lib/searchClient";
 const DEFAULT_LIMIT = 10;
+const EMPTY_SEARCH_HITS: SearchHit[] = [];
 
 const formatSlugLabel = (value: string) =>
   value
@@ -149,10 +150,65 @@ export default function SearchPage() {
   }, [results]);
 
   const sections = results?.sections;
-  const vendorHits = sections?.vendors?.hits || [];
-  const productHits = sections?.products?.hits || [];
-  const categoryHits = sections?.categories?.hits || [];
-  const subcategoryHits = sections?.subcategories?.hits || [];
+  const vendorHits = sections?.vendors?.hits || EMPTY_SEARCH_HITS;
+  const productHits = sections?.products?.hits || EMPTY_SEARCH_HITS;
+  const categoryHits = sections?.categories?.hits || EMPTY_SEARCH_HITS;
+  const subcategoryHits = sections?.subcategories?.hits || EMPTY_SEARCH_HITS;
+  const orderedCategoryItems = useMemo(() => {
+    const usedSubcategoryIds = new Set<string>();
+    const byCategory = new Map<string, SearchHit[]>();
+
+    subcategoryHits.forEach((hit) => {
+      const categoryKey = String(hit.categoryId || hit.categorySlug || "").trim();
+      if (!categoryKey) return;
+      const hits = byCategory.get(categoryKey) || [];
+      hits.push(hit);
+      byCategory.set(categoryKey, hits);
+    });
+
+    const items = categoryHits.flatMap((hit) => {
+      const categoryKey = String(hit.categoryId || hit.categorySlug || "").trim();
+      const children = categoryKey ? byCategory.get(categoryKey) || [] : [];
+      children.forEach((child) => {
+        if (child.subcategoryId) usedSubcategoryIds.add(child.subcategoryId);
+      });
+
+      return [
+        {
+          ...hit,
+          label: hit.categoryName,
+          meta: "Popular category",
+          icon: hit.icon,
+          href: hit.categorySlug
+            ? `/category/${hit.categorySlug}?city=${encodeURIComponent(selectedCity)}`
+            : undefined,
+        },
+        ...children.map((child) => ({
+          ...child,
+          label: child.subcategoryName,
+          meta: child.parentSubcategoryName || child.categoryName,
+          icon: child.icon,
+          href: child.categorySlug
+            ? `/category/${child.categorySlug}?subcategoryId=${child.subcategoryId || ""}&city=${encodeURIComponent(selectedCity)}`
+            : undefined,
+        })),
+      ];
+    });
+
+    const remainingSubcategories = subcategoryHits
+      .filter((hit) => !hit.subcategoryId || !usedSubcategoryIds.has(hit.subcategoryId))
+      .map((hit) => ({
+        ...hit,
+        label: hit.subcategoryName,
+        meta: hit.parentSubcategoryName || hit.categoryName,
+        icon: hit.icon,
+        href: hit.categorySlug
+          ? `/category/${hit.categorySlug}?subcategoryId=${hit.subcategoryId || ""}&city=${encodeURIComponent(selectedCity)}`
+          : undefined,
+      }));
+
+    return [...items, ...remainingSubcategories];
+  }, [categoryHits, selectedCity, subcategoryHits]);
 
   const queryLabel = query.trim();
   const hasQuery = Boolean(queryLabel);
@@ -509,26 +565,7 @@ export default function SearchPage() {
                     No categories found for this search.
                   </div>
                 ) : (
-                  [
-                    ...subcategoryHits.map((hit) => ({
-                      ...hit,
-                      label: hit.subcategoryName,
-                      meta: hit.categoryName,
-                      icon: hit.icon,
-                      href: hit.categorySlug
-                        ? `/category/${hit.categorySlug}?subcategoryId=${hit.subcategoryId || ""}&city=${encodeURIComponent(selectedCity)}`
-                        : undefined,
-                    })),
-                    ...categoryHits.map((hit) => ({
-                      ...hit,
-                      label: hit.categoryName,
-                      meta: "Popular category",
-                      icon: hit.icon,
-                      href: hit.categorySlug
-                        ? `/category/${hit.categorySlug}?city=${encodeURIComponent(selectedCity)}`
-                        : undefined,
-                    })),
-                  ].map((item) => (
+                  orderedCategoryItems.map((item) => (
                     <div key={item.id} className="rounded-2xl bg-white p-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-orange-50 text-orange-500">

@@ -66,7 +66,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(data.selectedSubcategoryId || "all");
   const [selectedSublocality, setSelectedSublocality] = useState<string>("All");
   const [selectedCity, setSelectedCity] = useState<string>(data.selectedCity || data.city || "");
 
@@ -144,13 +144,19 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
       setSelectedSublocality(sublocalityFromQuery);
     }
 
+    const subcategoryFromQuery = String(searchParams.get("subcategoryId") || data.selectedSubcategoryId || "all").trim();
+    if (subcategoryFromQuery && subcategoryFromQuery !== selectedSubcategory) {
+      setSelectedSubcategory(subcategoryFromQuery);
+    }
   }, [
     data.city,
     data.selectedCity,
     data.selectedSublocality,
+    data.selectedSubcategoryId,
     searchParams,
     selectedCity,
     selectedSublocality,
+    selectedSubcategory,
   ]);
 
   const updateQuery = useCallback(
@@ -193,6 +199,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
 
   const handleSubcategoryChange = (nextSubcategoryId: string) => {
     setSelectedSubcategory(nextSubcategoryId);
+    updateQuery({ subcategoryId: nextSubcategoryId === "all" ? null : nextSubcategoryId });
   };
 
   const filteredListings = useMemo(() => {
@@ -287,21 +294,8 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   ))}
                 </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-2">
-                {Array.from({ length: 9 }).map((_, index) => (
-                  <div
-                    key={`skeleton-${index}`}
-                    className="rounded-2xl bg-white/60 border border-white/70 shadow-md overflow-hidden animate-pulse"
-                  >
-                    <div className="h-32 w-full bg-slate-200/70 md:h-44" />
-                    <div className="p-3 space-y-2 md:p-4 md:space-y-3">
-                      <div className="h-4 w-3/4 rounded bg-slate-200/70" />
-                      <div className="h-3 w-1/2 rounded bg-slate-200/70" />
-                      <div className="h-3 w-2/3 rounded bg-slate-200/70" />
-                      <div className="h-8 w-full rounded bg-slate-200/70" />
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+                No vendors found for this subcategory.
               </div>
             )}
           </div>

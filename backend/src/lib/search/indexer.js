@@ -236,6 +236,9 @@ const buildSubcategoryDocument = (subcategory, cities) => {
     subcategoryName: normalizeString(subcategory.name || ""),
     subcategorySlug: normalizeString(subcategory.slug || ""),
     icon: normalizeString(subcategory.icon || ""),
+    parentSubcategoryId: subcategory.parentSubcategory?._id ? String(subcategory.parentSubcategory._id) : undefined,
+    parentSubcategoryName: normalizeString(subcategory.parentSubcategory?.name || ""),
+    sortOrder: Number.isFinite(Number(subcategory.sortOrder)) ? Number(subcategory.sortOrder) : 0,
     categoryId: subcategory.category?._id ? String(subcategory.category._id) : undefined,
     categoryName: normalizeString(subcategory.category?.name || ""),
     categorySlug: normalizeString(subcategory.category?.slug || ""),
@@ -246,6 +249,7 @@ const buildSubcategoryDocument = (subcategory, cities) => {
       subcategory.slug,
       subcategory.description,
       subcategory.category?.name,
+      subcategory.parentSubcategory?.name,
     ]),
   };
 };
@@ -304,8 +308,9 @@ const buildSearchDocuments = async () => {
     .lean();
 
   const subcategories = await Subcategory.find({ isActive: true })
-    .select("_id name slug description icon category updatedAt createdAt")
+    .select("_id name slug description icon category parentSubcategory sortOrder updatedAt createdAt")
     .populate("category", "_id name slug")
+    .populate("parentSubcategory", "_id name")
     .lean();
 
   const citiesByCategory = new Map();
@@ -463,8 +468,9 @@ const upsertCategoryDocuments = async ({ categoryId, subcategoryId }) => {
 
   if (subcategoryId) {
     const subcategory = await Subcategory.findById(subcategoryId)
-      .select("_id name slug description icon category updatedAt createdAt")
+      .select("_id name slug description icon category parentSubcategory sortOrder updatedAt createdAt")
       .populate("category", "_id name slug")
+      .populate("parentSubcategory", "_id name")
       .lean();
 
     if (subcategory) {

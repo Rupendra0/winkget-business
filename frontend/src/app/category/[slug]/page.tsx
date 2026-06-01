@@ -69,6 +69,7 @@ export default async function categoryPage({ params, searchParams }: Pageprops) 
       ...baseData,
       selectedCity: effectiveCity,
       selectedSublocality: effectiveSublocality,
+      selectedSubcategoryId,
       availableCities: cityNames.length > 0 ? cityNames : baseData.city ? [baseData.city] : [],
       localitiesByCity,
       sublocalities: localitiesByCity[effectiveCity] || baseData.sublocalities,

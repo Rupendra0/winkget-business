@@ -18,6 +18,12 @@ const MAX_OFFSET = 5000;
 
 const normalizeString = (value) => String(value || "").trim();
 
+const toSearchableText = (values) =>
+  (Array.isArray(values) ? values : [])
+    .map((value) => normalizeString(value))
+    .filter(Boolean)
+    .join(" ");
+
 const normalizeType = (value) => {
   const normalized = normalizeString(value).toLowerCase();
   if (!normalized) return "";
@@ -126,6 +132,114 @@ const hydrateCategoryIcons = async (hits, type) => {
   }));
 };
 
+const buildSubcategoryHit = (subcategory, categoryHit, depth) => {
+  const categoryId = subcategory.category?._id ? String(subcategory.category._id) : "";
+  const parentSubcategory = subcategory.parentSubcategory || null;
+
+  return {
+    id: `subcategory_${String(subcategory._id)}`,
+    type: "subcategory",
+    rankGroup: 3,
+    subcategoryId: String(subcategory._id),
+    subcategoryName: normalizeString(subcategory.name || ""),
+    subcategorySlug: normalizeString(subcategory.slug || ""),
+    parentSubcategoryId: parentSubcategory?._id ? String(parentSubcategory._id) : undefined,
+    parentSubcategoryName: normalizeString(parentSubcategory?.name || ""),
+    hierarchyDepth: depth,
+    sortOrder: Number.isFinite(Number(subcategory.sortOrder)) ? Number(subcategory.sortOrder) : 0,
+    categoryId,
+    categoryName: normalizeString(subcategory.category?.name || categoryHit.categoryName || ""),
+    categorySlug: normalizeString(subcategory.category?.slug || categoryHit.categorySlug || ""),
+    icon: normalizeString(subcategory.icon || ""),
+    cities: Array.isArray(categoryHit.cities) ? categoryHit.cities : [],
+    updatedAt: subcategory.updatedAt || subcategory.createdAt || null,
+    searchableText: toSearchableText([
+      subcategory.name,
+      subcategory.slug,
+      subcategory.description,
+      subcategory.category?.name,
+      parentSubcategory?.name,
+    ]),
+  };
+};
+
+const buildChildSubcategoryHits = async (categoryHits) => {
+  if (!Array.isArray(categoryHits) || categoryHits.length === 0) {
+    return [];
+  }
+
+  const categoryIds = Array.from(
+    new Set(
+      categoryHits
+        .map((hit) => normalizeString(hit.categoryId || ""))
+        .filter(Boolean)
+    )
+  );
+
+  if (categoryIds.length === 0) {
+    return [];
+  }
+
+  const categoryById = new Map(categoryHits.map((hit) => [normalizeString(hit.categoryId || ""), hit]));
+  const subcategories = await Subcategory.find({
+    category: { $in: categoryIds },
+    isActive: true,
+  })
+    .select("_id name slug description icon category parentSubcategory sortOrder updatedAt createdAt")
+    .populate("category", "_id name slug")
+    .populate("parentSubcategory", "_id name")
+    .sort({ sortOrder: 1, name: 1 })
+    .lean();
+
+  const byCategory = new Map();
+  subcategories.forEach((subcategory) => {
+    const categoryId = subcategory.category?._id ? String(subcategory.category._id) : "";
+    if (!categoryId) return;
+    const parentId = subcategory.parentSubcategory?._id ? String(subcategory.parentSubcategory._id) : "";
+    const categoryGroup = byCategory.get(categoryId) || new Map();
+    const siblings = categoryGroup.get(parentId) || [];
+    siblings.push(subcategory);
+    categoryGroup.set(parentId, siblings);
+    byCategory.set(categoryId, categoryGroup);
+  });
+
+  const ordered = [];
+  const walk = (categoryId, parentId, depth, lineage) => {
+    const categoryGroup = byCategory.get(categoryId);
+    const siblings = categoryGroup?.get(parentId) || [];
+    siblings.forEach((subcategory) => {
+      const subcategoryId = String(subcategory._id);
+      if (lineage.has(subcategoryId)) return;
+
+      const categoryHit = categoryById.get(categoryId) || {};
+      ordered.push(buildSubcategoryHit(subcategory, categoryHit, depth));
+      walk(categoryId, subcategoryId, depth + 1, new Set([...lineage, subcategoryId]));
+    });
+  };
+
+  categoryIds.forEach((categoryId) => {
+    walk(categoryId, "", 1, new Set());
+  });
+
+  return ordered;
+};
+
+const mergePreferredSubcategoryHits = (preferredHits, searchHits) => {
+  const seen = new Set();
+  const merged = [];
+
+  for (const hit of [...preferredHits, ...searchHits]) {
+    const key = normalizeString(hit.subcategoryId || hit.id || "").toLowerCase();
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(hit);
+  }
+
+  return merged;
+};
+
 const requireSearchAdmin = (req, res, next) => {
   const token = normalizeString(req.headers["x-search-token"] || req.query.token || "");
   const expected = normalizeString(process.env.SEARCH_ADMIN_TOKEN || "");
@@ -172,6 +286,10 @@ router.get("/search", async (req, res) => {
         hits = await hydrateVendorLocations(hits);
       } else if (type === "category" || type === "subcategory") {
         hits = await hydrateCategoryIcons(hits, type);
+        if (type === "category") {
+          const childSubcategories = await buildChildSubcategoryHits(hits);
+          hits = [...hits, ...childSubcategories];
+        }
       }
 
       return res.status(200).json({
@@ -227,6 +345,11 @@ router.get("/search", async (req, res) => {
       }),
     ]);
 
+    const hydratedCategories = await hydrateCategoryIcons(categories.hits, "category");
+    const hydratedSubcategories = await hydrateCategoryIcons(subcategories.hits, "subcategory");
+    const childSubcategories = await buildChildSubcategoryHits(hydratedCategories);
+    const orderedSubcategories = mergePreferredSubcategoryHits(childSubcategories, hydratedSubcategories);
+
     return res.status(200).json({
       ok: true,
       query,
@@ -234,8 +357,8 @@ router.get("/search", async (req, res) => {
       sections: {
         products: { hits: await hydrateVendorLocations(products.hits), total: products.estimatedTotalHits },
         vendors: { hits: await hydrateVendorLocations(vendors.hits), total: vendors.estimatedTotalHits },
-        categories: { hits: await hydrateCategoryIcons(categories.hits, "category"), total: categories.estimatedTotalHits },
-        subcategories: { hits: await hydrateCategoryIcons(subcategories.hits, "subcategory"), total: subcategories.estimatedTotalHits },
+        categories: { hits: hydratedCategories, total: categories.estimatedTotalHits },
+        subcategories: { hits: orderedSubcategories, total: Math.max(subcategories.estimatedTotalHits, orderedSubcategories.length) },
       },
       facets: facetResponse.facetDistribution || {},
     });

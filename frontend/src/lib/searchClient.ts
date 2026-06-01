@@ -22,6 +22,10 @@ export type SearchHit = {
   subcategoryId?: string;
   subcategoryName?: string;
   subcategorySlug?: string;
+  parentSubcategoryId?: string;
+  parentSubcategoryName?: string;
+  hierarchyDepth?: number;
+  sortOrder?: number;
   icon?: string;
   rating?: number;
   reviews?: number;
