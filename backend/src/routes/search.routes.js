@@ -15,6 +15,7 @@ const router = express.Router();
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 const MAX_OFFSET = 5000;
+const MAX_SEARCH_SUBCATEGORY_DEPTH = 2;
 
 const normalizeString = (value) => String(value || "").trim();
 
@@ -228,7 +229,9 @@ const buildChildSubcategoryHits = async (categoryHits) => {
     });
 
     const nextParentIds = currentLevel.map((subcategory) => String(subcategory._id));
-    addLevel(categoryId, nextParentIds, depth + 1, nextLineage);
+    if (depth < MAX_SEARCH_SUBCATEGORY_DEPTH) {
+      addLevel(categoryId, nextParentIds, depth + 1, nextLineage);
+    }
   };
 
   categoryIds.forEach((categoryId) => {
