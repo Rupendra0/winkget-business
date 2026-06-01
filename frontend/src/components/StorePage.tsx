@@ -432,22 +432,22 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-auto grid grid-cols-2 gap-2 pt-3">
             {productCartQuantity > 0 ? (
-              <div className="inline-flex h-9 items-stretch overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)]">
+              <div className="col-span-2 inline-grid h-9 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:col-span-1">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
-                  className="grid w-9 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
                   aria-label={`Decrease quantity for ${product.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-[40px] place-items-center bg-[#2f9e44] px-2 text-[12px] font-extrabold text-white">
+                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-[12px] font-extrabold text-white">
                   {productCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
-                  className="grid w-9 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
                   aria-label={`Increase quantity for ${product.name}`}
                 >
                   +
@@ -457,7 +457,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-slate-400"
+                className="col-span-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 text-[12px] font-semibold text-slate-700 transition hover:border-slate-400 sm:col-span-1"
               >
                 Add to Cart
               </button>
@@ -466,7 +466,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <button
               type="button"
               onClick={() => handleBuyNow(product)}
-              className="h-9 rounded-lg bg-blue-600 px-2 text-[12px] font-semibold text-white transition hover:bg-blue-700"
+              className="col-span-2 h-9 rounded-lg bg-blue-600 px-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 sm:col-span-1"
             >
               Buy Now
             </button>
@@ -768,7 +768,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <div className="mt-3 h-[3px] w-[56px] rounded-full bg-[#5b7cff]" />
               </div>
 
-              <div className="mt-8 grid gap-4 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:grid-rows-2">
+              <div className="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:grid-rows-2">
                 <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
                   <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Rating</p>
                   <div className="mt-7">
@@ -788,7 +788,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </p>
                 </div>
 
-                <div className="rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:row-span-2 xl:min-h-[380px]">
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
+                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{joinedLabel}</p>
+                </div>
+
+                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
+                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
+                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{locationLabel}</p>
+                </div>
+
+                <div className="col-span-2 rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:min-h-[380px]">
                   <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
                   <div className="mt-5 text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px]">
                     {data.aboutBody}
@@ -810,16 +820,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       </button>
                     )}
                   </div>
-                </div>
-
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
-                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{joinedLabel}</p>
-                </div>
-
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
-                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{locationLabel}</p>
                 </div>
               </div>
             </section>
