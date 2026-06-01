@@ -394,7 +394,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
         key={product.id}
         className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
       >
-        <Link href={productHref} className={`relative block ${imageHeightClass} overflow-hidden bg-slate-100`}>
+        <Link href={productHref} className={`relative block ${imageHeightClass} overflow-hidden bg-white`}>
           <img
             src={product.imageUrl}
             alt={product.name}
