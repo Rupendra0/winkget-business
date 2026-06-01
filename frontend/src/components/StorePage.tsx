@@ -39,7 +39,7 @@ const buildProductMap = (products: StorePageData["products"]) => {
 };
 
 const productRailRowClass =
-  "no-scrollbar grid w-full min-w-0 grid-flow-col auto-cols-[calc((100%_-_0.75rem)/2)] gap-3 overflow-x-auto overflow-y-hidden pb-2 sm:gap-4 lg:auto-cols-[calc((100%_-_3rem)/4)]";
+  "no-scrollbar grid w-full min-w-0 grid-flow-col auto-cols-[calc((100%_-_0.5rem)/2)] gap-2 overflow-x-auto overflow-y-hidden pb-2 sm:auto-cols-[calc((100%_-_0.75rem)/2)] sm:gap-3 lg:auto-cols-[calc((100%_-_3rem)/4)] lg:gap-4";
 
 const splitProductsForTwoRowRail = <T,>(items: T[], columnsPerView: number) => {
   const pageSize = columnsPerView * 2;
@@ -393,7 +393,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
     return (
       <article
         key={product.id}
-        className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
+        className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
       >
         <Link href={productHref} className={`relative block ${imageHeightClass} overflow-hidden bg-slate-100`}>
           <img
@@ -403,8 +403,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
           />
         </Link>
 
-        <div className="flex flex-1 flex-col p-3">
-          <Link href={productHref} className="block truncate text-[15px] font-semibold leading-5 text-slate-800 hover:text-blue-700">
+        <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3">
+          <Link href={productHref} className="block truncate text-[13px] font-semibold leading-4 text-slate-800 hover:text-blue-700 sm:text-[15px] sm:leading-5">
             {product.name}
           </Link>
 
@@ -419,35 +419,35 @@ export default function StorePage({ data }: { data: StorePageData }) {
           ) : null}
 
           {hasComparablePrice ? (
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.04em] text-emerald-700">{discountPercent}% OFF</p>
+            <p className="mt-1.5 text-[11px] font-semibold uppercase text-emerald-700 sm:mt-2 sm:text-xs sm:tracking-[0.04em]">{discountPercent}% OFF</p>
           ) : null}
 
-          <div className="mt-1 flex items-baseline gap-1.5">
+          <div className="mt-1 flex min-w-0 items-baseline gap-1">
             {hasComparablePrice ? (
-              <span className="text-l font-medium text-slate-400 line-through">{formatIndianCurrency(oldPriceValue)}</span>
+              <span className="min-w-0 shrink truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
             ) : null}
-            <span className="text-[clamp(0.95rem,1.5vw,1.2rem)] font-semibold text-slate-900">{currentPriceLabel}
+            <span className="min-w-0 shrink-0 text-[12px] font-semibold leading-none text-slate-900 sm:text-[clamp(0.95rem,1.5vw,1.2rem)]">{currentPriceLabel}
             </span>
           </div>
 
-          <div className="mt-auto grid grid-cols-2 gap-2 pt-3">
+          <div className="mt-auto grid grid-cols-2 gap-1.5 pt-2.5 sm:gap-2 sm:pt-3">
             {productCartQuantity > 0 ? (
-              <div className="col-span-2 inline-grid h-9 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:col-span-1">
+              <div className="col-span-2 inline-grid h-8 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:col-span-1 sm:h-9">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-base font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
                   aria-label={`Decrease quantity for ${product.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-[12px] font-extrabold text-white">
+                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-[11px] font-extrabold text-white sm:text-[12px]">
                   {productCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-base font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
                   aria-label={`Increase quantity for ${product.name}`}
                 >
                   +
@@ -457,7 +457,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="col-span-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 text-[12px] font-semibold text-slate-700 transition hover:border-slate-400 sm:col-span-1"
+                className="col-span-2 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 sm:col-span-1 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
               >
                 Add to Cart
               </button>
@@ -466,7 +466,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <button
               type="button"
               onClick={() => handleBuyNow(product)}
-              className="col-span-2 h-9 rounded-lg bg-blue-600 px-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 sm:col-span-1"
+              className="col-span-2 h-8 rounded-lg bg-blue-600 px-1.5 text-[11px] font-semibold text-white transition hover:bg-blue-700 sm:col-span-1 sm:h-9 sm:px-2 sm:text-[12px]"
             >
               Buy Now
             </button>
@@ -725,28 +725,28 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <div className="space-y-8 lg:min-w-0">
 
             {featuredProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
+            <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
                 </div>
               </div>
-              {renderProductRail(featuredProducts, "h-44")}
+              {renderProductRail(featuredProducts, "h-32 sm:h-44")}
             </section>
             ) : null}
 
             {trendingProducts.length > 0 ? (
-            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
+            <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
                 <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
                 </div>
               </div>
-              {renderProductRail(trendingProducts, "h-44")}
+              {renderProductRail(trendingProducts, "h-32 sm:h-44")}
             </section>
             ) : null}
 
-            <section className="rounded-2xl bg-white/80 p-5 lg:min-w-0">
+            <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
                 <div className="text-lg font-semibold text-slate-900">All Products</div>
                 <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -755,7 +755,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <option>Price: High to Low</option>
                 </select>
               </div>
-              {renderProductRail(data.products, "h-48")}
+              {renderProductRail(data.products, "h-36 sm:h-48")}
             </section>
 
             
