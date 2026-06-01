@@ -28,6 +28,7 @@ const inquirySchema = new Schema(
 );
 
 inquirySchema.index({ createdAt: -1 });
+inquirySchema.index({ status: 1, createdAt: -1 });
 inquirySchema.index({ vendor: 1, createdAt: -1 });
 inquirySchema.index({ vendor: 1, status: 1, createdAt: -1 });
 

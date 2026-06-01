@@ -64,6 +64,9 @@ const userSchema = new Schema(
 
 // Query acceleration for vendor lists and public catalog filters.
 userSchema.index({ role: 1, vendorStatus: 1, updatedAt: -1 });
+userSchema.index({ role: 1, vendorStatus: 1, createdAt: -1 });
+userSchema.index({ role: 1, createdAt: -1 });
+userSchema.index({ name: 1 });
 userSchema.index({ role: 1, vendorStatus: 1, businessCategory: 1, businessSubcategory: 1 });
 userSchema.index({ role: 1, vendorStatus: 1, city: 1, sublocality: 1 });
 userSchema.index({ businessEmail: 1 }, { sparse: true });

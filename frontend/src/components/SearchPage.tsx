@@ -113,6 +113,18 @@ export default function SearchPage() {
       .then((payload) => {
         if (!active) return;
         setResults(payload);
+        const nextSections = payload?.sections;
+        if (nextSections) {
+          const nextActiveTab =
+            (nextSections.vendors?.total || 0) > 0
+              ? "vendors"
+              : (nextSections.products?.total || 0) > 0
+                ? "products"
+                : (nextSections.categories?.total || 0) + (nextSections.subcategories?.total || 0) > 0
+                  ? "categories"
+                  : "vendors";
+          setActiveTab(nextActiveTab);
+        }
         setTabOffsets({ vendors: DEFAULT_LIMIT, products: DEFAULT_LIMIT });
       })
       .finally(() => {
@@ -146,6 +158,9 @@ export default function SearchPage() {
   const vendorTotal = sections?.vendors?.total || 0;
   const productTotal = sections?.products?.total || 0;
   const categoryTotal = (sections?.categories?.total || 0) + (sections?.subcategories?.total || 0);
+  const activeResultCount = activeTab === "products" ? productHits.length : vendorHits.length;
+  const activeResultTotal = activeTab === "products" ? productTotal : vendorTotal;
+  const canLoadMore = activeTab !== "categories" && activeResultTotal > activeResultCount;
   const summaryText = (() => {
     if (!hasQuery) return "Search results will appear here.";
     if (isLoading) {
@@ -456,12 +471,12 @@ export default function SearchPage() {
                           <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
                               href={`/listing/${hit.vendorId}`}
-                              className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white sm:px-3 sm:py-1.5 sm:text-xs"
+                              className="whitespace-nowrap rounded-full bg-slate-900 px-4 py-1 text-[11px] font-semibold text-white sm:px-5 sm:py-1.5 sm:text-xs"
                             >
-                              View vendor
+                              View
                             </Link>
-                            <button className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:px-3 sm:py-1.5 sm:text-xs">
-                              Ask price
+                            <button className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-1 text-[11px] font-semibold text-slate-600 sm:px-5 sm:py-1.5 sm:text-xs">
+                              Visit vendor
                             </button>
                           </div>
                         </div>
@@ -488,6 +503,7 @@ export default function SearchPage() {
                       ...hit,
                       label: hit.subcategoryName,
                       meta: hit.categoryName,
+                      icon: hit.icon,
                       href: hit.categorySlug
                         ? `/category/${hit.categorySlug}?subcategoryId=${hit.subcategoryId || ""}&city=${encodeURIComponent(selectedCity)}`
                         : undefined,
@@ -496,6 +512,7 @@ export default function SearchPage() {
                       ...hit,
                       label: hit.categoryName,
                       meta: "Popular category",
+                      icon: hit.icon,
                       href: hit.categorySlug
                         ? `/category/${hit.categorySlug}?city=${encodeURIComponent(selectedCity)}`
                         : undefined,
@@ -503,8 +520,12 @@ export default function SearchPage() {
                   ].map((item) => (
                     <div key={item.id} className="rounded-2xl bg-white p-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
-                          <Clock size={20} />
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-orange-50 text-orange-500">
+                          {item.icon ? (
+                            <img src={item.icon} alt={item.label || "Category"} className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <Clock size={20} />
+                          )}
                         </div>
                         <div>
                           <h3 className="text-base font-semibold text-slate-900">{item.label}</h3>
@@ -525,7 +546,7 @@ export default function SearchPage() {
               </div>
             ) : null}
 
-            {results && activeTab !== "categories" && !isLoading ? (
+            {results && canLoadMore && !isLoading ? (
               <div className="flex justify-center">
                 <button
                   type="button"

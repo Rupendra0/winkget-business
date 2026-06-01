@@ -98,6 +98,7 @@ const orderSchema = new Schema(
 
 orderSchema.index({ customer: 1, createdAt: -1 });
 orderSchema.index({ vendors: 1, createdAt: -1 });
+orderSchema.index({ vendors: 1, status: 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ paymentStatus: 1, createdAt: -1 });
 

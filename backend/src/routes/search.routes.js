@@ -1,4 +1,6 @@
 const express = require("express");
+const Category = require("../models/Category");
+const Subcategory = require("../models/Subcategory");
 const User = require("../models/User");
 const {
   ensureSearchIndex,
@@ -94,6 +96,36 @@ const hydrateVendorLocations = async (hits) => {
   });
 };
 
+const hydrateCategoryIcons = async (hits, type) => {
+  if (!Array.isArray(hits) || hits.length === 0) {
+    return [];
+  }
+
+  const idField = type === "subcategory" ? "subcategoryId" : "categoryId";
+  const Model = type === "subcategory" ? Subcategory : Category;
+  const ids = Array.from(
+    new Set(
+      hits
+        .map((hit) => normalizeString(hit[idField] || ""))
+        .filter(Boolean)
+    )
+  );
+
+  if (ids.length === 0) {
+    return hits;
+  }
+
+  const docs = await Model.find({ _id: { $in: ids } })
+    .select("_id icon")
+    .lean();
+  const iconById = new Map(docs.map((doc) => [String(doc._id), normalizeString(doc.icon || "")]));
+
+  return hits.map((hit) => ({
+    ...hit,
+    icon: iconById.get(normalizeString(hit[idField] || "")) || normalizeString(hit.icon || ""),
+  }));
+};
+
 const requireSearchAdmin = (req, res, next) => {
   const token = normalizeString(req.headers["x-search-token"] || req.query.token || "");
   const expected = normalizeString(process.env.SEARCH_ADMIN_TOKEN || "");
@@ -135,7 +167,12 @@ router.get("/search", async (req, res) => {
         offset,
         facets: ["categorySlug", "subcategorySlug"],
       });
-      const hits = type === "vendor" || type === "product" ? await hydrateVendorLocations(response.hits) : response.hits;
+      let hits = response.hits;
+      if (type === "vendor" || type === "product") {
+        hits = await hydrateVendorLocations(hits);
+      } else if (type === "category" || type === "subcategory") {
+        hits = await hydrateCategoryIcons(hits, type);
+      }
 
       return res.status(200).json({
         ok: true,
@@ -197,8 +234,8 @@ router.get("/search", async (req, res) => {
       sections: {
         products: { hits: await hydrateVendorLocations(products.hits), total: products.estimatedTotalHits },
         vendors: { hits: await hydrateVendorLocations(vendors.hits), total: vendors.estimatedTotalHits },
-        categories: { hits: categories.hits, total: categories.estimatedTotalHits },
-        subcategories: { hits: subcategories.hits, total: subcategories.estimatedTotalHits },
+        categories: { hits: await hydrateCategoryIcons(categories.hits, "category"), total: categories.estimatedTotalHits },
+        subcategories: { hits: await hydrateCategoryIcons(subcategories.hits, "subcategory"), total: subcategories.estimatedTotalHits },
       },
       facets: facetResponse.facetDistribution || {},
     });

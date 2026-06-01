@@ -20,7 +20,7 @@ const {
   validateCustomFormData,
 } = require("../lib/customForm");
 const { resolveTokenFromRequest } = require("../lib/authCookies");
-const { scheduleVendorIndex } = require("../lib/search/indexer");
+const { scheduleCategoryIndex, scheduleVendorIndex } = require("../lib/search/indexer");
 
 const router = express.Router();
 const VENDOR_STATUS_VALUES = new Set(["pending", "approved", "rejected"]);
@@ -2207,6 +2207,7 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
     reorderedCategoryIds.splice(categoryInsertIndex, 0, String(category._id));
     await applyCategorySortOrders(reorderedCategoryIds);
     category.sortOrder = categoryInsertIndex + 1;
+    scheduleCategoryIndex(String(category._id), "");
 
     return res.status(201).json({
       ok: true,
@@ -2293,6 +2294,7 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
       await applyCategorySortOrders(reorderedCategoryIds);
       category.sortOrder = categoryInsertIndex + 1;
     }
+    scheduleCategoryIndex(String(category._id), "");
 
     return res.status(200).json({
       ok: true,
@@ -2436,6 +2438,7 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
 
     await subcategory.populate("category", "_id name");
     await subcategory.populate("parentSubcategory", "_id name");
+    scheduleCategoryIndex(String(category._id), String(subcategory._id));
 
     return res.status(201).json({
       ok: true,
@@ -2622,6 +2625,7 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
 
     await subcategory.populate("category", "_id name");
     await subcategory.populate("parentSubcategory", "_id name");
+    scheduleCategoryIndex(nextCategoryId, String(subcategory._id));
 
     return res.status(200).json({
       ok: true,

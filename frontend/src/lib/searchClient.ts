@@ -22,6 +22,7 @@ export type SearchHit = {
   subcategoryId?: string;
   subcategoryName?: string;
   subcategorySlug?: string;
+  icon?: string;
   rating?: number;
   reviews?: number;
   isStoreOpen?: boolean | null;

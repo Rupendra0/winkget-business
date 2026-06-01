@@ -217,6 +217,7 @@ const buildCategoryDocument = (category, cities) => {
     categoryId,
     categoryName: normalizeString(category.name || ""),
     categorySlug: normalizeString(category.slug || ""),
+    icon: normalizeString(category.icon || ""),
     cities,
     updatedAt: category.updatedAt || category.createdAt || null,
     searchableText: toSearchableText([category.name, category.slug, category.description]),
@@ -234,6 +235,7 @@ const buildSubcategoryDocument = (subcategory, cities) => {
     subcategoryId,
     subcategoryName: normalizeString(subcategory.name || ""),
     subcategorySlug: normalizeString(subcategory.slug || ""),
+    icon: normalizeString(subcategory.icon || ""),
     categoryId: subcategory.category?._id ? String(subcategory.category._id) : undefined,
     categoryName: normalizeString(subcategory.category?.name || ""),
     categorySlug: normalizeString(subcategory.category?.slug || ""),
@@ -298,11 +300,11 @@ const buildSearchDocuments = async () => {
     .filter(Boolean);
 
   const categories = await Category.find({ isActive: true })
-    .select("_id name slug description updatedAt createdAt")
+    .select("_id name slug description icon updatedAt createdAt")
     .lean();
 
   const subcategories = await Subcategory.find({ isActive: true })
-    .select("_id name slug description category updatedAt createdAt")
+    .select("_id name slug description icon category updatedAt createdAt")
     .populate("category", "_id name slug")
     .lean();
 
@@ -438,7 +440,7 @@ const upsertCategoryDocuments = async ({ categoryId, subcategoryId }) => {
 
   if (categoryId) {
     const category = await Category.findById(categoryId)
-      .select("_id name slug description updatedAt createdAt")
+      .select("_id name slug description icon updatedAt createdAt")
       .lean();
 
     if (category) {
@@ -461,7 +463,7 @@ const upsertCategoryDocuments = async ({ categoryId, subcategoryId }) => {
 
   if (subcategoryId) {
     const subcategory = await Subcategory.findById(subcategoryId)
-      .select("_id name slug description category updatedAt createdAt")
+      .select("_id name slug description icon category updatedAt createdAt")
       .populate("category", "_id name slug")
       .lean();
 
