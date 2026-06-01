@@ -400,7 +400,7 @@ export default function Navbar() {
                 src={imageSrc}
                 alt={item.label}
                 loading="lazy"
-                className="h-full w-full object-cover"
+                className={`h-full w-full ${item.type === "product" ? "object-contain p-0.5" : "object-cover"}`}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-500">
