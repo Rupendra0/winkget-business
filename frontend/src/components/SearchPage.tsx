@@ -394,14 +394,20 @@ export default function SearchPage() {
                           <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
                               href={`/listing/${hit.vendorId}`}
-                              className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white sm:px-3 sm:py-1.5 sm:text-xs"
+                              className="rounded-full bg-slate-900 px-4 py-1 text-[11px] font-semibold text-white sm:px-5 sm:py-1.5 sm:text-xs"
                             >
                               Visit
+                            </Link>
+                            <Link
+                              href={`/store/${hit.vendorId}`}
+                              className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1 text-[11px] font-semibold text-blue-700 sm:px-5 sm:py-1.5 sm:text-xs"
+                            >
+                              MyStore
                             </Link>
                             {hit.vendorPhone ? (
                               <a
                                 href={`tel:${hit.vendorPhone.replace(/[^\d+]/g, "")}`}
-                                className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 sm:px-3 sm:py-1.5 sm:text-xs"
+                                className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-[11px] font-semibold text-emerald-700 sm:px-5 sm:py-1.5 sm:text-xs"
                               >
                                 Call
                               </a>
@@ -409,7 +415,7 @@ export default function SearchPage() {
                               <button
                                 type="button"
                                 disabled
-                                className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-400 sm:px-3 sm:py-1.5 sm:text-xs"
+                                className="rounded-full border border-emerald-100 bg-emerald-50 px-4 py-1 text-[11px] font-semibold text-emerald-300 sm:px-5 sm:py-1.5 sm:text-xs"
                               >
                                 Call
                               </button>
