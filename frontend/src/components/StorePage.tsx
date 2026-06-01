@@ -375,7 +375,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
     const hasReviewCount = Number.isFinite(reviewCountValue) && reviewCountValue > 0;
     const shouldShowRatingRow = hasRating && hasReviewCount;
     const ratingDisplay = hasRating ? ratingLabel(ratingValue) : "0.0";
-    const reviewCountLabel = new Intl.NumberFormat("en-IN").format(reviewCountValue);
 
     const currentPriceValue = toPriceValue(product.price);
     const oldPriceValue = Number(product.oldPriceValue || 0);
@@ -402,14 +401,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
             className="h-full w-full object-contain p-3 transition-transform duration-200 group-hover:scale-[1.03]"
           />
           {hasComparablePrice ? (
-            <span className="absolute left-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white shadow-sm sm:hidden">
+            <span className="absolute left-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white shadow-sm sm:text-[11px]">
               {discountPercent}% OFF
             </span>
           ) : null}
           {shouldShowRatingRow ? (
-            <span className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-amber-950 shadow-sm sm:hidden">
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-amber-950 shadow-sm sm:text-[11px]">
               {ratingDisplay}
-              <Star size={9} className="fill-amber-950 text-amber-950" />
+              <Star size={9} className="fill-amber-950 text-amber-950 sm:h-2.5 sm:w-2.5" />
             </span>
           ) : null}
         </Link>
@@ -418,20 +417,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
           <Link href={productHref} className="block truncate text-[13px] font-semibold leading-4 text-slate-800 hover:text-blue-700 sm:text-[15px] sm:leading-5">
             {product.name}
           </Link>
-
-          {shouldShowRatingRow ? (
-            <div className="mt-1.5 hidden items-center gap-2 sm:flex">
-              <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-emerald-600 px-1.5 py-[2px] text-[11px] font-semibold leading-none text-white">
-                {ratingDisplay}
-                <Star size={10} className="fill-white text-white" />
-              </span>
-              <span className="text-[11px] font-medium text-slate-500">({reviewCountLabel})</span>
-            </div>
-          ) : null}
-
-          {hasComparablePrice ? (
-            <p className="hidden sm:mt-2 sm:block sm:text-xs sm:font-semibold sm:uppercase sm:tracking-[0.04em] sm:text-emerald-700">{discountPercent}% OFF</p>
-          ) : null}
 
           <div className="mt-1 flex min-w-0 items-baseline gap-1">
             {hasComparablePrice ? (
