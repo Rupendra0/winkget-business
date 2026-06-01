@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { fetchCities, type CatalogCity } from "@/lib/catalogClient";
+import { buildProductSlug } from "@/data/productSlug";
 import { readSelectedCity, subscribeLocationCity, writeSelectedCity } from "@/lib/locationStore";
 import {
   fetchSearchResults,
@@ -456,7 +457,7 @@ export default function SearchPage() {
                       <div className="flex min-h-28 sm:min-h-32">
                         <div className="h-28 w-28 shrink-0 overflow-hidden rounded-bl-2xl bg-slate-100 sm:h-32 sm:w-32">
                           {hit.productImage ? (
-                            <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full rounded-bl-2xl object-cover" />
+                            <img src={hit.productImage} alt={hit.productName || "Product"} className="h-full w-full rounded-bl-2xl object-contain" />
                           ) : null}
                         </div>
                         <div className="flex-1 p-3 sm:p-4">
@@ -470,14 +471,24 @@ export default function SearchPage() {
                           </div>
                           <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
-                              href={`/listing/${hit.vendorId}`}
+                              href={`/product/${encodeURIComponent(
+                                buildProductSlug({
+                                  id: hit.productId,
+                                  name: hit.productName,
+                                  storeId: hit.vendorId,
+                                  sellerName: hit.vendorName,
+                                })
+                              )}`}
                               className="whitespace-nowrap rounded-full bg-slate-900 px-4 py-1 text-[11px] font-semibold text-white sm:px-5 sm:py-1.5 sm:text-xs"
                             >
                               View
                             </Link>
-                            <button className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-1 text-[11px] font-semibold text-slate-600 sm:px-5 sm:py-1.5 sm:text-xs">
+                            <Link
+                              href={`/listing/${hit.vendorId}`}
+                              className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-1 text-[11px] font-semibold text-slate-600 sm:px-5 sm:py-1.5 sm:text-xs"
+                            >
                               Visit vendor
-                            </button>
+                            </Link>
                           </div>
                         </div>
                       </div>
