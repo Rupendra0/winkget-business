@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { buildProductSlug } from "@/data/productSlug";
 import type { ProductDetailModel, RelatedProductModel } from "@/lib/storeCatalog";
+import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
+import {
+  fetchBusinessReviews,
+  submitBusinessReview,
+  type BusinessReview,
+  type BusinessReviewSummary,
+} from "@/lib/reviewStore";
 import {
   addToCart,
   CART_UPDATED_EVENT,
@@ -28,6 +35,26 @@ const normalizePairs = (items: Array<[string, string]> | undefined) =>
     .filter(([label, value]) => label && value);
 
 const DESCRIPTION_TAB_COLLAPSED_LINES = 3;
+
+const toProductReviewBusinessKey = (productId: string) => {
+  const normalizedProductId = String(productId || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]/g, "-")
+    .slice(0, 96);
+
+  return `product:${normalizedProductId || "unknown"}`;
+};
+
+const formatReviewDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const renderHighlightIcon = (label: string) => {
   const safeLabel = String(label || "").trim().toLowerCase();
@@ -99,9 +126,23 @@ export default function ProductDetailPageClient({
   const [showFullTabDescription, setShowFullTabDescription] = useState(false);
   const [activeInfoTab, setActiveInfoTab] = useState("product-details");
   const [cartQuantity, setCartQuantity] = useState(0);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [reviews, setReviews] = useState<BusinessReview[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<BusinessReviewSummary>({
+    rating: Number(product.rating || 0),
+    reviews: Math.max(0, Number(product.reviews || 0)),
+  });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
+  const [reviewRatingInput, setReviewRatingInput] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewFormMessage, setReviewFormMessage] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const quantity = 1;
 
   const productHref = `/product/${encodeURIComponent(buildProductSlug(product))}`;
+  const productReviewBusinessId = useMemo(() => toProductReviewBusinessKey(product.id), [product.id]);
   const storeProduct = useMemo(() => makeStoreProduct(product, productHref), [product, productHref]);
   const wishlisted = useSyncExternalStore(
     (onStoreChange) => {
@@ -228,6 +269,56 @@ export default function ProductDetailPageClient({
   };
 
   useEffect(() => {
+    let active = true;
+
+    const syncCurrentUser = async () => {
+      setAuthLoading(true);
+      const user = await fetchCurrentUser();
+      if (!active) return;
+
+      setCurrentUser(user);
+      setAuthLoading(false);
+    };
+
+    void syncCurrentUser();
+
+    const authChangedHandler = () => {
+      void syncCurrentUser();
+    };
+
+    window.addEventListener("auth:changed", authChangedHandler);
+    return () => {
+      active = false;
+      window.removeEventListener("auth:changed", authChangedHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProductReviews = async () => {
+      setReviewsLoading(true);
+      setViewerHasReviewed(false);
+      const result = await fetchBusinessReviews(productReviewBusinessId, 40);
+      if (!active) return;
+
+      if (result.ok) {
+        setReviews(result.reviews);
+        setReviewSummary(result.summary);
+        setViewerHasReviewed(result.viewerHasReviewed);
+      }
+
+      setReviewsLoading(false);
+    };
+
+    void loadProductReviews();
+
+    return () => {
+      active = false;
+    };
+  }, [productReviewBusinessId]);
+
+  useEffect(() => {
     const syncCartQuantity = () => {
       const matchingItem = readCart().find((item) => item.product.id === storeProduct.id);
       setCartQuantity(Math.max(0, Number(matchingItem?.quantity || 0)));
@@ -254,6 +345,58 @@ export default function ProductDetailPageClient({
   const onBuyNow = () => {
     addToCart(storeProduct, quantity);
     router.push("/checkout");
+  };
+
+  const handleSubmitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (authLoading) {
+      setReviewFormMessage("Checking login status...");
+      return;
+    }
+
+    if (!currentUser) {
+      setReviewFormMessage("Please login to submit your review.");
+      return;
+    }
+
+    if (viewerHasReviewed) {
+      setReviewFormMessage("You have already reviewed this product.");
+      return;
+    }
+
+    const comment = reviewText.trim();
+    if (!comment || comment.length < 5) {
+      setReviewFormMessage("Please write a meaningful review.");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewFormMessage(null);
+
+    const result = await submitBusinessReview({
+      businessId: productReviewBusinessId,
+      rating: reviewRatingInput,
+      comment,
+      authorName: currentUser.name || "Winkget User",
+    });
+
+    if (!result.ok) {
+      setReviewFormMessage(result.message);
+      setIsSubmittingReview(false);
+      return;
+    }
+
+    setReviews((previous) => [
+      result.review,
+      ...previous.filter((review) => review.id !== result.review.id),
+    ]);
+    setReviewSummary(result.summary);
+    setViewerHasReviewed(true);
+    setReviewRatingInput(5);
+    setReviewText("");
+    setReviewFormMessage("Review submitted successfully.");
+    setIsSubmittingReview(false);
   };
 
   const breadcrumbCategoryLabel = String(product.categoryLabel || "").trim() || "Category";
@@ -699,24 +842,102 @@ export default function ProductDetailPageClient({
               <div className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-3">
                 <p className="text-sm text-slate-600">Overall Rating</p>
                 <div className="mt-1 flex items-end gap-2">
-                  <p className="text-2xl font-bold text-slate-900">{Number(product.rating || 0).toFixed(1)}</p>
+                  <p className="text-2xl font-bold text-slate-900">{Number(reviewSummary.rating || 0).toFixed(1)}</p>
                   <p className="pb-1 text-sm text-slate-600">/ 5</p>
                 </div>
-                <p className="mt-1 text-sm text-slate-700">{Number(product.reviews || 0)} verified ratings</p>
+                <p className="mt-1 text-sm text-slate-700">{Number(reviewSummary.reviews || 0)} verified ratings</p>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-sm text-slate-700">
-                  {Number(product.reviews || 0) > 0
-                    ? "Customer reviews will be listed here."
-                    : "No review yet. Be the first customer to review this product."}
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700"
-                >
-                  Write a Review
-                </button>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Write a Review</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Share your experience with this product.
+                    </p>
+                  </div>
+                  {viewerHasReviewed ? (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      Reviewed
+                    </span>
+                  ) : null}
+                </div>
+
+                <form onSubmit={handleSubmitReview} className="mt-4 space-y-3">
+                  <div>
+                    <label htmlFor="product-review-rating" className="text-sm font-semibold text-slate-700">
+                      Rating
+                    </label>
+                    <select
+                      id="product-review-rating"
+                      value={reviewRatingInput}
+                      onChange={(event) => setReviewRatingInput(Number(event.target.value))}
+                      disabled={isSubmittingReview || viewerHasReviewed}
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 disabled:bg-slate-100"
+                    >
+                      <option value={5}>5 - Excellent</option>
+                      <option value={4}>4 - Good</option>
+                      <option value={3}>3 - Average</option>
+                      <option value={2}>2 - Poor</option>
+                      <option value={1}>1 - Bad</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-review-comment" className="text-sm font-semibold text-slate-700">
+                      Review
+                    </label>
+                    <textarea
+                      id="product-review-comment"
+                      value={reviewText}
+                      onChange={(event) => setReviewText(event.target.value)}
+                      disabled={isSubmittingReview || viewerHasReviewed}
+                      rows={4}
+                      maxLength={1200}
+                      placeholder={currentUser ? "What should other customers know?" : "Login to write a review"}
+                      className="mt-1 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 disabled:bg-slate-100"
+                    />
+                  </div>
+
+                  {reviewFormMessage ? (
+                    <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{reviewFormMessage}</p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview || viewerHasReviewed}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {isSubmittingReview ? "Submitting..." : viewerHasReviewed ? "Review Submitted" : "Submit Review"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="space-y-3">
+                {reviewsLoading ? (
+                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    Loading reviews...
+                  </p>
+                ) : reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <article key={review.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded bg-amber-400 px-2 py-1 text-xs font-bold text-amber-950">
+                          {Number(review.rating || 0).toFixed(1)} ★
+                        </span>
+                        <span className="text-sm font-semibold text-slate-900">{review.author}</span>
+                        {review.createdAt ? (
+                          <span className="text-xs text-slate-500">{formatReviewDate(review.createdAt)}</span>
+                        ) : null}
+                      </div>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{review.comment}</p>
+                    </article>
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    No review yet. Be the first customer to review this product.
+                  </p>
+                )}
               </div>
             </div>
           ) : null}
