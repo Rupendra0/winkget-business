@@ -491,7 +491,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 onClick={() => handleAddToCart(product)}
                 className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-blue-600 px-1 text-[10px] font-semibold text-white transition hover:bg-blue-700 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
               >
-                Add to Cart
+                Add
               </button>
             )}
           </div>
