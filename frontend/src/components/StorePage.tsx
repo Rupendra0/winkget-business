@@ -24,6 +24,11 @@ import {
   HeartPulse,
   Package,
   Heart,
+  MessageCircle,
+  CalendarDays,
+  MapPin,
+  PhoneCall,
+  ChevronDown,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
@@ -297,6 +302,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
   const [wishlistProductIds, setWishlistProductIds] = useState<Set<string>>(() => new Set());
   const [selectedCategoryBarItemId, setSelectedCategoryBarItemId] = useState("");
@@ -1114,16 +1120,42 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
           </div>
 
-          <section className="mt-8 rounded-[26px] border border-[#d9e2f1] bg-white px-5 py-6 shadow-[0_4px_16px_rgba(15,23,42,0.04)] sm:px-6">
-              <div>
-                <h2 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">{data.aboutTitle}</h2>
-                <div className="mt-3 h-[3px] w-[56px] rounded-full bg-[#5b7cff]" />
+          <section className="mt-8 relative overflow-hidden rounded-[26px] border border-[#d9e2f1] bg-gradient-to-b from-white to-[#f7faff] px-5 py-5 shadow-[0_4px_16px_rgba(15,23,42,0.04)] sm:px-6 sm:py-6">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-24 -top-20 h-64 w-64 rounded-full bg-[#5b7cff]/10 blur-3xl"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-[#ffcc00]/10 blur-3xl"
+            />
+
+            <div className="relative">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="h-11 w-11 overflow-hidden rounded-full border border-[#e0e7ff] bg-white shadow-[0_4px_10px_rgba(15,23,42,0.06)] sm:h-12 sm:w-12">
+                  <img
+                    src={data.logoImage}
+                    alt={`${data.storeName} logo`}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">{data.aboutTitle}</h2>
+                  <div className="mt-3 h-[3px] w-[56px] rounded-full bg-[#5b7cff]" />
+                </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:grid-rows-2">
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Rating</p>
-                  <div className="mt-7">
+              <div className="mt-8 grid grid-cols-2 items-start gap-4 sm:gap-5 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:gap-6">
+                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Rating</p>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
+                      <Star size={18} className="text-[#4a63ff]" aria-hidden="true" />
+                    </span>
+                  </div>
+
+                  <div>
                     <div className="flex items-center gap-1 text-[18px] leading-none text-[#ffcc00] sm:text-[20px]">
                       {Array.from({ length: 5 }).map((_, index) => (
                         <span key={`about-rating-star-${index}`}>{index < Math.round(data.rating) ? "★" : "☆"}</span>
@@ -1133,48 +1165,97 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </div>
                 </div>
 
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Reviews</p>
-                  <p className="mt-10 text-[20px] font-semibold leading-none text-[#344054] sm:text-[22px]">
+                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Reviews</p>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
+                      <MessageCircle size={18} className="text-[#4a63ff]" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[20px] font-semibold leading-none text-[#344054] sm:text-[22px]">
                     {new Intl.NumberFormat("en-IN").format(Math.max(0, Number(storeReviewStats.reviews || 0)))}
                   </p>
                 </div>
 
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
-                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{joinedLabel}</p>
+                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
+                      <CalendarDays size={18} className="text-[#4a63ff]" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">
+                    {joinedLabel}
+                  </p>
                 </div>
 
-                <div className="rounded-[18px] bg-[#f6f8fc] px-4 py-4 xl:min-h-[180px]">
-                  <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
-                  <p className="mt-10 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">{locationLabel}</p>
+                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
+                      <MapPin size={18} className="text-[#4a63ff]" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">
+                    {locationLabel}
+                  </p>
                 </div>
 
-                <div className="col-span-2 rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:min-h-[380px]">
-                  <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
-                  <div className="mt-5 text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px]">
+                <div className="col-span-2 flex flex-col rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] bg-[#5b7cff]/10 text-[#4a63ff]">
+                      <Sparkles size={18} className="text-[#4a63ff]" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
+                  </div>
+
+                  <div
+                    className={`mt-4 whitespace-pre-wrap text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px] ${
+                      isAboutExpanded ? "" : "line-clamp-6 sm:line-clamp-8"
+                    }`}
+                  >
                     {data.aboutBody}
                   </div>
-                  <div className="mt-8">
+
+                  <div className="mt-3 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsAboutExpanded((v) => !v)}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-[#cfd9ff] bg-[#f0edff] px-4 py-2 text-[14px] font-semibold text-[#3f49d8] transition hover:bg-[#e8e2ff]"
+                      aria-expanded={isAboutExpanded}
+                    >
+                      {isAboutExpanded ? "View Less" : "View More"}
+                      <ChevronDown
+                        size={16}
+                        className={isAboutExpanded ? "rotate-180 transform transition-transform" : "transform transition-transform"}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </div>
+
+                  <div className="mt-6 sm:mt-8">
                     {data.contactPhone ? (
                       <a
                         href={`tel:${data.contactPhone}`}
-                        className="inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff] transition hover:bg-[#f5f8ff]"
+                        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff] transition hover:bg-[#f5f8ff]"
                       >
+                        <PhoneCall size={16} className="text-[#4a63ff]" aria-hidden="true" />
                         Contact Seller
                       </a>
                     ) : (
                       <button
                         type="button"
-                        className="inline-flex h-[50px] items-center justify-center rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff]"
+                        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff]"
                       >
+                        <PhoneCall size={16} className="text-[#4a63ff]" aria-hidden="true" />
                         Contact Seller
                       </button>
                     )}
                   </div>
                 </div>
               </div>
-            </section>
+            </div>
+          </section>
         </section>
 
         {isMobileFiltersOpen ? (
