@@ -274,40 +274,40 @@ export default function CheckoutPage() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-3 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-none space-y-4">
-        <header className="overflow-hidden rounded-2xl border border-[#d6e0fb] bg-white shadow-sm">
+    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-none space-y-3">
+        <header className="overflow-hidden bg-white">
           <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full border border-[#93c5fd] bg-[#dbeafe] text-xs">1</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#dbeafe] text-xs text-[#1d4ed8]">1</span>
               Address
             </div>
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full border border-[#93c5fd] bg-[#dbeafe] text-xs">2</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#2563eb] text-xs text-white">2</span>
               Order Summary
             </div>
             <div className="inline-flex items-center gap-2 text-[#64748b]">
-              <span className="grid h-6 w-6 place-items-center rounded-full border border-[#cbd5e1] bg-white text-xs">3</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e5e7eb] text-xs">3</span>
               Payment
             </div>
           </div>
         </header>
 
         {items.length === 0 ? (
-          <section className="rounded-2xl border border-[#dde3ea] bg-white p-8 text-center shadow-sm">
+          <section className="bg-white p-8 text-center">
             <p className="text-lg font-semibold text-[#0f172a]">No items available for checkout</p>
             <p className="mt-1 text-sm text-[#64748b]">Add products to cart or click Buy Now on a product page.</p>
             <Link
               href="/cart"
-              className="mt-4 inline-flex items-center rounded-lg border border-[#cbd5e1] bg-white px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-[#f8fafc]"
+              className="mt-4 inline-flex items-center rounded px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-[#f8fafc]"
             >
               Open Cart
             </Link>
           </section>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
             <section className="space-y-3">
-              <article className="rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
+              <article className="bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Delivery Address</p>
@@ -317,12 +317,12 @@ export default function CheckoutPage() {
                 {!authChecked ? (
                   <p className="mt-3 text-sm text-[#64748b]">Checking login status...</p>
                 ) : !user ? (
-                  <div className="mt-3 rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3">
+                  <div className="mt-3 bg-[#fff7ed] p-3">
                     <p className="text-sm font-semibold text-[#9a3412]">Login required to place order</p>
                     <p className="mt-1 text-xs text-[#9a3412]">Please login or signup before continuing to payment.</p>
                     <Link
                       href={buildAuthHref(currentPath)}
-                      className="mt-3 inline-flex items-center rounded-lg bg-[#1d4ed8] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e40af]"
+                      className="mt-3 inline-flex items-center rounded bg-[#2874f0] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1f5ec8]"
                     >
                       Login / Signup
                     </Link>
@@ -332,12 +332,12 @@ export default function CheckoutPage() {
                     {addresses.length > 0 && !showAddressForm ? (
                       <div className="mt-3">
                         {selectedAddress ? (
-                          <div className="w-full rounded-xl border border-[#d8e0ea] bg-white px-3 py-3 text-left">
+                          <div className="w-full bg-white px-3 py-3 text-left">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
                                 <Check size={14} className="text-[#2563eb]" />
                                 {selectedAddress.fullName}
-                                <span className="rounded-full border border-[#cbd5e1] bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                                <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
                                   {selectedAddress.tag}
                                 </span>
                               </div>
@@ -346,14 +346,14 @@ export default function CheckoutPage() {
                                 <button
                                   type="button"
                                   onClick={openAddressPicker}
-                                  className="inline-flex items-center rounded-lg border border-[#cbd5e1] bg-white px-2.5 py-1 text-xs font-semibold text-[#1d4ed8] hover:bg-[#f8fafc]"
+                                  className="inline-flex items-center rounded bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e2e8f0]"
                                 >
                                   Change
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openEditAddress(selectedAddress)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-[#cbd5e1] bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                                  className="inline-flex items-center gap-1 rounded bg-[#f1f5f9] px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#e2e8f0]"
                                 >
                                   <Pencil size={12} /> Edit
                                 </button>
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
                     ) : null}
 
                     {showAddressForm ? (
-                      <div className="mt-3 space-y-3 rounded-xl border border-[#d9e3f2] bg-[#f8fbff] p-3">
+                      <div className="mt-3 space-y-3 bg-[#f8fbff] p-3">
                         <p className="text-sm font-semibold text-[#0f172a]">
                           {editingAddressId ? "Edit Address" : "Add Delivery Address"}
                         </p>
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
                             value={addressDraft.fullName}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, fullName: event.target.value }))}
                             placeholder="Full name"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                           />
                           <input
                             type="tel"
@@ -394,7 +394,7 @@ export default function CheckoutPage() {
                               setAddressDraft((current) => ({ ...current, phone: normalizePhone(event.target.value) }))
                             }
                             placeholder="Phone number"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                           />
                         </div>
 
@@ -403,7 +403,7 @@ export default function CheckoutPage() {
                           value={addressDraft.line1}
                           onChange={(event) => setAddressDraft((current) => ({ ...current, line1: event.target.value }))}
                           placeholder="House no, building, street"
-                          className="w-full rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                          className="w-full rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                         />
 
                         <div className="grid gap-2 sm:grid-cols-2">
@@ -412,14 +412,14 @@ export default function CheckoutPage() {
                             value={addressDraft.line2 || ""}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, line2: event.target.value }))}
                             placeholder="Area, locality"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                           />
                           <input
                             type="text"
                             value={addressDraft.landmark || ""}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, landmark: event.target.value }))}
                             placeholder="Landmark (optional)"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                           />
                         </div>
 
@@ -429,7 +429,7 @@ export default function CheckoutPage() {
                             value={addressDraft.city}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, city: event.target.value }))}
                             placeholder="City"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
                           />
                           <input
                             type="text"
@@ -453,10 +453,10 @@ export default function CheckoutPage() {
                               key={tag}
                               type="button"
                               onClick={() => setAddressDraft((current) => ({ ...current, tag }))}
-                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                                 addressDraft.tag === tag
-                                  ? "border-[#2563eb] bg-[#dbeafe] text-[#1d4ed8]"
-                                  : "border-[#cbd5e1] bg-white text-[#475569]"
+                                  ? "bg-[#dbeafe] text-[#1d4ed8]"
+                                  : "bg-white text-[#475569]"
                               }`}
                             >
                               {tag}
@@ -475,7 +475,7 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => void handleAddressSave()}
                             disabled={savingAddress}
-                            className="rounded-lg bg-[#2554d9] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1f47b8] disabled:opacity-60"
+                            className="rounded bg-[#2874f0] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1f5ec8] disabled:opacity-60"
                           >
                             {savingAddress ? "Saving..." : editingAddressId ? "Update Address" : "Save Address"}
                           </button>
@@ -488,7 +488,7 @@ export default function CheckoutPage() {
                                 setEditingAddressId("");
                                 setAddressDraft(EMPTY_ADDRESS_DRAFT);
                               }}
-                              className="rounded-lg border border-[#cbd5e1] bg-white px-3 py-2 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                              className="rounded bg-white px-3 py-2 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
                             >
                               Cancel
                             </button>
@@ -503,7 +503,7 @@ export default function CheckoutPage() {
                         onClick={() => setIsAddressPickerOpen(false)}
                       >
                         <section
-                          className="w-full max-w-xl rounded-2xl bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.2)]"
+                          className="w-full max-w-xl bg-white p-4"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <div className="mb-3 flex items-center justify-between gap-2">
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={openAddAddress}
-                              className="inline-flex items-center gap-1 rounded-lg border border-[#c7d7ff] bg-[#f2f6ff] px-3 py-1.5 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e7efff]"
+                              className="inline-flex items-center gap-1 rounded bg-[#f2f6ff] px-3 py-1.5 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e7efff]"
                             >
                               <Plus size={14} /> Add New
                             </button>
@@ -533,17 +533,17 @@ export default function CheckoutPage() {
                                       handleAddressSelectFromPicker(address.id);
                                     }
                                   }}
-                                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                                  className={`w-full px-3 py-3 text-left transition ${
                                     isSelected
-                                      ? "border-[#2563eb] bg-[#eff6ff]"
-                                      : "border-[#d8e0ea] bg-white hover:border-[#9db2d6]"
+                                      ? "bg-[#eff6ff]"
+                                      : "bg-white hover:bg-[#f8fafc]"
                                   }`}
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
                                       {isSelected ? <Check size={14} className="text-[#2563eb]" /> : null}
                                       {address.fullName}
-                                      <span className="rounded-full border border-[#cbd5e1] bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
                                         {address.tag}
                                       </span>
                                     </div>
@@ -553,7 +553,7 @@ export default function CheckoutPage() {
                                         event.stopPropagation();
                                         openEditAddress(address);
                                       }}
-                                      className="inline-flex items-center gap-1 rounded-lg border border-[#cbd5e1] bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                                      className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
                                     >
                                       <Pencil size={12} /> Edit
                                     </button>
@@ -575,7 +575,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={() => setIsAddressPickerOpen(false)}
-                              className="rounded-lg border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                              className="rounded bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
                             >
                               Close
                             </button>
@@ -587,7 +587,7 @@ export default function CheckoutPage() {
                 )}
               </article>
 
-              <article className="rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
+              <article className="bg-white p-4">
                 <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Order Summary</p>
                 <div className="mt-2 space-y-2">
                   {items.map((item) => {
@@ -609,9 +609,9 @@ export default function CheckoutPage() {
                             router.push(productHref);
                           }
                         }}
-                        className="grid cursor-pointer gap-3 rounded-2xl border border-[#dde3ea] bg-white p-3 shadow-sm transition hover:border-[#c5d4ef] sm:grid-cols-[96px_minmax(0,1fr)]"
+                        className="grid cursor-pointer gap-3 bg-white p-3 transition hover:bg-[#f8fafc] sm:grid-cols-[96px_minmax(0,1fr)]"
                       >
-                        <div className="overflow-hidden rounded-xl border border-[#e6ebf2] bg-[#f8fbff]">
+                        <div className="overflow-hidden rounded bg-[#f8fbff]">
                           <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
                         </div>
 
@@ -645,8 +645,8 @@ export default function CheckoutPage() {
               </article>
             </section>
 
-            <aside className="h-fit rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Payment Summary</p>
+            <aside className="h-fit bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Price Details</p>
 
               <div className="mt-3 space-y-2 text-sm text-[#334155]">
                 <div className="flex items-center justify-between">
@@ -671,7 +671,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="mt-3 border-t border-dashed border-[#d8e0ea] pt-3">
+              <div className="mt-3 bg-[#f9fafb] px-2 py-2">
                 <div className="flex items-center justify-between text-lg font-bold text-[#0f172a]">
                   <span>Total Amount</span>
                   <span>{formatPrice(totals.total)}</span>
@@ -682,7 +682,7 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handleContinueToPayment}
                 disabled={!user || !selectedAddress || items.length === 0}
-                className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-[#f5bf00] px-4 py-2.5 text-sm font-bold text-[#111827] hover:bg-[#e6b500] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded bg-[#ffcf00] px-4 py-2.5 text-sm font-bold text-[#111827] hover:bg-[#f5bf00] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Continue <ChevronRight size={16} />
               </button>

@@ -16,10 +16,13 @@ import {
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import { buildAuthHref } from "@/lib/authRedirect";
 import {
+  computeCheckoutTotals,
+  readCheckoutItems,
   paymentMethodLabel,
   placeOrder,
   readAddresses,
   readCheckoutDraft,
+  saveCheckoutDraft,
   type PaymentMethod,
 } from "@/lib/checkoutStore";
 
@@ -106,7 +109,37 @@ export default function CheckoutPaymentPage() {
       return null;
     }
 
-    return readCheckoutDraft(userId);
+    const existingDraft = readCheckoutDraft(userId);
+    if (existingDraft) {
+      return existingDraft;
+    }
+
+    // Fallback for dev refresh/direct-entry: rebuild checkout draft from current items + selected address.
+    const { addresses, selectedAddressId: storedSelectedAddressId } = readAddresses(userId);
+    const resolvedAddressId = storedSelectedAddressId || addresses[0]?.id || "";
+    if (!resolvedAddressId) {
+      return null;
+    }
+
+    const buyNowItems = readCheckoutItems("buy-now");
+    const cartItems = readCheckoutItems("cart");
+    const recoveredItems = buyNowItems.length > 0 ? buyNowItems : cartItems;
+    if (recoveredItems.length === 0) {
+      return null;
+    }
+
+    const recoveredMode = buyNowItems.length > 0 ? "buy-now" : "cart";
+    const recoveredDraft = {
+      userId,
+      mode: recoveredMode,
+      items: recoveredItems,
+      totals: computeCheckoutTotals(recoveredItems),
+      addressId: resolvedAddressId,
+      createdAt: new Date().toISOString(),
+    } as const;
+
+    saveCheckoutDraft(recoveredDraft);
+    return recoveredDraft;
   }, [userId]);
 
   const selectedAddressId = checkoutDraft?.addressId || "";
