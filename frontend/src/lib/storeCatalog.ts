@@ -276,38 +276,28 @@ const hasPreOrderSignal = (product: StoreProduct) =>
   [product.badge, product.name, ...(product.tags || [])].some((value) => /pre[\s-]?order/i.test(normalizeString(value)));
 
 const toPriceRangeFilters = (products: StoreProduct[]) => {
-  const maxPrice = Math.max(0, ...products.map((product) => parsePriceValue(product.price, 0)));
-
-  if (maxPrice > 500_000) {
-    return [
-      `Under ${formatPriceText(25_000)}`,
-      `${formatPriceText(25_000)} - ${formatPriceText(100_000)}`,
-      `${formatPriceText(100_000)} - ${formatPriceText(500_000)}`,
-      `${formatPriceText(500_000)}+`,
-    ];
-  }
-
-  if (maxPrice > 100_000) {
-    return [
-      `Under ${formatPriceText(25_000)}`,
-      `${formatPriceText(25_000)} - ${formatPriceText(100_000)}`,
-      `${formatPriceText(100_000)} - ${formatPriceText(500_000)}`,
-    ];
-  }
-
-  if (maxPrice > 10_000) {
-    return [
-      `Under ${formatPriceText(10_000)}`,
-      `${formatPriceText(10_000)} - ${formatPriceText(50_000)}`,
-      `${formatPriceText(50_000)} - ${formatPriceText(100_000)}`,
-    ];
-  }
-
-  return [
-    `Under ${formatPriceText(1_000)}`,
-    `${formatPriceText(1_000)} - ${formatPriceText(5_000)}`,
-    `${formatPriceText(5_000)} - ${formatPriceText(10_000)}`,
+  const maxPrice = Math.max(
+    0,
+    ...products.map((product) =>
+      Math.max(parsePriceValue(product.price, 0), Number(product.oldPriceValue || 0))
+    )
+  );
+  const ranges = [
+    { max: 1_000, label: `Under ${formatPriceText(1_000)}` },
+    { min: 1_000, max: 10_000, label: `${formatPriceText(1_000)} - ${formatPriceText(10_000)}` },
+    { min: 10_000, max: 50_000, label: `${formatPriceText(10_000)} - ${formatPriceText(50_000)}` },
+    { min: 50_000, max: 100_000, label: `${formatPriceText(50_000)} - ${formatPriceText(100_000)}` },
+    { min: 100_000, max: 500_000, label: `${formatPriceText(100_000)} - ${formatPriceText(500_000)}` },
+    { min: 500_000, label: `${formatPriceText(500_000)}+` },
   ];
+
+  return ranges
+    .filter((range) => {
+      if (!maxPrice) return true;
+      if (range.min && maxPrice < range.min) return false;
+      return true;
+    })
+    .map((range) => range.label);
 };
 
 const toStoreFilters = (products: StoreProduct[], categories: string[]) => {

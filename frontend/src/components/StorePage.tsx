@@ -305,10 +305,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
     };
   }, []);
 
-  useEffect(() => {
-    setActiveFilters({});
-  }, [data.id]);
-
   const toggleFilterOption = useCallback((groupLabel: string, optionLabel: string) => {
     const groupKey = normalizeFilterToken(groupLabel);
     const optionKey = normalizeFilterToken(optionLabel);
@@ -644,7 +640,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
     const currentPriceLabel =
       currentPriceValue > 0
-        ? formatIndianCompactCurrency(currentPriceValue)
+        ? formatIndianCurrency(currentPriceValue)
         : String(product.price || "").trim() || "Price unavailable";
 
     return (
@@ -658,11 +654,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
             alt={product.name}
             className="h-full w-full object-contain p-3 transition-transform duration-200 group-hover:scale-[1.03]"
           />
-          {hasComparablePrice ? (
-            <span className="absolute left-2 top-2 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white shadow-sm sm:text-[11px]">
-              {discountPercent}% OFF
-            </span>
-          ) : null}
           {shouldShowRatingRow ? (
             <span className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-amber-950 shadow-sm sm:text-[11px]">
               {ratingDisplay}
@@ -677,18 +668,21 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </Link>
 
           {hasComparablePrice ? (
-            <div className="mt-1 min-w-0">
-              <span className="block truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
+            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
+              <span className="shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white sm:text-[10px]">
+                {discountPercent}% OFF
+              </span>
             </div>
           ) : null}
 
-          <div className="mt-auto grid grid-cols-[minmax(0,1fr)_52px] gap-1.5 pt-2.5 sm:grid-cols-2 sm:gap-2 sm:pt-3">
-            <div className="flex h-8 min-w-0 items-center sm:h-9">
-              <span className="truncate text-[15px] font-extrabold leading-none text-slate-900 sm:text-lg">{currentPriceLabel}</span>
+          <div className="mt-auto pt-2.5 sm:pt-3">
+            <div className="flex min-w-0 items-center">
+              <span className="truncate text-[18px] font-extrabold leading-none text-slate-900 sm:text-xl">{currentPriceLabel}</span>
             </div>
 
             {productCartQuantity > 0 ? (
-              <div className="inline-grid h-8 min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-9">
+              <div className="mt-2 grid h-8 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-9">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
@@ -713,7 +707,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-blue-600 px-1 text-[10px] font-semibold text-white transition hover:bg-blue-700 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
+                className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0edff] px-2 text-[12px] font-semibold text-[#5b45d9] transition hover:bg-[#e7e1ff] sm:h-10 sm:text-sm"
               >
                 Add
               </button>
@@ -1023,6 +1017,14 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <div>
                   <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm lg:hidden"
+                >
+                  <SlidersHorizontal size={14} />
+                  Filters
+                </button>
               </div>
               {renderProductRail(featuredProducts, "h-32 sm:h-44")}
             </section>
@@ -1118,29 +1120,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </section>
         </section>
 
-        {!isMobileFiltersOpen ? (
-          <button
-            type="button"
-            onClick={() => setIsMobileFiltersOpen(true)}
-            className="fixed bottom-[76px] right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-white lg:hidden"
-          >
-            <span className="inline-flex items-center gap-2 text-sm font-semibold">
-              <SlidersHorizontal size={16} />
-              Filters
-            </span>
-          </button>
-        ) : null}
-
         {isMobileFiltersOpen ? (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/35"
-              onClick={() => setIsMobileFiltersOpen(false)}
-              aria-label="Close filters"
-            />
-
-            <section className="fixed inset-x-0 top-0 bottom-[68px] flex w-full flex-col bg-white">
+          <div className="fixed inset-0 z-[80] lg:hidden">
+            <section className="fixed inset-x-0 top-0 bottom-[64px] flex w-full flex-col bg-white">
               <div className="flex items-center justify-between border-b border-slate-200 p-5">
                 <h3 className="text-base font-bold text-slate-900">Filters</h3>
                 <button
