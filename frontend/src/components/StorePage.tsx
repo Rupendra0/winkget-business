@@ -458,7 +458,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </div>
           ) : null}
 
-          <div className="mt-auto grid grid-cols-2 gap-1.5 pt-2.5 sm:gap-2 sm:pt-3">
+          <div className="mt-auto grid grid-cols-[minmax(0,1fr)_52px] gap-1.5 pt-2.5 sm:grid-cols-2 sm:gap-2 sm:pt-3">
             <div className="flex h-8 min-w-0 items-center sm:h-9">
               <span className="truncate text-[15px] font-extrabold leading-none text-slate-900 sm:text-lg">{currentPriceLabel}</span>
             </div>
