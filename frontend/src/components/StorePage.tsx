@@ -1184,7 +1184,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       <CalendarDays size={18} className="text-[#4a63ff]" aria-hidden="true" />
                     </span>
                   </div>
-                  <p className="mt-1 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">
+                  <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
                     {joinedLabel}
                   </p>
                 </div>
@@ -1196,22 +1196,27 @@ export default function StorePage({ data }: { data: StorePageData }) {
                       <MapPin size={18} className="text-[#4a63ff]" aria-hidden="true" />
                     </span>
                   </div>
-                  <p className="mt-1 text-[19px] font-semibold leading-tight text-[#344054] sm:text-[20px]">
+                  <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
                     {locationLabel}
                   </p>
                 </div>
 
                 <div className="col-span-2 flex flex-col rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1">
                   <div className="flex items-start gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] bg-[#5b7cff]/10 text-[#4a63ff]">
-                      <Sparkles size={18} className="text-[#4a63ff]" aria-hidden="true" />
-                    </span>
+                    <div className="h-10 w-10 overflow-hidden rounded-full border border-[#d7defa] bg-white shadow-[0_4px_10px_rgba(15,23,42,0.06)]">
+                      <img
+                        src={data.logoImage}
+                        alt={`${data.storeName} logo`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
                     <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
                   </div>
 
                   <div
-                    className={`mt-4 whitespace-pre-wrap text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px] ${
-                      isAboutExpanded ? "" : "line-clamp-6 sm:line-clamp-8"
+                    className={`mt-4 whitespace-pre-wrap text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px] lg:whitespace-normal ${
+                      isAboutExpanded ? "" : "line-clamp-6 sm:line-clamp-8 lg:line-clamp-none"
                     }`}
                   >
                     {data.aboutBody}
