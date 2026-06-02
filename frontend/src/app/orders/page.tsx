@@ -12,12 +12,12 @@ const statusLabel = (value: CheckoutOrder["status"]) => value;
 
 const statusClassName = (value: CheckoutOrder["status"]) => {
   if (value === "Completed") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "bg-emerald-50 text-emerald-700";
   }
   if (value === "Disputed") {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "bg-rose-50 text-rose-700";
   }
-  return "border-amber-200 bg-amber-50 text-amber-800";
+  return "bg-amber-50 text-amber-800";
 };
 
 const formatDate = (value: string) => {
@@ -63,34 +63,34 @@ export default function OrdersPage() {
 
   if (loading || !user) {
     return (
-      <main className="min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mx-auto h-64 w-full max-w-none animate-pulse rounded-3xl border border-white/80 bg-white/80 p-6 shadow-xl" />
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+        <div className="mx-auto h-64 w-full max-w-none animate-pulse bg-white p-6" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mx-auto w-full max-w-none rounded-3xl border border-blue-100/80 bg-white/88 p-5 shadow-[0_18px_42px_rgba(30,64,175,0.12)] sm:p-7">
+    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-none bg-white p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-s sm:text-3xl font-bold text-slate-900">My Orders</h2>
           </div>
 
-          <p className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             Total Orders: {orders.length}
           </p>
         </div>
 
         {placedOrderId ? (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="mt-4 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Order placed successfully. Order ID: <span className="font-semibold">{placedOrderId}</span>
           </div>
         ) : null}
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 divide-y divide-[#e5e7eb] bg-white">
           {orders.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+            <div className="bg-slate-50 p-5 text-sm text-slate-600">
               <p className="font-semibold text-slate-800">No orders yet.</p>
               <p className="mt-1">Start shopping and place your first order.</p>
             </div>
@@ -105,7 +105,7 @@ export default function OrdersPage() {
                 <Link
                   key={order.id}
                   href={`/orders/${encodeURIComponent(order.id)}`}
-                  className="group block rounded-2xl border border-[#dbe7ff] bg-white p-4 shadow-[0_10px_24px_rgba(30,64,175,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(30,64,175,0.14)]"
+                  className="group block bg-white p-4 transition hover:bg-[#f8fafc]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -119,7 +119,7 @@ export default function OrdersPage() {
 
                   <div className="mt-3 rounded-xl p-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-200 bg-white">
+                      <div className="h-14 w-14 overflow-hidden rounded bg-white">
                         {leadItem?.product?.image ? (
                           <img
                             src={leadItem.product.image}
@@ -136,7 +136,7 @@ export default function OrdersPage() {
 
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">{leadItem?.product?.name || "Order Items"}</p>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusClassName(order.status)}`}>
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusClassName(order.status)}`}>
                           {statusLabel(order.status)}
                         </span>
                       <span className="px-2.5 py-1 text-[11px] font-bold">

@@ -275,7 +275,7 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
-      <div className="mx-auto w-full max-w-none space-y-3">
+      <div className="mx-auto w-full max-w-none space-y-0">
         <header className="overflow-hidden bg-white">
           <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
@@ -305,8 +305,8 @@ export default function CheckoutPage() {
             </Link>
           </section>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="space-y-3">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <section className="space-y-0 bg-white">
               <article className="bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -587,7 +587,7 @@ export default function CheckoutPage() {
                 )}
               </article>
 
-              <article className="bg-white p-4">
+              <article className="border-t border-[#e5e7eb] bg-white p-4">
                 <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Order Summary</p>
                 <div className="mt-2 space-y-2">
                   {items.map((item) => {
@@ -645,7 +645,7 @@ export default function CheckoutPage() {
               </article>
             </section>
 
-            <aside className="h-fit bg-white p-4">
+            <aside className="h-fit border-t border-[#e5e7eb] bg-white p-4 lg:border-l lg:border-t-0 lg:border-[#e5e7eb]">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Price Details</p>
 
               <div className="mt-3 space-y-2 text-sm text-[#334155]">

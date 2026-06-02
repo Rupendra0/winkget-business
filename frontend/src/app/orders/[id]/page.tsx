@@ -27,12 +27,12 @@ const formatStatus = (value: CheckoutOrder["status"]) => value;
 
 const statusClassName = (value: CheckoutOrder["status"]) => {
   if (value === "Completed") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "bg-emerald-50 text-emerald-700";
   }
   if (value === "Disputed") {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "bg-rose-50 text-rose-700";
   }
-  return "border-amber-200 bg-amber-50 text-amber-800";
+  return "bg-amber-50 text-amber-800";
 };
 
 export default function OrderDetailPage() {
@@ -69,21 +69,21 @@ export default function OrderDetailPage() {
 
   if (loading || !user) {
     return (
-      <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto h-72 w-full max-w-none animate-pulse rounded-3xl border border-white/80 bg-white/80 shadow-xl" />
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+        <div className="mx-auto h-72 w-full max-w-none animate-pulse bg-white" />
       </main>
     );
   }
 
   if (!order) {
     return (
-      <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-none rounded-3xl border border-slate-200 bg-white p-7 shadow-lg">
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+        <div className="mx-auto w-full max-w-none bg-white p-7">
           <p className="text-xl font-bold text-slate-900">Order not found</p>
           <p className="mt-2 text-sm text-slate-600">This order is unavailable or does not belong to your account.</p>
           <Link
             href="/orders"
-            className="mt-5 inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+            className="mt-5 inline-flex items-center justify-center rounded bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
           >
             Back to My Orders
           </Link>
@@ -97,23 +97,23 @@ export default function OrderDetailPage() {
     .replace(/\b\w/g, (token) => token.toUpperCase());
 
   return (
-    <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-none space-y-4">
+    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-none space-y-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/orders"
-            className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+            className="inline-flex items-center rounded bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
           >
             Back to My Orders
           </Link>
 
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusClassName(order.status)}`}>
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClassName(order.status)}`}>
             {formatStatus(order.status)}
           </span>
         </div>
 
-        <section className="rounded-3xl border border-blue-100/80 bg-white/90 p-5 shadow-[0_18px_40px_rgba(30,64,175,0.12)] sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+        <section className="bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5e7eb] pb-4">
             <div>
               <p className="text-lg font-bold uppercase tracking-[0.1em] text-blue-700">Order Details</p>
               <p className="mt-1 text-xs font-bold text-slate-600 sm:text-s">Order id : {order.id}</p>
@@ -127,15 +127,12 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-4">
+          <div className="mt-5 grid grid-cols-1 gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-0 bg-white">
                 <div className="mt-3 space-y-3">
                   {order.items.map((item) => (
-                    <div
-                      key={`${order.id}-${item.product.id}`}
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
-                    >
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div key={`${order.id}-${item.product.id}`} className="flex items-center gap-3 border-b border-[#e5e7eb] bg-slate-50 p-3 last:border-b-0">
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded bg-white">
                         {item.product.image ? (
                           <img
                             src={item.product.image}
@@ -156,7 +153,7 @@ export default function OrderDetailPage() {
                     </div>
                   ))}
                 </div>
-              <article className="rounded-2xl border border-slate-200 bg-white p-4">
+              <article className="border-t border-[#e5e7eb] bg-white p-4">
                 <p className="text-sm font-bold text-slate-900">Delivery Address</p>
                 <p className="mt-2 text-sm font-semibold text-slate-800">{order.address.fullName}</p>
                 <p className="mt-1 text-sm text-slate-700">
@@ -171,8 +168,8 @@ export default function OrderDetailPage() {
               </article>
             </div>
 
-            <div className="space-y-4">
-              <article className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="border-t border-[#e5e7eb] bg-white xl:border-l xl:border-t-0 xl:border-[#e5e7eb]">
+              <article className="bg-white p-4">
                 <p className="text-sm font-bold text-slate-900">Price Details</p>
 
                 <div className="mt-3 space-y-2 text-sm text-slate-700">
@@ -198,7 +195,7 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 border-t border-slate-200 pt-3">
+                <div className="mt-3 border-t border-[#e5e7eb] pt-3">
                   <div className="flex items-center justify-between gap-2 text-base font-bold text-slate-900">
                     <span>Total</span>
                     <span>{formatPrice(order.totals.total)}</span>
@@ -206,7 +203,7 @@ export default function OrderDetailPage() {
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-slate-200 bg-white p-4">
+              <article className="border-t border-[#e5e7eb] bg-white p-4">
                 <p className="text-sm font-bold text-slate-900">Payment & Order Info</p>
                 <div className="mt-3 space-y-2 text-sm text-slate-700">
                   <p>

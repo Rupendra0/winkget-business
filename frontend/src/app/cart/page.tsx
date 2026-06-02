@@ -93,9 +93,9 @@ export default function CartPage() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-3 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-none space-y-4">
-        <header className="rounded-2xl border border-[#d9e2ff] bg-white px-4 py-3 shadow-sm">
+    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-none space-y-0">
+        <header className="bg-white px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="brand-wordmark text-[1.25rem] font-bold text-[#1f2937]">Your Cart</p>
@@ -110,7 +110,7 @@ export default function CartPage() {
         </header>
 
         {items.length === 0 ? (
-          <section className="rounded-2xl border border-[#dde3ea] bg-white p-10 text-center shadow-sm">
+          <section className="bg-white p-10 text-center">
             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-[#eff4ff] text-[#2554d9]">
               <ShoppingCart size={26} />
             </div>
@@ -124,8 +124,8 @@ export default function CartPage() {
             </Link>
           </section>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_350px]">
-            <section className="space-y-3">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_350px]">
+            <section className="divide-y divide-[#e5e7eb] bg-white">
               {items.map((item) => {
                 const unitPrice = Number(item.product.price || 0);
                 const quantity = Math.max(1, Number(item.quantity || 1));
@@ -145,9 +145,9 @@ export default function CartPage() {
                         router.push(productHref);
                       }
                     }}
-                    className="grid cursor-pointer gap-3 rounded-2xl border border-[#dde3ea] bg-white p-3 shadow-sm transition hover:border-[#c5d4ef] sm:grid-cols-[96px_minmax(0,1fr)]"
+                    className="grid cursor-pointer gap-3 bg-white p-3 transition hover:bg-[#f8fafc] sm:grid-cols-[96px_minmax(0,1fr)]"
                   >
-                    <div className="overflow-hidden rounded-xl border border-[#e6ebf2] bg-[#f8fbff]">
+                    <div className="overflow-hidden rounded bg-[#f8fbff]">
                       <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
                     </div>
 
@@ -227,7 +227,7 @@ export default function CartPage() {
               })}
             </section>
 
-            <aside className="h-fit rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
+            <aside className="h-fit border-t border-[#e5e7eb] bg-white p-4 lg:border-l lg:border-t-0 lg:border-[#e5e7eb]">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Price Details</p>
 
               <div className="mt-3 space-y-2 text-sm text-[#334155]">

@@ -202,18 +202,18 @@ export default function CheckoutPaymentPage() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-3 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-none space-y-4">
-        <header className="rounded-2xl border border-[#d6e0fb] bg-white shadow-sm">
+    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-none space-y-0">
+        <header className="bg-white">
           <div className=" px-4 py-3 text-black">
             <p className="brand-wordmark text-lg">Complete Payment</p>
           </div>
         </header>
 
         {!authChecked ? (
-          <section className="rounded-2xl border border-[#dde3ea] bg-white p-6 text-sm text-[#64748b] shadow-sm">Checking login status...</section>
+          <section className="bg-white p-6 text-sm text-[#64748b]">Checking login status...</section>
         ) : !user ? (
-          <section className="rounded-2xl border border-[#fed7aa] bg-white p-6 shadow-sm">
+          <section className="bg-white p-6">
             <p className="text-lg font-semibold text-[#9a3412]">Login required for payment</p>
             <p className="mt-1 text-sm text-[#9a3412]">Please login/signup to complete your purchase.</p>
             <Link
@@ -224,7 +224,7 @@ export default function CheckoutPaymentPage() {
             </Link>
           </section>
         ) : !checkoutDraft || !selectedAddress ? (
-          <section className="rounded-2xl border border-[#dde3ea] bg-white p-6 shadow-sm">
+          <section className="bg-white p-6">
             <p className="text-lg font-semibold text-[#0f172a]">Checkout session not found</p>
             <p className="mt-1 text-sm text-[#64748b]">Please confirm your address and items again.</p>
             <Link
@@ -235,8 +235,8 @@ export default function CheckoutPaymentPage() {
             </Link>
           </section>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="rounded-2xl border border-[#dde3ea] bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <section className="bg-white">
               <div className="border-b border-[#e2e8f0] px-4 py-3">
                 <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Payment Options</p>
               </div>
@@ -356,7 +356,7 @@ export default function CheckoutPaymentPage() {
               </div>
             </section>
 
-            <aside className="h-fit rounded-2xl border border-[#dde3ea] bg-white p-4 shadow-sm">
+            <aside className="h-fit border-t border-[#e5e7eb] bg-white p-4 lg:border-l lg:border-t-0 lg:border-[#e5e7eb]">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Order Details</p>
               <div className="mt-2 space-y-1 text-sm text-[#334155]">
                 <div className="flex items-center justify-between">
