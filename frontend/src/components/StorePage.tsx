@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Star,
   Filter,
-  ShoppingCart,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
@@ -533,7 +532,30 @@ export default function StorePage({ data }: { data: StorePageData }) {
   return (
     <main className="px-3 sm:px-4 lg:px-6 pb-12">
       <div className="max-w-[1400px] mx-auto space-y-10">
-        <section className="overflow-hidden bg-white/70 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
+        <section className="-mx-3 bg-white sm:hidden">
+          <div className="flex items-center gap-3 px-5 pb-4 pt-4">
+            <div className="h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full border border-amber-100 bg-white shadow-sm">
+              <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <h1 className="truncate text-xl font-extrabold leading-tight text-slate-900">{data.storeName}</h1>
+                  <p className="mt-0.5 truncate text-sm font-medium text-slate-600">{locationLabel}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-bold text-emerald-700">
+                    <Truck size={15} />
+                    <span className="text-slate-400">&middot;</span>
+                    <span className={statusToneClass}>{statusLabel}</span>
+                    <span className="text-slate-400">&middot;</span>
+                    <span className={availabilityToneClass}>{isStoreClosed ? "Unavailable" : "Available"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="hidden overflow-hidden bg-white/70 sm:block lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
           <div className="relative h-52 sm:h-60 lg:h-72">
             <img
               src={data.bannerImage}
@@ -573,7 +595,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </div>
         </section>
 
-        <section className="-mt-10 rounded-2xl bg-white/90 p-2.5 sm:-mt-6 sm:p-3 lg:-mt-9 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
+        <section className="hidden rounded-2xl bg-white/90 p-2.5 sm:-mt-6 sm:block sm:p-3 lg:-mt-9 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
           <div className="grid grid-cols-4 gap-2 sm:hidden">
             <article className="rounded-lg bg-amber-50/80 px-1.5 py-2 text-center">
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Rate</p>
@@ -732,7 +754,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </div>
           </section>
 
-          <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:min-w-0 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="mt-4 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:min-w-0 lg:grid-cols-[240px_minmax(0,1fr)]">
             <aside className="hidden rounded-2xl bg-white/80 p-5 space-y-6 h-fit lg:block lg:sticky lg:top-24">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Filter size={16} />
