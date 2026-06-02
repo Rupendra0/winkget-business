@@ -739,7 +739,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </div>
 
             {productCartQuantity > 0 ? (
-              <div className="mt-2 grid h-8 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-9">
+              <div className="mt-2 grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-10">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
