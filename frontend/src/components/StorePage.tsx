@@ -23,12 +23,21 @@ import {
   Sofa,
   HeartPulse,
   Package,
+  Heart,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
-import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setCartItemQuantity } from "@/lib/shopStorage";
+import {
+  CART_UPDATED_EVENT,
+  addToCart,
+  makeStoreProduct,
+  readCart,
+  readWishlist,
+  setCartItemQuantity,
+  toggleWishlist,
+} from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -289,6 +298,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
+  const [wishlistProductIds, setWishlistProductIds] = useState<Set<string>>(() => new Set());
   const [selectedCategoryBarItemId, setSelectedCategoryBarItemId] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, Set<string>>>({});
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
@@ -362,6 +372,21 @@ export default function StorePage({ data }: { data: StorePageData }) {
     };
   }, []);
 
+  useEffect(() => {
+    const syncWishlistState = () => {
+      setWishlistProductIds(new Set(readWishlist().map((item) => item.id)));
+    };
+
+    syncWishlistState();
+    window.addEventListener("shop:wishlist-updated", syncWishlistState as EventListener);
+    window.addEventListener("storage", syncWishlistState);
+
+    return () => {
+      window.removeEventListener("shop:wishlist-updated", syncWishlistState as EventListener);
+      window.removeEventListener("storage", syncWishlistState);
+    };
+  }, []);
+
   const storeReviewStats = useMemo(
     () =>
       isReviewHydrated
@@ -405,6 +430,26 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
         addToCart(storeProduct, 1);
       }
+    },
+    [buildProductHref, data.id, data.storeName]
+  );
+
+  const handleToggleWishlist = useCallback(
+    (product: StoreProduct) => {
+      const href = buildProductHref(product);
+      const storeProduct = makeStoreProduct(
+        {
+          ...product,
+          storeId: data.id,
+          sellerName: product.sellerName || data.storeName,
+          image: product.imageUrl,
+          oldPrice: product.oldPriceValue,
+          categoryLabel: product.categoryLabel || product.category,
+        },
+        href
+      );
+
+      toggleWishlist(storeProduct);
     },
     [buildProductHref, data.id, data.storeName]
   );
@@ -646,7 +691,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
     return (
       <article
         key={product.id}
-        className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
+        className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white"
       >
         <Link href={productHref} className={`relative block ${imageHeightClass} overflow-hidden bg-white`}>
           <img
@@ -661,14 +706,26 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </span>
           ) : null}
         </Link>
+        <button
+          type="button"
+          onClick={() => handleToggleWishlist(product)}
+          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-400 shadow-sm transition hover:border-rose-200 hover:text-rose-500"
+          aria-label={`${wishlistProductIds.has(product.id) ? "Remove from" : "Add to"} wishlist`}
+        >
+          <Heart
+            size={17}
+            className={wishlistProductIds.has(product.id) ? "fill-rose-500 text-rose-500" : ""}
+            strokeWidth={1.8}
+          />
+        </button>
 
-        <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3">
+        <div className="flex min-w-0 flex-1 flex-col p-2 pb-3 sm:p-3 sm:pb-4">
           <Link href={productHref} className="line-clamp-2 min-h-8 text-[13px] font-semibold leading-4 text-slate-800 hover:text-blue-700 sm:min-h-10 sm:text-[15px] sm:leading-5">
             {product.name}
           </Link>
 
           {hasComparablePrice ? (
-            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+            <div className="mt-2.5 flex min-w-0 items-center gap-1.5">
               <span className="truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
               <span className="shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white sm:text-[10px]">
                 {discountPercent}% OFF
@@ -678,7 +735,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-auto pt-2.5 sm:pt-3">
             <div className="flex min-w-0 items-center">
-              <span className="truncate text-[18px] font-extrabold leading-none text-slate-900 sm:text-xl">{currentPriceLabel}</span>
+              <span className="truncate text-xl font-extrabold leading-none text-slate-900 sm:text-2xl">{currentPriceLabel}</span>
             </div>
 
             {productCartQuantity > 0 ? (
@@ -1026,7 +1083,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   Filters
                 </button>
               </div>
-              {renderProductRail(featuredProducts, "h-32 sm:h-44")}
+              {renderProductRail(featuredProducts, "h-36 sm:h-48")}
             </section>
             ) : null}
 
@@ -1037,7 +1094,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
                 </div>
               </div>
-              {renderProductRail(trendingProducts, "h-32 sm:h-44")}
+              {renderProductRail(trendingProducts, "h-36 sm:h-48")}
             </section>
             ) : null}
 
@@ -1050,7 +1107,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <option>Price: High to Low</option>
                 </select>
               </div>
-              {renderProductRail(visibleProducts, "h-36 sm:h-48")}
+              {renderProductRail(visibleProducts, "h-40 sm:h-52")}
             </section>
 
             
