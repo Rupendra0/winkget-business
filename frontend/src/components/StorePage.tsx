@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Star,
@@ -30,7 +29,7 @@ import Footer from "@/components/Footer";
 import { buildProductSlug } from "@/data/productSlug";
 import type { StorePageData, StoreProduct } from "@/data/listingData";
 import { getBusinessReviewAggregate, subscribeReviewUpdates } from "@/lib/reviewStore";
-import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setBuyNowSelection, setCartItemQuantity } from "@/lib/shopStorage";
+import { CART_UPDATED_EVENT, addToCart, makeStoreProduct, readCart, setCartItemQuantity } from "@/lib/shopStorage";
 
 const ratingLabel = (rating: number) => rating.toFixed(1);
 
@@ -118,7 +117,6 @@ const normalizeFilterToken = (value: unknown) =>
     .toLowerCase();
 
 export default function StorePage({ data }: { data: StorePageData }) {
-  const router = useRouter();
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -211,27 +209,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const updateProductCartQuantity = useCallback((productId: string, nextQuantity: number) => {
     setCartItemQuantity(productId, nextQuantity);
   }, []);
-
-  const handleBuyNow = useCallback(
-    (product: StoreProduct) => {
-      const href = buildProductHref(product);
-      const storeProduct = makeStoreProduct(
-        {
-          ...product,
-          storeId: data.id,
-          sellerName: product.sellerName || data.storeName,
-          image: product.imageUrl,
-          oldPrice: product.oldPriceValue,
-          categoryLabel: product.categoryLabel || product.category,
-        },
-        href
-      );
-
-      setBuyNowSelection(storeProduct, 1);
-      router.push("/checkout?mode=buy-now");
-    },
-    [buildProductHref, data.id, data.storeName, router]
-  );
 
   const allProducts = data.products;
   const rawFeaturedProducts = data.featured.productIds
@@ -472,19 +449,21 @@ export default function StorePage({ data }: { data: StorePageData }) {
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3">
-          <Link href={productHref} className="block truncate text-[13px] font-semibold leading-4 text-slate-800 hover:text-blue-700 sm:text-[15px] sm:leading-5">
+          <Link href={productHref} className="line-clamp-2 min-h-8 text-[13px] font-semibold leading-4 text-slate-800 hover:text-blue-700 sm:min-h-10 sm:text-[15px] sm:leading-5">
             {product.name}
           </Link>
 
-          <div className="mt-1 flex min-w-0 items-baseline gap-1">
-            {hasComparablePrice ? (
-              <span className="min-w-0 shrink truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
-            ) : null}
-            <span className="min-w-0 shrink-0 text-[12px] font-semibold leading-none text-slate-900 sm:text-[clamp(0.95rem,1.5vw,1.2rem)]">{currentPriceLabel}
-            </span>
-          </div>
+          {hasComparablePrice ? (
+            <div className="mt-1 min-w-0">
+              <span className="block truncate text-[11px] font-medium text-slate-400 line-through sm:text-sm">{formatIndianCurrency(oldPriceValue)}</span>
+            </div>
+          ) : null}
 
           <div className="mt-auto grid grid-cols-2 gap-1.5 pt-2.5 sm:gap-2 sm:pt-3">
+            <div className="flex h-8 min-w-0 items-center sm:h-9">
+              <span className="truncate text-[15px] font-extrabold leading-none text-slate-900 sm:text-lg">{currentPriceLabel}</span>
+            </div>
+
             {productCartQuantity > 0 ? (
               <div className="inline-grid h-8 min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-9">
                 <button
@@ -511,19 +490,11 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-1 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-blue-600 px-1 text-[10px] font-semibold text-white transition hover:bg-blue-700 sm:h-9 sm:gap-1.5 sm:px-2 sm:text-[12px]"
               >
                 Add to Cart
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => handleBuyNow(product)}
-              className="h-8 rounded-lg bg-blue-600 px-1 text-[10px] font-semibold text-white transition hover:bg-blue-700 sm:h-9 sm:px-2 sm:text-[12px]"
-            >
-              Buy Now
-            </button>
           </div>
         </div>
       </article>
