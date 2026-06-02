@@ -264,6 +264,104 @@ const toCategorySlug = (value: string) => {
   return token === "na" ? "products" : token;
 };
 
+const readProductAttribute = (product: StoreProduct, labels: string[]) => {
+  const wantedLabels = labels.map((label) => label.toLowerCase());
+  const entries = [...(product.keyAttributes || []), ...(product.specifications || [])];
+  const match = entries.find((entry) => wantedLabels.includes(normalizeString(entry.label).toLowerCase()));
+
+  return normalizeString(match?.value);
+};
+
+const hasPreOrderSignal = (product: StoreProduct) =>
+  [product.badge, product.name, ...(product.tags || [])].some((value) => /pre[\s-]?order/i.test(normalizeString(value)));
+
+const toPriceRangeFilters = (products: StoreProduct[]) => {
+  const maxPrice = Math.max(0, ...products.map((product) => parsePriceValue(product.price, 0)));
+
+  if (maxPrice > 500_000) {
+    return [
+      `Under ${formatPriceText(25_000)}`,
+      `${formatPriceText(25_000)} - ${formatPriceText(100_000)}`,
+      `${formatPriceText(100_000)} - ${formatPriceText(500_000)}`,
+      `${formatPriceText(500_000)}+`,
+    ];
+  }
+
+  if (maxPrice > 100_000) {
+    return [
+      `Under ${formatPriceText(25_000)}`,
+      `${formatPriceText(25_000)} - ${formatPriceText(100_000)}`,
+      `${formatPriceText(100_000)} - ${formatPriceText(500_000)}`,
+    ];
+  }
+
+  if (maxPrice > 10_000) {
+    return [
+      `Under ${formatPriceText(10_000)}`,
+      `${formatPriceText(10_000)} - ${formatPriceText(50_000)}`,
+      `${formatPriceText(50_000)} - ${formatPriceText(100_000)}`,
+    ];
+  }
+
+  return [
+    `Under ${formatPriceText(1_000)}`,
+    `${formatPriceText(1_000)} - ${formatPriceText(5_000)}`,
+    `${formatPriceText(5_000)} - ${formatPriceText(10_000)}`,
+  ];
+};
+
+const toStoreFilters = (products: StoreProduct[], categories: string[]) => {
+  const categoryOptions = uniqueStrings([
+    ...products.map((product) => normalizeString(product.subcategoryName || product.categoryLabel || product.category)),
+    ...categories,
+  ]).slice(0, 8);
+
+  const brandOptions = uniqueStrings(
+    products.map((product) =>
+      readProductAttribute(product, ["brand", "manufacturer", "make"]) ||
+      normalizeString(product.supplierName || product.sellerName || product.vendorSource)
+    )
+  ).slice(0, 8);
+
+  const maxDiscount = Math.max(0, ...products.map((product) => deriveDiscount(product)));
+  const discountOptions = ["10% off or more", "30% off or more", "50% off or more"].filter((option) => {
+    const discountValue = Number(option.match(/\d+/)?.[0] || 0);
+    return maxDiscount >= discountValue;
+  });
+
+  const deliveryOptions = uniqueStrings([
+    products.some((product) => /free/i.test(normalizeString(product.shippingLabel)) || product.showFreeDelivery)
+      ? "Free delivery"
+      : undefined,
+    products.some((product) => normalizeString(product.deliveryByText || product.shippingTimeline)) ? "Fast delivery" : undefined,
+    products.some((product) => product.showCashOnDelivery) ? "Cash on delivery" : undefined,
+    products.some((product) => product.isReturnable === true) ? "Returnable" : undefined,
+  ]);
+  const availabilityOptions = uniqueStrings([
+    products.some((product) => !Number.isFinite(Number(product.inventory)) || Number(product.inventory) > 0)
+      ? "In stock"
+      : undefined,
+    products.some((product) => Number.isFinite(Number(product.inventory)) && Number(product.inventory) <= 0)
+      ? "Out of stock"
+      : undefined,
+    products.some(hasPreOrderSignal) ? "Pre-order" : undefined,
+  ]);
+  const ratingOptions = ["4 star & above", "3 star & above"].filter((option) => {
+    const ratingValue = Number(option.match(/\d+/)?.[0] || 0);
+    return products.some((product) => Number(product.rating || 0) >= ratingValue);
+  });
+
+  return [
+    { label: "Price", options: toPriceRangeFilters(products) },
+    ...(categoryOptions.length > 1 ? [{ label: "Category", options: categoryOptions }] : []),
+    ...(brandOptions.length > 0 ? [{ label: "Brand / Seller", options: brandOptions }] : []),
+    ...(discountOptions.length > 0 ? [{ label: "Discount", options: discountOptions }] : []),
+    ...(ratingOptions.length > 0 ? [{ label: "Rating", options: ratingOptions }] : []),
+    ...(availabilityOptions.length > 0 ? [{ label: "Availability", options: availabilityOptions }] : []),
+    ...(deliveryOptions.length > 0 ? [{ label: "Delivery", options: deliveryOptions }] : []),
+  ];
+};
+
 const toStoreProductsFromVendorProducts = (
   vendorProducts: CatalogVendorProduct[],
   profile: ListingProfile,
@@ -673,11 +771,7 @@ export const toStoreDataFromProfile = (
     establishmentYear: profile.establishmentYear,
     categories,
     categoryBarItems: categoryBarItems.length > 0 ? categoryBarItems : undefined,
-    filters: [
-      { label: "Price", options: ["Under ₹1,000", "₹1,000 - ₹10,000", "₹10,000+"] },
-      { label: "Brand", options: ["Top Brands", "Budget", "Premium"] },
-      { label: "Availability", options: ["In stock", "Pre-order"] },
-    ],
+    filters: toStoreFilters(products, categories),
     products,
     featured: {
       title: "Featured Products",

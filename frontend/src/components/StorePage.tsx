@@ -115,12 +115,182 @@ const normalizeFilterToken = (value: unknown) =>
     .trim()
     .toLowerCase();
 
+const parseNumberTokens = (value: string) =>
+  (String(value || "").match(/\d[\d,]*/g) || [])
+    .map((token) => Number(token.replace(/,/g, "")))
+    .filter((number) => Number.isFinite(number));
+
+const readProductAttribute = (product: StoreProduct, labels: string[]) => {
+  const wantedLabels = labels.map((label) => label.toLowerCase());
+  const entries = [...(product.keyAttributes || []), ...(product.specifications || [])];
+  const match = entries.find((entry) => wantedLabels.includes(normalizeFilterToken(entry.label)));
+
+  return String(match?.value || "").trim();
+};
+
+const deriveDiscountPercent = (product: StoreProduct) => {
+  const badge = String(product.badge || "");
+  const badgeDiscountMatch = badge.match(/(\d{1,2})\s*%/);
+  const badgeDiscount = badgeDiscountMatch ? Number(badgeDiscountMatch[1]) : 0;
+
+  const currentPrice = toPriceValue(product.price);
+  const oldPrice = Number(product.oldPriceValue || 0);
+  const priceDiscount =
+    Number.isFinite(oldPrice) && oldPrice > 0 && currentPrice > 0 && oldPrice > currentPrice
+      ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
+      : 0;
+
+  return Math.max(0, Math.min(70, Math.max(badgeDiscount, priceDiscount)));
+};
+
+const hasPreOrderSignal = (product: StoreProduct) =>
+  [product.badge, product.name, ...(product.tags || [])].some((value) =>
+    /pre[\s-]?order|coming\s+soon/i.test(String(value || ""))
+  );
+
+const toProductPriceValue = (product: StoreProduct) => {
+  const directPrice = toPriceValue(product.price);
+  if (directPrice > 0) {
+    return directPrice;
+  }
+  const fallback = Number(product.oldPriceValue || 0);
+  return Number.isFinite(fallback) ? fallback : 0;
+};
+
+const matchesPriceOption = (optionKey: string, product: StoreProduct) => {
+  const priceValue = toProductPriceValue(product);
+  if (priceValue <= 0) return false;
+
+  const numbers = parseNumberTokens(optionKey);
+  if (numbers.length === 0) return true;
+
+  const normalized = normalizeFilterToken(optionKey);
+  if (normalized.includes("under") || normalized.includes("below")) {
+    return priceValue <= numbers[0];
+  }
+  if (normalized.includes("+") || normalized.includes("above") || normalized.includes("over")) {
+    return priceValue >= numbers[0];
+  }
+  if (numbers.length >= 2) {
+    const [minValue, maxValue] = numbers;
+    const min = Math.min(minValue, maxValue);
+    const max = Math.max(minValue, maxValue);
+    return priceValue >= min && priceValue <= max;
+  }
+
+  return true;
+};
+
+const matchesCategoryOption = (optionKey: string, product: StoreProduct) => {
+  const productTokens = [
+    product.subcategoryName,
+    product.categoryLabel,
+    product.category,
+    product.categorySlug,
+  ]
+    .map((value) => normalizeFilterToken(value))
+    .filter(Boolean);
+
+  return productTokens.includes(normalizeFilterToken(optionKey));
+};
+
+const matchesBrandOption = (optionKey: string, product: StoreProduct) => {
+  const token = normalizeFilterToken(optionKey);
+  if (!token) return true;
+
+  const derivedBrand = readProductAttribute(product, ["brand", "manufacturer", "make"]);
+  const candidates = [
+    derivedBrand,
+    product.supplierName,
+    product.sellerName,
+    product.vendorSource,
+  ]
+    .map((value) => normalizeFilterToken(value))
+    .filter(Boolean);
+
+  return candidates.includes(token);
+};
+
+const matchesDiscountOption = (optionKey: string, product: StoreProduct) => {
+  const discountValue = Number(parseNumberTokens(optionKey)[0] || 0);
+  if (!discountValue) return true;
+  return deriveDiscountPercent(product) >= discountValue;
+};
+
+const matchesRatingOption = (optionKey: string, product: StoreProduct) => {
+  const ratingValue = Number(parseNumberTokens(optionKey)[0] || 0);
+  if (!ratingValue) return true;
+  return Number(product.rating || 0) >= ratingValue;
+};
+
+const matchesAvailabilityOption = (optionKey: string, product: StoreProduct) => {
+  const normalized = normalizeFilterToken(optionKey);
+  const inventoryValue = Number(product.inventory);
+  const hasInventoryValue = Number.isFinite(inventoryValue);
+  const inStock = !hasInventoryValue || inventoryValue > 0;
+  const outOfStock = hasInventoryValue && inventoryValue <= 0;
+  const preOrder = hasPreOrderSignal(product);
+
+  if (normalized.includes("pre") || normalized.includes("coming")) return preOrder;
+  if (normalized.includes("out")) return outOfStock;
+  if (normalized.includes("in")) return inStock;
+
+  return true;
+};
+
+const matchesDeliveryOption = (optionKey: string, product: StoreProduct) => {
+  const normalized = normalizeFilterToken(optionKey);
+  if (normalized.includes("free")) {
+    return /free/i.test(String(product.shippingLabel || "")) || product.showFreeDelivery === true;
+  }
+  if (normalized.includes("fast")) {
+    return Boolean(String(product.deliveryByText || product.shippingTimeline || "").trim());
+  }
+  if (normalized.includes("cash") || normalized.includes("cod")) {
+    return product.showCashOnDelivery === true;
+  }
+  if (normalized.includes("return")) {
+    return product.isReturnable === true;
+  }
+
+  return true;
+};
+
+const matchesFilterGroup = (groupKey: string, optionKeys: string[], product: StoreProduct) => {
+  if (optionKeys.length === 0) return true;
+
+  return optionKeys.some((optionKey) => {
+    if (groupKey.includes("price")) return matchesPriceOption(optionKey, product);
+    if (groupKey.includes("category")) return matchesCategoryOption(optionKey, product);
+    if (groupKey.includes("brand") || groupKey.includes("seller")) return matchesBrandOption(optionKey, product);
+    if (groupKey.includes("discount")) return matchesDiscountOption(optionKey, product);
+    if (groupKey.includes("rating")) return matchesRatingOption(optionKey, product);
+    if (groupKey.includes("availability") || groupKey.includes("stock")) return matchesAvailabilityOption(optionKey, product);
+    if (groupKey.includes("delivery") || groupKey.includes("shipping")) return matchesDeliveryOption(optionKey, product);
+
+    const optionToken = normalizeFilterToken(optionKey);
+    const fallbackTokens = [
+      product.name,
+      product.category,
+      product.categoryLabel,
+      product.subcategoryName,
+      product.badge,
+      ...(product.tags || []),
+    ]
+      .map((value) => normalizeFilterToken(value))
+      .filter(Boolean);
+
+    return fallbackTokens.some((token) => token.includes(optionToken));
+  });
+};
+
 export default function StorePage({ data }: { data: StorePageData }) {
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
   const [selectedCategoryBarItemId, setSelectedCategoryBarItemId] = useState("");
+  const [activeFilters, setActiveFilters] = useState<Record<string, Set<string>>>({});
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -134,6 +304,44 @@ export default function StorePage({ data }: { data: StorePageData }) {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    setActiveFilters({});
+  }, [data.id]);
+
+  const toggleFilterOption = useCallback((groupLabel: string, optionLabel: string) => {
+    const groupKey = normalizeFilterToken(groupLabel);
+    const optionKey = normalizeFilterToken(optionLabel);
+    if (!groupKey || !optionKey) return;
+
+    setActiveFilters((prev) => {
+      const next = { ...prev };
+      const existing = new Set(next[groupKey] || []);
+
+      if (existing.has(optionKey)) {
+        existing.delete(optionKey);
+      } else {
+        existing.add(optionKey);
+      }
+
+      if (existing.size === 0) {
+        delete next[groupKey];
+      } else {
+        next[groupKey] = existing;
+      }
+
+      return next;
+    });
+  }, []);
+
+  const isFilterChecked = useCallback(
+    (groupLabel: string, optionLabel: string) => {
+      const groupKey = normalizeFilterToken(groupLabel);
+      const optionKey = normalizeFilterToken(optionLabel);
+      return Boolean(groupKey && optionKey && activeFilters[groupKey]?.has(optionKey));
+    },
+    [activeFilters]
+  );
 
   useEffect(() => {
     const syncCartState = () => {
@@ -366,17 +574,33 @@ export default function StorePage({ data }: { data: StorePageData }) {
     },
     [selectedCategoryFilterLabels]
   );
+  const matchesActiveFilters = useCallback(
+    (product: StoreProduct | undefined) => {
+      if (!product) return false;
+      const activeEntries = Object.entries(activeFilters);
+      if (activeEntries.length === 0) return true;
+
+      return activeEntries.every(([groupKey, optionSet]) =>
+        matchesFilterGroup(groupKey, Array.from(optionSet || []), product)
+      );
+    },
+    [activeFilters]
+  );
+  const matchesCombinedFilters = useCallback(
+    (product: StoreProduct | undefined) => matchesSelectedCategoryFilter(product) && matchesActiveFilters(product),
+    [matchesActiveFilters, matchesSelectedCategoryFilter]
+  );
   const featuredProducts = useMemo(
-    () => rawFeaturedProducts.filter(matchesSelectedCategoryFilter),
-    [matchesSelectedCategoryFilter, rawFeaturedProducts]
+    () => rawFeaturedProducts.filter(matchesCombinedFilters),
+    [matchesCombinedFilters, rawFeaturedProducts]
   );
   const trendingProducts = useMemo(
-    () => rawTrendingProducts.filter(matchesSelectedCategoryFilter),
-    [matchesSelectedCategoryFilter, rawTrendingProducts]
+    () => rawTrendingProducts.filter(matchesCombinedFilters),
+    [matchesCombinedFilters, rawTrendingProducts]
   );
   const visibleProducts = useMemo(
-    () => allProducts.filter(matchesSelectedCategoryFilter),
-    [allProducts, matchesSelectedCategoryFilter]
+    () => allProducts.filter(matchesCombinedFilters),
+    [allProducts, matchesCombinedFilters]
   );
 
   const scrollCategoryRail = useCallback((direction: "left" | "right") => {
@@ -769,7 +993,12 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   <div className="space-y-2">
                     {group.options.map((option) => (
                       <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
-                        <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300"
+                          checked={isFilterChecked(group.label, option)}
+                          onChange={() => toggleFilterOption(group.label, option)}
+                        />
                         {option}
                       </label>
                     ))}
@@ -911,8 +1140,8 @@ export default function StorePage({ data }: { data: StorePageData }) {
               aria-label="Close filters"
             />
 
-            <section className="fixed bottom-0 left-0 max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5">
-              <div className="mb-4 flex items-center justify-between">
+            <section className="fixed inset-x-0 top-0 bottom-[68px] flex w-full flex-col bg-white">
+              <div className="flex items-center justify-between border-b border-slate-200 p-5">
                 <h3 className="text-base font-bold text-slate-900">Filters</h3>
                 <button
                   type="button"
@@ -924,21 +1153,27 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 </button>
               </div>
 
-              <div className="space-y-5">
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
                 {data.filters.map((group) => (
                   <div key={group.label}>
                     <div className="mb-2 text-xs font-semibold uppercase text-slate-500">{group.label}</div>
                     <div className="space-y-2">
                       {group.options.map((option) => (
                         <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
-                          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300"
+                            checked={isFilterChecked(group.label, option)}
+                            onChange={() => toggleFilterOption(group.label, option)}
+                          />
                           {option}
                         </label>
                       ))}
                     </div>
                   </div>
                 ))}
-
+              </div>
+              <div className="border-t border-slate-200 bg-white p-5">
                 <button
                   type="button"
                   onClick={() => setIsMobileFiltersOpen(false)}
