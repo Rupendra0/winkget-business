@@ -770,7 +770,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => handleAddToCart(product)}
-                className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0edff] px-2 text-[12px] font-semibold text-[#5b45d9] transition hover:bg-[#e7e1ff] sm:h-10 sm:text-sm"
+                className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-lg bg-blue-50 px-2 text-[12px] font-semibold text-blue-700 transition hover:bg-blue-600 hover:text-white sm:h-10 sm:text-sm"
               >
                 Add
               </button>
@@ -1226,7 +1226,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
                     <button
                       type="button"
                       onClick={() => setIsAboutExpanded((v) => !v)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-[#cfd9ff] bg-[#f0edff] px-4 py-2 text-[14px] font-semibold text-[#3f49d8] transition hover:bg-[#e8e2ff]"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-blue-200 bg-blue-50 px-4 py-2 text-[14px] font-semibold text-blue-700 transition hover:bg-blue-100"
                       aria-expanded={isAboutExpanded}
                     >
                       {isAboutExpanded ? "View Less" : "View More"}

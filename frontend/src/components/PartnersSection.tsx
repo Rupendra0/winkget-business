@@ -114,9 +114,9 @@ export default function PartnersSection() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-0">
-        <div className="w-full animate-pulse rounded-2xl bg-white px-0 py-4 sm:py-5 lg:py-6">
-          <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
+      <section className="px-3 py-3 md:py-4 lg:py-6">
+        <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
+          <div className="mb-3 h-7 w-44 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
             {Array.from({ length: SPONSOR_LIMIT }).map((_, index) => (
               <div key={`sponsor-skeleton-${index}`} className="h-[112px] w-[112px] shrink-0 rounded-full bg-slate-200/70" />
@@ -226,9 +226,9 @@ export default function PartnersSection() {
   };
 
   return (
-    <section className="px-3 pt-0 pb-10">
+    <section className="px-3 py-3 pb-8 md:py-4 md:pb-10 lg:py-6 lg:pb-12">
       <div className="w-full">
-        <div className="mb-4 text-center">
+        <div className="mb-3 text-center">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 

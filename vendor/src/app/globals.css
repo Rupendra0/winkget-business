@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --vendor-primary: #2563eb;
+  --vendor-primary: #124676;
   --vendor-accent-green: #22c55e;
   --vendor-text-primary: #111827;
   --vendor-text-secondary: #6b7280;
@@ -11,6 +11,32 @@
 
 @theme inline {
   --font-sans: var(--font-vendor-sans);
+
+  /* Redefining blue to #124676 shades to unify vendor components */
+  --color-blue-50: #edf5fc;
+  --color-blue-100: #d2e6f8;
+  --color-blue-200: #a6cdf1;
+  --color-blue-300: #79b4eb;
+  --color-blue-400: #2182dd;
+  --color-blue-500: #124676;
+  --color-blue-600: #0e3961;
+  --color-blue-700: #0b2c4b;
+  --color-blue-800: #071f35;
+  --color-blue-900: #051423;
+  --color-blue-950: #030d16;
+
+  /* Redefining orange to #124676 shades to unify vendor components */
+  --color-orange-50: #edf5fc;
+  --color-orange-100: #d2e6f8;
+  --color-orange-200: #a6cdf1;
+  --color-orange-300: #79b4eb;
+  --color-orange-400: #2182dd;
+  --color-orange-500: #124676;
+  --color-orange-600: #0e3961;
+  --color-orange-700: #0b2c4b;
+  --color-orange-800: #071f35;
+  --color-orange-900: #051423;
+  --color-orange-950: #030d16;
 }
 
 body {
@@ -18,7 +44,7 @@ body {
   color: var(--vendor-text-primary);
   font-family: var(--font-vendor-sans), sans-serif;
   background:
-    radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.14), transparent 42%),
+    radial-gradient(circle at 15% 10%, rgba(18, 70, 118, 0.14), transparent 42%),
     radial-gradient(circle at 88% 0%, rgba(244, 114, 182, 0.13), transparent 40%),
     linear-gradient(180deg, #f8fbff 0%, #eef3ff 48%, #edf4ff 100%);
 }

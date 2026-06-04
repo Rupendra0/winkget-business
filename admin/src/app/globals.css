@@ -8,9 +8,9 @@
   --text-strong: #111827;
   --text-soft: #4b5563;
   --border: #e5e7eb;
-  --accent: #2563eb;
-  --accent-soft: #dbeafe;
-  --accent-strong: #1d4ed8;
+  --accent: #124676;
+  --accent-soft: #d2e6f8;
+  --accent-strong: #0e3961;
 }
 
 :root[data-theme="dark"] {
@@ -21,9 +21,9 @@
   --text-strong: #f9fafb;
   --text-soft: #cbd5e1;
   --border: #2c3748;
-  --accent: #3b82f6;
-  --accent-soft: #1e3a8a;
-  --accent-strong: #bfdbfe;
+  --accent: #2182dd;
+  --accent-soft: #0e3961;
+  --accent-strong: #79b4eb;
 }
 
 @theme inline {
@@ -31,6 +31,32 @@
   --color-foreground: var(--text-strong);
   --font-sans: var(--font-admin-display);
   --font-mono: var(--font-admin-mono);
+
+  /* Redefining blue to #124676 shades to unify admin components */
+  --color-blue-50: #edf5fc;
+  --color-blue-100: #d2e6f8;
+  --color-blue-200: #a6cdf1;
+  --color-blue-300: #79b4eb;
+  --color-blue-400: #2182dd;
+  --color-blue-500: #124676;
+  --color-blue-600: #0e3961;
+  --color-blue-700: #0b2c4b;
+  --color-blue-800: #071f35;
+  --color-blue-900: #051423;
+  --color-blue-950: #030d16;
+
+  /* Redefining orange to #124676 shades to unify admin components */
+  --color-orange-50: #edf5fc;
+  --color-orange-100: #d2e6f8;
+  --color-orange-200: #a6cdf1;
+  --color-orange-300: #79b4eb;
+  --color-orange-400: #2182dd;
+  --color-orange-500: #124676;
+  --color-orange-600: #0e3961;
+  --color-orange-700: #0b2c4b;
+  --color-orange-800: #071f35;
+  --color-orange-900: #051423;
+  --color-orange-950: #030d16;
 }
 
 body {

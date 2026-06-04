@@ -253,112 +253,118 @@ export default function ExploreWellnessSections() {
   }
 
   return (
-    <section className="space-y-2 px-3 py-0">
+    <>
       {exploreCards.length > 0 ? (
-        <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
-          <div className="mb-3">
-            <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
-          </div>
+        <section className="px-3 py-3 md:py-4 lg:py-6">
+          <div className="w-full rounded-xl bg-white px-0 py-0">
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
+            </div>
 
-          {/* Mobile: Scrollable carousel showing 2 cards */}
-          <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {exploreCards.map((card) => (
-              <Link
-                key={`explore-mobile-${card.cardId}`}
-                href={buildCategoryHref(card.categorySlug)}
-                className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-                onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
-              >
-                <img
-                  src={card.image}
-                  alt={card.categoryName || "Explore"}
-                  className="h-[150px] w-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+            {/* Mobile: Scrollable carousel showing 2 cards */}
+            <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+              {exploreCards.map((card) => (
+                <Link
+                  key={`explore-mobile-${card.cardId}`}
+                  href={buildCategoryHref(card.categorySlug)}
+                  className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                  onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
+                >
+                  <img
+                    src={card.image}
+                    alt={card.categoryName || "Explore"}
+                    className="h-[150px] w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
 
-          {/* Desktop: Grid layout */}
-          <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
-            {exploreCards.map((card) => (
-              <Link
-                key={`explore-desktop-${card.cardId}`}
-                href={buildCategoryHref(card.categorySlug)}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-              >
-                <img
-                  src={card.image}
-                  alt={card.categoryName || "Explore"}
-                  className="h-[150px] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
-                </div>
-              </Link>
-            ))}
+            {/* Desktop: Grid layout */}
+            <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+              {exploreCards.map((card) => (
+                <Link
+                  key={`explore-desktop-${card.cardId}`}
+                  href={buildCategoryHref(card.categorySlug)}
+                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                >
+                  <img
+                    src={card.image}
+                    alt={card.categoryName || "Explore"}
+                    className="h-[150px] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       ) : null}
 
       {wellnessCards.length > 0 ? (
-        <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
-          <div className="mb-3">
-            <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
-          </div>
+        <section className="px-3 py-3 md:py-4 lg:py-6">
+          <div className="w-full rounded-xl bg-white px-0 py-0">
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
+            </div>
 
-          {/* Mobile: Scrollable carousel showing 3 cards */}
-          <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {wellnessCards.map((card) => (
-              <Link
-                key={`wellness-mobile-${card.cardId}`}
-                href={buildCategoryHref(card.categorySlug)}
-                className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-                onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
-              >
-                <img
-                  src={card.image}
-                  alt={card.categoryName || "Health and wellness"}
-                  className="h-[46vw] min-h-[170px] w-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+            {/* Mobile: Scrollable carousel showing 3 cards */}
+            <div className="flex md:hidden gap-4 overflow-x-auto pb-2 no-scrollbar">
+              {wellnessCards.map((card) => (
+                <Link
+                  key={`wellness-mobile-${card.cardId}`}
+                  href={buildCategoryHref(card.categorySlug)}
+                  className="relative shrink-0 basis-[calc((100%-2rem)/3)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                  onClickCapture={createLinkClickCapture(wellnessSwipeRefs)}
+                >
+                  <img
+                    src={card.image}
+                    alt={card.categoryName || "Health and wellness"}
+                    className="h-[46vw] min-h-[170px] w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
 
-          {/* Desktop: Strip layout */}
-          <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex no-scrollbar">
-            {wellnessCards.map((card) => (
-              <Link
-                key={`wellness-desktop-${card.cardId}`}
-                href={buildCategoryHref(card.categorySlug)}
-                className="group relative h-[23vw] w-[18.4%] shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition hover:shadow-md"
-              >
-                <img
-                  src={card.image}
-                  alt={card.categoryName || "Health and wellness"}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                  <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
-                </div>
-              </Link>
-            ))}
+            {/* Desktop: Strip layout */}
+            <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex no-scrollbar">
+              {wellnessCards.map((card) => (
+                <Link
+                  key={`wellness-desktop-${card.cardId}`}
+                  href={buildCategoryHref(card.categorySlug)}
+                  className="group relative h-[23vw] w-[18.4%] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition hover:shadow-md"
+                >
+                  <img
+                    src={card.image}
+                    alt={card.categoryName || "Health and wellness"}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       ) : null}
 
       {loadError && exploreCards.length === 0 && wellnessCards.length === 0 ? (
-        <div className="rounded-2xl bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
+        <section className="px-3 py-3 md:py-4 lg:py-6">
+          <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500">{loadError}</div>
+        </section>
       ) : null}
-    </section>
+    </>
   );
 }

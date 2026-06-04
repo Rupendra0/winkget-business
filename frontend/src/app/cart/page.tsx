@@ -102,7 +102,7 @@ export default function CartPage() {
             </div>
             <Link
               href="/"
-              className="rounded-lg border border-[#cdd8f6] bg-white px-3 py-2 text-sm font-semibold text-[#1d4ed8] hover:bg-[#f8fbff]"
+              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
             >
               Continue Shopping
             </Link>
@@ -111,14 +111,14 @@ export default function CartPage() {
 
         {items.length === 0 ? (
           <section className="bg-white p-10 text-center">
-            <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-[#eff4ff] text-[#2554d9]">
+            <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-blue-600">
               <ShoppingCart size={26} />
             </div>
             <p className="text-lg font-semibold text-[#0f172a]">Your cart is empty</p>
             <p className="mt-1 text-sm text-[#64748b]">Add products from stores, then come back here to checkout.</p>
             <Link
               href="/"
-              className="mt-5 inline-flex items-center rounded-lg bg-[#2554d9] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f47b8]"
+              className="mt-5 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Explore Products
             </Link>
@@ -147,7 +147,7 @@ export default function CartPage() {
                     }}
                     className="grid cursor-pointer gap-3 bg-white p-3 transition hover:bg-[#f8fafc] sm:grid-cols-[96px_minmax(0,1fr)]"
                   >
-                    <div className="overflow-hidden rounded bg-[#f8fbff]">
+                    <div className="overflow-hidden rounded bg-blue-50/50">
                       <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
                     </div>
 
@@ -158,7 +158,7 @@ export default function CartPage() {
                         <Link
                           href={vendorProfileHref}
                           onClick={(event) => event.stopPropagation()}
-                          className="font-semibold text-[#1d4ed8] hover:underline"
+                          className="font-semibold text-blue-700 hover:underline"
                         >
                           {item.product.sellerName || "Winkget Seller"}
                         </Link>
@@ -180,7 +180,7 @@ export default function CartPage() {
                               event.stopPropagation();
                               updateQuantity(item.product.id, quantity - 1);
                             }}
-                            className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-[#f3f6ff]"
+                            className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-blue-50"
                             aria-label="Decrease quantity"
                           >
                             <Minus size={14} />
@@ -192,7 +192,7 @@ export default function CartPage() {
                               event.stopPropagation();
                               updateQuantity(item.product.id, quantity + 1);
                             }}
-                            className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-[#f3f6ff]"
+                            className="grid h-8 w-8 place-items-center text-[#374151] hover:bg-blue-50"
                             aria-label="Increase quantity"
                           >
                             <Plus size={14} />
@@ -216,7 +216,7 @@ export default function CartPage() {
                             event.stopPropagation();
                             buyNowItem(item);
                           }}
-                          className="inline-flex items-center rounded-lg bg-[#2563eb] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                          className="inline-flex items-center rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                         >
                           Buy Now
                         </button>
@@ -262,7 +262,7 @@ export default function CartPage() {
 
               <Link
                 href="/checkout?mode=cart"
-                className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-[#f5bf00] px-4 py-2.5 text-sm font-bold text-[#0f172a] hover:bg-[#e6b500]"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
               >
                 Proceed to Checkout
               </Link>

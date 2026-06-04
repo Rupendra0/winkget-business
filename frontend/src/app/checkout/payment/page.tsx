@@ -218,7 +218,7 @@ export default function CheckoutPaymentPage() {
             <p className="mt-1 text-sm text-[#9a3412]">Please login/signup to complete your purchase.</p>
             <Link
               href={buildAuthHref(pathname || "/checkout/payment")}
-              className="mt-3 inline-flex rounded-lg bg-[#1d4ed8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af]"
+              className="mt-3 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Login / Signup
             </Link>
@@ -249,7 +249,7 @@ export default function CheckoutPaymentPage() {
                       type="button"
                       onClick={() => setSelectedMethod(option.value)}
                       className={`flex w-full items-start gap-2 border-b border-[#e2e8f0] px-4 py-3 text-left last:border-b-0 ${
-                        selectedMethod === option.value ? "bg-[#edf3ff]" : "bg-white hover:bg-[#f8fbff]"
+                        selectedMethod === option.value ? "bg-blue-50" : "bg-white hover:bg-blue-50/20"
                       }`}
                     >
                       <option.Icon size={18} className="mt-0.5 text-[#334155]" />
@@ -303,7 +303,7 @@ export default function CheckoutPaymentPage() {
                   ) : null}
 
                   {selectedMethod === "razorpay" ? (
-                    <p className="mt-3 rounded-lg border border-[#dbe7ff] bg-[#f4f8ff] p-3 text-sm text-[#1e40af]">
+                    <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
                       You will be redirected to Razorpay style payment flow after clicking Pay.
                     </p>
                   ) : null}
@@ -344,7 +344,7 @@ export default function CheckoutPaymentPage() {
                     type="button"
                     onClick={() => void handlePlaceOrder()}
                     disabled={!canPlaceOrder}
-                    className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-[#f5bf00] px-4 py-2.5 text-sm font-bold text-[#111827] hover:bg-[#e6b500] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {placingOrder
                       ? "Processing..."
@@ -388,7 +388,7 @@ export default function CheckoutPaymentPage() {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-lg border border-[#e2e8f0] bg-[#f8fbff] p-3 text-xs text-[#475569]">
+              <div className="mt-3 rounded-lg border border-[#e2e8f0] bg-blue-50/50 p-3 text-xs text-[#475569]">
                 <p className="font-semibold text-[#0f172a]">Deliver to</p>
                 <p className="mt-1">{selectedAddress.fullName}</p>
                 <p>{selectedAddress.line1}</p>

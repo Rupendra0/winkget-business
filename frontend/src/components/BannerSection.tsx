@@ -134,10 +134,10 @@ export default function BannerSection() {
   };
 
   return (
-    <section className="px-3 pt-0 pb-0 md:pt-2 lg:px-3 xl:px-3">
+    <section className="px-3 py-3 md:py-4 lg:py-6">
       <div className="md:hidden">
         <div
-          className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm`}
+          className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm`}
           aria-label="Homepage banners carousel"
           onTouchStart={handleMobileTouchStart}
           onTouchEnd={handleMobileTouchEnd}
@@ -175,7 +175,7 @@ export default function BannerSection() {
           return (
             <div
               key={tile.key}
-              className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${tile.className}`}
+              className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${tile.className}`}
             >
               {imageUrl ? (
                 <img

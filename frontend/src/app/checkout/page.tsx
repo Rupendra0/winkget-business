@@ -279,11 +279,11 @@ export default function CheckoutPage() {
         <header className="overflow-hidden bg-white">
           <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#dbeafe] text-xs text-[#1d4ed8]">1</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700">1</span>
               Address
             </div>
             <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#2563eb] text-xs text-white">2</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-600 text-xs text-white">2</span>
               Order Summary
             </div>
             <div className="inline-flex items-center gap-2 text-[#64748b]">
@@ -299,7 +299,7 @@ export default function CheckoutPage() {
             <p className="mt-1 text-sm text-[#64748b]">Add products to cart or click Buy Now on a product page.</p>
             <Link
               href="/cart"
-              className="mt-4 inline-flex items-center rounded px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-[#f8fafc]"
+              className="mt-4 inline-flex items-center rounded px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-blue-50"
             >
               Open Cart
             </Link>
@@ -317,12 +317,12 @@ export default function CheckoutPage() {
                 {!authChecked ? (
                   <p className="mt-3 text-sm text-[#64748b]">Checking login status...</p>
                 ) : !user ? (
-                  <div className="mt-3 bg-[#fff7ed] p-3">
-                    <p className="text-sm font-semibold text-[#9a3412]">Login required to place order</p>
-                    <p className="mt-1 text-xs text-[#9a3412]">Please login or signup before continuing to payment.</p>
+                  <div className="mt-3 bg-blue-50 p-3">
+                    <p className="text-sm font-semibold text-blue-900">Login required to place order</p>
+                    <p className="mt-1 text-xs text-blue-800">Please login or signup before continuing to payment.</p>
                     <Link
                       href={buildAuthHref(currentPath)}
-                      className="mt-3 inline-flex items-center rounded bg-[#2874f0] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1f5ec8]"
+                      className="mt-3 inline-flex items-center rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                     >
                       Login / Signup
                     </Link>
@@ -335,7 +335,7 @@ export default function CheckoutPage() {
                           <div className="w-full bg-white px-3 py-3 text-left">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
-                                <Check size={14} className="text-[#2563eb]" />
+                                <Check size={14} className="text-blue-600" />
                                 {selectedAddress.fullName}
                                 <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
                                   {selectedAddress.tag}
@@ -346,14 +346,14 @@ export default function CheckoutPage() {
                                 <button
                                   type="button"
                                   onClick={openAddressPicker}
-                                  className="inline-flex items-center rounded bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e2e8f0]"
+                                  className="inline-flex items-center rounded bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
                                 >
                                   Change
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openEditAddress(selectedAddress)}
-                                  className="inline-flex items-center gap-1 rounded bg-[#f1f5f9] px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#e2e8f0]"
+                                  className="inline-flex items-center gap-1 rounded bg-[#f1f5f9] px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-blue-50"
                                 >
                                   <Pencil size={12} /> Edit
                                 </button>
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
                     ) : null}
 
                     {showAddressForm ? (
-                      <div className="mt-3 space-y-3 bg-[#f8fbff] p-3">
+                      <div className="mt-3 space-y-3 bg-blue-50/30 p-3">
                         <p className="text-sm font-semibold text-[#0f172a]">
                           {editingAddressId ? "Edit Address" : "Add Delivery Address"}
                         </p>
@@ -455,7 +455,7 @@ export default function CheckoutPage() {
                               onClick={() => setAddressDraft((current) => ({ ...current, tag }))}
                               className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                                 addressDraft.tag === tag
-                                  ? "bg-[#dbeafe] text-[#1d4ed8]"
+                                  ? "bg-blue-100 text-blue-700"
                                   : "bg-white text-[#475569]"
                               }`}
                             >
@@ -475,7 +475,7 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => void handleAddressSave()}
                             disabled={savingAddress}
-                            className="rounded bg-[#2874f0] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1f5ec8] disabled:opacity-60"
+                            className="rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                           >
                             {savingAddress ? "Saving..." : editingAddressId ? "Update Address" : "Save Address"}
                           </button>
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={openAddAddress}
-                              className="inline-flex items-center gap-1 rounded bg-[#f2f6ff] px-3 py-1.5 text-xs font-semibold text-[#1d4ed8] hover:bg-[#e7efff]"
+                              className="inline-flex items-center gap-1 rounded bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
                             >
                               <Plus size={14} /> Add New
                             </button>
@@ -535,13 +535,13 @@ export default function CheckoutPage() {
                                   }}
                                   className={`w-full px-3 py-3 text-left transition ${
                                     isSelected
-                                      ? "bg-[#eff6ff]"
-                                      : "bg-white hover:bg-[#f8fafc]"
+                                      ? "bg-blue-50"
+                                      : "bg-white hover:bg-blue-50/20"
                                   }`}
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
-                                      {isSelected ? <Check size={14} className="text-[#2563eb]" /> : null}
+                                      {isSelected ? <Check size={14} className="text-blue-600" /> : null}
                                       {address.fullName}
                                       <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
                                         {address.tag}
@@ -611,7 +611,7 @@ export default function CheckoutPage() {
                         }}
                         className="grid cursor-pointer gap-3 bg-white p-3 transition hover:bg-[#f8fafc] sm:grid-cols-[96px_minmax(0,1fr)]"
                       >
-                        <div className="overflow-hidden rounded bg-[#f8fbff]">
+                        <div className="overflow-hidden rounded bg-blue-50/50">
                           <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
                         </div>
 
@@ -622,7 +622,7 @@ export default function CheckoutPage() {
                             <Link
                               href={vendorProfileHref}
                               onClick={(event) => event.stopPropagation()}
-                              className="font-semibold text-[#1d4ed8] hover:underline"
+                              className="font-semibold text-blue-700 hover:underline"
                             >
                               {item.product.sellerName || "Winkget Seller"}
                             </Link>
@@ -682,7 +682,7 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handleContinueToPayment}
                 disabled={!user || !selectedAddress || items.length === 0}
-                className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded bg-[#ffcf00] px-4 py-2.5 text-sm font-bold text-[#111827] hover:bg-[#f5bf00] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Continue <ChevronRight size={16} />
               </button>

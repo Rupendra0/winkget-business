@@ -4,10 +4,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X, Menu } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X, Menu, Heart } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
-import { CART_UPDATED_EVENT, getCartCount } from '@/lib/shopStorage';
+import { CART_UPDATED_EVENT, getCartCount, readWishlist } from '@/lib/shopStorage';
 import { fetchSearchSuggestions, type SearchSuggestion } from '@/lib/searchClient';
 import { buildProductSlug } from '@/data/productSlug';
 
@@ -40,6 +40,7 @@ export default function Navbar() {
   const [selectedCity, setSelectedCity] = useState("");
   const [loadingCities, setLoadingCities] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [isMobileSearchOnly, setIsMobileSearchOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -145,6 +146,26 @@ export default function Navbar() {
     return () => {
       window.removeEventListener(CART_UPDATED_EVENT, syncCartCount as EventListener);
       window.removeEventListener("storage", syncCartCount);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncWishlistCount = () => {
+      try {
+        setWishlistCount(readWishlist().length);
+      } catch {
+        setWishlistCount(0);
+      }
+    };
+
+    syncWishlistCount();
+
+    window.addEventListener("shop:wishlist-updated", syncWishlistCount as EventListener);
+    window.addEventListener("storage", syncWishlistCount);
+
+    return () => {
+      window.removeEventListener("shop:wishlist-updated", syncWishlistCount as EventListener);
+      window.removeEventListener("storage", syncWishlistCount);
     };
   }, []);
 
@@ -602,21 +623,21 @@ export default function Navbar() {
             >
               Sell on Winkget
             </a>
-            <button className="inline-flex h-11 items-center rounded-lg bg-orange-500 px-3 text-sm font-medium text-white hover:bg-orange-600 btn-hover shadow-sm">
-              Winkget
-            </button>
+            
+            {/* Wishlist Button */}
             <Link
-              href="/cart"
-              className="relative inline-flex h-11 items-center rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
-              aria-label="Cart"
+              href="/wishlist"
+              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              aria-label="Wishlist"
             >
-              <ShoppingCart size={18} />
-              {cartCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                  {cartCount > 99 ? "99+" : cartCount}
-                </span>
-              ) : null}
+              <Heart size={18} className="text-gray-700" />
+              <span className="text-sm mr-2">Wishlist</span>
+              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+                {wishlistCount}
+              </span>
             </Link>
+
+            {/* Login Button / Status */}
             {authLoading ? (
               <div className="h-11 w-28 rounded-lg border border-orange-100 bg-white/70 animate-pulse" />
             ) : user ? (
@@ -624,10 +645,11 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-gray-800 font-medium hover:bg-orange-50 btn-hover shadow-sm"
+                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 btn-hover shadow-sm"
                 >
-                  <UserRound size={18} />
+                  <UserRound size={18} className="text-white" />
                   <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
+                  <ChevronDown size={14} className="text-white/80" />
                 </button>
 
                 {menuOpen ? (
@@ -680,11 +702,27 @@ export default function Navbar() {
                 ) : null}
               </div>
             ) : (
-              <Link href={buildAuthHref(currentPath)} className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 btn-hover shadow-sm">
-                <LogIn size={18} className="text-white" />
+              <Link
+                href={buildAuthHref(currentPath)}
+                className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 btn-hover shadow-sm"
+              >
+                <UserRound size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
             )}
+
+            {/* Cart Button */}
+            <Link
+              href="/cart"
+              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              aria-label="Cart"
+            >
+              <ShoppingCart size={18} className="text-gray-700" />
+              <span className="text-sm mr-2">Cart</span>
+              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+                {cartCount}
+              </span>
+            </Link>
           </div>
 
           {/* Mobile Menu */}
@@ -695,11 +733,9 @@ export default function Navbar() {
               aria-label="Cart"
             >
               <ShoppingCart size={18} strokeWidth={2.4} />
-              {cartCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] items-center justify-center rounded-full bg-orange-500 px-1 text-[8px] font-bold text-white">
-                  {cartCount > 9 ? "9+" : cartCount}
-                </span>
-              ) : null}
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-500 px-1 text-[8px] font-bold text-white">
+                {cartCount}
+              </span>
             </Link>
             <Link
               href={user ? "/profile" : buildAuthHref(currentPath)}

@@ -186,12 +186,12 @@ export default function PromoBanners() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-0">
-        <div className="w-full animate-pulse rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
+      <section className="px-3 py-3 md:py-4 lg:py-6">
+        <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
           <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={`promo-skeleton-${index}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div key={`promo-skeleton-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                 <div className="h-[200px] w-full bg-slate-200/70 sm:h-[215px]" />
                 <div className="p-3">
                   <div className="h-4 w-2/3 rounded bg-slate-200/70" />
@@ -209,8 +209,8 @@ export default function PromoBanners() {
   }
 
   return (
-    <section className="px-3 py-0">
-      <div className="w-full rounded-2xl bg-white px-0 py-3 sm:py-4 lg:py-4">
+    <section className="px-3 py-3 md:py-4 lg:py-6">
+      <div className="w-full rounded-xl bg-white px-0 py-0">
         <div className="mb-3">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
@@ -220,7 +220,7 @@ export default function PromoBanners() {
             <Link
               key={card.cardId}
               href={buildCategoryHref(card.categorySlug)}
-              className="relative inline-block h-[42vw] min-h-[150px] w-[46%] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition md:h-[18vw] md:w-[18.4%] md:min-w-0"
+              className="relative inline-block h-[42vw] min-h-[150px] w-[46%] shrink-0 overflow-hidden rounded-xl bg-white shadow-[0_8px_300px_rgba(205,205,205,0.24)] transition md:h-[18vw] md:w-[18.4%] md:min-w-0"
             >
               <img
                 src={card.image}
