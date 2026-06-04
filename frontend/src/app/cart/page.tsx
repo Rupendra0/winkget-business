@@ -208,12 +208,13 @@ export default function CartPage() {
 
                       {/* Right Column: Title, Rating, Price, Delivery */}
                       <div className="flex-1 space-y-1 min-w-0">
-                        <Link
-                          href={productHref}
-                          className="line-clamp-1 md:line-clamp-2 text-sm font-semibold text-gray-900 hover:text-blue-600 leading-snug"
-                        >
-                          {item.product.name}
-                        </Link>
+                        <h3 className="line-clamp-1 md:line-clamp-2 text-sm font-semibold text-gray-900 hover:text-blue-600 leading-snug">
+                          <Link
+                            href={productHref}
+                          >
+                            {item.product.name}
+                          </Link>
+                        </h3>
                         
                         <div className="text-[11px] text-gray-500">
                           Seller:{" "}

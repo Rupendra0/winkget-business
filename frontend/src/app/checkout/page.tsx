@@ -6,12 +6,15 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Check,
+  ChevronLeft,
   ChevronRight,
   Home,
+  Lock,
   MapPin,
   Pencil,
   Plus,
   ShieldCheck,
+  ShoppingBag,
   Truck,
 } from "lucide-react";
 import { buildProductSlug } from "@/data/productSlug";
@@ -282,12 +285,12 @@ export default function CheckoutPage() {
 
   if (!isMounted) {
     return (
-      <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
-        <div className="mx-auto w-full max-w-none animate-pulse space-y-4">
-          <div className="h-12 bg-white rounded" />
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="h-96 bg-white rounded" />
-            <div className="h-64 bg-white rounded" />
+      <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+        <div className="mx-auto w-full max-w-6xl animate-pulse space-y-4 pt-0 sm:pt-4">
+          <div className="h-12 bg-white rounded border border-gray-200" />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="h-96 bg-white rounded border border-gray-200" />
+            <div className="h-64 bg-white rounded border border-gray-200" />
           </div>
         </div>
       </main>
@@ -295,39 +298,79 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
-      <div className="mx-auto w-full max-w-none space-y-0">
-        <header className="overflow-hidden bg-white">
-          <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-sm">
-            <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700">1</span>
-              Address
-            </div>
-            <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-600 text-xs text-white">2</span>
-              Order Summary
-            </div>
-            <div className="inline-flex items-center gap-2 text-[#64748b]">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e5e7eb] text-xs">3</span>
-              Payment
-            </div>
-          </div>
-        </header>
-
+    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+      <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {items.length === 0 ? (
-          <section className="bg-white p-8 text-center">
-            <p className="text-lg font-semibold text-[#0f172a]">No items available for checkout</p>
-            <p className="mt-1 text-sm text-[#64748b]">Add products to cart or click Buy Now on a product page.</p>
-            <Link
-              href="/cart"
-              className="mt-4 inline-flex items-center rounded px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-blue-50"
-            >
-              Open Cart
-            </Link>
-          </section>
+          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100 shadow-xs">
+            {/* Header */}
+            <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
+              <div className="flex items-center gap-3">
+                <ShoppingBag size={22} className="text-[#1f2937] shrink-0" />
+                <h1 className="text-lg font-bold text-gray-900">Checkout</h1>
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600">
+                <Lock size={12} className="text-gray-500" />
+                <span>100% Secure</span>
+              </div>
+            </header>
+
+            {/* Steps row */}
+            <div className="bg-slate-50/50 flex flex-wrap items-center gap-4 px-4 py-3 text-xs sm:text-sm border-b border-gray-100">
+              <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700 font-bold">1</span>
+                Address
+              </div>
+              <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-600 text-xs text-white font-bold">2</span>
+                Order Summary
+              </div>
+              <div className="inline-flex items-center gap-2 text-[#64748b]">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e5e7eb] text-xs font-bold">3</span>
+                Payment
+              </div>
+            </div>
+            <section className="bg-white p-8 text-center">
+              <p className="text-lg font-semibold text-[#0f172a]">No items available for checkout</p>
+              <p className="mt-1 text-sm text-[#64748b]">Add products to cart or click Buy Now on a product page.</p>
+              <Link
+                href="/cart"
+                className="mt-4 inline-flex items-center rounded px-4 py-2 text-sm font-semibold text-[#334155] hover:bg-blue-50"
+              >
+                Open Cart
+              </Link>
+            </section>
+          </div>
         ) : (
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="space-y-0 bg-white">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+            <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100 shadow-xs">
+              
+              {/* Header */}
+              <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
+                <div className="flex items-center gap-3">
+                  <ShoppingBag size={22} className="text-[#1f2937] shrink-0" />
+                  <h1 className="text-lg font-bold text-gray-900">Checkout</h1>
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600">
+                  <Lock size={12} className="text-gray-500" />
+                  <span>100% Secure</span>
+                </div>
+              </header>
+
+              {/* Steps row */}
+              <div className="bg-slate-50/50 sticky top-[60px] z-20 sm:relative sm:top-auto sm:z-auto flex flex-wrap items-center gap-4 px-4 py-3 text-xs sm:text-sm border-b border-gray-100">
+                <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700 font-bold">1</span>
+                  Address
+                </div>
+                <div className="inline-flex items-center gap-2 font-semibold text-[#1f2937]">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-600 text-xs text-white font-bold">2</span>
+                  Order Summary
+                </div>
+                <div className="inline-flex items-center gap-2 text-[#64748b]">
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e5e7eb] text-xs font-bold">3</span>
+                  Payment
+                </div>
+              </div>
               <article className="bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -608,9 +651,11 @@ export default function CheckoutPage() {
                 )}
               </article>
 
-              <article className="border-t border-[#e5e7eb] bg-white p-4">
-                <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Order Summary</p>
-                <div className="mt-2 space-y-2">
+              <article className="bg-white">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Order Summary</p>
+                </div>
+                <div className="divide-y divide-gray-100">
                   {items.map((item) => {
                     const unitPrice = Number(item.product.price || 0);
                     const quantity = Math.max(1, Number(item.quantity || 1));
@@ -619,54 +664,59 @@ export default function CheckoutPage() {
                     const vendorProfileHref = resolveVendorProfileHref(item);
 
                     return (
-                      <article
+                      <div
                         key={item.product.id}
-                        role="button"
-                        tabIndex={0}
                         onClick={() => router.push(productHref)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(productHref);
-                          }
-                        }}
-                        className="grid cursor-pointer gap-3 bg-white p-3 transition hover:bg-[#f8fafc] sm:grid-cols-[96px_minmax(0,1fr)]"
+                        className="cursor-pointer transition hover:bg-[#f8fafc] bg-white"
                       >
-                        <div className="overflow-hidden rounded bg-blue-50/50">
-                          <img src={item.product.image} alt={item.product.name} className="h-24 w-full object-contain" loading="lazy" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="line-clamp-2 text-[1rem] font-semibold text-[#0f172a]">{item.product.name}</p>
-                          <p className="text-xs text-[#6b7280]">
-                            Seller:{" "}
-                            <Link
-                              href={vendorProfileHref}
-                              onClick={(event) => event.stopPropagation()}
-                              className="font-semibold text-blue-700 hover:underline"
-                            >
-                              {item.product.sellerName || "Winkget Seller"}
-                            </Link>
-                          </p>
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <p className="text-xl font-bold text-[#111827]">{formatPrice(unitPrice)}</p>
-                            {Number(item.product.oldPrice || 0) > unitPrice ? (
-                              <p className="text-sm text-[#94a3b8] line-through">{formatPrice(Number(item.product.oldPrice || 0))}</p>
-                            ) : null}
-                            <p className="text-sm font-semibold text-[#166534]">Total: {formatPrice(lineTotal)}</p>
+                        <div className="flex gap-4 p-4">
+                          {/* Left Column: Image & Qty */}
+                          <div className="w-20 sm:w-24 shrink-0 flex flex-col items-center">
+                            <div className="block overflow-hidden rounded bg-gray-50 border border-gray-100 p-1 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-white">
+                              <img
+                                src={item.product.image}
+                                alt={item.product.name}
+                                className="max-h-full max-w-full object-contain mx-auto"
+                                loading="lazy"
+                              />
+                            </div>
+                            <span className="mt-2 text-xs font-semibold text-[#475569]">Qty: {quantity}</span>
                           </div>
 
-                          <p className="text-xs font-semibold text-[#475569]">Qty: {quantity}</p>
+                          {/* Right Column: Title, Seller, Price, Total */}
+                          <div className="flex-1 space-y-1 min-w-0">
+                            <h3 className="line-clamp-1 md:line-clamp-2 text-sm font-semibold text-gray-900 leading-snug">
+                              {item.product.name}
+                            </h3>
+                            <div className="text-[11px] text-gray-500">
+                              Seller:{" "}
+                              <span className="font-semibold text-blue-600">
+                                {item.product.sellerName || "Winkget Seller"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 pt-1 flex-wrap">
+                              <span className="text-base font-bold text-gray-900">{formatPrice(unitPrice)}</span>
+                              {Number(item.product.oldPrice || 0) > unitPrice && (
+                                <span className="text-xs text-gray-400 line-through">
+                                  {formatPrice(Number(item.product.oldPrice || 0))}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="text-xs font-semibold text-emerald-600 mt-1">
+                              Total: {formatPrice(lineTotal)}
+                            </div>
+                          </div>
                         </div>
-                      </article>
+                      </div>
                     );
                   })}
                 </div>
               </article>
             </section>
 
-            <aside className="h-fit border-t border-[#e5e7eb] bg-white p-4 lg:border-l lg:border-t-0 lg:border-[#e5e7eb]">
+            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Price Details</p>
 
               <div className="mt-3 space-y-2 text-sm text-[#334155]">
@@ -692,9 +742,9 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="mt-3 bg-[#f9fafb] px-2 py-2">
-                <div className="flex items-center justify-between text-lg font-bold text-[#0f172a]">
-                  <span>Total Amount</span>
+              <div className="border-t border-dashed border-[#d5deea] pt-3">
+                <div className="flex items-center justify-between text-base font-bold text-gray-900">
+                  <span>Total Payable</span>
                   <span>{formatPrice(totals.total)}</span>
                 </div>
               </div>
@@ -703,16 +753,18 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handleContinueToPayment}
                 disabled={!user || !selectedAddress || items.length === 0}
-                className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="hidden lg:inline-flex mt-4 w-full items-center justify-center gap-1 rounded bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Continue <ChevronRight size={16} />
               </button>
 
-              {!user ? (
-                <p className="mt-2 text-xs font-semibold text-[#b45309]">Login is required to continue payment.</p>
-              ) : !selectedAddress ? (
-                <p className="mt-2 text-xs font-semibold text-[#b45309]">Please add/select an address to continue.</p>
-              ) : null}
+              <div className="hidden lg:block">
+                {!user ? (
+                  <p className="mt-2 text-xs font-semibold text-[#b45309]">Login is required to continue payment.</p>
+                ) : !selectedAddress ? (
+                  <p className="mt-2 text-xs font-semibold text-[#b45309]">Please add/select an address to continue.</p>
+                ) : null}
+              </div>
 
               <div className="mt-3 space-y-1 text-xs text-[#475569]">
                 <p className="inline-flex items-center gap-1.5">
@@ -732,6 +784,51 @@ export default function CheckoutPage() {
           </div>
         )}
       </div>
+
+      {/* Sticky Bottom Bar for Mobile View */}
+      {items.length > 0 && (
+        <div className="fixed bottom-[calc(62px+env(safe-area-inset-bottom))] left-0 right-0 z-40 flex flex-col border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+          {/* Savings Ribbon */}
+          {totals.savings > 0 && (
+            <div className="bg-[#f0faf5] px-4 py-2 border-b border-[#e1f5eb] flex items-center justify-center gap-1.5 text-xs text-[#166534] font-bold">
+              <span>You'll save {formatPrice(totals.savings)} on this order!</span>
+            </div>
+          )}
+          
+          {/* Main Price & Action Row */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex flex-col">
+              {totals.savings > 0 && (
+                <span className="text-[10px] text-gray-400 line-through leading-none">
+                  {formatPrice(totals.mrp + totals.shippingFee + totals.platformFee)}
+                </span>
+              )}
+              <span className="text-base font-bold text-gray-900 flex items-center gap-1 mt-0.5 leading-none">
+                {formatPrice(totals.total)}
+                <span className="text-gray-400 text-xs font-normal">ⓘ</span>
+              </span>
+            </div>
+            
+            {!user ? (
+              <Link
+                href={buildAuthHref(currentPath)}
+                className="rounded bg-blue-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
+              >
+                Login
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleContinueToPayment}
+                disabled={!selectedAddress}
+                className="rounded bg-blue-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Continue
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
