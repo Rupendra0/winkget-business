@@ -170,6 +170,7 @@ router.post("/auth/signup", async (req, res) => {
     return res.status(201).json({
       ok: true,
       message: "Signup successful",
+      token,
       user: {
         id: String(user._id),
         name: user.name,
@@ -641,6 +642,7 @@ router.post("/auth/vendor/login", async (req, res) => {
     return res.status(200).json({
       ok: true,
       message: "Vendor login successful",
+      token,
       user: {
         id: String(user._id),
         name: user.name,

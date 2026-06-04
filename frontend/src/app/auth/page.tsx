@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Apple, Chrome, Lock, Mail, Store, User, Phone } from "lucide-react";
 import { resolvePostAuthRoute } from "@/lib/authRedirect";
+import { setStoredAuthToken } from "@/lib/authClient";
 
 type AuthMode = "signin" | "signup";
 
@@ -140,6 +141,7 @@ export default function AuthPage() {
         return;
       }
 
+      setStoredAuthToken(payload.token);
       setSuccess(mode === "signin" ? "Login successful." : "Account created successfully.");
       window.dispatchEvent(new Event("auth:changed"));
       router.push(resolvePostAuthRoute(searchParams.get("next")));
