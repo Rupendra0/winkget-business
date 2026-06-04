@@ -301,7 +301,7 @@ export default function CheckoutPage() {
     <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {items.length === 0 ? (
-          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100 shadow-xs">
+          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
             {/* Header */}
             <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
               <div className="flex items-center gap-3">
@@ -342,7 +342,7 @@ export default function CheckoutPage() {
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100 shadow-xs">
+            <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100">
               
               {/* Header */}
               <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
@@ -438,7 +438,7 @@ export default function CheckoutPage() {
                     ) : null}
 
                     {showAddressForm ? (
-                      <div className="mt-3 space-y-3 bg-blue-50/30 p-3">
+                      <div className="mt-3 space-y-3 p-3">
                         <p className="text-sm font-semibold text-[#0f172a]">
                           {editingAddressId ? "Edit Address" : "Add Delivery Address"}
                         </p>
@@ -449,7 +449,7 @@ export default function CheckoutPage() {
                             value={addressDraft.fullName}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, fullName: event.target.value }))}
                             placeholder="Full name"
-                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                           <input
                             type="tel"
@@ -458,7 +458,7 @@ export default function CheckoutPage() {
                               setAddressDraft((current) => ({ ...current, phone: normalizePhone(event.target.value) }))
                             }
                             placeholder="Phone number"
-                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                         </div>
 
@@ -467,7 +467,7 @@ export default function CheckoutPage() {
                           value={addressDraft.line1}
                           onChange={(event) => setAddressDraft((current) => ({ ...current, line1: event.target.value }))}
                           placeholder="House no, building, street"
-                          className="w-full rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                         />
 
                         <div className="grid gap-2 sm:grid-cols-2">
@@ -476,14 +476,14 @@ export default function CheckoutPage() {
                             value={addressDraft.line2 || ""}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, line2: event.target.value }))}
                             placeholder="Area, locality"
-                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                           <input
                             type="text"
                             value={addressDraft.landmark || ""}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, landmark: event.target.value }))}
                             placeholder="Landmark (optional)"
-                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                         </div>
 
@@ -493,21 +493,21 @@ export default function CheckoutPage() {
                             value={addressDraft.city}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, city: event.target.value }))}
                             placeholder="City"
-                            className="rounded bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                           <input
                             type="text"
                             value={addressDraft.state}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, state: event.target.value }))}
                             placeholder="State"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                           <input
                             type="text"
                             value={addressDraft.postalCode}
                             onChange={(event) => setAddressDraft((current) => ({ ...current, postalCode: event.target.value }))}
                             placeholder="PIN code"
-                            className="rounded-lg border border-[#cdd8ea] bg-white px-3 py-2 text-sm outline-none focus:border-[#2563eb]"
+                            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
                           />
                         </div>
 
@@ -787,7 +787,7 @@ export default function CheckoutPage() {
 
       {/* Sticky Bottom Bar for Mobile View */}
       {items.length > 0 && (
-        <div className="fixed bottom-[calc(62px+env(safe-area-inset-bottom))] left-0 right-0 z-40 flex flex-col border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+        <div className="fixed bottom-[calc(62px+env(safe-area-inset-bottom))] left-0 right-0 z-40 flex flex-col border-t border-gray-200 bg-white lg:hidden">
           {/* Savings Ribbon */}
           {totals.savings > 0 && (
             <div className="bg-[#f0faf5] px-4 py-2 border-b border-[#e1f5eb] flex items-center justify-center gap-1.5 text-xs text-[#166534] font-bold">

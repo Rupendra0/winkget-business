@@ -221,9 +221,9 @@ export default function OrdersPage() {
         </div>
 
         {placedOrderId ? (
-          <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm flex items-center justify-between">
+          <div className="hidden md:flex mb-4 px-1 text-sm font-bold text-emerald-700 items-center justify-between">
             <span>
-              🎉 Order placed successfully! Order ID: <span className="font-bold">{placedOrderId}</span>
+              🎉 Order placed successfully! Order ID: <span className="font-mono">{placedOrderId}</span>
             </span>
             <button 
               type="button" 
@@ -232,7 +232,7 @@ export default function OrdersPage() {
                 params.delete("placed");
                 router.replace(`${pathname}?${params.toString()}`);
               }}
-              className="text-xs font-bold text-emerald-700 hover:underline"
+              className="text-xs font-bold text-emerald-700 hover:underline shrink-0"
             >
               Dismiss
             </button>
@@ -250,7 +250,7 @@ export default function OrdersPage() {
           {/* Right Column: Search Bar & Orders List */}
           <div className="space-y-4 min-w-0">
             {/* Search Bar */}
-            <div className="sticky top-2 md:relative md:top-auto z-30 md:z-0 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+            <div className="sticky top-2 md:relative md:top-auto z-30 md:z-0 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
               <input
                 type="text"
                 placeholder="Search your orders here"
@@ -273,6 +273,26 @@ export default function OrdersPage() {
               </button>
             </div>
 
+            {/* Mobile-only Success Banner (Below Search Bar) */}
+            {placedOrderId ? (
+              <div className="md:hidden flex items-center justify-between gap-2 px-1 text-[10px] sm:text-xs font-bold text-emerald-700">
+                <span className="truncate">
+                  🎉 Order placed successfully! ID: <span className="font-mono">{placedOrderId}</span>
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("placed");
+                    router.replace(`${pathname}?${params.toString()}`);
+                  }}
+                  className="underline shrink-0"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
+
             {/* List Header */}
             <div className="px-1 space-y-2">
               <div className="flex items-center justify-between gap-3">
@@ -287,7 +307,7 @@ export default function OrdersPage() {
                 <button
                   type="button"
                   onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
-                  className="md:hidden inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95 shadow-sm"
+                  className="md:hidden inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95"
                 >
                   <SlidersHorizontal size={13} className="text-slate-500" />
                   <span>Filter</span>

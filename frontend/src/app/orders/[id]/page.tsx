@@ -627,7 +627,7 @@ export default function OrderDetailPage() {
                 </div>
 
                 {/* Attached Mobile Containers: Status + Delivery details + Price details */}
-                <div className="bg-white rounded-xl border border-slate-200/80 divide-y divide-slate-100 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200/80 divide-y divide-slate-100 overflow-hidden">
                   
                   {/* 1. Status Section */}
                   <div className="p-4 space-y-3">
@@ -745,7 +745,7 @@ export default function OrderDetailPage() {
             {otherItems.length > 0 && (
               <div className="hidden md:block space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 px-1">Other Items In This Order</h3>
-                <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
+                <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-100 overflow-hidden">
                   {otherItems.map((item) => {
                     const otherHref = `/product/${encodeURIComponent(
                       buildProductSlug({
@@ -890,7 +890,7 @@ export default function OrderDetailPage() {
                     </button>
                   </div>
                 </div>
-                <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
+                <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-100 overflow-hidden">
                   {otherItems.map((item) => {
                     const otherHref = `/product/${encodeURIComponent(
                       buildProductSlug({
@@ -955,7 +955,7 @@ export default function OrderDetailPage() {
             className="fixed inset-0" 
             onClick={() => setShowUpdatesModal(false)} 
           />
-          <div className="relative bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-y-auto p-8 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 z-10">
+          <div className="relative bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-y-auto p-8 border border-slate-100 animate-in fade-in zoom-in-95 duration-200 z-10">
             <button
               type="button"
               onClick={() => setShowUpdatesModal(false)}

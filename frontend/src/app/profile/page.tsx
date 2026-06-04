@@ -229,6 +229,8 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
   // Change password states
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -275,6 +277,11 @@ export default function ProfilePage() {
         return;
       }
       setUser(currentUser);
+
+      const savedImage = localStorage.getItem(`winkget:profile:image:${currentUser.id}`);
+      if (savedImage) {
+        setProfileImage(savedImage);
+      }
 
       // Initialize edit fields
       const nameParts = (currentUser.name || "").trim().split(/\s+/);
@@ -326,6 +333,34 @@ export default function ProfilePage() {
     toggleWishlist(item);
     setWishlistItems(readWishlist() as CustomWishlistItem[]);
     setSuccessMessage(`Removed from wishlist`);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setErrorMessage("Image size must be less than 2MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProfileImage(base64String);
+        if (user?.id) {
+          localStorage.setItem(`winkget:profile:image:${user.id}`, base64String);
+          setSuccessMessage("Profile picture updated successfully");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    if (user?.id) {
+      localStorage.removeItem(`winkget:profile:image:${user.id}`);
+      setSuccessMessage("Profile picture removed");
+    }
   };
 
   // Profile Save Handlers
@@ -659,17 +694,38 @@ export default function ProfilePage() {
     .slice(0, 2);
 
   return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] pt-2 pb-6 px-2 sm:px-4 md:px-8">
+    <main className="min-h-[calc(100vh-80px)] bg-white pt-2 pb-6 px-2 sm:px-4 md:px-8">
+      {/* Mobile-only Header with Back Button */}
+      <header className="lg:hidden bg-white border-b border-slate-200/60 py-3 flex items-center gap-2 sticky top-0 z-40 mb-4 -mx-2 px-4">
+        <button
+          type="button"
+          onClick={() => {
+            if (showMobileMenu) {
+              router.back();
+            } else {
+              setShowMobileMenu(true);
+            }
+          }}
+          className="text-[#0e3961] hover:opacity-85 p-1 rounded-full hover:bg-slate-100 transition-colors shrink-0"
+          aria-label="Back"
+        >
+          <ChevronLeft size={24} strokeWidth={2.5} />
+        </button>
+        <h1 className="text-base font-bold text-slate-800 truncate">
+          {showMobileMenu ? "My Account" : menuGroups.flatMap(g => g.items).find(i => i.id === activeTab)?.label || "Account details"}
+        </h1>
+      </header>
+
       {/* Notifications Alert Container */}
       <div className="max-w-7xl mx-auto mb-4">
         {successMessage && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2 shadow-sm animate-enter">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2 animate-enter">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}
         {errorMessage && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center gap-2 shadow-sm animate-enter">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-center gap-2 animate-enter">
             <AlertCircle size={16} className="text-red-600 shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -680,19 +736,26 @@ export default function ProfilePage() {
         
         {/* ================= LEFT SIDEBAR ================= */}
         <aside className={`space-y-4 lg:block ${showMobileMenu ? "block" : "hidden"}`}>
-          {/* User greetings card */}
-          <div className="bg-white rounded-xl p-4 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-[#124676] to-[#2182dd] text-white flex items-center justify-center font-bold text-sm border border-[#124676]/20 shadow-sm">
-              {userInitials}
+          {/* Unified Greeting & Navigation Container */}
+          <div className="bg-white rounded-xl overflow-hidden border border-slate-200/50 divide-y divide-slate-100">
+            {/* User greetings */}
+            <div className="p-4 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center font-bold text-sm border border-slate-200 shrink-0">
+                {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-tr from-[#124676] to-[#2182dd] text-white flex items-center justify-center font-bold text-sm">
+                    {userInitials}
+                  </div>
+                )}
+              </div>
+              <div className="overflow-hidden">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Hello,</div>
+                <h2 className="text-base font-bold text-slate-800 truncate" title={user.name}>{user.name || "Valued User"}</h2>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Hello,</div>
-              <h2 className="text-base font-bold text-slate-800 truncate" title={user.name}>{user.name || "Valued User"}</h2>
-            </div>
-          </div>
 
-          {/* Navigation card */}
-          <div className="bg-white rounded-xl overflow-hidden">
+            {/* Navigation menu */}
             <nav className="divide-y divide-slate-100">
               {menuGroups.map((group, groupIdx) => {
                 const GroupIcon = group.icon;
@@ -771,15 +834,6 @@ export default function ProfilePage() {
 
         {/* ================= RIGHT DETAIL PANEL ================= */}
         <section className={`lg:block ${!showMobileMenu ? "block" : "hidden"}`}>
-          {/* Back to menu button (Mobile only) */}
-          <button
-            type="button"
-            onClick={() => setShowMobileMenu(true)}
-            className="flex items-center gap-1.5 text-sm font-bold text-[#0e3961] mb-4 lg:hidden bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm"
-          >
-            <ChevronLeft size={16} />
-            <span>Back to Menu</span>
-          </button>
 
           <div className="bg-white rounded-xl p-4 sm:p-6 min-h-[450px]">
             
@@ -800,6 +854,40 @@ export default function ProfilePage() {
                     </button>
                   </div>
 
+                  {/* Profile Picture Upload Options */}
+                  <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 pt-2">
+                    <div className="relative h-20 w-20 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                      {profileImage ? (
+                        <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-tr from-[#124676] to-[#2182dd] text-white flex items-center justify-center font-bold text-lg">
+                          {userInitials}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-center sm:text-left">
+                      <label className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow-sm transition active:scale-95">
+                        <span>Upload Picture</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {profileImage && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="block text-xs text-red-500 font-semibold hover:underline mt-1.5 mx-auto sm:mx-0"
+                        >
+                          Remove Picture
+                        </button>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">Allowed formats: JPG, PNG. Max size 2MB.</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">First Name</label>
@@ -808,10 +896,10 @@ export default function ProfilePage() {
                         disabled={!editPersonal}
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all bg-white disabled:bg-white ${
                           editPersonal 
-                            ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                            : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                            ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                            : "border-slate-100 text-slate-500 cursor-not-allowed"
                         }`}
                       />
                     </div>
@@ -822,10 +910,10 @@ export default function ProfilePage() {
                         disabled={!editPersonal}
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all bg-white disabled:bg-white ${
                           editPersonal 
-                            ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                            : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                            ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                            : "border-slate-100 text-slate-500 cursor-not-allowed"
                         }`}
                       />
                     </div>
@@ -892,10 +980,10 @@ export default function ProfilePage() {
                         disabled={!editEmail}
                         value={emailVal}
                         onChange={(e) => setEmailVal(e.target.value)}
-                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all bg-white disabled:bg-white ${
                           editEmail 
-                            ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                            : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                            ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                            : "border-slate-100 text-slate-500 cursor-not-allowed"
                         }`}
                       />
                     </div>
@@ -933,10 +1021,10 @@ export default function ProfilePage() {
                         disabled={!editMobile}
                         value={phoneVal}
                         onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ""))}
-                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                        className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all bg-white disabled:bg-white ${
                           editMobile 
-                            ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                            : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                            ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                            : "border-slate-100 text-slate-500 cursor-not-allowed"
                         }`}
                       />
                     </div>
@@ -997,7 +1085,7 @@ export default function ProfilePage() {
                         placeholder="Current password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#0e3961]"
+                        className="w-full rounded-xl border border-slate-200 bg-white disabled:bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#0e3961]"
                       />
                     </div>
                     <div>
@@ -1007,7 +1095,7 @@ export default function ProfilePage() {
                         placeholder="New password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#0e3961]"
+                        className="w-full rounded-xl border border-slate-200 bg-white disabled:bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-[#0e3961]"
                       />
                     </div>
                   </div>
@@ -1068,7 +1156,7 @@ export default function ProfilePage() {
                         placeholder="Full Name"
                         value={addressDraft.fullName}
                         onChange={(e) => setAddressDraft({ ...addressDraft, fullName: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="tel"
@@ -1076,49 +1164,49 @@ export default function ProfilePage() {
                         placeholder="10-digit Phone Number"
                         value={addressDraft.phone}
                         onChange={(e) => setAddressDraft({ ...addressDraft, phone: e.target.value.replace(/\D/g, "") })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
                         placeholder="Pincode / Postal Code"
                         value={addressDraft.postalCode}
                         onChange={(e) => setAddressDraft({ ...addressDraft, postalCode: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
                         placeholder="Locality / Line 2"
                         value={addressDraft.line2}
                         onChange={(e) => setAddressDraft({ ...addressDraft, line2: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
                         placeholder="Address (Area and Street)"
                         value={addressDraft.line1}
                         onChange={(e) => setAddressDraft({ ...addressDraft, line1: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full sm:col-span-2"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full sm:col-span-2"
                       />
                       <input
                         type="text"
                         placeholder="City / District"
                         value={addressDraft.city}
                         onChange={(e) => setAddressDraft({ ...addressDraft, city: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
                         placeholder="State"
                         value={addressDraft.state}
                         onChange={(e) => setAddressDraft({ ...addressDraft, state: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
                         placeholder="Landmark (Optional)"
                         value={addressDraft.landmark}
                         onChange={(e) => setAddressDraft({ ...addressDraft, landmark: e.target.value })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full sm:col-span-2"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full sm:col-span-2"
                       />
                     </div>
 
@@ -1248,10 +1336,10 @@ export default function ProfilePage() {
                       maxLength={10}
                       value={panNumberInput}
                       onChange={(e) => setPanNumberInput(e.target.value.toUpperCase())}
-                      className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all uppercase ${
+                      className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all uppercase bg-white disabled:bg-white ${
                         editPan 
-                          ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                          : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                          ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                          : "border-slate-100 text-slate-500 cursor-not-allowed"
                       }`}
                     />
                   </div>
@@ -1262,10 +1350,10 @@ export default function ProfilePage() {
                       disabled={!editPan}
                       value={panNameInput}
                       onChange={(e) => setPanNameInput(e.target.value)}
-                      className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all uppercase ${
+                      className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all uppercase bg-white disabled:bg-white ${
                         editPan 
-                          ? "bg-white border-slate-200 text-slate-900 focus:border-[#0e3961]" 
-                          : "bg-slate-50 border-slate-100 text-slate-700 cursor-not-allowed"
+                          ? "border-slate-200 text-slate-900 focus:border-[#0e3961]" 
+                          : "border-slate-100 text-slate-500 cursor-not-allowed"
                       }`}
                     />
                   </div>
@@ -1448,7 +1536,7 @@ export default function ProfilePage() {
                         placeholder="Gift Card Number"
                         value={gcNumber}
                         onChange={(e) => setGcNumber(e.target.value.replace(/\D/g, ""))}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="password"
@@ -1456,7 +1544,7 @@ export default function ProfilePage() {
                         value={gcPin}
                         maxLength={6}
                         onChange={(e) => setGcPin(e.target.value.replace(/\D/g, ""))}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <button
                         type="button"
@@ -1483,7 +1571,7 @@ export default function ProfilePage() {
                         placeholder="Receiver's Email ID"
                         value={buyGcEmail}
                         onChange={(e) => setBuyGcEmail(e.target.value)}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <input
                         type="text"
@@ -1491,7 +1579,7 @@ export default function ProfilePage() {
                         placeholder="Receiver's Name"
                         value={buyGcName}
                         onChange={(e) => setBuyGcName(e.target.value)}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <div className="grid grid-cols-2 gap-2">
                         <select
@@ -1511,7 +1599,7 @@ export default function ProfilePage() {
                           placeholder="No. of Cards"
                           value={buyGcCount}
                           onChange={(e) => setBuyGcCount(e.target.value)}
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                          className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                         />
                       </div>
                       <input
@@ -1519,7 +1607,7 @@ export default function ProfilePage() {
                         placeholder="Gifter's Name (Optional)"
                         value={buyGcGifter}
                         onChange={(e) => setBuyGcGifter(e.target.value)}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
+                        className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-3 py-2 text-sm outline-none focus:border-[#0e3961] w-full"
                       />
                       <button
                         type="submit"
@@ -1547,7 +1635,7 @@ export default function ProfilePage() {
                     placeholder="Enter UPI VPA (e.g. mobile@ybl)"
                     value={newUpi}
                     onChange={(e) => setNewUpi(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm outline-none focus:border-[#0e3961] flex-1"
+                    className="rounded-xl border border-slate-200 bg-white disabled:bg-white px-4 py-2 text-sm outline-none focus:border-[#0e3961] flex-1"
                   />
                   <button
                     type="button"
@@ -1633,7 +1721,7 @@ export default function ProfilePage() {
                     cardList.map((card) => (
                       <div
                         key={card.id}
-                        className="rounded-xl bg-gradient-to-tr from-slate-800 to-slate-950 p-5 text-white flex flex-col justify-between h-44 shadow-lg border border-slate-800 relative group overflow-hidden"
+                        className="rounded-xl bg-gradient-to-tr from-slate-800 to-slate-950 p-5 text-white flex flex-col justify-between h-44 border border-slate-800 relative group overflow-hidden"
                       >
                         {/* Chip graphic ornament */}
                         <div className="absolute top-4 right-4 text-slate-600/50 uppercase tracking-widest text-[9px] font-sans font-bold select-none">
@@ -1641,7 +1729,7 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="flex items-center justify-between mb-4">
-                          <div className="w-10 h-7 rounded bg-amber-400/80 border border-amber-300/40 relative shadow-sm" />
+                          <div className="w-10 h-7 rounded bg-amber-400/80 border border-amber-300/40 relative" />
                           <CreditCard size={28} className="text-slate-400" />
                         </div>
 
@@ -1792,7 +1880,7 @@ export default function ProfilePage() {
                     wishlistItems.map((item) => (
                       <div key={item.id} className="p-4 sm:p-5 flex items-start justify-between gap-4 hover:bg-slate-50/20 transition-all animate-enter">
                         <div className="flex items-start gap-4">
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center shrink-0 shadow-sm">
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center shrink-0">
                             <img
                               src={item.image}
                               alt={item.name}
