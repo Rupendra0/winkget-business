@@ -104,7 +104,7 @@ export default function OrdersPage() {
         if (onTheWay && order.status === "Pending") isMatched = true;
         if (delivered && order.status === "Completed") isMatched = true;
         if (cancelled && order.status === "Disputed") isMatched = true;
-        if (returned && order.status === "Returned") isMatched = true; // Placeholder for returned
+        if (returned && (order.status as string) === "Returned") isMatched = true; // Placeholder for returned
         if (!isMatched) return false;
       }
 
