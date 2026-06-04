@@ -252,7 +252,18 @@ export default function Navbar() {
         return;
       }
 
-      setIsMobileSearchOnly(window.scrollY > 56);
+      const currentScroll = window.scrollY;
+      setIsMobileSearchOnly((prev) => {
+        const thresholdCollapse = 90;
+        const thresholdExpand = 20;
+        if (!prev && currentScroll > thresholdCollapse) {
+          return true;
+        }
+        if (prev && currentScroll < thresholdExpand) {
+          return false;
+        }
+        return prev;
+      });
     };
 
     updateMobileSearchOnlyState();

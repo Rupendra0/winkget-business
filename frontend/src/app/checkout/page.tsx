@@ -96,9 +96,10 @@ export default function CheckoutPage() {
   const mode = (searchParams.get("mode") === "buy-now" ? "buy-now" : "cart") as CheckoutMode;
   const currentPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
+  const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [items, setItems] = useState(() => readCheckoutItems(mode));
+  const [items, setItems] = useState<StorefrontCartItem[]>([]);
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -109,8 +110,14 @@ export default function CheckoutPage() {
   const [savingAddress, setSavingAddress] = useState(false);
 
   useEffect(() => {
-    setItems(readCheckoutItems(mode));
-  }, [mode]);
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      setItems(readCheckoutItems(mode));
+    }
+  }, [mode, isMounted]);
 
   useEffect(() => {
     let active = true;
@@ -272,6 +279,20 @@ export default function CheckoutPage() {
 
     router.push("/checkout/payment");
   };
+
+  if (!isMounted) {
+    return (
+      <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+        <div className="mx-auto w-full max-w-none animate-pulse space-y-4">
+          <div className="h-12 bg-white rounded" />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="h-96 bg-white rounded" />
+            <div className="h-64 bg-white rounded" />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">

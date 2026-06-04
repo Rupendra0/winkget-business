@@ -104,40 +104,56 @@ export default function CartPage() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-2 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0">
-        <header className="bg-white px-4 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShoppingCart size={22} className="text-[#1f2937] shrink-0" />
-              <p className="brand-wordmark text-[1.25rem] font-bold text-[#1f2937]">Your Cart</p>
-            </div>
-            <Link
-              href="/"
-              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-            >
-              Continue Shopping
-            </Link>
-          </div>
-        </header>
-
         {items.length === 0 ? (
-          <section className="bg-white p-10 text-center">
-            <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-blue-600">
-              <ShoppingCart size={26} />
-            </div>
-            <p className="text-lg font-semibold text-[#0f172a]">Your cart is empty</p>
-            <p className="mt-1 text-sm text-[#64748b]">Add products from stores, then come back here to checkout.</p>
-            <Link
-              href="/"
-              className="mt-5 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Explore Products
-            </Link>
-          </section>
+          <div className="border-y border-gray-200 sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
+            <header className="bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart size={22} className="text-[#1f2937] shrink-0" />
+                  <p className="brand-wordmark text-[1.25rem] font-bold text-[#1f2937]">Your Cart</p>
+                </div>
+                <Link
+                  href="/"
+                  className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                >
+                  Continue Shopping
+                </Link>
+              </div>
+            </header>
+            <section className="bg-white p-10 text-center">
+              <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-blue-600">
+                <ShoppingCart size={26} />
+              </div>
+              <p className="text-lg font-semibold text-[#0f172a]">Your cart is empty</p>
+              <p className="mt-1 text-sm text-[#64748b]">Add products from stores, then come back here to checkout.</p>
+              <Link
+                href="/"
+                className="mt-5 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Explore Products
+              </Link>
+            </section>
+          </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="border border-gray-200 rounded-b-lg border-t-0 overflow-hidden bg-white divide-y divide-gray-100">
+            <div className="border-y border-gray-200 sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
+              <header className="bg-white px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart size={22} className="text-[#1f2937] shrink-0" />
+                    <p className="brand-wordmark text-[1.25rem] font-bold text-[#1f2937]">Your Cart</p>
+                  </div>
+                  <Link
+                    href="/"
+                    className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                  >
+                    Continue Shopping
+                  </Link>
+                </div>
+              </header>
+
               {items.map((item) => {
                 const unitPrice = Number(item.product.price || 0);
                 const quantity = Math.max(1, Number(item.quantity || 1));
@@ -289,7 +305,7 @@ export default function CartPage() {
               })}
             </div>
 
-            <aside className="h-fit rounded-lg border border-gray-200 bg-white p-6 space-y-4 mt-4 lg:sticky lg:top-24 lg:self-start lg:mt-4">
+            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 mt-4 lg:sticky lg:top-24 lg:self-start lg:mt-4">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Price Details</p>
 
               <div className="space-y-2 text-sm text-[#334155]">
