@@ -183,7 +183,7 @@ export default function CityStrip() {
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
                 <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
-                <div className="mt-1.5 h-[37px] overflow-hidden break-words text-xs text-gray-500">{partner.address}</div>
+                <div className="mt-1.5 h-8 line-clamp-2 text-xs text-gray-500">{partner.address}</div>
               </div>
             </Link>
           ))}
