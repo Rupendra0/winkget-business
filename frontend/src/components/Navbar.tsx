@@ -518,12 +518,16 @@ export default function Navbar() {
       )
     : null;
 
-  const isCheckoutOrPayment = pathname === "/checkout" || pathname === "/checkout/payment";
+  const isCheckoutOrPaymentOrOrders =
+    pathname === "/checkout" ||
+    pathname === "/checkout/payment" ||
+    pathname === "/orders" ||
+    pathname?.startsWith("/orders/");
 
   return (
     <>
       <nav className={`sticky top-0 z-50 bg-white/70 pt-[calc(env(safe-area-inset-top)+0.5rem)] font-medium backdrop-blur-md md:pt-0 ${
-        isCheckoutOrPayment ? "hidden md:block" : ""
+        isCheckoutOrPaymentOrOrders ? "hidden md:block" : ""
       }`}>
         <div className="w-full px-[10px]">
           <div

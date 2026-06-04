@@ -1,23 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search, Package, MapPin, ShoppingBag, Eye, Calendar, Clock, SlidersHorizontal, CreditCard } from "lucide-react";
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import { buildAuthHref } from "@/lib/authRedirect";
 import { paymentMethodLabel, readOrders, type CheckoutOrder } from "@/lib/checkoutStore";
+import { buildProductSlug } from "@/data/productSlug";
 
 const formatPrice = (value: number) => `Rs. ${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const statusLabel = (value: CheckoutOrder["status"]) => value;
 
 const statusClassName = (value: CheckoutOrder["status"]) => {
   if (value === "Completed") {
-    return "bg-emerald-50 text-emerald-700";
+    return "bg-emerald-50 text-emerald-700 border-emerald-100";
   }
   if (value === "Disputed") {
-    return "bg-rose-50 text-rose-700";
+    return "bg-rose-50 text-rose-700 border-rose-100";
   }
-  return "bg-amber-50 text-amber-800";
+  return "bg-amber-50 text-amber-800 border-amber-100";
 };
 
 const formatDate = (value: string) => {
@@ -43,6 +45,25 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<CheckoutOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  const [statusFilters, setStatusFilters] = useState({
+    onTheWay: false,
+    delivered: false,
+    cancelled: false,
+    returned: false,
+  });
+
+  const [timeFilters, setTimeFilters] = useState({
+    last30Days: false,
+    year2024: false,
+    year2023: false,
+    older: false,
+  });
+
   useEffect(() => {
     const loadSession = async () => {
       const currentUser = await fetchCurrentUser();
@@ -61,108 +82,411 @@ export default function OrdersPage() {
 
   const placedOrderId = String(searchParams.get("placed") || "").trim();
 
+  // Filtered orders list
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      // 1. Search Query filter (matches ID, product name, or seller name)
+      const query = appliedSearchQuery.toLowerCase().trim();
+      if (query) {
+        const matchesId = order.id.toLowerCase().includes(query);
+        const matchesItems = order.items.some(
+          (item) =>
+            item.product.name.toLowerCase().includes(query) ||
+            (item.product.sellerName || "").toLowerCase().includes(query)
+        );
+        if (!matchesId && !matchesItems) return false;
+      }
+
+      // 2. Status checkbox filter
+      const { onTheWay, delivered, cancelled, returned } = statusFilters;
+      if (onTheWay || delivered || cancelled || returned) {
+        let isMatched = false;
+        if (onTheWay && order.status === "Pending") isMatched = true;
+        if (delivered && order.status === "Completed") isMatched = true;
+        if (cancelled && order.status === "Disputed") isMatched = true;
+        if (returned && order.status === "Returned") isMatched = true; // Placeholder for returned
+        if (!isMatched) return false;
+      }
+
+      // 3. Time period checkbox filter
+      const { last30Days, year2024, year2023, older } = timeFilters;
+      if (last30Days || year2024 || year2023 || older) {
+        const orderDate = new Date(order.createdAt);
+        const orderYear = orderDate.getFullYear();
+        const daysDiff = (Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
+
+        let isMatched = false;
+        if (last30Days && daysDiff <= 30) isMatched = true;
+        if (year2024 && orderYear === 2024) isMatched = true;
+        if (year2023 && orderYear === 2023) isMatched = true;
+        if (older && orderYear < 2023) isMatched = true;
+        if (!isMatched) return false;
+      }
+
+      return true;
+    });
+  }, [orders, appliedSearchQuery, statusFilters, timeFilters]);
+
   if (loading || !user) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
-        <div className="mx-auto h-64 w-full max-w-none animate-pulse bg-white p-6" />
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-6 sm:px-4 lg:px-6">
+        <div className="mx-auto h-64 w-full max-w-6xl animate-pulse bg-white rounded-xl" />
       </main>
     );
   }
 
-  return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
-      <div className="mx-auto w-full max-w-none bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-s sm:text-3xl font-bold text-slate-900">My Orders</h2>
-          </div>
+  // Common Filters Content
+  const renderFiltersContent = () => (
+    <>
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 className="text-base font-bold text-slate-800">Filters</h3>
+        {(Object.values(statusFilters).some(Boolean) || Object.values(timeFilters).some(Boolean)) && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilters({ onTheWay: false, delivered: false, cancelled: false, returned: false });
+              setTimeFilters({ last30Days: false, year2024: false, year2023: false, older: false });
+            }}
+            className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
 
-          <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-            Total Orders: {orders.length}
-          </p>
+      <div className="mt-4 space-y-6">
+        {/* Order Status Filters */}
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Order Status</h4>
+          <div className="space-y-2.5">
+            {[
+              { label: "On the way", key: "onTheWay" },
+              { label: "Delivered", key: "delivered" },
+              { label: "Cancelled", key: "cancelled" },
+              { label: "Returned", key: "returned" },
+            ].map((opt) => (
+              <label key={opt.key} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={statusFilters[opt.key as keyof typeof statusFilters]}
+                  onChange={(e) => {
+                    setStatusFilters((prev) => ({ ...prev, [opt.key]: e.target.checked }));
+                  }}
+                  className="h-4.5 w-4.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Order Time Filters */}
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Order Time</h4>
+          <div className="space-y-2.5">
+            {[
+              { label: "Last 30 days", key: "last30Days" },
+              { label: "2024", key: "year2024" },
+              { label: "2023", key: "year2023" },
+              { label: "Older", key: "older" },
+            ].map((opt) => (
+              <label key={opt.key} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={timeFilters[opt.key as keyof typeof timeFilters]}
+                  onChange={(e) => {
+                    setTimeFilters((prev) => ({ ...prev, [opt.key]: e.target.checked }));
+                  }}
+                  className="h-4.5 w-4.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
+      <div className="mx-auto w-full max-w-6xl">
+        {/* Breadcrumbs */}
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 px-1">
+          <Link href="/" className="hover:text-blue-600 transition">Home</Link>
+          <span>&gt;</span>
+          <Link href="/profile" className="hover:text-blue-600 transition">My Account</Link>
+          <span>&gt;</span>
+          <span className="text-slate-700 font-semibold">My Orders</span>
         </div>
 
         {placedOrderId ? (
-          <div className="mt-4 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Order placed successfully. Order ID: <span className="font-semibold">{placedOrderId}</span>
+          <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm flex items-center justify-between">
+            <span>
+              🎉 Order placed successfully! Order ID: <span className="font-bold">{placedOrderId}</span>
+            </span>
+            <button 
+              type="button" 
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("placed");
+                router.replace(`${pathname}?${params.toString()}`);
+              }}
+              className="text-xs font-bold text-emerald-700 hover:underline"
+            >
+              Dismiss
+            </button>
           </div>
         ) : null}
 
-        <div className="mt-6 divide-y divide-[#e5e7eb] bg-white">
-          {orders.length === 0 ? (
-            <div className="bg-slate-50 p-5 text-sm text-slate-600">
-              <p className="font-semibold text-slate-800">No orders yet.</p>
-              <p className="mt-1">Start shopping and place your first order.</p>
+        <div className="grid gap-6 md:grid-cols-[260px_1fr]">
+          {/* Left Column: Filters (Desktop only) */}
+          <aside className="hidden md:block md:sticky md:top-24 self-start space-y-4">
+            <div className="border border-slate-200/80 bg-white p-5 rounded-xl">
+              {renderFiltersContent()}
             </div>
-          ) : (
-            orders.map((order) => {
-              const itemCount = order.items.reduce((count, item) => count + Math.max(1, Number(item.quantity || 1)), 0);
-              const leadItem = order.items[0] || null;
-              const deliveryCity = order.address?.city || "City";
-              const paymentState = String(order.paymentStatus || "pending").replace(/_/g, " ");
+          </aside>
 
-              return (
-                <Link
-                  key={order.id}
-                  href={`/orders/${encodeURIComponent(order.id)}`}
-                  className="group block bg-white p-4 transition hover:bg-[#f8fafc]"
+          {/* Right Column: Search Bar & Orders List */}
+          <div className="space-y-4 min-w-0">
+            {/* Search Bar */}
+            <div className="sticky top-2 md:relative md:top-auto z-30 md:z-0 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+              <input
+                type="text"
+                placeholder="Search your orders here"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setAppliedSearchQuery(searchQuery);
+                  }
+                }}
+                className="flex-1 px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setAppliedSearchQuery(searchQuery)}
+                className="inline-flex items-center gap-2 bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95"
+              >
+                <Search size={16} strokeWidth={2.4} />
+                <span className="hidden sm:inline">Search Orders</span>
+              </button>
+            </div>
+
+            {/* List Header */}
+            <div className="px-1 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-bold text-slate-800">
+                  {appliedSearchQuery ? "Search Results" : "My Orders"}
+                </h2>
+                {/* On desktop, show results count here */}
+                <span className="hidden md:inline-flex text-xs font-semibold text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1">
+                  Showing {filteredOrders.length} of {orders.length} orders
+                </span>
+                {/* On mobile, show Filter button on the right edge */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+                  className="md:hidden inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="mt-0.5 text-xs font-medium text-slate-600">Placed on {formatDate(order.createdAt)}</p>
-                    </div>
+                  <SlidersHorizontal size={13} className="text-slate-500" />
+                  <span>Filter</span>
+                </button>
+              </div>
 
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-slate-900">{formatPrice(order.totals.total)}</p>
-                    </div>
+              {/* Collapsible Mobile Filters */}
+              {isMobileFiltersOpen && (
+                <div className="block md:hidden border border-slate-200/80 bg-white p-5 rounded-xl">
+                  {renderFiltersContent()}
+                </div>
+              )}
+
+              {/* On mobile, show results count below */}
+              <div className="md:hidden flex items-center justify-between text-xs font-medium text-slate-500 px-1 py-1">
+                <span>Showing {filteredOrders.length} of {orders.length} orders</span>
+                {(Object.values(statusFilters).some(Boolean) || Object.values(timeFilters).some(Boolean)) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilters({ onTheWay: false, delivered: false, cancelled: false, returned: false });
+                      setTimeFilters({ last30Days: false, year2024: false, year2023: false, older: false });
+                    }}
+                    className="text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Orders Feed */}
+            <div className="space-y-4">
+              {filteredOrders.length === 0 ? (
+                <div className="border border-slate-200/80 bg-white p-10 text-center rounded-xl">
+                  <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-slate-50 text-slate-400">
+                    <Package size={26} />
                   </div>
+                  <p className="text-lg font-bold text-slate-800">No orders found</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {appliedSearchQuery 
+                      ? "Try clearing your search query or adjusting your filters." 
+                      : "Start shopping and place your first order."}
+                  </p>
+                  {appliedSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setAppliedSearchQuery("");
+                      }}
+                      className="mt-4 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredOrders.map((order) => {
+                  const itemCount = order.items.reduce((count, item) => count + Math.max(1, Number(item.quantity || 1)), 0);
+                  const paymentState = String(order.paymentStatus || "pending").replace(/_/g, " ");
 
-                  <div className="mt-3 rounded-xl p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 overflow-hidden rounded bg-white">
-                        {leadItem?.product?.image ? (
-                          <img
-                            src={leadItem.product.image}
-                            alt={leadItem.product.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
-                            {leadItem?.product?.name?.slice(0, 1).toUpperCase() || "P"}
+                  return (
+                    <div
+                      key={order.id}
+                      className="relative border border-slate-200/80 bg-white rounded-xl overflow-hidden hover:border-slate-300 transition"
+                    >
+                      {/* Stretched Link for clickable card */}
+                      <Link
+                        href={`/orders/${encodeURIComponent(order.id)}`}
+                        className="absolute inset-0 z-10"
+                        aria-label="View order details"
+                      />
+
+                      {/* Order Card Header */}
+                      <header className="bg-slate-50/70 border-b border-slate-100 px-4 py-3 flex items-center justify-between gap-3 text-xs text-slate-500 font-medium">
+                        {/* Desktop Header */}
+                        <div className="hidden md:flex flex-1 items-center justify-between">
+                          <div>
+                            <span>Order ID: <strong className="text-slate-700 font-mono">{order.id}</strong></span>
                           </div>
-                        )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Calendar size={13} className="text-slate-400" />
+                            <span>Placed: <strong className="text-slate-700">{formatDate(order.createdAt)}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Mobile Header */}
+                        <div className="flex md:hidden flex-1 items-center justify-between gap-2">
+                          <div>
+                            <strong className="text-slate-700 font-mono">{order.id}</strong>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Calendar size={13} className="text-slate-400" />
+                            <span className="text-slate-700">{formatDate(order.createdAt)}</span>
+                          </div>
+                        </div>
+                      </header>
+
+                      {/* Order Card Body */}
+                      <div className="divide-y divide-slate-100">
+                        {order.items.map((item, index) => {
+                          const unitPrice = Number(item.product.price || 0);
+                          const quantity = Math.max(1, Number(item.quantity || 1));
+                          const productHref = `/product/${encodeURIComponent(
+                            buildProductSlug({
+                              id: item.product.id,
+                              name: item.product.name,
+                              storeId: item.product.storeId,
+                              sellerName: item.product.sellerName,
+                            })
+                          )}`;
+
+                          return (
+                            <div key={`${item.product.id}-${index}`} className="flex gap-4 p-4 items-start">
+                              {/* Product Image & Qty Column */}
+                              <div className="flex flex-col items-center gap-2 shrink-0">
+                                <Link
+                                  href={productHref}
+                                  className="relative z-20 block h-20 w-20 sm:h-24 sm:w-24 flex items-center justify-center rounded border border-slate-100 p-1 hover:opacity-90 transition bg-transparent"
+                                >
+                                  {item.product.image ? (
+                                    <img
+                                      src={item.product.image}
+                                      alt={item.product.name}
+                                      className="max-h-full max-w-full object-contain mx-auto"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
+                                      {item.product.name?.slice(0, 1).toUpperCase() || "P"}
+                                    </div>
+                                  )}{" "}
+                                </Link>
+                                <span className="md:hidden text-xs font-semibold text-slate-500">
+                                  Qty: <strong className="text-slate-800">{quantity}</strong>
+                                </span>
+                              </div>
+
+                              {/* Item Details */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="line-clamp-1 md:line-clamp-2 text-sm font-semibold text-slate-800 hover:text-blue-600 leading-snug">
+                                  <Link href={productHref} className="relative z-20">{item.product.name}</Link>
+                                </h3>
+
+                                {/* Desktop-only metadata */}
+                                <div className="hidden md:flex text-[11px] text-slate-400 mt-1 items-center gap-1.5 flex-wrap">
+                                  <span>Seller: <strong className="text-slate-600">{item.product.sellerName || "Winkget Seller"}</strong></span>
+                                  <span>•</span>
+                                  <span>Qty: <strong className="text-slate-600">{quantity}</strong></span>
+                                  <span>•</span>
+                                  <span>Price: <strong className="text-slate-600">{formatPrice(unitPrice)}</strong></span>
+                                </div>
+
+                                {/* Mobile-only metadata */}
+                                <div className="flex md:hidden text-[11px] text-slate-400 mt-1 items-center gap-1.5 flex-wrap">
+                                  <span>Price: <strong className="text-slate-600">{formatPrice(unitPrice)}</strong></span>
+                                </div>
+
+                                {/* Badges */}
+                                <div className="flex mt-2.5 flex-wrap items-center gap-2">
+                                  {/* Delivery status */}
+                                  <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${statusClassName(order.status)}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${order.status === "Completed" ? "bg-emerald-600" : order.status === "Disputed" ? "bg-rose-600" : "bg-amber-600"}`} />
+                                    {statusLabel(order.status)}
+                                  </span>
+
+                                  {/* Payment method info */}
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 border border-slate-200/60 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                    <CreditCard size={11} className="text-slate-400" />
+                                    {paymentMethodLabel(order.paymentMethod)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{leadItem?.product?.name || "Order Items"}</p>
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusClassName(order.status)}`}>
-                          {statusLabel(order.status)}
-                        </span>
-                      <span className="px-2.5 py-1 text-[11px] font-bold">
-                      {paymentMethodLabel(order.paymentMethod)}
-                    </span>
-                    <span className="px-2.5 py-1 text-[11px] font-bold">
-                      Payment: {paymentState}
-                    </span>
-                      <span className="px-2.5 py-1 text-[11px] font-bold">
-                      {order.mode === "buy-now" ? "Buy Now" : "Cart Order"}
-                    </span>
-                      <span className="px-2.5 py-1 text-[11px] font-bold">
-                      Items: {itemCount}
-                    </span>
-                      </div>
+                      {/* Order Card Footer */}
+                      <footer className="bg-slate-50/40 border-t border-slate-100 px-4 py-3 flex items-center justify-end gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-slate-500">Total:</span>
+                          <span className="text-sm font-bold text-slate-900">{formatPrice(order.totals.total)}</span>
+                        </div>
+                        <Link
+                          href={`/orders/${encodeURIComponent(order.id)}`}
+                          className="relative z-20 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition active:scale-95"
+                        >
+                          <Eye size={12} strokeWidth={2.4} />
+                          <span>Details</span>
+                        </Link>
+                      </footer>
                     </div>
-                  </div>
-                  {order.items.length > 1 ? (
-                    <p className="mt-2 text-xs font-medium text-slate-500">
-                      +{order.items.length - 1} more item{order.items.length - 1 > 1 ? "s" : ""}
-                    </p>
-                  ) : null}
-                </Link>
-              );
-            })
-          )}
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </main>
