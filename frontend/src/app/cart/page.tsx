@@ -137,7 +137,7 @@ export default function CartPage() {
             </section>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] pt-4">
             <div className="border-y border-gray-200 sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
               <header className="bg-white px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -306,7 +306,7 @@ export default function CartPage() {
               })}
             </div>
 
-            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 mt-4 lg:sticky lg:top-24 lg:self-start lg:mt-4">
+            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 mt-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Price Details</p>
 
               <div className="space-y-2 text-sm text-[#334155]">

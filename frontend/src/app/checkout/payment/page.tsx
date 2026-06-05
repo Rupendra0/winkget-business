@@ -340,7 +340,7 @@ export default function CheckoutPaymentPage() {
             </section>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] pt-4">
             {/* Left Column: Payments accordion */}
             <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100">
               

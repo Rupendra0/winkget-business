@@ -352,7 +352,7 @@ export default function CheckoutPage() {
             </section>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] pt-4">
             <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100">
               
               {/* Header */}
@@ -730,7 +730,7 @@ export default function CheckoutPage() {
               </article>
             </section>
 
-            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
+            <aside className="h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 mt-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Price Details</p>
 
               <div className="mt-3 space-y-2 text-sm text-[#334155]">

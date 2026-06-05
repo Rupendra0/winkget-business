@@ -12,31 +12,31 @@
   --font-heading: var(--font-poppins);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Redefine orange to #124676 shades for unified client identity */
-  --color-orange-50: #edf5fc;
-  --color-orange-100: #d2e6f8;
-  --color-orange-200: #a6cdf1;
-  --color-orange-300: #79b4eb;
-  --color-orange-400: #2182dd;
-  --color-orange-500: #124676;
-  --color-orange-600: #0e3961;
-  --color-orange-700: #0b2c4b;
-  --color-orange-800: #071f35;
-  --color-orange-900: #051423;
-  --color-orange-950: #030d16;
+  /* Redefine orange to Electric Indigo shades for unified client identity */
+  --color-orange-50: #eef2ff;
+  --color-orange-100: #e0e7ff;
+  --color-orange-200: #c7d2fe;
+  --color-orange-300: #a5b4fc;
+  --color-orange-400: #818cf8;
+  --color-orange-500: #6366f1;
+  --color-orange-600: #4f46e5;
+  --color-orange-700: #4338ca;
+  --color-orange-800: #3730a3;
+  --color-orange-900: #312e81;
+  --color-orange-950: #1e1b4b;
 
-  /* Redefine blue to #124676 shades to keep consistent with orange */
-  --color-blue-50: #edf5fc;
-  --color-blue-100: #d2e6f8;
-  --color-blue-200: #a6cdf1;
-  --color-blue-300: #79b4eb;
-  --color-blue-400: #2182dd;
-  --color-blue-500: #124676;
-  --color-blue-600: #0e3961;
-  --color-blue-700: #0b2c4b;
-  --color-blue-800: #071f35;
-  --color-blue-900: #051423;
-  --color-blue-950: #030d16;
+  /* Redefine blue to Electric Indigo shades to keep consistent with orange */
+  --color-blue-50: #eef2ff;
+  --color-blue-100: #e0e7ff;
+  --color-blue-200: #c7d2fe;
+  --color-blue-300: #a5b4fc;
+  --color-blue-400: #818cf8;
+  --color-blue-500: #6366f1;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+  --color-blue-950: #1e1b4b;
 }
 
 html {
