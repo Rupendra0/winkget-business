@@ -271,3 +271,45 @@ button {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Custom scale overrides to increase font size slightly while preserving the ratio */
+.page-scaled-fonts .text-xs,
+.page-scaled-fonts .text-\[12px\] {
+  font-size: 0.8125rem !important; /* 13px, original 12px */
+}
+.page-scaled-fonts .text-sm,
+.page-scaled-fonts .text-\[14px\] {
+  font-size: 0.9375rem !important; /* 15px, original 14px */
+}
+.page-scaled-fonts .text-base,
+.page-scaled-fonts .text-\[16px\] {
+  font-size: 1.0625rem !important; /* 17px, original 16px */
+}
+.page-scaled-fonts .text-lg,
+.page-scaled-fonts .text-\[18px\] {
+  font-size: 1.25rem !important; /* 20px, original 18px */
+}
+.page-scaled-fonts .text-xl,
+.page-scaled-fonts .text-\[20px\] {
+  font-size: 1.375rem !important; /* 22px, original 20px */
+}
+.page-scaled-fonts .text-2xl,
+.page-scaled-fonts .text-\[24px\] {
+  font-size: 1.625rem !important; /* 26px, original 24px */
+}
+.page-scaled-fonts .text-3xl,
+.page-scaled-fonts .text-\[30px\] {
+  font-size: 2rem !important; /* 32px, original 30px */
+}
+.page-scaled-fonts .text-\[10px\] {
+  font-size: 11px !important;
+}
+.page-scaled-fonts .text-\[11px\] {
+  font-size: 12px !important;
+}
+.page-scaled-fonts .text-\[13px\] {
+  font-size: 14px !important;
+}
+.page-scaled-fonts .text-\[15px\] {
+  font-size: 16px !important;
+}

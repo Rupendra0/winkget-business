@@ -296,7 +296,7 @@ export default function CheckoutPage() {
 
   if (!isMounted) {
     return (
-      <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
         <div className="mx-auto w-full max-w-6xl animate-pulse space-y-4 pt-0 sm:pt-4">
           <div className="h-12 bg-white rounded border border-gray-200" />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -309,7 +309,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {items.length === 0 ? (
           <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
@@ -382,69 +382,72 @@ export default function CheckoutPage() {
                   Payment
                 </div>
               </div>
-              <article className="bg-white p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Delivery Address</p>
-                  </div>
-                </div>
-
+              <article className="bg-white p-4 sm:p-6 select-none">
                 {!authChecked ? (
-                  <p className="mt-3 text-sm text-[#64748b]">Checking login status...</p>
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Delivery Address</p>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm text-[#64748b]">Checking login status...</p>
+                  </>
                 ) : !user ? (
-                  <div className="mt-3 bg-blue-50 p-3">
-                    <p className="text-sm font-semibold text-blue-900">Login required to place order</p>
-                    <p className="mt-1 text-xs text-blue-800">Please login or signup before continuing to payment.</p>
-                    <Link
-                      href={buildAuthHref(currentPath)}
-                      className="mt-3 inline-flex items-center rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                    >
-                      Login / Signup
-                    </Link>
-                  </div>
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-[#64748b]">Delivery Address</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 bg-blue-50 p-3">
+                      <p className="text-sm font-semibold text-blue-900">Login required to place order</p>
+                      <p className="mt-1 text-xs text-blue-800">Please login or signup before continuing to payment.</p>
+                      <Link
+                        href={buildAuthHref(currentPath)}
+                        className="mt-3 inline-flex items-center rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                      >
+                        Login / Signup
+                      </Link>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    {addresses.length > 0 && !showAddressForm ? (
-                      <div className="mt-3">
-                        {selectedAddress ? (
-                          <div className="w-full bg-white px-3 py-3 text-left">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
-                                <Check size={14} className="text-blue-600" />
-                                {selectedAddress.fullName}
-                                <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
-                                  {selectedAddress.tag}
-                                </span>
-                              </div>
+                    {addresses.length > 0 && !showAddressForm && selectedAddress ? (
+                      <div className="w-full text-left space-y-2">
+                        {/* Top row: Deliver to: and Change button */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-800">Deliver to:</span>
+                          <button
+                            type="button"
+                            onClick={openAddressPicker}
+                            className="border border-gray-200 hover:border-gray-300 px-4 py-1 text-xs font-semibold text-blue-600 hover:bg-slate-50 transition rounded bg-white shadow-sm"
+                          >
+                            Change
+                          </button>
+                        </div>
 
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={openAddressPicker}
-                                  className="inline-flex items-center rounded bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                                >
-                                  Change
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openEditAddress(selectedAddress)}
-                                  className="inline-flex items-center gap-1 rounded bg-[#f1f5f9] px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-blue-50"
-                                >
-                                  <Pencil size={12} /> Edit
-                                </button>
-                              </div>
-                            </div>
+                        {/* Name and tag */}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm font-bold text-gray-950">{selectedAddress.fullName}</span>
+                          <span className="bg-gray-100 text-[10px] font-bold text-gray-500 px-1.5 py-0.5 rounded tracking-wide uppercase">
+                            {selectedAddress.tag}
+                          </span>
+                        </div>
 
-                            <p className="mt-1 text-sm text-[#334155]">
-                              {selectedAddress.line1}
-                              {selectedAddress.line2 ? `, ${selectedAddress.line2}` : ""}
-                              {selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ""}
-                            </p>
-                            <p className="mt-1 text-xs text-[#64748b]">
-                              {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postalCode} | {selectedAddress.phone}
-                            </p>
-                          </div>
-                        ) : null}
+                        {/* Address details */}
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {selectedAddress.line1}
+                          {selectedAddress.line2 ? `, ${selectedAddress.line2}` : ""}
+                          {selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ""}
+                          {`, ${selectedAddress.city}`}
+                          {selectedAddress.state ? `, ${selectedAddress.state}` : ""}
+                          {` ${selectedAddress.postalCode}`}
+                        </p>
+
+                        {/* Phone number */}
+                        <p className="text-sm text-gray-700">
+                          {selectedAddress.phone}
+                        </p>
                       </div>
                     ) : null}
 
@@ -578,7 +581,7 @@ export default function CheckoutPage() {
                         onClick={() => setIsAddressPickerOpen(false)}
                       >
                         <section
-                          className="w-full max-w-xl bg-white p-4"
+                          className="w-full max-w-xl bg-white p-5 rounded-2xl shadow-xl border border-slate-100"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <div className="mb-3 flex items-center justify-between gap-2">
@@ -586,9 +589,9 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={openAddAddress}
-                              className="inline-flex items-center gap-1 rounded bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition active:scale-95"
                             >
-                              <Plus size={14} /> Add New
+                              <Plus size={16} /> Add New
                             </button>
                           </div>
 
@@ -608,17 +611,17 @@ export default function CheckoutPage() {
                                       handleAddressSelectFromPicker(address.id);
                                     }
                                   }}
-                                  className={`w-full px-3 py-3 text-left transition ${
+                                  className={`w-full px-3 py-3 text-left transition rounded-xl ${
                                     isSelected
-                                      ? "bg-blue-50"
-                                      : "bg-white hover:bg-blue-50/20"
+                                      ? "bg-blue-50 border border-blue-100"
+                                      : "bg-white hover:bg-blue-50/20 border border-transparent"
                                   }`}
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
                                       {isSelected ? <Check size={14} className="text-blue-600" /> : null}
                                       {address.fullName}
-                                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#475569] border border-slate-100">
                                         {address.tag}
                                       </span>
                                     </div>
@@ -628,9 +631,9 @@ export default function CheckoutPage() {
                                         event.stopPropagation();
                                         openEditAddress(address);
                                       }}
-                                      className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-[11px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2 text-sm font-bold text-orange-700 hover:bg-orange-100 hover:border-orange-300 transition active:scale-95"
                                     >
-                                      <Pencil size={12} /> Edit
+                                      <Pencil size={14} /> Edit
                                     </button>
                                   </div>
                                   <p className="mt-1 text-sm text-[#334155]">
@@ -650,7 +653,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={() => setIsAddressPickerOpen(false)}
-                              className="rounded bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#f8fafc]"
+                              className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-5 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition active:scale-95 shadow-sm"
                             >
                               Close
                             </button>
@@ -823,7 +826,7 @@ export default function CheckoutPage() {
             {!user ? (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="rounded bg-blue-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
+                className="inline-flex items-center justify-center rounded bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
               >
                 Login
               </Link>
@@ -832,7 +835,7 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handleContinueToPayment}
                 disabled={!selectedAddress}
-                className="rounded bg-blue-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Continue
               </button>

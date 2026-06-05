@@ -264,7 +264,7 @@ export default function CheckoutPaymentPage() {
 
   if (!isMounted) {
     return (
-      <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
         <div className="mx-auto w-full max-w-6xl animate-pulse space-y-4 pt-0 sm:pt-4">
           <div className="h-12 bg-white rounded border border-gray-200" />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -277,7 +277,7 @@ export default function CheckoutPaymentPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {!authChecked ? (
           <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">

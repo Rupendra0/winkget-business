@@ -399,7 +399,7 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
         <div className="mx-auto h-72 w-full max-w-none animate-pulse bg-white rounded-xl" />
       </main>
     );
@@ -407,7 +407,7 @@ export default function OrderDetailPage() {
 
   if (!user) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
         <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl text-center">
           <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-900 mb-4">
             <Package size={24} />
@@ -429,7 +429,7 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
         <div className="mx-auto w-full max-w-6xl bg-white p-7 rounded-xl border border-slate-200/80">
           <p className="text-xl font-bold text-slate-900">Order not found</p>
           <p className="mt-2 text-sm text-slate-600">This order is unavailable or does not belong to your account.</p>
@@ -446,7 +446,7 @@ export default function OrderDetailPage() {
 
   if (showUpdatesMobile) {
     return (
-      <main className="min-h-screen bg-white px-6 py-4">
+      <main className="page-scaled-fonts min-h-screen bg-white px-6 py-4">
         <div className="mb-6">
           <button
             type="button"
@@ -466,7 +466,7 @@ export default function OrderDetailPage() {
   const otherItems = order.items.slice(1);
 
   return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
+    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
       <div className="mx-auto w-full max-w-6xl">
         
         {/* Desktop-only Breadcrumbs */}

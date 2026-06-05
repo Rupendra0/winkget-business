@@ -136,7 +136,7 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-6 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-6 sm:px-4 lg:px-6">
         <div className="mx-auto h-64 w-full max-w-6xl animate-pulse bg-white rounded-xl" />
       </main>
     );
@@ -144,7 +144,7 @@ export default function OrdersPage() {
 
   if (!user) {
     return (
-      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
         <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl text-center">
           <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-900 mb-4">
             <Package size={24} />
@@ -238,7 +238,7 @@ export default function OrdersPage() {
   );
 
   return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
+    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
       <div className="mx-auto w-full max-w-6xl">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 px-1">

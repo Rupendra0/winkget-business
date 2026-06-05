@@ -104,7 +104,7 @@ export default function CartPage() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0">
         {items.length === 0 ? (
           <div className="border-y border-gray-200 sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
@@ -387,7 +387,7 @@ export default function CartPage() {
             
             <Link
               href="/checkout?mode=cart"
-              className="rounded bg-blue-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
+              className="inline-flex items-center justify-center rounded bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
             >
               Place Order
             </Link>

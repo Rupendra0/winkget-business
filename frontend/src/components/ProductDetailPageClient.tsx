@@ -19,6 +19,7 @@ import {
   makeStoreProduct,
   readCart,
   setCartItemQuantity,
+  setBuyNowSelection,
   toggleWishlist,
 } from "@/lib/shopStorage";
 
@@ -343,8 +344,8 @@ export default function ProductDetailPageClient({
   };
 
   const onBuyNow = () => {
-    addToCart(storeProduct, quantity);
-    router.push("/checkout");
+    setBuyNowSelection(storeProduct, quantity);
+    router.push("/checkout?mode=buy-now");
   };
 
   const handleSubmitReview = async (event: FormEvent<HTMLFormElement>) => {
