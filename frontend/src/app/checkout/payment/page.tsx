@@ -280,7 +280,7 @@ export default function CheckoutPaymentPage() {
     <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {!authChecked ? (
-          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
+          <div className="border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
             <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
               <div className="flex items-center gap-3">
                 <CreditCard size={22} className="text-[#1f2937] shrink-0" />
@@ -294,7 +294,7 @@ export default function CheckoutPaymentPage() {
             <section className="bg-white p-6 text-sm text-[#64748b]">Checking login status...</section>
           </div>
         ) : !user ? (
-          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
+          <div className="border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
             <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
               <div className="flex items-center gap-3">
                 <CreditCard size={22} className="text-[#1f2937] shrink-0" />
@@ -317,7 +317,7 @@ export default function CheckoutPaymentPage() {
             </section>
           </div>
         ) : !checkoutDraft || !selectedAddress ? (
-          <div className="border-none sm:border sm:rounded-lg overflow-hidden bg-white divide-y divide-gray-100">
+          <div className="border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
             <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
               <div className="flex items-center gap-3">
                 <CreditCard size={22} className="text-[#1f2937] shrink-0" />
@@ -342,7 +342,7 @@ export default function CheckoutPaymentPage() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] pt-4">
             {/* Left Column: Payments accordion */}
-            <section className="space-y-0 border-none sm:border sm:rounded-lg bg-white divide-y divide-gray-100">
+            <section className="space-y-0 border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
               
               {/* Header */}
               <header className="bg-white py-4 px-4 flex items-center justify-between sticky top-0 z-30 sm:relative sm:top-auto sm:z-auto">
@@ -744,7 +744,7 @@ export default function CheckoutPaymentPage() {
             </section>
 
             {/* Right Column: Order Details (Hidden on Mobile) */}
-            <aside className="hidden lg:block h-fit border-y border-gray-200 sm:border sm:rounded-lg bg-white p-6 space-y-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
+            <aside className="hidden lg:block h-fit border-y border-gray-200 sm:border sm:rounded-2xl bg-white p-6 space-y-4 lg:sticky lg:top-24 lg:self-start lg:mt-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Order Details</p>
               <div className="mt-2 space-y-2 text-sm text-[#334155]">
                 <div className="flex items-center justify-between">
