@@ -1513,17 +1513,27 @@ function OrdersSection({
   error: string | null;
 }) {
   const formatCurrency = (value: number) => `Rs ${Math.max(0, Math.round(value || 0)).toLocaleString("en-IN")}`;
-  const statusOptions: VendorOrderStatus[] = ["Pending", "Completed", "Disputed"];
+  const statusOptions: VendorOrderStatus[] = ["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"];
 
   const toStatusBadgeClass = (status: VendorOrderStatus) => {
     if (status === "Completed") {
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
     }
-
     if (status === "Disputed") {
       return "border-rose-200 bg-rose-50 text-rose-700";
     }
-
+    if (status === "Confirmed") {
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    }
+    if (status === "Shipped") {
+      return "border-purple-200 bg-purple-50 text-purple-700";
+    }
+    if (status === "Out For Delivery") {
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    }
+    if (status === "Delivery Attempted") {
+      return "border-orange-200 bg-orange-50 text-orange-700";
+    }
     return "border-amber-200 bg-amber-50 text-amber-700";
   };
 
@@ -1554,7 +1564,7 @@ function OrdersSection({
 
       <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          {(["All", "Pending", "Completed", "Disputed"] as Array<"All" | VendorOrderStatus>).map((status) => (
+          {(["All", "Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"] as Array<"All" | VendorOrderStatus>).map((status) => (
             <button
               key={`order-filter-${status}`}
               type="button"

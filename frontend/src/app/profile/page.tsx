@@ -265,42 +265,47 @@ export default function ProfilePage() {
     }
 
     window.dispatchEvent(new Event("auth:changed"));
-    router.replace("/auth");
     router.refresh();
   };
 
   useEffect(() => {
     const loadSession = async () => {
+      setLoading(true);
       const currentUser = await fetchCurrentUser();
-      if (!currentUser) {
-        router.replace(buildAuthHref(pathname || "/profile"));
-        return;
-      }
       setUser(currentUser);
 
-      const savedImage = localStorage.getItem(`winkget:profile:image:${currentUser.id}`);
-      if (savedImage) {
-        setProfileImage(savedImage);
+      if (currentUser) {
+        const savedImage = localStorage.getItem(`winkget:profile:image:${currentUser.id}`);
+        if (savedImage) {
+          setProfileImage(savedImage);
+        }
+
+        // Initialize edit fields
+        const nameParts = (currentUser.name || "").trim().split(/\s+/);
+        setFirstName(nameParts[0] || "");
+        setLastName(nameParts.slice(1).join(" ") || "");
+        setEmailVal(currentUser.email || "");
+        setPhoneVal(currentUser.phone || "");
+
+        // Seed addresses
+        seedAddressFromUserProfile(currentUser);
+        const nextAddressState = readAddresses(currentUser.id);
+        setAddresses(nextAddressState.addresses);
+        setSelectedAddressId(nextAddressState.selectedAddressId || "");
       }
-
-      // Initialize edit fields
-      const nameParts = (currentUser.name || "").trim().split(/\s+/);
-      setFirstName(nameParts[0] || "");
-      setLastName(nameParts.slice(1).join(" ") || "");
-      setEmailVal(currentUser.email || "");
-      setPhoneVal(currentUser.phone || "");
-
-      // Seed addresses
-      seedAddressFromUserProfile(currentUser);
-      const nextAddressState = readAddresses(currentUser.id);
-      setAddresses(nextAddressState.addresses);
-      setSelectedAddressId(nextAddressState.selectedAddressId || "");
-
       setLoading(false);
     };
 
     void loadSession();
-  }, [pathname, router]);
+
+    const handleAuthChange = () => {
+      void loadSession();
+    };
+    window.addEventListener("auth:changed", handleAuthChange);
+    return () => {
+      window.removeEventListener("auth:changed", handleAuthChange);
+    };
+  }, [pathname]);
 
   // Keep address book refreshed when switching to addresses tab
   useEffect(() => {
@@ -625,12 +630,34 @@ export default function ProfilePage() {
     });
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 pt-2 pb-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
           <div className="animate-pulse bg-white rounded-xl h-48" />
           <div className="animate-pulse bg-white rounded-xl h-[450px]" />
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
+        <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-900 mb-4">
+            <UserRound size={24} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Login to view profile</h2>
+          <p className="text-sm text-slate-500 mt-2 mb-6">
+            Please log in to manage your personal details, saved delivery addresses, and account security.
+          </p>
+          <Link
+            href={buildAuthHref(pathname || "/profile")}
+            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+          >
+            Login to Account
+          </Link>
         </div>
       </main>
     );

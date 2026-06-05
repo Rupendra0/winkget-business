@@ -314,7 +314,6 @@ export default function Navbar() {
     setUser(null);
     setMenuOpen(false);
     window.dispatchEvent(new Event("auth:changed"));
-    router.push("/");
     router.refresh();
   };
 

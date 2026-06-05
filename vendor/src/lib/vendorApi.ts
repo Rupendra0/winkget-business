@@ -104,7 +104,7 @@ export type VendorInquirySnapshot = {
   inquiries: VendorInquiry[];
 };
 
-export type VendorOrderStatus = "Pending" | "Disputed" | "Completed";
+export type VendorOrderStatus = "Pending" | "Confirmed" | "Shipped" | "Out For Delivery" | "Delivery Attempted" | "Completed" | "Disputed";
 
 export type VendorOrderItem = {
   id: string;
@@ -617,7 +617,14 @@ export async function fetchVendorOrders(options?: {
       ? payload.orders.map((order, index) => {
           const statusValue = String(order.status || "Pending");
           const normalizedStatus: VendorOrderStatus =
-            statusValue === "Completed" || statusValue === "Disputed" ? statusValue : "Pending";
+            statusValue === "Confirmed" ||
+            statusValue === "Shipped" ||
+            statusValue === "Out For Delivery" ||
+            statusValue === "Delivery Attempted" ||
+            statusValue === "Completed" ||
+            statusValue === "Disputed"
+              ? (statusValue as VendorOrderStatus)
+              : "Pending";
 
           const normalizedItems = Array.isArray(order.items)
             ? order.items.map((item, itemIndex) => ({
@@ -723,7 +730,14 @@ export async function updateVendorOrderStatus(orderId: string, status: VendorOrd
 
   const statusValue = String(order.status || "Pending");
   const normalizedStatus: VendorOrderStatus =
-    statusValue === "Completed" || statusValue === "Disputed" ? statusValue : "Pending";
+    statusValue === "Confirmed" ||
+    statusValue === "Shipped" ||
+    statusValue === "Out For Delivery" ||
+    statusValue === "Delivery Attempted" ||
+    statusValue === "Completed" ||
+    statusValue === "Disputed"
+      ? (statusValue as VendorOrderStatus)
+      : "Pending";
 
   const normalizedItems = Array.isArray(order.items)
     ? order.items.map((item, itemIndex) => ({

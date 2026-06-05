@@ -67,6 +67,7 @@ export type CheckoutOrder = {
   id: string;
   userId: string;
   createdAt: string;
+  updatedAt: string;
   mode: CheckoutMode;
   items: StorefrontCartItem[];
   totals: CheckoutTotals;
@@ -74,7 +75,7 @@ export type CheckoutOrder = {
   paymentMethod: PaymentMethod;
   paymentStatus: "pending" | "paid" | "cod_pending";
   orderStatus: "placed" | "confirmed";
-  status: "Pending" | "Disputed" | "Completed";
+  status: "Pending" | "Confirmed" | "Shipped" | "Out For Delivery" | "Delivery Attempted" | "Completed" | "Disputed";
 };
 
 type AddressStore = Record<string, { selectedAddressId?: string; addresses: SavedAddress[] }>;
@@ -360,6 +361,7 @@ const normalizeCheckoutOrder = (value: unknown, fallbackUserId: string): Checkou
   }
 
   const createdAt = normalizeString(raw.createdAt) || new Date().toISOString();
+  const updatedAt = normalizeString(raw.updatedAt) || createdAt;
   const mode: CheckoutMode = raw.mode === "buy-now" ? "buy-now" : "cart";
   const userId = normalizeString(raw.userId) || fallbackUserId;
 
@@ -367,6 +369,7 @@ const normalizeCheckoutOrder = (value: unknown, fallbackUserId: string): Checkou
     id,
     userId,
     createdAt,
+    updatedAt,
     mode,
     items,
     totals: computeCheckoutTotals(items),
@@ -374,12 +377,20 @@ const normalizeCheckoutOrder = (value: unknown, fallbackUserId: string): Checkou
     paymentMethod: normalizePaymentMethod(raw.paymentMethod),
     paymentStatus: normalizePaymentStatus(raw.paymentStatus),
     orderStatus: normalizeOrderStatus(raw.orderStatus),
-    status:
-      normalizeString((raw as any).status) === "Completed"
-        ? "Completed"
-        : normalizeString((raw as any).status) === "Disputed"
-          ? "Disputed"
-          : "Pending",
+    status: (() => {
+      const s = normalizeString((raw as any).status);
+      if (
+        s === "Confirmed" ||
+        s === "Shipped" ||
+        s === "Out For Delivery" ||
+        s === "Delivery Attempted" ||
+        s === "Completed" ||
+        s === "Disputed"
+      ) {
+        return s;
+      }
+      return "Pending";
+    })(),
   };
 };
 

@@ -66,19 +66,26 @@ export default function OrdersPage() {
 
   useEffect(() => {
     const loadSession = async () => {
+      setLoading(true);
       const currentUser = await fetchCurrentUser();
-      if (!currentUser) {
-        router.replace(buildAuthHref(pathname || "/orders"));
-        return;
-      }
       setUser(currentUser);
-      const nextOrders = await readOrders(currentUser.id);
-      setOrders(nextOrders);
+      if (currentUser) {
+        const nextOrders = await readOrders(currentUser.id);
+        setOrders(nextOrders);
+      }
       setLoading(false);
     };
 
     void loadSession();
-  }, [pathname, router]);
+
+    const handleAuthChange = () => {
+      void loadSession();
+    };
+    window.addEventListener("auth:changed", handleAuthChange);
+    return () => {
+      window.removeEventListener("auth:changed", handleAuthChange);
+    };
+  }, [pathname]);
 
   const placedOrderId = String(searchParams.get("placed") || "").trim();
 
@@ -127,10 +134,32 @@ export default function OrdersPage() {
     });
   }, [orders, appliedSearchQuery, statusFilters, timeFilters]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-6 sm:px-4 lg:px-6">
         <div className="mx-auto h-64 w-full max-w-6xl animate-pulse bg-white rounded-xl" />
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
+        <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-900 mb-4">
+            <Package size={24} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Login to view your orders</h2>
+          <p className="text-sm text-slate-500 mt-2 mb-6">
+            Please log in to keep track of your active deliveries, view order history, and manage invoices.
+          </p>
+          <Link
+            href={buildAuthHref(pathname || "/orders")}
+            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+          >
+            Login to Account
+          </Link>
+        </div>
       </main>
     );
   }

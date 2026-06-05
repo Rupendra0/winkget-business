@@ -11,7 +11,7 @@ const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ORDER_MODE_VALUES = new Set(["cart", "buy-now"]);
 const PAYMENT_METHOD_VALUES = new Set(["cod", "razorpay", "upi", "card", "netbanking", "wallet"]);
-const ADMIN_STATUS_VALUES = new Set(["Pending", "Disputed", "Completed"]);
+const ADMIN_STATUS_VALUES = new Set(["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"]);
 
 const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET || "dev-secret";
@@ -591,9 +591,13 @@ router.get("/orders/vendor", requireAuthenticated("vendor"), requireVendor, asyn
         accumulator.total += 1;
         accumulator.revenue += toNonNegativeNumber(order.amount, 0);
 
-        if (order.status === "Pending") accumulator.pending += 1;
-        if (order.status === "Completed") accumulator.completed += 1;
-        if (order.status === "Disputed") accumulator.disputed += 1;
+        if (order.status === "Completed") {
+          accumulator.completed += 1;
+        } else if (order.status === "Disputed") {
+          accumulator.disputed += 1;
+        } else {
+          accumulator.pending += 1;
+        }
 
         return accumulator;
       },

@@ -56,7 +56,29 @@ const statusClassName = (value: CheckoutOrder["status"]) => {
   if (value === "Disputed") {
     return "bg-rose-50 text-rose-700 border-rose-100";
   }
+  if (value === "Confirmed") {
+    return "bg-blue-50 text-blue-700 border-blue-100";
+  }
+  if (value === "Shipped") {
+    return "bg-purple-50 text-purple-700 border-purple-100";
+  }
+  if (value === "Out For Delivery") {
+    return "bg-sky-50 text-sky-700 border-sky-100";
+  }
+  if (value === "Delivery Attempted") {
+    return "bg-orange-50 text-orange-700 border-orange-100";
+  }
   return "bg-amber-50 text-amber-800 border-amber-100";
+};
+
+const statusDotColor = (value: CheckoutOrder["status"]) => {
+  if (value === "Completed") return "bg-emerald-600";
+  if (value === "Disputed") return "bg-rose-600";
+  if (value === "Confirmed") return "bg-blue-600";
+  if (value === "Shipped") return "bg-purple-600";
+  if (value === "Out For Delivery") return "bg-sky-600";
+  if (value === "Delivery Attempted") return "bg-orange-600";
+  return "bg-amber-600";
 };
 
 export default function OrderDetailPage() {
@@ -81,20 +103,26 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     const loadSessionAndOrder = async () => {
+      setLoading(true);
       const currentUser = await fetchCurrentUser();
-      if (!currentUser) {
-        router.replace(buildAuthHref(pathname || "/orders"));
-        return;
-      }
-
       setUser(currentUser);
-      const nextOrder = await readOrderById(currentUser.id, orderId);
-      setOrder(nextOrder);
+      if (currentUser) {
+        const nextOrder = await readOrderById(currentUser.id, orderId);
+        setOrder(nextOrder);
+      }
       setLoading(false);
     };
 
     void loadSessionAndOrder();
-  }, [orderId, pathname, router]);
+
+    const handleAuthChange = () => {
+      void loadSessionAndOrder();
+    };
+    window.addEventListener("auth:changed", handleAuthChange);
+    return () => {
+      window.removeEventListener("auth:changed", handleAuthChange);
+    };
+  }, [orderId, pathname]);
 
   const itemCount = useMemo(() => {
     if (!order) return 0;
@@ -105,6 +133,7 @@ export default function OrderDetailPage() {
     if (!order) return [];
 
     const baseDate = new Date(order.createdAt);
+    const updateDate = new Date(order.updatedAt || order.createdAt);
     
     const addHours = (date: Date, hours: number) => {
       const copy = new Date(date);
@@ -142,133 +171,135 @@ export default function OrderDetailPage() {
       return `${formatDt(date)} - ${formatTm(date)}`;
     };
 
-    const confirmedDate = baseDate;
-    const shippedDate = addHours(baseDate, 3);
-    const attemptDate = addHours(baseDate, 24);
-    const outDate = addHours(baseDate, 26);
-    const deliveredDate = addHours(baseDate, 28);
-
     const trackingNo = `FMPP${order.id.slice(-8).toUpperCase()}`;
 
-    // Group 1: Order Confirmed
-    const groupConfirmed = {
+    // Define dates dynamically
+    const placedDate = baseDate;
+    const confirmedDate = order.status === "Confirmed" ? updateDate : addHours(baseDate, 1.5);
+    const shippedDate = order.status === "Shipped" ? updateDate : addHours(baseDate, 3);
+    const outDate = order.status === "Out For Delivery" ? updateDate : addHours(baseDate, 24);
+    const attemptDate = order.status === "Delivery Attempted" ? updateDate : addHours(baseDate, 25);
+    const deliveredDate = order.status === "Completed" ? updateDate : addHours(baseDate, 26);
+    const disputedDate = order.status === "Disputed" ? updateDate : addHours(baseDate, 26);
+
+    // Status helpers
+    const isConfirmedOrLater = ["Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+    const isShippedOrLater = ["Shipped", "Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+    const isOutOrLater = ["Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+
+    const timeline = [];
+
+    // 1. Order Placed / Confirmed
+    timeline.push({
       title: "Order Confirmed",
-      dateStr: formatDt(confirmedDate),
-      status: "completed" as const,
-      subEvents: [
-        { title: "Your Order has been placed.", description: formatSubEventTime(confirmedDate) },
-        { title: "Seller has processed your order.", description: formatSubEventTime(addHours(confirmedDate, 2)) },
-        { title: "Your item has been picked up by delivery partner.", description: formatSubEventTime(addHours(confirmedDate, 2.5)) },
+      dateStr: isConfirmedOrLater ? formatDt(confirmedDate) : formatDt(placedDate),
+      status: (isConfirmedOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+      subEvents: isConfirmedOrLater ? [
+        { title: "Your Order has been placed.", description: formatSubEventTime(placedDate) },
+        { title: "Seller has processed your order.", description: formatSubEventTime(confirmedDate) },
+      ] : [
+        { title: "Your Order has been placed.", description: formatSubEventTime(placedDate) },
+        { title: "Waiting for seller confirmation.", description: undefined }
       ]
-    };
+    });
 
-    // Group 2: Shipped
-    const groupShipped = {
+    // 2. Shipped
+    timeline.push({
       title: "Shipped",
-      dateStr: formatDt(shippedDate),
-      status: "completed" as const,
-      subEvents: [
-        { title: `Ekart Logistics - ${trackingNo}`, description: `Your item has been shipped. ${formatSubEventTime(shippedDate)}` },
-        { title: "Your item has been received in the hub nearest to you", description: undefined },
-      ]
-    };
+      dateStr: isShippedOrLater ? formatDt(shippedDate) : undefined,
+      status: (isShippedOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+      subEvents: isShippedOrLater ? [
+        { title: `Courier partner picked up - ${trackingNo}`, description: formatSubEventTime(shippedDate) },
+        { title: "In transit to nearest delivery hub.", description: undefined }
+      ] : []
+    });
 
-    if (order.status === "Pending") {
-      const groupAttempted = {
+    // 3. Out For Delivery
+    timeline.push({
+      title: "Out For Delivery",
+      dateStr: isOutOrLater ? formatDt(outDate) : undefined,
+      status: (isOutOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+      subEvents: isOutOrLater ? [
+        { title: "Your order is out for delivery with agent.", description: formatSubEventTime(outDate) }
+      ] : []
+    });
+
+    // 4. Special Warning / Attempted step if status is Delivery Attempted
+    if (order.status === "Delivery Attempted") {
+      timeline.push({
         title: "Delivery Attempted",
-        dateStr: undefined,
+        dateStr: formatDt(attemptDate),
         status: "warning" as const,
         subEvents: [
-          { title: "Delivery agent was unable to deliver your order. Please check again after some time for further updates.", description: formatSubEventTime(attemptDate) },
+          { title: "Delivery agent was unable to deliver your order. We will retry soon.", description: formatSubEventTime(attemptDate) }
         ]
-      };
-
-      const groupOut = {
-        title: "Out For Delivery",
-        dateStr: formatDt(outDate),
-        status: "completed" as const,
-        subEvents: [
-          { title: "Your item is out for delivery", description: formatSubEventTime(outDate) },
-        ]
-      };
-
-      const groupDelivered = {
-        title: `Delivered ${formatDt(deliveredDate)}`,
-        dateStr: undefined,
-        status: "pending" as const,
-        subEvents: [
-          { title: "Your item has been delivered", description: formatSubEventTime(deliveredDate) },
-        ]
-      };
-
-      return [groupConfirmed, groupShipped, groupAttempted, groupOut, groupDelivered];
-    } else if (order.status === "Completed") {
-      const groupOut = {
-        title: "Out For Delivery",
-        dateStr: formatDt(outDate),
-        status: "completed" as const,
-        subEvents: [
-          { title: "Your item is out for delivery", description: formatSubEventTime(outDate) },
-        ]
-      };
-
-      const groupDelivered = {
-        title: "Delivered",
-        dateStr: formatDt(deliveredDate),
-        status: "completed" as const,
-        subEvents: [
-          { title: "Your item has been delivered", description: formatSubEventTime(deliveredDate) },
-        ]
-      };
-
-      return [groupConfirmed, groupShipped, groupOut, groupDelivered];
-    } else {
-      const groupAttempted = {
-        title: "Delivery Attempted",
-        dateStr: undefined,
-        status: "warning" as const,
-        subEvents: [
-          { title: "Delivery agent was unable to deliver your order. Please check again after some time for further updates.", description: formatSubEventTime(attemptDate) },
-        ]
-      };
-
-      const groupCancelled = {
-        title: "Cancelled / Returned",
-        dateStr: formatDt(outDate),
-        status: "warning" as const,
-        subEvents: [
-          { title: "Your order was cancelled or returned.", description: formatSubEventTime(outDate) },
-        ]
-      };
-
-      return [groupConfirmed, groupShipped, groupAttempted, groupCancelled];
+      });
     }
+
+    // 5. Final Step: Completed (Delivered) or Disputed (Cancelled / Returned)
+    if (order.status === "Disputed") {
+      timeline.push({
+        title: "Cancelled / Disputed",
+        dateStr: formatDt(disputedDate),
+        status: "warning" as const,
+        subEvents: [
+          { title: "Your order was cancelled or disputed.", description: formatSubEventTime(disputedDate) }
+        ]
+      });
+    } else {
+      const isCompleted = order.status === "Completed";
+      timeline.push({
+        title: isCompleted ? "Delivered" : "Delivered (Estimated)",
+        dateStr: isCompleted ? formatDt(deliveredDate) : undefined,
+        status: (isCompleted ? "completed" : "pending") as "completed" | "pending" | "warning",
+        subEvents: isCompleted ? [
+          { title: "Your item has been delivered successfully.", description: formatSubEventTime(deliveredDate) }
+        ] : []
+      });
+    }
+
+    return timeline;
   }, [order]);
 
   const steps = useMemo(() => {
     if (!order) return [];
 
     const placedStep = {
-      label: "Order Confirmed",
-      date: formatDateTime(order.createdAt),
+      label: order.status === "Pending" ? "Order Placed" : "Order Confirmed",
+      date: order.status === "Pending" ? formatDateTime(order.createdAt) : formatDateTime(order.updatedAt || order.createdAt),
       active: true,
       isCancelled: false,
+      isWarning: false,
     };
 
     let secondStepLabel = "Delivery Pending";
     let secondStepDate: string | null = null;
     let isSecondStepActive = false;
     let isCancelled = false;
+    let isWarning = false;
 
     if (order.status === "Completed") {
       secondStepLabel = "Delivered";
-      secondStepDate = formatDateTime(order.createdAt);
+      secondStepDate = formatDateTime(order.updatedAt || order.createdAt);
       isSecondStepActive = true;
     } else if (order.status === "Disputed") {
-      secondStepLabel = "Cancelled";
-      secondStepDate = formatDateTime(order.createdAt);
+      secondStepLabel = "Cancelled / Disputed";
+      secondStepDate = formatDateTime(order.updatedAt || order.createdAt);
       isSecondStepActive = true;
       isCancelled = true;
+    } else if (order.status === "Delivery Attempted") {
+      secondStepLabel = "Delivery Attempted";
+      secondStepDate = formatDateTime(order.updatedAt || order.createdAt);
+      isSecondStepActive = true;
+      isWarning = true;
+    } else if (order.status === "Out For Delivery") {
+      secondStepLabel = "Out for Delivery";
+      secondStepDate = formatDateTime(order.updatedAt || order.createdAt);
+      isSecondStepActive = true;
+    } else if (order.status === "Shipped") {
+      secondStepLabel = "Shipped";
+      secondStepDate = formatDateTime(order.updatedAt || order.createdAt);
+      isSecondStepActive = true;
     } else {
       secondStepLabel = "Processing / Delivery Pending";
       isSecondStepActive = false;
@@ -281,6 +312,7 @@ export default function OrderDetailPage() {
         date: secondStepDate,
         active: isSecondStepActive,
         isCancelled: isCancelled,
+        isWarning: isWarning,
       }
     ];
   }, [order]);
@@ -365,10 +397,32 @@ export default function OrderDetailPage() {
     );
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
         <div className="mx-auto h-72 w-full max-w-none animate-pulse bg-white rounded-xl" />
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-4 py-12 flex items-center justify-center">
+        <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-900 mb-4">
+            <Package size={24} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Login to view order details</h2>
+          <p className="text-sm text-slate-500 mt-2 mb-6">
+            Please log in to track this order, view items, and manage delivery options.
+          </p>
+          <Link
+            href={buildAuthHref(pathname || `/orders/${orderId}`)}
+            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+          >
+            Login to Account
+          </Link>
+        </div>
       </main>
     );
   }
@@ -444,7 +498,7 @@ export default function OrderDetailPage() {
             <span>Back to Orders</span>
           </Link>
           <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-bold ${statusClassName(order.status)}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${order.status === "Completed" ? "bg-emerald-600" : order.status === "Disputed" ? "bg-rose-600" : "bg-amber-600"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${statusDotColor(order.status)}`} />
             {formatStatus(order.status)}
           </span>
         </div>
@@ -516,23 +570,41 @@ export default function OrderDetailPage() {
                 <div className="pt-5 border-t border-slate-100">
                   <div className="relative pl-6 space-y-6">
                     {/* Vertical line connector */}
-                    <div className={`absolute left-[11px] top-2 bottom-2 w-0.5 ${steps[1]?.active ? (steps[1].isCancelled ? "bg-rose-200" : "bg-emerald-200") : "bg-slate-200"}`} />
+                    <div className={`absolute left-[11px] top-2 bottom-2 w-0.5 ${
+                      steps[1]?.active 
+                        ? (steps[1].isCancelled 
+                          ? "bg-rose-200" 
+                          : ((steps[1] as any).isWarning 
+                            ? "bg-orange-200" 
+                            : "bg-emerald-200")) 
+                        : "bg-slate-200"
+                    }`} />
 
                     {steps.map((step, idx) => {
                       const isCompleted = step.active;
-                      const dotBg = isCompleted 
-                        ? (step.isCancelled ? "bg-rose-600 border-rose-600" : "bg-emerald-600 border-emerald-600") 
-                        : "bg-slate-200 border-slate-200";
+                      let dotBg = "bg-slate-200 border-slate-200";
+                      if (isCompleted) {
+                        if (step.isCancelled) {
+                          dotBg = "bg-rose-600 border-rose-600";
+                        } else if ((step as any).isWarning) {
+                          dotBg = "bg-orange-500 border-orange-500";
+                        } else {
+                          dotBg = "bg-emerald-600 border-emerald-600";
+                        }
+                      }
 
                       return (
                         <div key={idx} className="relative flex items-start gap-4 text-sm">
                           {/* Circle dot marker */}
                           <div className={`absolute -left-[20px] top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${dotBg} flex items-center justify-center shadow-sm z-10`}>
-                            {isCompleted && !step.isCancelled && (
+                            {isCompleted && !step.isCancelled && !(step as any).isWarning && (
                               <span className="text-[6px] text-white font-bold leading-none">✓</span>
                             )}
                             {isCompleted && step.isCancelled && (
                               <span className="text-[6px] text-white font-bold leading-none">✕</span>
+                            )}
+                            {isCompleted && (step as any).isWarning && (
+                              <span className="text-[6px] text-white font-bold leading-none">!</span>
                             )}
                           </div>
 
@@ -633,18 +705,43 @@ export default function OrderDetailPage() {
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex flex-col gap-0.5">
-                        <span className={`text-sm font-bold ${order.status === "Completed" ? "text-emerald-700" : order.status === "Disputed" ? "text-rose-700" : "text-amber-800"}`}>
-                          {order.status === "Completed" ? "Delivered" : order.status === "Disputed" ? "Cancelled" : "Delivery Pending"}
+                        <span className={`text-sm font-bold ${
+                          order.status === "Completed" ? "text-emerald-700" :
+                          order.status === "Disputed" ? "text-rose-700" :
+                          order.status === "Confirmed" ? "text-blue-700" :
+                          order.status === "Shipped" ? "text-purple-700" :
+                          order.status === "Out For Delivery" ? "text-sky-700" :
+                          order.status === "Delivery Attempted" ? "text-orange-700" :
+                          "text-amber-800"
+                        }`}>
+                          {order.status === "Completed" ? "Delivered" :
+                           order.status === "Disputed" ? "Cancelled" :
+                           order.status === "Confirmed" ? "Confirmed" :
+                           order.status === "Shipped" ? "Shipped" :
+                           order.status === "Out For Delivery" ? "Out For Delivery" :
+                           order.status === "Delivery Attempted" ? "Delivery Attempted" :
+                           "Delivery Pending"}
                         </span>
                         <span className="text-xs text-slate-500 font-medium">
-                          {formatStatusDateTime(order.createdAt)}
+                          {formatStatusDateTime(order.updatedAt || order.createdAt)}
                         </span>
                       </div>
 
                       {/* Circular marker on right (hidden if Pending) */}
                       {order.status !== "Pending" && (
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm shrink-0 ${order.status === "Completed" ? "bg-[#008A5E]" : "bg-rose-600"}`}>
-                          {order.status === "Completed" ? "✓" : "✕"}
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm shrink-0 ${
+                          order.status === "Completed" ? "bg-[#008A5E]" :
+                          order.status === "Disputed" ? "bg-rose-600" :
+                          order.status === "Confirmed" ? "bg-blue-600" :
+                          order.status === "Shipped" ? "bg-purple-600" :
+                          order.status === "Out For Delivery" ? "bg-sky-600" :
+                          order.status === "Delivery Attempted" ? "bg-orange-500" :
+                          "bg-amber-600"
+                        }`}>
+                          {order.status === "Completed" ? "✓" :
+                           order.status === "Disputed" ? "✕" :
+                           order.status === "Delivery Attempted" ? "!" :
+                           "✓"}
                         </div>
                       )}
                     </div>
@@ -768,9 +865,23 @@ export default function OrderDetailPage() {
                             <span>Qty: <strong className="text-slate-600">{Math.max(1, Number(item.quantity || 1))}</strong></span>
                           </div>
                           <div className="pt-1 flex items-center gap-1.5 text-xs font-bold">
-                            <span className={`h-1.5 w-1.5 rounded-full ${order.status === "Completed" ? "bg-emerald-600" : order.status === "Disputed" ? "bg-rose-600" : "bg-amber-600"}`} />
-                            <span className={order.status === "Completed" ? "text-emerald-700" : order.status === "Disputed" ? "text-rose-700" : "text-amber-800"}>
-                              {order.status === "Completed" ? "Delivered" : order.status === "Disputed" ? "Cancelled" : "Delivery Pending"}
+                            <span className={`h-1.5 w-1.5 rounded-full ${statusDotColor(order.status)}`} />
+                            <span className={
+                              order.status === "Completed" ? "text-emerald-700" :
+                              order.status === "Disputed" ? "text-rose-700" :
+                              order.status === "Confirmed" ? "text-blue-700" :
+                              order.status === "Shipped" ? "text-purple-700" :
+                              order.status === "Out For Delivery" ? "text-sky-700" :
+                              order.status === "Delivery Attempted" ? "text-orange-700" :
+                              "text-amber-800"
+                            }>
+                              {order.status === "Completed" ? "Delivered" :
+                               order.status === "Disputed" ? "Cancelled" :
+                               order.status === "Confirmed" ? "Confirmed" :
+                               order.status === "Shipped" ? "Shipped" :
+                               order.status === "Out For Delivery" ? "Out For Delivery" :
+                               order.status === "Delivery Attempted" ? "Delivery Attempted" :
+                               "Delivery Pending"}
                             </span>
                           </div>
                         </div>

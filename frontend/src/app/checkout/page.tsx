@@ -126,6 +126,7 @@ export default function CheckoutPage() {
     let active = true;
 
     const loadSession = async () => {
+      setAuthChecked(false);
       const currentUser = await fetchCurrentUser();
       if (!active) return;
 
@@ -137,14 +138,24 @@ export default function CheckoutPage() {
         setAddresses(nextAddressState.addresses);
         setSelectedAddressIdState(nextAddressState.selectedAddressId || nextAddressState.addresses[0]?.id || "");
         setShowAddressForm(nextAddressState.addresses.length === 0);
+      } else {
+        setAddresses([]);
+        setSelectedAddressIdState("");
       }
 
       setAuthChecked(true);
     };
 
     void loadSession();
+
+    const handleAuthChange = () => {
+      if (active) void loadSession();
+    };
+    window.addEventListener("auth:changed", handleAuthChange);
+
     return () => {
       active = false;
+      window.removeEventListener("auth:changed", handleAuthChange);
     };
   }, []);
 

@@ -116,6 +116,7 @@ export default function CheckoutPaymentPage() {
     let active = true;
 
     const loadSession = async () => {
+      setAuthChecked(false);
       const currentUser = await fetchCurrentUser();
       if (!active) return;
 
@@ -124,8 +125,15 @@ export default function CheckoutPaymentPage() {
     };
 
     void loadSession();
+
+    const handleAuthChange = () => {
+      if (active) void loadSession();
+    };
+    window.addEventListener("auth:changed", handleAuthChange);
+
     return () => {
       active = false;
+      window.removeEventListener("auth:changed", handleAuthChange);
     };
   }, []);
 
