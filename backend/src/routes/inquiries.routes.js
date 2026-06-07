@@ -25,6 +25,11 @@ const requireAdmin = async (req, res, next) => {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
+    }
+
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub).select("_id role").lean();
     if (!user || user.role !== "admin") {
@@ -43,6 +48,11 @@ const requireVendor = async (req, res, next) => {
     const token = resolveTokenFromRequest(req, "vendor");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
     }
 
     const payload = verifyToken(token);

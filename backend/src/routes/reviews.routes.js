@@ -100,6 +100,10 @@ const resolveAuthenticatedUser = async (req) => {
   if (!token) return null;
 
   try {
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return null;
+    }
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub).select("_id role name businessName email phone").lean();
     return user || null;

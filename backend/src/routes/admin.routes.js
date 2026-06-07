@@ -23,6 +23,23 @@ const { resolveTokenFromRequest } = require("../lib/authCookies");
 const { scheduleCategoryIndex, scheduleVendorIndex } = require("../lib/search/indexer");
 
 const router = express.Router();
+
+router.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const originalJson = res.json;
+    res.json = function (body) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const { clearCatalogCache } = require("../lib/redis");
+        clearCatalogCache().catch((err) =>
+          console.error("Error clearing catalog cache in admin middleware:", err)
+        );
+      }
+      return originalJson.call(this, body);
+    };
+  }
+  next();
+});
+
 const VENDOR_STATUS_VALUES = new Set(["pending", "approved", "rejected"]);
 const VENDOR_LIST_STATUS_VALUES = new Set(["all", "pending", "approved", "rejected"]);
 const USER_LIST_ROLE_VALUES = new Set(["all", "admin", "customer", "vendor"]);
@@ -782,6 +799,11 @@ const requireAdmin = async (req, res, next) => {
     const token = resolveTokenFromRequest(req, "admin");
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
     }
 
     const payload = verifyToken(token);

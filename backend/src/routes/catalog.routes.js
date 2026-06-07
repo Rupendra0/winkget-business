@@ -9,6 +9,7 @@ const Review = require("../models/Review");
 const { sanitizeCustomFormFields } = require("../lib/customForm");
 const { toStoreStatusSummary } = require("../lib/storeStatus");
 const { hasScopedAuthCookie } = require("../lib/authCookies");
+const { getCachedRouteEntry, setCachedRouteEntry } = require("../lib/redis");
 
 const router = express.Router();
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
@@ -40,72 +41,41 @@ const toPositiveInt = (value, fallback) => {
 
 const PUBLIC_GET_MAX_AGE_SECONDS = toPositiveInt(process.env.PUBLIC_GET_MAX_AGE_SECONDS, 300);
 const PUBLIC_ROUTE_CACHE_TTL_SECONDS = toPositiveInt(process.env.PUBLIC_ROUTE_CACHE_TTL_SECONDS, 180);
-const PUBLIC_ROUTE_CACHE_MAX_ENTRIES = toPositiveInt(process.env.PUBLIC_ROUTE_CACHE_MAX_ENTRIES, 500);
-const publicRouteCache = new Map();
-
-const getCachedRouteEntry = (key) => {
-  const entry = publicRouteCache.get(key);
-  if (!entry) {
-    return null;
-  }
-
-  if (entry.expiresAt <= Date.now()) {
-    publicRouteCache.delete(key);
-    return null;
-  }
-
-  return entry;
-};
-
-const setCachedRouteEntry = (key, statusCode, payload, ttlSeconds = PUBLIC_ROUTE_CACHE_TTL_SECONDS) => {
-  if (ttlSeconds <= 0) {
-    return;
-  }
-
-  if (publicRouteCache.size >= PUBLIC_ROUTE_CACHE_MAX_ENTRIES) {
-    const oldestKey = publicRouteCache.keys().next().value;
-    if (oldestKey) {
-      publicRouteCache.delete(oldestKey);
-    }
-  }
-
-  publicRouteCache.set(key, {
-    statusCode,
-    payload,
-    expiresAt: Date.now() + ttlSeconds * 1000,
-  });
-};
 
 const withPublicGetCache = (handler, ttlSeconds = PUBLIC_ROUTE_CACHE_TTL_SECONDS) => async (req, res, next) => {
   const hasAuthContext = Boolean(req.headers.authorization || hasScopedAuthCookie(req, "customer"));
   if (hasAuthContext) {
-    res.set("Cache-Control", "private, no-store");
     return handler(req, res, next);
   }
 
-  res.set("Cache-Control", `public, max-age=${PUBLIC_GET_MAX_AGE_SECONDS}`);
-
-  const canServeFromCache = req.method === "GET";
-  if (!canServeFromCache) {
-    return handler(req, res, next);
-  }
-
-  const cacheKey = req.originalUrl;
-  const cached = getCachedRouteEntry(cacheKey);
-  if (cached) {
-    return res.status(cached.statusCode).json(cached.payload);
-  }
-
-  const originalJson = res.json.bind(res);
-  res.json = (payload) => {
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      setCachedRouteEntry(cacheKey, res.statusCode, payload, ttlSeconds);
+  const cacheKey = req.originalUrl || req.url;
+  try {
+    const cached = await getCachedRouteEntry(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(cached.statusCode).json(cached.payload);
     }
+  } catch (error) {
+    console.error("Cache read error:", error);
+  }
 
-    return originalJson(payload);
+  res.setHeader("X-Cache", "MISS");
+
+  const originalJson = res.json;
+  res.json = function (body) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      setCachedRouteEntry(cacheKey, res.statusCode, body, ttlSeconds).catch((err) =>
+        console.error("Cache write error:", err)
+      );
+    }
+    return originalJson.call(this, body);
   };
 
-  return handler(req, res, next);
+  try {
+    await handler(req, res, next);
+  } catch (err) {
+    next(err);
+  }
 };
 
 const toCategorySummary = (category) => ({
@@ -113,6 +83,7 @@ const toCategorySummary = (category) => ({
   name: category.name,
   slug: category.slug,
   description: category.description,
+  image: category.image,
   icon: category.icon,
   isActive: category.isActive,
   sortOrder: category.sortOrder,
@@ -176,7 +147,6 @@ const toCitySummary = (city) => {
 
 const DEFAULT_VENDOR_IMAGE =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=60";
-
 const toSafeRegex = (value) => new RegExp(String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
 const normalizeAddressToken = (value) =>

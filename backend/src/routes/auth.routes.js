@@ -691,6 +691,11 @@ router.get("/auth/me", async (req, res) => {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
+    }
+
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
@@ -764,9 +769,27 @@ router.get("/auth/me", async (req, res) => {
   }
 });
 
-router.post("/auth/logout", (req, res) => {
+router.post("/auth/logout", async (req, res) => {
   const authContext = req.body?.authContext || req.query?.context || req.headers["x-auth-context"];
-  clearAuthCookie(res, authContext ? normalizeAuthContext(authContext, "customer") : undefined);
+  const resolvedAuthContext = authContext ? normalizeAuthContext(authContext, "customer") : "customer";
+  const token = resolveTokenFromRequest(req, resolvedAuthContext);
+
+  if (token) {
+    const { blacklistToken } = require("../lib/redis");
+    try {
+      const payload = verifyToken(token);
+      if (payload && payload.exp) {
+        const remainingSeconds = payload.exp - Math.floor(Date.now() / 1000);
+        if (remainingSeconds > 0) {
+          await blacklistToken(token, remainingSeconds);
+        }
+      }
+    } catch (err) {
+      // Ignore verification error (already expired or invalid)
+    }
+  }
+
+  clearAuthCookie(res, resolvedAuthContext);
   return res.status(200).json({ ok: true, message: "Logged out successfully" });
 });
 
@@ -776,6 +799,11 @@ router.put("/auth/me", async (req, res) => {
     const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
     }
 
     const payload = verifyToken(token);
@@ -1199,6 +1227,8 @@ router.put("/auth/me", async (req, res) => {
 
     if (user.role === "vendor") {
       scheduleVendorIndex(String(user._id));
+      const { clearCatalogCache } = require("../lib/redis");
+      await clearCatalogCache();
     }
 
     const updatedUser = await User.findById(user._id)
@@ -1275,6 +1305,11 @@ router.patch("/vendor/store-status", async (req, res) => {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
     }
 
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
+    }
+
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub).select(
       "_id role vendorStatus shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
@@ -1328,6 +1363,8 @@ router.patch("/vendor/store-status", async (req, res) => {
 
     scheduleVendorIndex(String(user._id));
     emitVendorStoreStatus(user);
+    const { clearCatalogCache } = require("../lib/redis");
+    await clearCatalogCache();
 
     return res.status(200).json({
       ok: true,
@@ -1345,6 +1382,11 @@ router.post("/auth/change-password", async (req, res) => {
     const token = resolveTokenFromRequest(req, authContext);
     if (!token) {
       return res.status(401).json({ ok: false, message: "Not authenticated" });
+    }
+
+    const { isTokenBlacklisted } = require("../lib/redis");
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ ok: false, message: "Session revoked" });
     }
 
     const payload = verifyToken(token);

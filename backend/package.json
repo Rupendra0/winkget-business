@@ -10,6 +10,7 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.7.5",
     "cookie-parser": "^1.4.7",
