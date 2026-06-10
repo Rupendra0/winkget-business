@@ -6703,7 +6703,7 @@ function OrderDetailModal({
                         {primaryItem.name}
                       </h3>
                       <p className="text-xs text-slate-400">
-                        Seller: <strong className="text-slate-600 font-semibold">{primaryItem.sellerName || vendor?.businessName || "Winkget Seller"}</strong>
+                        Seller: <strong className="text-slate-600 font-semibold">{(primaryItem as any).sellerName || vendor?.businessName || "Winkget Seller"}</strong>
                       </p>
                       <div className="pt-2 text-sm flex items-center gap-3">
                         <strong className="text-slate-900 font-extrabold">{formatCurrency(primaryItem.price)}</strong>
@@ -6836,21 +6836,36 @@ function OrderDetailModal({
               <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Delivery Details</h3>
                 <div className="space-y-3.5 text-xs sm:text-sm text-slate-600">
-                  <div>
-                    <strong className="text-slate-800 block text-xs uppercase tracking-wide">Delivery Address</strong>
-                    <p className="mt-1 text-slate-700 leading-relaxed font-semibold">
-                      {order.address.line1}
-                      {order.address.line2 ? `, ${order.address.line2}` : ""}
-                      {order.address.landmark ? `, ${order.address.landmark}` : ""}
-                      <br />
-                      {order.address.city}, {order.address.state} - {order.address.postalCode}
-                    </p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3.5">
-                    <strong className="text-slate-800 block text-xs uppercase tracking-wide">Receiver</strong>
-                    <p className="mt-1 text-slate-700 font-extrabold">{order.address.fullName}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 font-semibold">Phone: {order.address.phone}</p>
-                  </div>
+                  {order.address ? (
+                    <div>
+                      <strong className="text-slate-800 block text-xs uppercase tracking-wide">Delivery Address</strong>
+                      <p className="mt-1 text-slate-700 leading-relaxed font-semibold">
+                        {order.address.line1}
+                        {order.address.line2 ? `, ${order.address.line2}` : ""}
+                        {order.address.landmark ? `, ${order.address.landmark}` : ""}
+                        <br />
+                        {order.address.city}, {order.address.state} - {order.address.postalCode}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <strong className="text-slate-800 block text-xs uppercase tracking-wide">Delivery Address</strong>
+                      <p className="mt-1 text-slate-400 italic">No address provided</p>
+                    </div>
+                  )}
+                  {order.address ? (
+                    <div className="border-t border-slate-100 pt-3.5">
+                      <strong className="text-slate-800 block text-xs uppercase tracking-wide">Receiver</strong>
+                      <p className="mt-1 text-slate-700 font-extrabold">{order.address.fullName}</p>
+                      {order.address.phone && <p className="text-xs text-slate-500 mt-0.5 font-semibold">Phone: {order.address.phone}</p>}
+                    </div>
+                  ) : (
+                    <div className="border-t border-slate-100 pt-3.5">
+                      <strong className="text-slate-800 block text-xs uppercase tracking-wide">Receiver</strong>
+                      <p className="mt-1 text-slate-700 font-extrabold">{order.customer}</p>
+                      {order.customerPhone && <p className="text-xs text-slate-500 mt-0.5 font-semibold">Phone: {order.customerPhone}</p>}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -6858,33 +6873,42 @@ function OrderDetailModal({
               <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Price Details</h3>
                 <div className="space-y-2.5 text-xs sm:text-sm text-slate-650 font-semibold">
-                  <div className="flex justify-between">
-                    <span>Listing Price (MRP)</span>
-                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.mrp)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Special Price (Subtotal)</span>
-                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.subtotal)}</span>
-                  </div>
-                  {order.totals.savings > 0 && (
-                    <div className="flex justify-between text-emerald-650 font-bold">
-                      <span>Savings</span>
-                      <span>-{formatCurrency(order.totals.savings)}</span>
+                  {order.totals ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Listing Price (MRP)</span>
+                        <span className="text-slate-800 font-bold">{formatCurrency(order.totals.mrp)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Special Price (Subtotal)</span>
+                        <span className="text-slate-800 font-bold">{formatCurrency(order.totals.subtotal)}</span>
+                      </div>
+                      {order.totals.savings > 0 && (
+                        <div className="flex justify-between text-emerald-650 font-bold">
+                          <span>Savings</span>
+                          <span>-{formatCurrency(order.totals.savings)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Shipping Fee</span>
+                        <span className="text-slate-800 font-bold">{order.totals.shippingFee > 0 ? formatCurrency(order.totals.shippingFee) : "Free"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Platform Fee</span>
+                        <span className="text-slate-800 font-bold">{formatCurrency(order.totals.platformFee)}</span>
+                      </div>
+                      
+                      <div className="border-t border-slate-100 pt-2.5 mt-2 flex justify-between text-sm sm:text-base font-extrabold text-slate-900">
+                        <span>Total Amount</span>
+                        <span>{formatCurrency(order.totals.total)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-sm sm:text-base font-extrabold text-slate-900">
+                      <span>Total Amount</span>
+                      <span>{formatCurrency(order.amount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span>Shipping Fee</span>
-                    <span className="text-slate-800 font-bold">{order.totals.shippingFee > 0 ? formatCurrency(order.totals.shippingFee) : "Free"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Platform Fee</span>
-                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.platformFee)}</span>
-                  </div>
-                  
-                  <div className="border-t border-slate-100 pt-2.5 mt-2 flex justify-between text-sm sm:text-base font-extrabold text-slate-900">
-                    <span>Total Amount</span>
-                    <span>{formatCurrency(order.totals.total)}</span>
-                  </div>
                   
                   <div className="border-t border-slate-100 pt-2.5 mt-2 text-xs flex justify-between items-center text-slate-500 font-bold">
                     <span>Paid By</span>
@@ -6955,7 +6979,7 @@ function OrderDetailModal({
                               `Hello ${order.customer}, your Winkget Express order status update is ready.`,
                               `Order No: ${order.orderNo}`,
                               `Status: ${order.status}`,
-                              `Total: ${formatCurrency(order.totals.total)}`,
+                              `Total: ${formatCurrency(order.totals?.total ?? order.amount)}`,
                               `Payment: ${toPaymentMethodLabel(order.paymentMethod).toUpperCase()} (${order.paymentStatus})`,
                             ].join("\n")
                           );
@@ -6974,7 +6998,7 @@ function OrderDetailModal({
                       onClick={() => {
                         if (order.customerEmail) {
                           const subject = `Order Status Update: ${order.orderNo}`;
-                          const body = `Hello ${order.customer},\n\nYour order ${order.orderNo} status has been updated to: ${order.status}.\n\nTotal Amount: ${formatCurrency(order.totals.total)}\n\nRegards,\n${vendor?.businessName || "Winkget Express"}`;
+                          const body = `Hello ${order.customer},\n\nYour order ${order.orderNo} status has been updated to: ${order.status}.\n\nTotal Amount: ${formatCurrency(order.totals?.total ?? order.amount)}\n\nRegards,\n${vendor?.businessName || "Winkget Express"}`;
                           window.open(`mailto:${encodeURIComponent(order.customerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank", "noopener");
                         }
                       }}
