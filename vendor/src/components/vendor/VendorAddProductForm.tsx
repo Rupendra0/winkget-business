@@ -19,6 +19,7 @@ type VendorAddProductFormProps = {
   } | null;
   sellerName: string;
   compactMode?: boolean;
+  isServiceVendor?: boolean;
   mode?: "create" | "edit";
   initialProduct?: VendorProductRecord | null;
   saving: boolean;
@@ -369,6 +370,7 @@ export default function VendorAddProductForm({
   lockedCategory,
   sellerName,
   compactMode = false,
+  isServiceVendor = false,
   mode = "create",
   initialProduct,
   saving,
@@ -391,15 +393,25 @@ export default function VendorAddProductForm({
 
     sourceCategories.forEach((category) => {
       const subcategories = Array.isArray(category.subcategories) ? category.subcategories : [];
-      subcategories.forEach((subcategory) => {
+      if (subcategories.length === 0) {
         firstLayerOptions.push({
-          id: subcategory.id,
-          name: subcategory.name,
-          slug: subcategory.slug,
-          parentSubcategoryId: subcategory.parentSubcategoryId,
-          childSubcategories: Array.isArray(subcategory.childSubcategories) ? subcategory.childSubcategories : [],
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          parentSubcategoryId: undefined,
+          childSubcategories: [],
         });
-      });
+      } else {
+        subcategories.forEach((subcategory) => {
+          firstLayerOptions.push({
+            id: subcategory.id,
+            name: subcategory.name,
+            slug: subcategory.slug,
+            parentSubcategoryId: subcategory.parentSubcategoryId,
+            childSubcategories: Array.isArray(subcategory.childSubcategories) ? subcategory.childSubcategories : [],
+          });
+        });
+      }
     });
 
     return firstLayerOptions;
@@ -746,7 +758,9 @@ export default function VendorAddProductForm({
 
     if (!selectedCategorySlug) errors.categorySlug = "Category is required.";
     if (subcategoryOptions.length > 0 && !selectedSubcategorySlug) errors.subcategorySlug = "Subcategory is required.";
-    if (!String(fieldValues.productName || "").trim()) errors.productName = "Product name is required.";
+    if (!String(fieldValues.productName || "").trim()) {
+      errors.productName = isServiceVendor ? "Service name is required." : "Product name is required.";
+    }
     if (!(fieldValues.mainImage instanceof File) && !existingMainImageUrl) errors.mainImage = "Main image is required.";
 
     const sellingPrice = Number(fieldValues.sellingPrice);
@@ -850,10 +864,16 @@ export default function VendorAddProductForm({
       };
 
       await onSubmitProduct(payload);
-      setSubmitNotice(isEditMode ? "Product updated successfully." : "Product published successfully.");
+      setSubmitNotice(
+        isEditMode
+          ? (isServiceVendor ? "Service updated successfully." : "Product updated successfully.")
+          : (isServiceVendor ? "Service published successfully." : "Product published successfully.")
+      );
       onClose();
     } catch (error) {
-      const fallback = isEditMode ? "Failed to update product. Please try again." : "Failed to publish product. Please try again.";
+      const fallback = isEditMode
+        ? (isServiceVendor ? "Failed to update service. Please try again." : "Failed to update product. Please try again.")
+        : (isServiceVendor ? "Failed to publish service. Please try again." : "Failed to publish product. Please try again.");
       setSubmitNotice(error instanceof Error ? error.message : fallback);
     }
   };
@@ -862,9 +882,15 @@ export default function VendorAddProductForm({
     <section className="rounded-[24px] border-2 border-[#d9ccb7] bg-[linear-gradient(180deg,#fffaf3,#fff5e9)] px-4 py-4 shadow-[0_16px_40px_rgba(87,63,38,0.08)] sm:px-5 sm:py-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[30px] font-semibold leading-tight text-slate-950">{isEditMode ? "Edit Product" : "Add Product"}</h2>
+          <h2 className="text-[30px] font-semibold leading-tight text-slate-950">
+            {isEditMode
+              ? (isServiceVendor ? "Edit Service" : "Edit Product")
+              : (isServiceVendor ? "Add Service" : "Add Product")}
+          </h2>
           <p className="mt-1 text-sm text-slate-600">
-            {isEditMode ? "Update existing product details using the same form." : "Upload details with multiple images and select a clear main product image."}
+            {isEditMode
+              ? (isServiceVendor ? "Update existing service details using the same form." : "Update existing product details using the same form.")
+              : (isServiceVendor ? "Upload details with multiple images and select a clear main service image." : "Upload details with multiple images and select a clear main product image.")}
           </p>
         </div>
         <button
@@ -883,7 +909,7 @@ export default function VendorAddProductForm({
               <h3 className="text-lg font-semibold text-slate-900">General Information</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <label className="block text-sm text-slate-700">
-                  Product Name<span className="ml-1 text-rose-500">*</span>
+                  {isServiceVendor ? "Service Name" : "Product Name"}<span className="ml-1 text-rose-500">*</span>
                   <input
                     type="text"
                     value={fieldValues.productName}
@@ -891,7 +917,7 @@ export default function VendorAddProductForm({
                     className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm outline-none transition ${
                       fieldErrors.productName ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
                     }`}
-                    placeholder="Enter product name"
+                    placeholder={isServiceVendor ? "Enter service name" : "Enter product name"}
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     Word limit: {countWords(fieldValues.productName)}/{MAX_PRODUCT_NAME_WORDS}
@@ -944,7 +970,7 @@ export default function VendorAddProductForm({
                     value={fieldValues.shortDescription}
                     onChange={(event) => updateField("shortDescription", event.target.value)}
                     className="mt-1 min-h-[62px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Enter short product description"
+                    placeholder={isServiceVendor ? "Enter short service description" : "Enter short product description"}
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     Word limit: {countWords(fieldValues.shortDescription)}/{MAX_SHORT_DESCRIPTION_WORDS}
@@ -957,7 +983,7 @@ export default function VendorAddProductForm({
                     value={fieldValues.longDescription}
                     onChange={(event) => updateField("longDescription", event.target.value)}
                     className="mt-1 min-h-[120px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Enter long product description"
+                    placeholder={isServiceVendor ? "Enter long service description" : "Enter long product description"}
                   />
                 </label>
               </div>
@@ -991,17 +1017,19 @@ export default function VendorAddProductForm({
                   />
                   {fieldErrors.sellingPrice ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.sellingPrice}</p> : null}
                 </label>
-                <label className="block text-sm text-slate-700">
-                  Stock
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={fieldValues.stock}
-                    onChange={(event) => updateField("stock", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  />
-                </label>
+                {isServiceVendor ? null : (
+                  <label className="block text-sm text-slate-700">
+                    Stock
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={fieldValues.stock}
+                      onChange={(event) => updateField("stock", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    />
+                  </label>
+                )}
                 <label className="block text-sm text-slate-700">
                   Store Placement
                   <select
@@ -1010,44 +1038,48 @@ export default function VendorAddProductForm({
                     className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
                   >
                     <option value="none">None</option>
-                    <option value="featured">Featured Product</option>
-                    <option value="trending">Trending Product</option>
+                    <option value="featured">{isServiceVendor ? "Featured Service" : "Featured Product"}</option>
+                    <option value="trending">{isServiceVendor ? "Trending Service" : "Trending Product"}</option>
                   </select>
                 </label>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-slate-700">Selected Details</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).length ? (
-                      HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).map((option) => (
-                        <span
-                          key={option.key}
-                          className="rounded-full border border-[#d9ccb7] bg-[#fff4e1] px-3 py-1 text-xs font-semibold text-slate-700"
-                        >
-                          {option.label}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-500">No details selected yet.</span>
-                    )}
+                {isServiceVendor ? null : (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-slate-700">Selected Details</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).length ? (
+                        HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).map((option) => (
+                          <span
+                            key={option.key}
+                            className="rounded-full border border-[#d9ccb7] bg-[#fff4e1] px-3 py-1 text-xs font-semibold text-slate-700"
+                          >
+                            {option.label}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-500">No details selected yet.</span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </section>
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Brand & Tags</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{isServiceVendor ? "Tags" : "Brand & Tags"}</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <label className="block text-sm text-slate-700">
-                  Brand
-                  <input
-                    type="text"
-                    value={fieldValues.brand}
-                    onChange={(event) => updateField("brand", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Brand name"
-                  />
-                </label>
-                <label className="block text-sm text-slate-700">
+                {isServiceVendor ? null : (
+                  <label className="block text-sm text-slate-700">
+                    Brand
+                    <input
+                      type="text"
+                      value={fieldValues.brand}
+                      onChange={(event) => updateField("brand", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Brand name"
+                    />
+                  </label>
+                )}
+                <label className={`block text-sm text-slate-700 ${isServiceVendor ? "md:col-span-2" : ""}`}>
                   Tags
                   <input
                     type="text"
@@ -1060,57 +1092,59 @@ export default function VendorAddProductForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-slate-900">Variants</h3>
-                <button
-                  type="button"
-                  onClick={() => setVariants((current) => [...current, createVariant()])}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
-                >
-                  + Add Variant
-                </button>
-              </div>
-              <div className="mt-3 space-y-3">
-                {variants.map((variant) => (
-                  <div key={variant.id} className="rounded-xl border-2 border-[#d9ccb7] bg-[#fff8ef] p-3">
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <label className="block text-sm text-slate-700">
-                        Size
-                        <input value={variant.variantSize} onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
-                      </label>
-                      <label className="block text-sm text-slate-700">
-                        Color
-                        <input value={variant.variantColor} onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
-                      </label>
-                      <label className="block text-sm text-slate-700">
-                        MRP
-                        <input type="number" value={variant.variantMrp} onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
-                      </label>
-                      <label className="block text-sm text-slate-700">
-                        Selling Price
-                        <input type="number" value={variant.variantSellingPrice} onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
-                      </label>
-                      <label className="block text-sm text-slate-700">
-                        Stock
-                        <input type="number" value={variant.variantStock} onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
-                      </label>
-                      <label className="block text-sm text-slate-700 md:col-span-3">
-                        Variant Image
-                        <input type="file" accept="image/*" onChange={(event) => onVariantChange(variant.id, "variantImage", event.target.files?.[0] || null)} className="mt-1 block w-full text-sm" />
-                      </label>
+            {isServiceVendor ? null : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-lg font-semibold text-slate-900">Variants</h3>
+                  <button
+                    type="button"
+                    onClick={() => setVariants((current) => [...current, createVariant()])}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+                  >
+                    + Add Variant
+                  </button>
+                </div>
+                <div className="mt-3 space-y-3">
+                  {variants.map((variant) => (
+                    <div key={variant.id} className="rounded-xl border-2 border-[#d9ccb7] bg-[#fff8ef] p-3">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <label className="block text-sm text-slate-700">
+                          Size
+                          <input value={variant.variantSize} onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                        </label>
+                        <label className="block text-sm text-slate-700">
+                          Color
+                          <input value={variant.variantColor} onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                        </label>
+                        <label className="block text-sm text-slate-700">
+                          MRP
+                          <input type="number" value={variant.variantMrp} onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                        </label>
+                        <label className="block text-sm text-slate-700">
+                          Selling Price
+                          <input type="number" value={variant.variantSellingPrice} onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                        </label>
+                        <label className="block text-sm text-slate-700">
+                          Stock
+                          <input type="number" value={variant.variantStock} onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                        </label>
+                        <label className="block text-sm text-slate-700 md:col-span-3">
+                          Variant Image
+                          <input type="file" accept="image/*" onChange={(event) => onVariantChange(variant.id, "variantImage", event.target.files?.[0] || null)} className="mt-1 block w-full text-sm" />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVariants((current) => (current.length > 1 ? current.filter((item) => item.id !== variant.id) : current))}
+                        className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-600"
+                      >
+                        Remove Variant
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setVariants((current) => (current.length > 1 ? current.filter((item) => item.id !== variant.id) : current))}
-                      className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-600"
-                    >
-                      Remove Variant
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           <div className="space-y-5">
@@ -1154,7 +1188,9 @@ export default function VendorAddProductForm({
                       </button>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-700">{mainImagePreview ? mainImagePreview.name : "No file selected"}</p>
-                        <p className="mt-1 text-xs text-slate-500">This image will be used as product cover.</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {isServiceVendor ? "This image will be used as service cover." : "This image will be used as product cover."}
+                        </p>
                         <button type="button" onClick={() => mainImageInputRef.current?.click()} className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
                           Choose file
                         </button>
@@ -1221,14 +1257,16 @@ export default function VendorAddProductForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
-              <label className="mt-3 block text-sm text-slate-700">
-                Key Attributes
-                <textarea value={fieldValues.attributesText} onChange={(event) => updateField("attributesText", limitAttributeInput(event.target.value))} className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]" placeholder="Material: Cotton" />
-                <p className="mt-1 text-xs text-slate-500">Maximum 6 attributes.</p>
-              </label>
-            </section>
+            {isServiceVendor ? null : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
+                <label className="mt-3 block text-sm text-slate-700">
+                  Key Attributes
+                  <textarea value={fieldValues.attributesText} onChange={(event) => updateField("attributesText", limitAttributeInput(event.target.value))} className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]" placeholder="Material: Cotton" />
+                  <p className="mt-1 text-xs text-slate-500">Maximum 6 attributes.</p>
+                </label>
+              </section>
+            )}
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
               <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
@@ -1237,52 +1275,58 @@ export default function VendorAddProductForm({
                   Badge
                   <input value={fieldValues.badge} onChange={(event) => updateField("badge", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
                 </label>
-                <div>
-                  <p className="text-sm text-slate-700">Highlight Options</p>
-                  <div ref={highlightOptionsPopupRef} className="relative mt-1">
-                    <button type="button" onClick={() => setIsHighlightOptionsOpen((previous) => !previous)} className="flex h-11 w-full items-center justify-between rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm font-medium text-slate-700">
-                      <span>{selectedExtraOptionsCount ? `${selectedExtraOptionsCount} option(s) selected` : "Select Highlight Options"}</span>
-                      <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">v</span>
-                    </button>
-                    {isHighlightOptionsOpen ? (
-                      <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-[#d9ccb7] bg-white p-2.5 shadow-lg">
-                        <div className="grid max-h-56 gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2">
-                          {HIGHLIGHT_OPTIONS.map((field) => (
-                            <label key={field.key} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={highlightValues[field.key] === true}
-                                onChange={(event) => setHighlightValues((current) => ({ ...current, [field.key]: event.target.checked }))}
-                                className="h-4 w-4 accent-emerald-600"
-                              />
-                              <span className="break-words">{field.label}</span>
-                            </label>
-                          ))}
-                        </div>
+                {isServiceVendor ? null : (
+                  <>
+                    <div>
+                      <p className="text-sm text-slate-700">Highlight Options</p>
+                      <div ref={highlightOptionsPopupRef} className="relative mt-1">
+                        <button type="button" onClick={() => setIsHighlightOptionsOpen((previous) => !previous)} className="flex h-11 w-full items-center justify-between rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm font-medium text-slate-700">
+                          <span>{selectedExtraOptionsCount ? `${selectedExtraOptionsCount} option(s) selected` : "Select Highlight Options"}</span>
+                          <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">v</span>
+                        </button>
+                        {isHighlightOptionsOpen ? (
+                          <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-[#d9ccb7] bg-white p-2.5 shadow-lg">
+                            <div className="grid max-h-56 gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2">
+                              {HIGHLIGHT_OPTIONS.map((field) => (
+                                <label key={field.key} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={highlightValues[field.key] === true}
+                                    onChange={(event) => setHighlightValues((current) => ({ ...current, [field.key]: event.target.checked }))}
+                                    className="h-4 w-4 accent-emerald-600"
+                                  />
+                                  <span className="break-words">{field.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                  </div>
-                </div>
-                <label className="block text-sm text-slate-700">
-                  Purchase Price
-                  <input type="number" min="0" step="0.01" value={fieldValues.purchasePrice} onChange={(event) => updateField("purchasePrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
-                </label>
-                <label className="block text-sm text-slate-700">
-                  Discount (%)
-                  <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
-                </label>
+                    </div>
+                    <label className="block text-sm text-slate-700">
+                      Purchase Price
+                      <input type="number" min="0" step="0.01" value={fieldValues.purchasePrice} onChange={(event) => updateField("purchasePrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
+                    </label>
+                    <label className="block text-sm text-slate-700">
+                      Discount (%)
+                      <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
+                    </label>
+                  </>
+                )}
               </div>
             </section>
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">Product Specifications</h3>
+                <h3 className="text-lg font-semibold text-slate-900 font-semibold">
+                  {isServiceVendor ? "Service Specifications" : "Product Specifications"}
+                </h3>
                 <span className="text-xs text-slate-500">One per row - label and value</span>
               </div>
               <div className="mt-3 grid gap-2">
                 {specPairs.map((pair, index) => (
                   <div key={`spec-${index}`} className="grid grid-cols-2 gap-2">
-                    <textarea value={pair.label} onChange={(event) => updateSpecification(index, "label", event.target.value)} placeholder="Enter text here" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    <textarea value={pair.label} onChange={(event) => updateSpecification(index, "label", event.target.value)} placeholder="Enter label (e.g. Warranty)" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                     <div className="relative">
                       <textarea value={pair.value} onChange={(event) => updateSpecification(index, "value", event.target.value)} placeholder="Enter text here" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                       <button type="button" onClick={() => removeSpecification(index)} className="absolute right-1 top-1 text-sm font-semibold text-red-600">
@@ -1340,7 +1384,13 @@ export default function VendorAddProductForm({
             disabled={saving}
             className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? (isEditMode ? "Updating Product..." : "Publishing Product...") : isEditMode ? "Update Product" : "Publish Product"}
+            {saving
+              ? (isEditMode
+                  ? (isServiceVendor ? "Updating Service..." : "Updating Product...")
+                  : (isServiceVendor ? "Publishing Service..." : "Publishing Product..."))
+              : isEditMode
+                ? (isServiceVendor ? "Update Service" : "Update Product")
+                : (isServiceVendor ? "Publish Service" : "Publish Product")}
           </button>
           {submitNotice || actionMessage ? <p className="text-sm text-slate-600">{submitNotice || actionMessage}</p> : null}
           {actionError ? <p className="text-sm text-rose-600">{actionError}</p> : null}

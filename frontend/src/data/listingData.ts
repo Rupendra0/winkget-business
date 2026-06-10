@@ -12,6 +12,7 @@ export type ListingProfile = {
   id: string;
   storeId?: string;
   createdAt?: string;
+  businessType?: string;
   name: string;
   category: string;
   coverImage: string;
@@ -127,6 +128,7 @@ export type StorePageData = {
   logoImage: string;
   storeCategory?: string;
   isRestaurantMarketplace?: boolean;
+  isServiceStore?: boolean;
   isStoreOpen?: boolean | null;
   contactPhone?: string;
   whatsappPhone?: string;

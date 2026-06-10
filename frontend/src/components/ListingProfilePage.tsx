@@ -146,6 +146,7 @@ export default function ListingProfilePage({
   profile: ListingProfile;
   storeData?: StorePageData | null;
 }) {
+  const isServiceProvider = profile.businessType === "service";
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<BusinessReviewSummary>({
     rating: Number(profile.rating || 0),
@@ -1251,7 +1252,20 @@ export default function ListingProfilePage({
 
           <div className="mt-4 -mx-7 rounded-[12px] border border-[#e8edf5] bg-white p-2 md:mx-0 lg:hidden">
             <div className="grid grid-cols-4 gap-2.5">
-              {storeHref ? (
+              {isServiceProvider ? (
+                storeHref ? (
+                  <Link
+                    href={storeHref}
+                    className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#4c88de] px-2 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf] md:min-h-11 md:rounded-[10px] md:text-sm"
+                  >
+                    Services
+                  </Link>
+                ) : (
+                  <span className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#4c88de] px-2 text-[13px] font-semibold text-white opacity-60 md:min-h-11 md:rounded-[10px] md:text-sm">
+                    Services
+                  </span>
+                )
+              ) : storeHref ? (
                 <Link
                   href={storeHref}
                   className="inline-flex min-h-[42px] w-full items-center justify-center whitespace-nowrap rounded-[8px] bg-[#4c88de] px-2 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf] md:min-h-11 md:rounded-[10px] md:text-sm"
@@ -1445,7 +1459,20 @@ export default function ListingProfilePage({
               <section className="rounded-[12px] border border-[#e8edf5] bg-white p-5 [&_.desktop-outline]:!border [&_.desktop-outline]:!border-slate-300">
                 <div className="space-y-4">
                   <div className="grid grid-cols-4 gap-3">
-                    {storeHref ? (
+                    {isServiceProvider ? (
+                      storeHref ? (
+                        <Link
+                          href={storeHref}
+                          className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#4c88de] px-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf]"
+                        >
+                          Services
+                        </Link>
+                      ) : (
+                        <span className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#4c88de] px-3 text-sm font-semibold text-white opacity-60">
+                          Services
+                        </span>
+                      )
+                    ) : storeHref ? (
                       <Link
                         href={storeHref}
                         className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[#4c88de] px-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#427ccf]"

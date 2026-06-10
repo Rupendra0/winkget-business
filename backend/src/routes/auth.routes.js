@@ -272,6 +272,13 @@ router.post("/auth/login", async (req, res) => {
 router.post("/auth/vendor/signup", async (req, res) => {
   try {
     const businessName = String(req.body?.businessName || "").trim();
+    const businessTypeInput = String(req.body?.businessType || "").trim().toLowerCase();
+
+    if (businessTypeInput && !["restaurant", "store", "service"].includes(businessTypeInput)) {
+      return res.status(400).json({ ok: false, message: "Invalid business type selected" });
+    }
+    const businessType = businessTypeInput || "store";
+
     const ownerName = String(req.body?.ownerName || "").trim();
     const personalEmailInput = String(req.body?.personalEmail || req.body?.email || "").trim();
     const personalPhoneInput = String(req.body?.personalPhone || req.body?.phone || "").trim();
@@ -503,6 +510,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
     const user = await User.create({
       name: ownerName,
       businessName,
+      businessType,
       email: personalEmail,
       phone: personalPhone,
       passwordHash,
@@ -544,6 +552,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
         id: String(user._id),
         name: user.name,
         businessName: user.businessName,
+        businessType: user.businessType || "store",
         email: user.email,
         phone: user.phone,
         alternatePhone: user.alternatePhone,
@@ -599,7 +608,7 @@ router.post("/auth/vendor/login", async (req, res) => {
       ],
     })
       .select(
-        "_id name businessName email phone alternatePhone businessEmail businessPhone businessAlternatePhone city sublocality state shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt customFormData role vendorStatus passwordHash businessCategory businessSubcategory"
+        "_id name businessName businessType email phone alternatePhone businessEmail businessPhone businessAlternatePhone city sublocality state shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt customFormData role vendorStatus passwordHash businessCategory businessSubcategory"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -647,6 +656,7 @@ router.post("/auth/vendor/login", async (req, res) => {
         id: String(user._id),
         name: user.name,
         businessName: user.businessName,
+        businessType: user.businessType || "store",
         email: user.email,
         phone: user.phone,
         alternatePhone: user.alternatePhone,
@@ -699,7 +709,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
+        "_id name email phone alternatePhone businessName businessType role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -719,6 +729,7 @@ router.get("/auth/me", async (req, res) => {
         phone: user.phone,
         alternatePhone: user.alternatePhone,
         businessName: user.businessName,
+        businessType: user.businessType || "store",
         role: user.role,
         vendorStatus: user.vendorStatus,
         businessCategory: toCategoryReference(user.businessCategory),

@@ -22,6 +22,7 @@ export type VendorBusinessReference = {
 export type VendorSession = {
   id: string;
   role: string;
+  businessType?: string;
   name?: string;
   email?: string;
   phone?: string;

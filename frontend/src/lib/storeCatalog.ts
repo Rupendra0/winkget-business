@@ -743,6 +743,7 @@ export const toStoreDataFromProfile = (
     logoImage: normalizeString(profile.logoImage) || imageUrl,
     storeCategory: categoryLabel,
     isRestaurantMarketplace,
+    isServiceStore: profile.businessType === "service",
     isStoreOpen: typeof profile.isStoreOpen === "boolean" ? profile.isStoreOpen : null,
     contactPhone: contactPhone || undefined,
     whatsappPhone: whatsappPhone || undefined,

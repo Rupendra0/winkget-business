@@ -704,6 +704,7 @@ const toVendorSummary = (vendor) => ({
   id: String(vendor._id),
   name: vendor.name,
   businessName: vendor.businessName,
+  businessType: vendor.businessType || "store",
   businessCategory: toCategoryReference(vendor.businessCategory),
   businessSubcategory: toSubcategoryReference(vendor.businessSubcategory),
   email: vendor.email,
@@ -864,7 +865,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .select(
-          "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
+          "_id name businessName businessType businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
         )
         .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
         .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -926,7 +927,7 @@ router.get("/admin/vendors", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessType businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -957,7 +958,7 @@ router.patch("/admin/vendors/:id/status", requireAdmin, async (req, res) => {
 
     const vendor = await User.findOne({ _id: vendorId, role: "vendor" })
       .select(
-        "_id name businessName businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name businessName businessType businessCategory businessSubcategory email phone alternatePhone businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");

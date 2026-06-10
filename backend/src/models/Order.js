@@ -1,7 +1,7 @@
 const { Schema, model, models } = require("mongoose");
 
 const ORDER_STATUS_VALUES = ["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"];
-const PAYMENT_METHOD_VALUES = ["cod", "razorpay", "upi", "card", "netbanking", "wallet"];
+const PAYMENT_METHOD_VALUES = ["cod", "razorpay", "upi", "card", "netbanking", "wallet", "emi", "giftcard"];
 const PAYMENT_STATUS_VALUES = ["pending", "paid", "cod_pending"];
 const ORDER_FLOW_STATUS_VALUES = ["placed", "confirmed", "cancelled"];
 const ORDER_MODE_VALUES = ["cart", "buy-now"];

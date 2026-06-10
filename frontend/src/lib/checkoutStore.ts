@@ -61,7 +61,7 @@ export type ActiveCheckoutDraft = {
   createdAt: string;
 };
 
-export type PaymentMethod = "cod" | "razorpay" | "upi" | "card" | "netbanking" | "wallet";
+export type PaymentMethod = "cod" | "razorpay" | "upi" | "card" | "netbanking" | "wallet" | "emi" | "giftcard";
 
 export type CheckoutOrder = {
   id: string;
@@ -323,6 +323,8 @@ const normalizePaymentMethod = (value: unknown): PaymentMethod => {
   if (normalized === "card") return "card";
   if (normalized === "netbanking") return "netbanking";
   if (normalized === "wallet") return "wallet";
+  if (normalized === "emi") return "emi";
+  if (normalized === "giftcard") return "giftcard";
   return "cod";
 };
 
@@ -774,5 +776,7 @@ export const paymentMethodLabel = (method: PaymentMethod) => {
   if (method === "upi") return "UPI";
   if (method === "card") return "Card";
   if (method === "netbanking") return "Net Banking";
+  if (method === "emi") return "Winkget EMI";
+  if (method === "giftcard") return "Winkget Gift Card";
   return "Wallet";
 };

@@ -32,6 +32,8 @@ import {
   Store,
   Trash2,
   Upload,
+  ChevronLeft,
+  ChevronRight,
   X,
   Youtube,
 } from "lucide-react";
@@ -259,9 +261,12 @@ const SECTION_META: Record<SidebarLabel, { title: string; subtitle: string }> = 
   },
 };
 
-const getNavLabel = (label: SidebarLabel, isRestaurantVendor: boolean): string => {
+const getNavLabel = (label: SidebarLabel, isRestaurantVendor: boolean, isServiceVendor?: boolean): string => {
   if (label === "Products" && isRestaurantVendor) {
     return "Menu";
+  }
+  if (label === "Products" && isServiceVendor) {
+    return "Services";
   }
 
   return label;
@@ -490,6 +495,20 @@ function normalizeWhatsappPhone(value: string) {
   if (!digits) return "";
   return digits.length === 10 ? `91${digits}` : digits;
 }
+
+function toPaymentMethodLabel(method: string) {
+  const m = String(method || "").trim().toLowerCase();
+  if (m === "cod") return "Cash on Delivery";
+  if (m === "razorpay") return "Razorpay";
+  if (m === "upi") return "UPI";
+  if (m === "card") return "Card";
+  if (m === "netbanking") return "Net Banking";
+  if (m === "wallet") return "Wallet";
+  if (m === "emi") return "Winkget EMI";
+  if (m === "giftcard") return "Winkget Gift Card";
+  return method || "N/A";
+}
+
 
 function escapeHtml(value: string) {
   return String(value || "")
@@ -735,6 +754,10 @@ function isRestaurantVendorProfile(vendor: VendorSession | null): boolean {
       String(token || "")
     )
   );
+}
+
+function isServiceVendorProfile(vendor: VendorSession | null): boolean {
+  return vendor?.businessType === "service";
 }
 
 function buildInquirySummary(inquiries: VendorInquiry[]): VendorInquirySnapshot["summary"] {
@@ -1496,6 +1519,7 @@ function OrdersSection({
   actionError,
   loading,
   error,
+  onSelectOrder,
 }: {
   summary: VendorOrderSnapshot["summary"];
   orders: VendorOrderRecord[];
@@ -1511,6 +1535,7 @@ function OrdersSection({
   actionError: string | null;
   loading: boolean;
   error: string | null;
+  onSelectOrder: (orderId: string) => void;
 }) {
   const formatCurrency = (value: number) => `Rs ${Math.max(0, Math.round(value || 0)).toLocaleString("en-IN")}`;
   const statusOptions: VendorOrderStatus[] = ["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"];
@@ -1611,78 +1636,72 @@ function OrdersSection({
               body="New customer orders will appear here automatically."
             />
           ) : (
-            orders.map((order) => {
+              orders.map((order) => {
               const leadItem = order.items[0] || null;
               const statusDraft = statusDraftById[order.id] || order.status;
               const hasStatusChange = statusDraft !== order.status;
 
-              return (
+               return (
                 <article
                   key={order.id}
-                  className="rounded-2xl border border-[#dbe7ff] bg-white p-4 shadow-[0_10px_22px_rgba(30,64,175,0.08)]"
+                  onClick={() => onSelectOrder(order.id)}
+                  className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_15px_30px_rgba(15,23_42,0.05)] space-y-4 cursor-pointer hover:border-blue-200 hover:shadow-lg transition-all"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="mt-0.5 text-l font-bold text-slate-900">{order.customer}</p>
-                      <p className="text-xs font-semibold tracking-wide text-slate-700">{order.orderNo}</p>
-                      <p className="mt-0.5 text-[11px] font-medium text-slate-500">{formatDateTime(order.createdAt)}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xl font-bold text-slate-900 leading-none">{order.customer}</p>
+                      <p className="text-sm font-semibold text-slate-500">{order.orderNo}</p>
+                      <p className="text-xs text-slate-400 font-medium">{formatDateTime(order.createdAt)}</p>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-base font-extrabold text-blue-800">{formatCurrency(order.amount)}</p>
+                    <div className="text-right space-y-1.5">
+                      <p className="text-xl font-extrabold text-slate-900 leading-none">{formatCurrency(order.amount)}</p>
                       <span
-                        className={`mt-1 inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${toStatusBadgeClass(order.status)}`}
+                        className={`inline-flex rounded-full border px-3 py-0.5 text-xs font-bold ${toStatusBadgeClass(order.status)}`}
                       >
                         {order.status}
                       </span>
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl border border-blue-100 bg-[#f4f8ff] p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-200 bg-white">
-                        {leadItem?.image ? (
-                          <img src={leadItem.image} alt={leadItem.name} className="h-full w-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
-                            {leadItem?.name?.slice(0, 1).toUpperCase() || "P"}
-                          </div>
-                        )}
-                      </div>
+                  <div className="space-y-3">
+                    {order.items.map((item, idx) => (
+                      <div key={`${order.id}-item-${item.id || idx}`} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-b-0">
+                        <div className="h-16 w-16 overflow-hidden rounded-xl bg-white shrink-0 flex items-center justify-center">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain mx-auto" loading="lazy" />
+                          ) : (
+                            <div className="grid h-full w-full place-items-center bg-slate-50 text-sm font-bold text-slate-400">
+                              {item.name?.slice(0, 1).toUpperCase() || "P"}
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{leadItem?.name || "Order Items"}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{item.name}</p>
+                          <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">Qty: {item.quantity}</p>
+                        </div>
                       </div>
-                    </div>
-
-                    {order.items.length > 1 ? (
-                      <div className="mt-2 border-t border-blue-100 pt-2 space-y-1">
-                        {order.items.slice(1, 4).map((item) => (
-                          <p key={`${order.id}-${item.id}-${item.name}`} className="text-xs font-medium text-slate-700">
-                            {item.name} x {item.quantity}
-                          </p>
-                        ))}
-                        {order.items.length > 4 ? (
-                          <p className="text-xs font-medium text-slate-500">+{order.items.length - 4} more items</p>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    ))}
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-700">
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Items: {order.itemCount}</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">Payment: {order.paymentMethod}</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-650">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">Items: {order.itemCount}</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">Payment: {toPaymentMethodLabel(order.paymentMethod)}</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
                       Payment Status: {order.paymentStatus}
                     </span>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 p-2.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Update Status</span>
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5"
+                  >
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">UPDATE STATUS</span>
                     <select
                       value={statusDraft}
                       onChange={(event) => onStatusDraftChange(order.id, event.target.value as VendorOrderStatus)}
-                      className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 outline-none focus:border-blue-400"
                     >
                       {statusOptions.map((status) => (
                         <option key={`order-status-${order.id}-${status}`} value={status}>
@@ -1695,7 +1714,7 @@ function OrdersSection({
                       type="button"
                       onClick={() => onStatusSave(order.id)}
                       disabled={!hasStatusChange || updatingOrderId === order.id}
-                      className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {updatingOrderId === order.id ? "Updating..." : hasStatusChange ? "Save" : "Saved"}
                     </button>
@@ -2431,7 +2450,7 @@ function BillingSection({
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
-                    Payment: {String(selectedOrder.paymentMethod || "").toUpperCase()} / {selectedOrder.paymentStatus}
+                    Payment: {toPaymentMethodLabel(selectedOrder.paymentMethod)} / {selectedOrder.paymentStatus}
                   </p>
                 </div>
               </div>
@@ -2777,6 +2796,7 @@ function VendorProductsSection({
   form,
   sellerName,
   isRestaurantVendor,
+  isServiceVendor,
   vendorCategoryId,
   vendorCategoryName,
   vendorSubcategoryId,
@@ -2808,6 +2828,7 @@ function VendorProductsSection({
   form: VendorProductFormState;
   sellerName: string;
   isRestaurantVendor: boolean;
+  isServiceVendor?: boolean;
   vendorCategoryId?: string;
   vendorCategoryName?: string;
   vendorSubcategoryId?: string;
@@ -2844,8 +2865,8 @@ function VendorProductsSection({
   const [inventoryActionError, setInventoryActionError] = useState<string | null>(null);
   const [inventorySavingTarget, setInventorySavingTarget] = useState<string | null>(null);
   const isProductFormVisible = showProductForm || Boolean(editingProductId);
-  const productEntityLabel = isRestaurantVendor ? "Menu" : "Products";
-  const addActionLabel = isRestaurantVendor ? "Add Menu Item" : "Add Product";
+  const productEntityLabel = isRestaurantVendor ? "Menu" : isServiceVendor ? "Services" : "Products";
+  const addActionLabel = isRestaurantVendor ? "Add Menu Item" : isServiceVendor ? "Add Service" : "Add Product";
 
   const lockedCategory = useMemo(() => {
     if (!isRestaurantVendor || !Array.isArray(categories) || categories.length === 0) {
@@ -3050,7 +3071,7 @@ function VendorProductsSection({
             type="text"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={isRestaurantVendor ? "Search menu items" : "Search products"}
+            placeholder={isRestaurantVendor ? "Search menu items" : isServiceVendor ? "Search services" : "Search products"}
             className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 sm:w-72"
           />
 
@@ -3077,8 +3098,8 @@ function VendorProductsSection({
             <p className="text-sm text-red-700">{productsError}</p>
           ) : products.length === 0 ? (
             <EmptyState
-              title={isRestaurantVendor ? "No menu items found" : "No products found"}
-              body={isRestaurantVendor ? "Click Add Menu Item to create your first dish." : "Click Add Product to create your first item."}
+              title={isRestaurantVendor ? "No menu items found" : isServiceVendor ? "No services found" : "No products found"}
+              body={isRestaurantVendor ? "Click Add Menu Item to create your first dish." : isServiceVendor ? "Click Add Service to create your first item." : "Click Add Product to create your first item."}
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -3384,7 +3405,7 @@ function VendorProductsSection({
                                 </span>
                               </div>
                               <p className="mt-2 text-xs text-slate-500">
-                                Payment: {String(selectedManagedOrder.paymentMethod || "").toUpperCase()} / {selectedManagedOrder.paymentStatus}
+                                Payment: {toPaymentMethodLabel(selectedManagedOrder.paymentMethod)} / {selectedManagedOrder.paymentStatus}
                               </p>
                             </div>
                           </div>
@@ -3927,6 +3948,7 @@ function VendorProductsSection({
                 lockedCategory={lockedCategory}
                 sellerName={sellerName}
                 compactMode={isRestaurantVendor}
+                isServiceVendor={isServiceVendor}
                 saving={saving}
                 actionMessage={actionMessage}
                 actionError={actionError}
@@ -4149,6 +4171,7 @@ export default function VendorDashboard() {
   const [vendorOrderActionMessage, setVendorOrderActionMessage] = useState<string | null>(null);
   const [vendorOrderActionError, setVendorOrderActionError] = useState<string | null>(null);
   const [selectedBillingOrderId, setSelectedBillingOrderId] = useState<string | null>(null);
+  const [viewingOrderDetailId, setViewingOrderDetailId] = useState<string | null>(null);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<InquiryStatusFilter>("All");
   const [inquirySearch, setInquirySearch] = useState("");
   const [settingsForm, setSettingsForm] = useState<SettingsFormState>(() => buildSettingsForm(null));
@@ -4594,6 +4617,7 @@ export default function VendorDashboard() {
   }, [reviews.summary.rating, vendor?.serviceTags]);
 
   const isRestaurantVendor = useMemo(() => isRestaurantVendorProfile(vendor), [vendor]);
+  const isServiceVendor = useMemo(() => isServiceVendorProfile(vendor), [vendor]);
   const scopedVendorCategories = useMemo(() => {
     if (!Array.isArray(vendorCategories) || vendorCategories.length === 0) {
       return [] as VendorCatalogCategory[];
@@ -5400,11 +5424,21 @@ export default function VendorDashboard() {
 
   const handleVendorProductQuickUpsert = async (payload: VendorProductUpsertInput, productId?: string | null) => {
     if (!vendor || productFormSaving) {
-      throw new Error(isRestaurantVendor ? "Unable to save menu item right now" : "Unable to save product right now");
+      throw new Error(
+        isRestaurantVendor
+          ? "Unable to save menu item right now"
+          : isServiceVendor
+          ? "Unable to save service right now"
+          : "Unable to save product right now"
+      );
     }
 
     if (!payload.categorySlug || !payload.productName || !payload.image) {
-      setProductFormError("Category, product name, and image are required.");
+      setProductFormError(
+        isServiceVendor
+          ? "Category, service name, and image are required."
+          : "Category, product name, and image are required."
+      );
       setProductFormMessage(null);
       throw new Error("Validation failed");
     }
@@ -5423,11 +5457,23 @@ export default function VendorDashboard() {
       if (productId) {
         const updated = await updateVendorProduct(productId, payload);
         setVendorProducts((current) => current.map((product) => (product.id === updated.id ? updated : product)));
-        setProductFormMessage(isRestaurantVendor ? "Menu item updated successfully." : "Product updated successfully.");
+        setProductFormMessage(
+          isRestaurantVendor
+            ? "Menu item updated successfully."
+            : isServiceVendor
+            ? "Service updated successfully."
+            : "Product updated successfully."
+        );
       } else {
         const created = await createVendorProduct(payload);
         setVendorProducts((current) => [created, ...current]);
-        setProductFormMessage(isRestaurantVendor ? "Menu item added successfully." : "Product added successfully.");
+        setProductFormMessage(
+          isRestaurantVendor
+            ? "Menu item added successfully."
+            : isServiceVendor
+            ? "Service added successfully."
+            : "Product added successfully."
+        );
       }
 
       setEditingProductId(null);
@@ -5580,6 +5626,7 @@ export default function VendorDashboard() {
           actionError={vendorOrderActionError}
           loading={vendorOrdersLoading}
           error={vendorOrdersError}
+          onSelectOrder={setViewingOrderDetailId}
         />
       );
     }
@@ -5674,6 +5721,7 @@ export default function VendorDashboard() {
           form={productForm}
           sellerName={String(vendor.businessName || vendor.name || "").trim()}
           isRestaurantVendor={isRestaurantVendor}
+          isServiceVendor={isServiceVendor}
           vendorCategoryId={vendor.businessCategory?.id}
           vendorCategoryName={vendor.businessCategory?.name}
           vendorSubcategoryId={vendor.businessSubcategory?.id}
@@ -5788,7 +5836,7 @@ export default function VendorDashboard() {
                 const Icon = item.icon;
                 const isActive = activeNav === item.label;
                 const unreadCount = navUnreadCounts[item.label] || 0;
-                const navLabel = getNavLabel(item.label, isRestaurantVendor);
+                const navLabel = getNavLabel(item.label, isRestaurantVendor, isServiceVendor);
                 return (
                   <button
                     key={item.label}
@@ -6052,7 +6100,7 @@ export default function VendorDashboard() {
             const Icon = item.icon;
             const isActive = activeNav === item.label;
             const unreadCount = navUnreadCounts[item.label] || 0;
-            const navLabel = getNavLabel(item.label, isRestaurantVendor);
+            const navLabel = getNavLabel(item.label, isRestaurantVendor, isServiceVendor);
 
             return (
               <li key={`mobile-${item.label}`}>
@@ -6187,6 +6235,21 @@ export default function VendorDashboard() {
           </article>
         </section>
       ) : null}
+
+      {viewingOrderDetailId && (
+        <OrderDetailModal
+          orderId={viewingOrderDetailId}
+          onClose={() => setViewingOrderDetailId(null)}
+          orders={vendorOrderData.orders}
+          vendor={vendor}
+          statusDraftById={vendorOrderStatusDraftById}
+          onStatusDraftChange={handleVendorOrderStatusDraftChange}
+          onStatusSave={handleVendorOrderStatusSave}
+          updatingOrderId={updatingVendorOrderId}
+          setSelectedBillingOrderId={setSelectedBillingOrderId}
+          setActiveNav={setActiveNav}
+        />
+      )}
       </main>
     </>
   );
@@ -6393,3 +6456,547 @@ function buildVendorProductPayload(
     sourcePlatform: "winkget_vendor",
   };
 }
+
+function OrderDetailModal({
+  orderId,
+  onClose,
+  orders,
+  vendor,
+  statusDraftById,
+  onStatusDraftChange,
+  onStatusSave,
+  updatingOrderId,
+  setSelectedBillingOrderId,
+  setActiveNav,
+}: {
+  orderId: string;
+  onClose: () => void;
+  orders: VendorOrderRecord[];
+  vendor: VendorSession | null;
+  statusDraftById: Record<string, VendorOrderStatus>;
+  onStatusDraftChange: (orderId: string, status: VendorOrderStatus) => void;
+  onStatusSave: (orderId: string) => void;
+  updatingOrderId: string | null;
+  setSelectedBillingOrderId: (orderId: string | null) => void;
+  setActiveNav: (nav: any) => void;
+}) {
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return null;
+
+  const formatCurrency = (value: number) => `Rs ${Math.max(0, Math.round(value || 0)).toLocaleString("en-IN")}`;
+  const statusOptions: VendorOrderStatus[] = ["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"];
+
+  const toStatusBadgeClass = (status: VendorOrderStatus) => {
+    if (status === "Completed") {
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    }
+    if (status === "Disputed") {
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    }
+    if (status === "Confirmed") {
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    }
+    if (status === "Shipped") {
+      return "border-purple-200 bg-purple-50 text-purple-700";
+    }
+    if (status === "Out For Delivery") {
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    }
+    if (status === "Delivery Attempted") {
+      return "border-orange-200 bg-orange-50 text-orange-700";
+    }
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  };
+
+  const statusDraft = statusDraftById[order.id] || order.status;
+  const hasStatusChange = statusDraft !== order.status;
+
+  const primaryItem = order.items[0] || null;
+  const otherItems = order.items.slice(1);
+
+  // Generate dynamic timeline steps
+  const baseDate = new Date(order.createdAt);
+  const updateDate = new Date(order.createdAt);
+
+  const addHours = (date: Date, hours: number) => {
+    const copy = new Date(date);
+    copy.setMinutes(copy.getMinutes() + Math.round(hours * 60));
+    return copy;
+  };
+
+  const getOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  const formatDt = (date: Date) => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    const dayName = days[date.getDay()];
+    const ordinalDay = getOrdinal(date.getDate());
+    const monthName = months[date.getMonth()];
+    const yearShort = String(date.getFullYear()).slice(-2);
+    
+    return `${dayName}, ${ordinalDay} ${monthName} '${yearShort}`;
+  };
+
+  const formatTm = (date: Date) => {
+    return date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).replace(/\s+/g, "").toLowerCase();
+  };
+
+  const formatSubEventTime = (date: Date) => {
+    return `${formatDt(date)} - ${formatTm(date)}`;
+  };
+
+  const trackingNo = `FMPP${order.id.slice(-8).toUpperCase()}`;
+
+  const placedDate = baseDate;
+  const confirmedDate = order.status === "Confirmed" ? updateDate : addHours(baseDate, 1.5);
+  const shippedDate = order.status === "Shipped" ? updateDate : addHours(baseDate, 3);
+  const outDate = order.status === "Out For Delivery" ? updateDate : addHours(baseDate, 24);
+  const attemptDate = order.status === "Delivery Attempted" ? updateDate : addHours(baseDate, 25);
+  const deliveredDate = order.status === "Completed" ? updateDate : addHours(baseDate, 26);
+  const disputedDate = order.status === "Disputed" ? updateDate : addHours(baseDate, 26);
+
+  const isConfirmedOrLater = ["Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+  const isShippedOrLater = ["Shipped", "Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+  const isOutOrLater = ["Out For Delivery", "Delivery Attempted", "Completed"].includes(order.status);
+
+  const timeline = [];
+
+  // 1. Order Confirmed
+  timeline.push({
+    title: "Order Confirmed",
+    dateStr: isConfirmedOrLater ? formatDt(confirmedDate) : formatDt(placedDate),
+    status: (isConfirmedOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+    subEvents: isConfirmedOrLater ? [
+      { title: "Your Order has been placed.", description: formatSubEventTime(placedDate) },
+      { title: "Seller has processed your order.", description: formatSubEventTime(confirmedDate) },
+    ] : [
+      { title: "Your Order has been placed.", description: formatSubEventTime(placedDate) },
+      { title: "Waiting for seller confirmation.", description: undefined }
+    ]
+  });
+
+  // 2. Shipped
+  timeline.push({
+    title: "Shipped",
+    dateStr: isShippedOrLater ? formatDt(shippedDate) : undefined,
+    status: (isShippedOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+    subEvents: isShippedOrLater ? [
+      { title: `Courier partner picked up - ${trackingNo}`, description: formatSubEventTime(shippedDate) },
+      { title: "In transit to nearest delivery hub.", description: undefined }
+    ] : []
+  });
+
+  // 3. Out For Delivery
+  timeline.push({
+    title: "Out For Delivery",
+    dateStr: isOutOrLater ? formatDt(outDate) : undefined,
+    status: (isOutOrLater ? "completed" : "pending") as "completed" | "pending" | "warning",
+    subEvents: isOutOrLater ? [
+      { title: "Your order is out for delivery with agent.", description: formatSubEventTime(outDate) }
+    ] : []
+  });
+
+  // 4. Attempted
+  if (order.status === "Delivery Attempted") {
+    timeline.push({
+      title: "Delivery Attempted",
+      dateStr: formatDt(attemptDate),
+      status: "warning" as const,
+      subEvents: [
+        { title: "Delivery agent was unable to deliver your order. We will retry soon.", description: formatSubEventTime(attemptDate) }
+      ]
+    });
+  }
+
+  // 5. Final Step
+  if (order.status === "Disputed") {
+    timeline.push({
+      title: "Cancelled / Disputed",
+      dateStr: formatDt(disputedDate),
+      status: "warning" as const,
+      subEvents: [
+        { title: "Your order was cancelled or disputed.", description: formatSubEventTime(disputedDate) }
+      ]
+    });
+  } else {
+    const isCompleted = order.status === "Completed";
+    timeline.push({
+      title: isCompleted ? "Delivered" : "Delivered (Estimated)",
+      dateStr: isCompleted ? formatDt(deliveredDate) : undefined,
+      status: (isCompleted ? "completed" : "pending") as "completed" | "pending" | "warning",
+      subEvents: isCompleted ? [
+        { title: "Your item has been delivered successfully.", description: formatSubEventTime(deliveredDate) }
+      ] : []
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 md:p-8">
+      {/* Click outside to close */}
+      <div className="absolute inset-0" onClick={onClose} />
+      
+      <div className="relative w-full max-w-6xl h-full max-h-[90vh] bg-[#f1f3f6] rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
+        
+        {/* Modal Header */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95 shadow-xs"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back to Orders</span>
+            </button>
+            <h2 className="hidden sm:block text-sm font-semibold text-slate-500">Order ID: <strong className="text-slate-700 font-mono">{order.orderNo}</strong></h2>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${toStatusBadgeClass(order.status)}`}>
+              {order.status}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition"
+              aria-label="Close modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+        
+        {/* Modal Body (Scrollable) */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          
+          {/* Breadcrumb banner on desktop */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 px-1">
+            <span>Home</span>
+            <span>&gt;</span>
+            <span>Vendor Portal</span>
+            <span>&gt;</span>
+            <span>Orders</span>
+            <span>&gt;</span>
+            <span className="text-slate-700 font-semibold">{order.orderNo}</span>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
+            
+            {/* Left Column: Product Info & Timeline */}
+            <div className="space-y-6">
+              
+              {/* Primary Item Card */}
+              {primaryItem && (
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/85 space-y-6">
+                  <div className="flex gap-4 items-start justify-between">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h3 className="text-base font-bold text-slate-800 leading-snug">
+                        {primaryItem.name}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Seller: <strong className="text-slate-600 font-semibold">{primaryItem.sellerName || vendor?.businessName || "Winkget Seller"}</strong>
+                      </p>
+                      <div className="pt-2 text-sm flex items-center gap-3">
+                        <strong className="text-slate-900 font-extrabold">{formatCurrency(primaryItem.price)}</strong>
+                        <span className="text-xs text-slate-500 font-bold bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-0.5">
+                          Qty: {primaryItem.quantity}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Thumbnail Image without distortion */}
+                    <div className="block h-20 w-20 sm:h-24 sm:w-24 shrink-0 flex items-center justify-center rounded-2xl border border-slate-100 p-1 bg-transparent">
+                      {primaryItem.image ? (
+                        <img
+                          src={primaryItem.image}
+                          alt={primaryItem.name}
+                          className="max-h-full max-w-full object-contain mx-auto"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
+                          {primaryItem.name?.slice(0, 1).toUpperCase() || "P"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Vertical Progress Tracker Timeline */}
+                  <div className="pt-5 border-t border-slate-100">
+                    <div className="relative pl-6 space-y-6">
+                      {/* Vertical line connector */}
+                      <div className={`absolute left-[11px] top-2 bottom-2 w-0.5 ${
+                        order.status === "Completed" ? "bg-emerald-200" :
+                        order.status === "Disputed" ? "bg-rose-200" :
+                        order.status === "Delivery Attempted" ? "bg-orange-200" :
+                        "bg-blue-200"
+                      }`} />
+
+                      {timeline.map((step, idx) => {
+                        const isCompleted = step.status === "completed";
+                        const isWarning = step.status === "warning";
+                        let dotBg = "bg-slate-200 border-slate-200";
+                        if (isCompleted) {
+                          dotBg = "bg-emerald-600 border-emerald-600";
+                        } else if (isWarning) {
+                          dotBg = "bg-rose-650 border-rose-650";
+                        }
+
+                        return (
+                          <div key={idx} className="relative flex items-start gap-4 text-xs sm:text-sm">
+                            {/* Circle dot marker */}
+                            <div className={`absolute -left-[20px] top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${dotBg} flex items-center justify-center shadow-sm z-10`}>
+                              {isCompleted && (
+                                <span className="text-[6px] text-white font-bold leading-none">✓</span>
+                              )}
+                              {isWarning && (
+                                <span className="text-[6px] text-white font-bold leading-none">!</span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-0.5 leading-tight">
+                              <span className={`font-bold ${isCompleted ? "text-slate-800" : "text-slate-400"}`}>
+                                {step.title}
+                              </span>
+                              {step.dateStr && (
+                                <span className="text-xs text-slate-500 font-medium">
+                                  {step.dateStr}
+                                </span>
+                              )}
+                              {step.subEvents.map((sub, sIdx) => (
+                                <div key={sIdx} className="mt-1 space-y-0.5">
+                                  <p className="text-xs text-slate-500 font-medium">{sub.title}</p>
+                                  {sub.description && (
+                                    <p className="text-[10px] text-slate-400 font-normal">{sub.description}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Other Items In Order */}
+              {otherItems.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-slate-700 px-1">Other Items In This Order</h3>
+                  <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+                    {otherItems.map((item, idx) => (
+                      <div key={item.id || idx} className="p-4 flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <h4 className="line-clamp-1 text-sm font-bold text-slate-800">
+                            {item.name}
+                          </h4>
+                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                            <span>Price: <strong className="text-slate-600 font-semibold">{formatCurrency(item.price)}</strong></span>
+                            <span>•</span>
+                            <span>Qty: <strong className="text-slate-600 font-semibold">{item.quantity}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Image Thumbnail without distortion */}
+                        <div className="block h-16 w-16 shrink-0 flex items-center justify-center rounded-2xl border border-slate-100 p-1 bg-transparent">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="max-h-full max-w-full object-contain mx-auto"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="grid h-full w-full place-items-center bg-blue-50 text-xs font-bold text-blue-700">
+                              {item.name?.slice(0, 1).toUpperCase() || "P"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Delivery Details & Price Details & Controls */}
+            <div className="space-y-6">
+              
+              {/* Delivery Details */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Delivery Details</h3>
+                <div className="space-y-3.5 text-xs sm:text-sm text-slate-600">
+                  <div>
+                    <strong className="text-slate-800 block text-xs uppercase tracking-wide">Delivery Address</strong>
+                    <p className="mt-1 text-slate-700 leading-relaxed font-semibold">
+                      {order.address.line1}
+                      {order.address.line2 ? `, ${order.address.line2}` : ""}
+                      {order.address.landmark ? `, ${order.address.landmark}` : ""}
+                      <br />
+                      {order.address.city}, {order.address.state} - {order.address.postalCode}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 pt-3.5">
+                    <strong className="text-slate-800 block text-xs uppercase tracking-wide">Receiver</strong>
+                    <p className="mt-1 text-slate-700 font-extrabold">{order.address.fullName}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 font-semibold">Phone: {order.address.phone}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Details */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Price Details</h3>
+                <div className="space-y-2.5 text-xs sm:text-sm text-slate-650 font-semibold">
+                  <div className="flex justify-between">
+                    <span>Listing Price (MRP)</span>
+                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.mrp)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Special Price (Subtotal)</span>
+                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.subtotal)}</span>
+                  </div>
+                  {order.totals.savings > 0 && (
+                    <div className="flex justify-between text-emerald-650 font-bold">
+                      <span>Savings</span>
+                      <span>-{formatCurrency(order.totals.savings)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Shipping Fee</span>
+                    <span className="text-slate-800 font-bold">{order.totals.shippingFee > 0 ? formatCurrency(order.totals.shippingFee) : "Free"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Platform Fee</span>
+                    <span className="text-slate-800 font-bold">{formatCurrency(order.totals.platformFee)}</span>
+                  </div>
+                  
+                  <div className="border-t border-slate-100 pt-2.5 mt-2 flex justify-between text-sm sm:text-base font-extrabold text-slate-900">
+                    <span>Total Amount</span>
+                    <span>{formatCurrency(order.totals.total)}</span>
+                  </div>
+                  
+                  <div className="border-t border-slate-100 pt-2.5 mt-2 text-xs flex justify-between items-center text-slate-500 font-bold">
+                    <span>Paid By</span>
+                    <span className="text-slate-700 uppercase font-extrabold">{toPaymentMethodLabel(order.paymentMethod)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold">
+                    <span>Payment Status</span>
+                    <span className={`uppercase font-extrabold ${order.paymentStatus === "paid" ? "text-emerald-700" : "text-amber-800"}`}>
+                      {order.paymentStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vendor Actions Controls */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Vendor Actions</h3>
+                
+                {/* Update Order Status */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-650 block">Update Order Status</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={statusDraft}
+                      onChange={(event) => onStatusDraftChange(order.id, event.target.value as VendorOrderStatus)}
+                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={`detail-status-select-${status}`} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => onStatusSave(order.id)}
+                      disabled={!hasStatusChange || updatingOrderId === order.id}
+                      className="rounded-xl border border-slate-200 bg-[var(--vendor-primary)] text-white px-4 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {updatingOrderId === order.id ? "Saving..." : hasStatusChange ? "Save" : "Saved"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Invoice generation & communications */}
+                <div className="border-t border-slate-100 pt-4 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBillingOrderId(order.id);
+                      setActiveNav("Billing");
+                      onClose();
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-650 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition"
+                  >
+                    <Download className="h-4 w-4" />
+                    Generate & Download Invoice
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const customerPhone = normalizeWhatsappPhone(order.customerPhone || order.address?.phone || "");
+                        if (customerPhone) {
+                          const body = encodeURIComponent(
+                            [
+                              `Hello ${order.customer}, your Winkget Express order status update is ready.`,
+                              `Order No: ${order.orderNo}`,
+                              `Status: ${order.status}`,
+                              `Total: ${formatCurrency(order.totals.total)}`,
+                              `Payment: ${toPaymentMethodLabel(order.paymentMethod).toUpperCase()} (${order.paymentStatus})`,
+                            ].join("\n")
+                          );
+                          window.open(`https://api.whatsapp.com/send?phone=${customerPhone}&text=${body}`, "_blank", "noopener");
+                        }
+                      }}
+                      disabled={!normalizeWhatsappPhone(order.customerPhone || order.address?.phone || "")}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (order.customerEmail) {
+                          const subject = `Order Status Update: ${order.orderNo}`;
+                          const body = `Hello ${order.customer},\n\nYour order ${order.orderNo} status has been updated to: ${order.status}.\n\nTotal Amount: ${formatCurrency(order.totals.total)}\n\nRegards,\n${vendor?.businessName || "Winkget Express"}`;
+                          window.open(`mailto:${encodeURIComponent(order.customerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank", "noopener");
+                        }
+                      }}
+                      disabled={!order.customerEmail}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Email
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+

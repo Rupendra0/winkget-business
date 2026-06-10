@@ -75,6 +75,7 @@ export type CatalogVendorSummary = {
   createdAt?: string;
   name?: string;
   businessName?: string;
+  businessType?: string;
   businessPhone?: string;
   businessAlternatePhone?: string;
   businessEmail?: string;
@@ -640,6 +641,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
   return {
     id: vendor.id,
     storeId: vendor.id,
+    businessType: vendor.businessType,
     name: displayName,
     category: categoryLabel,
     coverImage,

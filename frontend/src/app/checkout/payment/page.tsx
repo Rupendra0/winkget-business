@@ -232,8 +232,7 @@ export default function CheckoutPaymentPage() {
 
     setPlacingOrder(true);
 
-    const actualMethod: PaymentMethod =
-      selectedMethod === "emi" || selectedMethod === "giftcard" ? "card" : selectedMethod;
+    const actualMethod: PaymentMethod = selectedMethod;
 
     if (actualMethod !== "cod") {
       await new Promise((resolve) => {

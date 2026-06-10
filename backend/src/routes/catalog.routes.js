@@ -259,6 +259,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     createdAt: vendor.createdAt,
     name: vendor.name,
     businessName: vendor.businessName,
+    businessType: vendor.businessType || "store",
     businessPhone: vendor.businessPhone,
     businessAlternatePhone: vendor.businessAlternatePhone,
     businessEmail: vendor.businessEmail,
@@ -678,7 +679,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     const vendors = await User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
-          "_id name businessName city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
+          "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")
@@ -708,7 +709,7 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
       )
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")

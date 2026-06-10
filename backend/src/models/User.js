@@ -47,6 +47,11 @@ const userSchema = new Schema(
       default: "approved",
     },
     vendorReviewNote: { type: String, trim: true },
+    businessType: {
+      type: String,
+      enum: ["restaurant", "store", "service"],
+      default: "store",
+    },
     passwordHash: { type: String },
     image: { type: String },
     provider: { type: String, default: "credentials" },

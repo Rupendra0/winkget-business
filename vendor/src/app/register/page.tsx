@@ -83,6 +83,7 @@ type CustomFormDataMap = Record<string, string | number | string[]>;
 
 type VendorFormState = {
   businessName: string;
+  businessType: string;
   ownerName: string;
   gender: string;
   dateOfBirth: string;
@@ -184,6 +185,7 @@ const MAX_DOCUMENT_FILE_SIZE = 8 * 1024 * 1024;
 
 const INITIAL_FORM: VendorFormState = {
   businessName: "",
+  businessType: "store",
   ownerName: "",
   gender: "",
   dateOfBirth: "",
@@ -1115,6 +1117,7 @@ export default function VendorRegisterPage() {
         credentials: "include",
         body: JSON.stringify({
           businessName: form.businessName.trim(),
+          businessType: form.businessType,
           ownerName: form.ownerName.trim(),
           gender: form.gender,
           dateOfBirth: form.dateOfBirth,
@@ -1348,6 +1351,22 @@ export default function VendorRegisterPage() {
                       placeholder="Enter legal business name"
                       required
                     />
+                  </label>
+
+                  <label className="sm:col-span-2 block">
+                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Business Type <RequiredMark />
+                    </span>
+                    <select
+                      value={form.businessType}
+                      onChange={(event) => updateField("businessType", event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black outline-none focus:border-orange-400"
+                      required
+                    >
+                      <option value="store">Retail / Product Store (sells physical goods)</option>
+                      <option value="restaurant">Restaurant / Food Item Outlet</option>
+                      <option value="service">Service Provider (consultants, advocates, CAs, etc.)</option>
+                    </select>
                   </label>
 
                   <label className="block">

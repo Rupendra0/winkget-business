@@ -10,7 +10,7 @@ const router = express.Router();
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const ORDER_MODE_VALUES = new Set(["cart", "buy-now"]);
-const PAYMENT_METHOD_VALUES = new Set(["cod", "razorpay", "upi", "card", "netbanking", "wallet"]);
+const PAYMENT_METHOD_VALUES = new Set(["cod", "razorpay", "upi", "card", "netbanking", "wallet", "emi", "giftcard"]);
 const ADMIN_STATUS_VALUES = new Set(["Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivery Attempted", "Completed", "Disputed"]);
 
 const verifyToken = (token) => {

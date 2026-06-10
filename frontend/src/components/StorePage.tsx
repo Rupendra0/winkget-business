@@ -781,6 +781,151 @@ export default function StorePage({ data }: { data: StorePageData }) {
     );
   };
 
+  const renderUdemyStyleServiceCard = (product: StoreProduct) => {
+    const productHref = buildProductHref(product);
+    const productCartQuantity = Math.max(0, Number(cartQuantities[product.id] || 0));
+    const productReviewSummary = isReviewHydrated
+      ? getBusinessReviewAggregate(
+          toProductReviewBusinessKey(product.id),
+          Number(product.rating || 0),
+          Math.max(0, Number(product.reviews || 0))
+        )
+      : {
+          rating: Number(product.rating || 0),
+          reviews: Math.max(0, Number(product.reviews || 0)),
+        };
+    const ratingValue = Number(productReviewSummary.rating || 0);
+    const reviewCountValue = Math.max(0, Math.round(Number(productReviewSummary.reviews || 0)));
+    const ratingDisplay = ratingLabel(ratingValue);
+
+    const currentPriceValue = toPriceValue(product.price);
+    const oldPriceValue = Number(product.oldPriceValue || 0);
+    const hasComparablePrice = Number.isFinite(oldPriceValue) && oldPriceValue > currentPriceValue && currentPriceValue > 0;
+
+    const currentPriceLabel =
+      currentPriceValue > 0
+        ? formatIndianCurrency(currentPriceValue)
+        : String(product.price || "").trim() || "Price unavailable";
+
+    const priceVal = toPriceValue(product.price);
+    const isPremium = product.badge?.toLowerCase() === "premium" || product.tags?.includes("Premium") || (priceVal > 0 && priceVal % 3 === 0);
+    const isBestseller = !isPremium && (product.badge?.toLowerCase() === "bestseller" || product.tags?.includes("Bestseller") || (priceVal > 0 && priceVal % 3 === 1));
+
+    let badgeElement = null;
+    if (isPremium) {
+      badgeElement = (
+        <span className="inline-block rounded bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+          Premium
+        </span>
+      );
+    } else if (isBestseller) {
+      badgeElement = (
+        <span className="inline-block rounded bg-teal-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-950 shadow-sm">
+          Bestseller
+        </span>
+      );
+    }
+
+    return (
+      <article
+        key={product.id}
+        className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:shadow-md"
+      >
+        <Link href={productHref} className="relative block aspect-video w-full overflow-hidden bg-slate-100">
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
+          />
+        </Link>
+        <button
+          type="button"
+          onClick={() => handleToggleWishlist(product)}
+          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-400 shadow-sm transition hover:border-rose-200 hover:text-rose-500"
+          aria-label={`${wishlistProductIds.has(product.id) ? "Remove from" : "Add to"} wishlist`}
+        >
+          <Heart
+            size={17}
+            className={wishlistProductIds.has(product.id) ? "fill-rose-500 text-rose-500" : ""}
+            strokeWidth={1.8}
+          />
+        </button>
+
+        <div className="flex min-w-0 flex-1 flex-col p-3 pb-4">
+          <Link
+            href={productHref}
+            className="line-clamp-2 min-h-[2.5rem] text-[13px] font-bold leading-5 text-slate-800 hover:text-blue-700 sm:text-[15px]"
+          >
+            {product.name}
+          </Link>
+          
+          <p className="mt-1 text-xs text-slate-500 truncate">
+            {product.sellerName || data.storeName}
+          </p>
+
+          <div className="mt-2 flex items-center gap-1.5 text-xs">
+            <span className="font-extrabold text-amber-600">{ratingDisplay}</span>
+            <div className="flex items-center text-amber-500 gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  size={12}
+                  className={i < Math.round(ratingValue) ? "fill-amber-500 text-amber-500" : "text-slate-300"}
+                />
+              ))}
+            </div>
+            <span className="text-slate-400">({reviewCountValue})</span>
+          </div>
+
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-base font-extrabold text-slate-900 sm:text-lg">{currentPriceLabel}</span>
+            {hasComparablePrice ? (
+              <span className="text-xs text-slate-400 line-through">
+                {formatIndianCurrency(oldPriceValue)}
+              </span>
+            ) : null}
+          </div>
+
+          {badgeElement && <div className="mt-2">{badgeElement}</div>}
+
+          <div className="mt-auto pt-3">
+            {productCartQuantity > 0 ? (
+              <div className="grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)]">
+                <button
+                  type="button"
+                  onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a]"
+                  aria-label={`Decrease quantity for ${product.name}`}
+                >
+                  -
+                </button>
+                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-0.5 text-[10px] font-extrabold text-white">
+                  {productCartQuantity}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a]"
+                  aria-label={`Increase quantity for ${product.name}`}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleAddToCart(product)}
+                className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-blue-50 px-2 text-[12px] font-semibold text-blue-700 transition hover:bg-blue-600 hover:text-white"
+              >
+                Add
+              </button>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  };
+
   const renderProductRail = (products: Array<StoreProduct | undefined>, imageHeightClass: string) => {
     const validProducts = products.filter(Boolean) as StoreProduct[];
     const mobileRows = splitProductsForTwoRowRail(validProducts, 2);
@@ -794,7 +939,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <div key={`product-rail-row-${rowIndex}`} className={productRailRowClass}>
               {row.map((product) => (
                 <div key={product.id}>
-                  {renderFlipkartStyleProductCard(product, imageHeightClass)}
+                  {data.isServiceStore
+                    ? renderUdemyStyleServiceCard(product)
+                    : renderFlipkartStyleProductCard(product, imageHeightClass)}
                 </div>
               ))}
             </div>
@@ -1069,7 +1216,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
             {selectedCategoryBarItem && visibleProducts.length === 0 ? (
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <p className="text-sm font-semibold text-slate-700">
-                No products found for {selectedCategoryBarItem.label}.
+                {data.isServiceStore
+                  ? `No services found for ${selectedCategoryBarItem.label}.`
+                  : `No products found for ${selectedCategoryBarItem.label}.`}
               </p>
             </section>
             ) : null}
@@ -1078,7 +1227,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-lg font-semibold text-slate-900">{data.featured.title}</div>
+                  <div className="text-lg font-semibold text-slate-900">
+                    {data.isServiceStore ? "Featured Services" : data.featured.title}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1097,7 +1248,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
                 <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-lg font-semibold text-slate-900">{data.trending.title}</div>
+                  <div className="text-lg font-semibold text-slate-900">
+                    {data.isServiceStore ? "Trending Services" : data.trending.title}
+                  </div>
                 </div>
               </div>
               {renderProductRail(trendingProducts, "h-36 sm:h-48")}
@@ -1106,7 +1259,9 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
               <div className="flex items-center justify-between">
-                <div className="text-lg font-semibold text-slate-900">All Products</div>
+                <div className="text-lg font-semibold text-slate-900">
+                  {data.isServiceStore ? "All Services" : "All Products"}
+                </div>
                 <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                   <option>Sort by: Featured</option>
                   <option>Price: Low to High</option>
