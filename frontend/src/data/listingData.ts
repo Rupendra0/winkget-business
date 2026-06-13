@@ -17,6 +17,8 @@ export type ListingProfile = {
   category: string;
   coverImage: string;
   logoImage: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
   rating: number;
   reviews: number;
   priceRange: string;
@@ -451,6 +453,8 @@ export const buildFallbackProfile = (listing: CategoryListing): ListingProfile =
     category: listing.subcategory,
     coverImage: listing.imageUrl,
     logoImage: listing.imageUrl,
+    heroTitle: listing.name,
+    heroSubtitle: listing.subcategory ? `${listing.subcategory} - Trusted by Thousands` : "Trusted by Thousands",
     rating: listing.rating,
     reviews: listing.reviews,
     priceRange: listing.priceRange ?? "Starts from ₹99",

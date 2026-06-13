@@ -9,7 +9,7 @@ const DEFAULT_MAP_IMAGE =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=60";
 const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
-const DEFAULT_TILE_IMAGES = [
+export const DEFAULT_TILE_IMAGES = [
   "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
   "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=400&q=60",
   "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=400&q=60",
@@ -646,6 +646,8 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     category: categoryLabel,
     coverImage,
     logoImage,
+    heroTitle: (vendor as any).heroTitle || displayName,
+    heroSubtitle: (vendor as any).heroSubtitle || (vendor as any).tagline || (categoryLabel ? `${categoryLabel} - Trusted by Thousands` : "Trusted by Thousands"),
     rating: Number(vendor.rating || 0),
     reviews: Number(vendor.reviews || 0),
     priceRange: vendor.priceRange || "",
