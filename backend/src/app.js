@@ -24,7 +24,7 @@ const devOrigins =
     ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
     : [];
 const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
-const REQUEST_TIMEOUT_MS = Math.max(Number(process.env.REQUEST_TIMEOUT_MS || 15000), 1000);
+const REQUEST_TIMEOUT_MS = Math.max(Number(process.env.REQUEST_TIMEOUT_MS || 30000), 1000);
 
 app.use(
   cors({
@@ -52,6 +52,13 @@ app.use((req, res, next) => {
       ok: false,
       message: "Request timed out",
     });
+
+    // Prevent subsequent late DB responses from throwing ERR_HTTP_HEADERS_SENT
+    res.json = () => res;
+    res.send = () => res;
+    res.status = () => res;
+    res.setHeader = () => res;
+    res.set = () => res;
   });
 
   next();
@@ -72,7 +79,10 @@ app.get("/", (_req, res) => {
   res.json({ ok: true, message: "Winkget backend service" });
 });
 
-app.use((err, _req, res, _next) => {
+app.use((err, _req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
   res.status(500).json({
     ok: false,
     message: "Unhandled server error",
