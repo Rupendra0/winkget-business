@@ -302,6 +302,22 @@ router.get("/health/db-ops", async (_req, res) => {
     } catch (e) {
       testQuery.indexesError = e.message;
     }
+
+    // Fast check for image field size and prefix
+    try {
+      const oneVendor = await db.collection("users").findOne(
+        { role: "vendor", vendorStatus: "approved" },
+        { projection: { image: 1, shopBannerImage: 1 }, maxTimeMS: 2000 }
+      );
+      if (oneVendor) {
+        testQuery.imageLength = oneVendor.image ? oneVendor.image.length : 0;
+        testQuery.imagePrefix = oneVendor.image ? oneVendor.image.substring(0, 50) : null;
+        testQuery.shopBannerLength = oneVendor.shopBannerImage ? oneVendor.shopBannerImage.length : 0;
+        testQuery.shopBannerPrefix = oneVendor.shopBannerImage ? oneVendor.shopBannerImage.substring(0, 50) : null;
+      }
+    } catch (e) {
+      testQuery.prefixError = e.message;
+    }
     diagnostics.testQuery = testQuery;
 
     // 5. CurrentOp (Admin)
