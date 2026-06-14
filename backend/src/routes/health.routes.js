@@ -120,6 +120,41 @@ router.get("/health/diagnose", async (_req, res) => {
       queryExplain = { error: explainError.message };
     }
 
+    // Compute document sizes to detect huge base64 strings
+    const docSizes = {};
+    const measureCollectionSizes = async (colName, modelObj) => {
+      try {
+        const docs = await modelObj.find({}).lean();
+        let maxSize = 0;
+        let totalSize = 0;
+        let maxDocId = null;
+        
+        docs.forEach(doc => {
+          const size = JSON.stringify(doc).length;
+          totalSize += size;
+          if (size > maxSize) {
+            maxSize = size;
+            maxDocId = doc._id;
+          }
+        });
+        
+        docSizes[colName] = {
+          count: docs.length,
+          avgSizeChars: docs.length > 0 ? Math.round(totalSize / docs.length) : 0,
+          maxSizeChars: maxSize,
+          maxDocId: maxDocId
+        };
+      } catch (err) {
+        docSizes[colName] = { error: err.message };
+      }
+    };
+
+    const HomePlacement = require("../models/HomePlacement");
+    const Category = require("../models/Category");
+    await measureCollectionSizes("users", User);
+    await measureCollectionSizes("homeplacements", HomePlacement);
+    await measureCollectionSizes("categories", Category);
+
     return res.status(200).json({
       ok: true,
       readyState: connection.readyState,
@@ -131,6 +166,7 @@ router.get("/health/diagnose", async (_req, res) => {
         configured: Boolean(redis),
       },
       trace,
+      docSizes,
       users: {
         total: totalUsers,
         vendors: totalVendors,
