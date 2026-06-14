@@ -63,6 +63,53 @@ router.get("/health/diagnose", async (_req, res) => {
       redisPing = "Disabled/Not configured";
     }
 
+    // Step-by-step performance tracing for `/api/vendors` query
+    const trace = {};
+    let vendors = [];
+    const query = { role: "vendor", vendorStatus: "approved" };
+
+    try {
+      const t0 = Date.now();
+      const rawQuery = User.find(query)
+        .sort({ updatedAt: -1, businessName: 1, name: 1 })
+        .select(
+          "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
+        )
+        .lean();
+      vendors = await rawQuery;
+      trace.rawQueryMs = Date.now() - t0;
+
+      const t1 = Date.now();
+      await User.populate(vendors, { path: "businessCategory", select: "_id name slug" });
+      trace.populateCategoryMs = Date.now() - t1;
+
+      const t2 = Date.now();
+      await User.populate(vendors, { path: "businessSubcategory", select: "_id name slug" });
+      trace.populateSubcategoryMs = Date.now() - t2;
+
+      const t3 = Date.now();
+      const reviewRows = await Review.aggregate([
+        {
+          $match: {
+            vendor: { $in: vendors.map((v) => v._id) },
+            isVisible: true,
+          },
+        },
+        {
+          $group: {
+            _id: "$vendor",
+            reviews: { $sum: 1 },
+            rating: { $avg: "$rating" },
+          },
+        },
+      ]);
+      trace.aggregateReviewsMs = Date.now() - t3;
+      trace.reviewsCount = reviewRows.length;
+    } catch (traceError) {
+      trace.error = traceError.message;
+      trace.stack = traceError.stack;
+    }
+
     // Query explanation
     let queryExplain = null;
     try {
@@ -83,6 +130,7 @@ router.get("/health/diagnose", async (_req, res) => {
         pingTimeMs: redisPingTimeMs,
         configured: Boolean(redis),
       },
+      trace,
       users: {
         total: totalUsers,
         vendors: totalVendors,

@@ -601,7 +601,28 @@ router.get("/subcategories", withPublicGetCache(async (req, res) => {
 }));
 
 router.get("/vendors", withPublicGetCache(async (req, res) => {
+  const traceStartTime = Date.now();
+  const traceId = Math.random().toString(36).substring(2, 11);
+  const logStep = (stepName) => {
+    const duration = Date.now() - traceStartTime;
+    console.log(`[vendors-trace][${traceId}] ${stepName} at ${duration}ms`);
+    const FailureLog = require("../models/FailureLog");
+    FailureLog.create({
+      source: "backend-catalog-vendors-trace",
+      type: "warning",
+      message: `[${traceId}] Vendors Trace: ${stepName}`,
+      metadata: {
+        traceId,
+        step: stepName,
+        durationMs: duration,
+        url: req.originalUrl,
+        query: req.query
+      }
+    }).catch(err => console.error("Trace logging failed:", err.message));
+  };
+
   try {
+    logStep("Handler Enter");
     const categoryIdInput = String(req.query.categoryId || "").trim();
     const categorySlug = String(req.query.categorySlug || "").trim().toLowerCase();
     const subcategoryId = String(req.query.subcategoryId || "").trim();
@@ -612,18 +633,23 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     let resolvedCategoryId = categoryIdInput;
 
     if (categorySlug) {
+      logStep("Resolving categorySlug: " + categorySlug);
       const category = await Category.findOne({ slug: categorySlug, isActive: true }).select("_id").lean();
+      logStep("Category slug resolved");
       if (!category) {
+        logStep("Category slug resolved to null, exiting early");
         return res.status(200).json({ ok: true, vendors: [] });
       }
       resolvedCategoryId = String(category._id);
     }
 
     if (resolvedCategoryId && !OBJECT_ID_REGEX.test(resolvedCategoryId)) {
+      logStep("Invalid Category ID, exiting early");
       return res.status(400).json({ ok: false, message: "Invalid category id" });
     }
 
     if (subcategoryId && !OBJECT_ID_REGEX.test(subcategoryId)) {
+      logStep("Invalid Subcategory ID, exiting early");
       return res.status(400).json({ ok: false, message: "Invalid subcategory id" });
     }
 
@@ -635,23 +661,29 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     let subcategoryFilterIds = [];
 
     if (subcategoryId) {
+      logStep("Resolving subcategoryId: " + subcategoryId);
       const selectedSubcategory = await Subcategory.findOne({
         _id: subcategoryId,
         isActive: true,
       })
         .select("_id category")
         .lean();
+      logStep("Subcategory resolved");
 
       if (!selectedSubcategory) {
+        logStep("Subcategory not found, exiting early");
         return res.status(200).json({ ok: true, vendors: [] });
       }
 
       const selectedCategoryId = String(selectedSubcategory.category);
       if (resolvedCategoryId && resolvedCategoryId !== selectedCategoryId) {
+        logStep("Category mismatch, exiting early");
         return res.status(200).json({ ok: true, vendors: [] });
       }
 
+      logStep("Collecting descendants for subcategory: " + subcategoryId);
       const descendantSubcategoryIds = await collectDescendantSubcategoryIds(selectedSubcategory._id);
+      logStep("Descendants collected: " + descendantSubcategoryIds.length);
       subcategoryFilterIds = [String(selectedSubcategory._id), ...descendantSubcategoryIds];
     }
 
@@ -667,6 +699,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     let resolvedSublocality = "";
 
     if (city) {
+      logStep("Resolving city: " + city + ", sublocality: " + sublocality);
       const cityDoc = await City.findOne({
         $or: [
           { name: new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
@@ -676,6 +709,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       })
         .select("name localities")
         .lean();
+      logStep("City resolved");
 
       if (cityDoc) {
         resolvedCity = cityDoc.name;
@@ -708,6 +742,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     }
 
     if (search) {
+      logStep("Resolving search: " + search);
       const regex = toSafeRegex(search);
       query.$or = [{ businessName: regex }, { name: regex }, { businessDescription: regex }, { serviceTags: regex }];
     }
@@ -715,6 +750,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     const limit = toPositiveInt(req.query.limit, 0);
     const page = toPositiveInt(req.query.page, 1);
 
+    logStep("Building User query");
     let dbQuery = User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
@@ -728,15 +764,25 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       dbQuery = dbQuery.skip((page - 1) * limit).limit(limit);
     }
 
+    logStep("Executing User query");
     const vendors = await dbQuery;
+    logStep("User query completed: " + vendors.length + " vendors fetched");
 
+    logStep("Executing Review aggregate query");
     const reviewSummaryByVendorId = await getVendorReviewSummaryMap(vendors.map((vendor) => vendor._id));
+    logStep("Review aggregate query completed");
 
+    logStep("Mapping vendors to summary objects");
+    const mappedVendors = vendors.map((vendor) => toVendorSummary(vendor, reviewSummaryByVendorId));
+    logStep("Mapping completed");
+
+    logStep("Sending success response");
     return res.status(200).json({
       ok: true,
-      vendors: vendors.map((vendor) => toVendorSummary(vendor, reviewSummaryByVendorId)),
+      vendors: mappedVendors,
     });
   } catch (error) {
+    logStep("Error caught in handler: " + error.message);
     return res.status(500).json({ ok: false, message: "Failed to load vendors", error: error.message });
   }
 }));
