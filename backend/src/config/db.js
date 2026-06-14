@@ -108,6 +108,7 @@ async function connectDatabase() {
     socketTimeoutMS: toPositiveInt(process.env.MONGODB_SOCKET_TIMEOUT_MS, 45000),
     connectTimeoutMS: 30000,
     monitorCommands: true,
+    autoIndex: process.env.NODE_ENV === "development" || String(process.env.AUTO_INDEX_ON_START || "").toLowerCase() === "true",
   };
 
   cachedConnectionPromise = mongoose

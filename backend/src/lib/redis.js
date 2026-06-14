@@ -1,22 +1,8 @@
 const { Redis } = require("@upstash/redis");
 const crypto = require("crypto");
 
-// Instantiate Upstash serverless Redis client
+// Instantiate Upstash serverless Redis client (Disabled completely to prevent socket/connection leaks under load)
 let redis = null;
-
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  try {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-    console.log("Redis client initialized successfully with Upstash REST endpoint.");
-  } catch (error) {
-    console.error("Failed to initialize Redis client:", error);
-  }
-} else {
-  console.warn("UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN missing in environment. Redis operations will fallback / be disabled.");
-}
 
 const REDIS_TIMEOUT_MS = 1500;
 

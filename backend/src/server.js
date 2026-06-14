@@ -43,15 +43,20 @@ async function startServer() {
       }
     };
 
-    await syncModelIndexes("User", User);
-    await syncModelIndexes("Category", Category);
-    await syncModelIndexes("Subcategory", Subcategory);
-    await syncModelIndexes("Inquiry", Inquiry);
-    await syncModelIndexes("Review", Review);
-    await syncModelIndexes("City", City);
-    await syncModelIndexes("FailureLog", FailureLog);
-    await syncModelIndexes("VendorProduct", VendorProduct);
-    await syncModelIndexes("Order", Order);
+    if (process.env.NODE_ENV === "development" || String(process.env.SYNC_INDEXES_ON_START || "").toLowerCase() === "true") {
+      console.log("Synchronizing database indexes...");
+      await syncModelIndexes("User", User);
+      await syncModelIndexes("Category", Category);
+      await syncModelIndexes("Subcategory", Subcategory);
+      await syncModelIndexes("Inquiry", Inquiry);
+      await syncModelIndexes("Review", Review);
+      await syncModelIndexes("City", City);
+      await syncModelIndexes("FailureLog", FailureLog);
+      await syncModelIndexes("VendorProduct", VendorProduct);
+      await syncModelIndexes("Order", Order);
+    } else {
+      console.log("Database index synchronization skipped (production mode). Set SYNC_INDEXES_ON_START=true to override.");
+    }
 
     try {
       await ensureSearchIndex();
