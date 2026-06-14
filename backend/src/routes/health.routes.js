@@ -47,6 +47,22 @@ router.get("/health/diagnose", async (_req, res) => {
     // Check indexes on users collection
     const userIndexes = await usersCollection.indexes();
 
+    // Check Redis connectivity
+    const { redis } = require("../lib/redis");
+    let redisPing = null;
+    let redisPingTimeMs = null;
+    if (redis) {
+      try {
+        const startRedis = Date.now();
+        redisPing = await redis.ping();
+        redisPingTimeMs = Date.now() - startRedis;
+      } catch (redisError) {
+        redisPing = { error: redisError.message };
+      }
+    } else {
+      redisPing = "Disabled/Not configured";
+    }
+
     // Query explanation
     let queryExplain = null;
     try {
@@ -62,6 +78,11 @@ router.get("/health/diagnose", async (_req, res) => {
       readyState: connection.readyState,
       databaseName: connection.name,
       collections: collectionStats,
+      redis: {
+        ping: redisPing,
+        pingTimeMs: redisPingTimeMs,
+        configured: Boolean(redis),
+      },
       users: {
         total: totalUsers,
         vendors: totalVendors,

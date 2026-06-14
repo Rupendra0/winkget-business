@@ -18,6 +18,26 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
   console.warn("UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN missing in environment. Redis operations will fallback / be disabled.");
 }
 
+const REDIS_TIMEOUT_MS = 1500;
+
+const promiseTimeout = (promise, ms) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Redis operation timed out after ${ms}ms`));
+    }, ms);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
 /**
  * Route Caching Helpers
  */
@@ -25,11 +45,11 @@ const getCachedRouteEntry = async (url) => {
   if (!redis) return null;
   const key = `cache:catalog:route:${url}`;
   try {
-    const data = await redis.get(key);
+    const data = await promiseTimeout(redis.get(key), REDIS_TIMEOUT_MS);
     if (!data) return null;
     return typeof data === "string" ? JSON.parse(data) : data;
   } catch (error) {
-    console.error("Redis getCachedRouteEntry error:", error);
+    console.error("Redis getCachedRouteEntry error:", error.message);
     return null;
   }
 };
@@ -39,22 +59,22 @@ const setCachedRouteEntry = async (url, statusCode, payload, ttlSeconds) => {
   const key = `cache:catalog:route:${url}`;
   try {
     const data = JSON.stringify({ statusCode, payload });
-    await redis.set(key, data, { ex: ttlSeconds });
+    await promiseTimeout(redis.set(key, data, { ex: ttlSeconds }), REDIS_TIMEOUT_MS);
   } catch (error) {
-    console.error("Redis setCachedRouteEntry error:", error);
+    console.error("Redis setCachedRouteEntry error:", error.message);
   }
 };
 
 const clearCatalogCache = async () => {
   if (!redis) return;
   try {
-    const keys = await redis.keys("cache:catalog:route:*");
+    const keys = await promiseTimeout(redis.keys("cache:catalog:route:*"), REDIS_TIMEOUT_MS);
     if (keys && keys.length > 0) {
-      await redis.del(...keys);
+      await promiseTimeout(redis.del(...keys), REDIS_TIMEOUT_MS);
       console.log(`Successfully cleared ${keys.length} catalog cache entries from Redis.`);
     }
   } catch (error) {
-    console.error("Error clearing catalog cache from Redis:", error);
+    console.error("Error clearing catalog cache from Redis:", error.message);
   }
 };
 
@@ -70,9 +90,9 @@ const blacklistToken = async (token, expiresInSeconds) => {
   if (!redis || !token || expiresInSeconds <= 0) return;
   const key = getRevocationKey(token);
   try {
-    await redis.set(key, "revoked", { ex: Math.ceil(expiresInSeconds) });
+    await promiseTimeout(redis.set(key, "revoked", { ex: Math.ceil(expiresInSeconds) }), REDIS_TIMEOUT_MS);
   } catch (error) {
-    console.error("Error blacklisting token in Redis:", error);
+    console.error("Error blacklisting token in Redis:", error.message);
   }
 };
 
@@ -80,10 +100,10 @@ const isTokenBlacklisted = async (token) => {
   if (!redis || !token) return false;
   const key = getRevocationKey(token);
   try {
-    const status = await redis.get(key);
+    const status = await promiseTimeout(redis.get(key), REDIS_TIMEOUT_MS);
     return status === "revoked";
   } catch (error) {
-    console.error("Error checking token blacklist in Redis:", error);
+    console.error("Error checking token blacklist in Redis:", error.message);
     return false;
   }
 };
