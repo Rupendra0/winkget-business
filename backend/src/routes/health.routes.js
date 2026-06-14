@@ -224,17 +224,83 @@ router.get("/health/diagnose", async (_req, res) => {
   }
 });
 
-router.get("/health/current-op", async (_req, res) => {
+router.get("/health/db-ops", async (_req, res) => {
+  let client = null;
   try {
-    const connection = mongoose.connection;
-    if (connection.readyState !== 1) {
-      return res.status(500).json({ ok: false, message: "Database not connected" });
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      return res.status(500).json({ ok: false, error: "MONGODB_URI env var is missing" });
     }
-    const adminDb = connection.db.admin();
-    const ops = await adminDb.command({ currentOp: 1, $all: true });
-    return res.status(200).json({ ok: true, ops });
+
+    const MongoClient = mongoose.mongo.MongoClient;
+    client = new MongoClient(mongoUri, {
+      maxPoolSize: 1,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
+      connectTimeoutMS: 5000,
+    });
+
+    await client.connect();
+    const db = client.db(process.env.MONGODB_DB || "winkget_business");
+    const adminDb = client.db().admin();
+
+    const diagnostics = {};
+
+    // 1. Ping
+    try {
+      const pingStart = Date.now();
+      await db.command({ ping: 1 });
+      diagnostics.pingMs = Date.now() - pingStart;
+    } catch (e) {
+      diagnostics.pingError = e.message;
+    }
+
+    // 2. DbStats
+    try {
+      diagnostics.dbStats = await db.command({ dbStats: 1 });
+    } catch (e) {
+      diagnostics.dbStatsError = e.message;
+    }
+
+    // 3. CurrentOp (Admin)
+    try {
+      diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1, $all: true });
+    } catch (e) {
+      diagnostics.currentOpAdminError = e.message;
+    }
+
+    // 4. CurrentOp (Local DB)
+    try {
+      diagnostics.currentOpDb = await db.command({ currentOp: 1, $ownOps: true });
+    } catch (e) {
+      diagnostics.currentOpDbError = e.message;
+    }
+
+    // 5. ServerStatus
+    try {
+      diagnostics.serverStatus = await db.command({ serverStatus: 1 });
+    } catch (e) {
+      diagnostics.serverStatusError = e.message;
+    }
+
+    return res.status(200).json({
+      ok: true,
+      diagnostics,
+    });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(500).json({
+      ok: false,
+      error: err.message,
+      stack: err.stack,
+    });
+  } finally {
+    if (client) {
+      try {
+        await client.close();
+      } catch (closeErr) {
+        // ignore
+      }
+    }
   }
 });
 

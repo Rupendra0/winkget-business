@@ -610,19 +610,6 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
   const logStep = (stepName) => {
     const duration = Date.now() - traceStartTime;
     console.log(`[vendors-trace][${traceId}] ${stepName} at ${duration}ms`);
-    const FailureLog = require("../models/FailureLog");
-    FailureLog.create({
-      source: "backend-catalog-vendors-trace",
-      type: "warning",
-      message: `[${traceId}] Vendors Trace: ${stepName}`,
-      metadata: {
-        traceId,
-        step: stepName,
-        durationMs: duration,
-        url: req.originalUrl,
-        query: req.query
-      }
-    }).catch(err => console.error("Trace logging failed:", err.message));
   };
 
   try {
