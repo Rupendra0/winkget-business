@@ -262,6 +262,41 @@ router.get("/health/db-ops", async (_req, res) => {
       diagnostics.dbStatsError = e.message;
     }
 
+    // 2b. CollStats for users
+    try {
+      diagnostics.usersStats = await db.command({ collStats: "users" });
+    } catch (e) {
+      diagnostics.usersStatsError = e.message;
+    }
+
+    // 2c. Test query latency & document size
+    const testQuery = {};
+    try {
+      const t0 = Date.now();
+      testQuery.approvedCount = await db.collection("users").countDocuments({ role: "vendor", vendorStatus: "approved" });
+      testQuery.countMs = Date.now() - t0;
+
+      const t1 = Date.now();
+      testQuery.oneVendor = await db.collection("users").findOne({ role: "vendor", vendorStatus: "approved" });
+      testQuery.findOneMs = Date.now() - t1;
+      if (testQuery.oneVendor) {
+        testQuery.oneVendorSize = JSON.stringify(testQuery.oneVendor).length;
+        const cleanVendor = { ...testQuery.oneVendor };
+        delete cleanVendor.image;
+        delete cleanVendor.shopBannerImage;
+        delete cleanVendor.myStoreImage;
+        delete cleanVendor.myStoreBannerImage;
+        delete cleanVendor.shopGallery;
+        testQuery.oneVendorCleanSize = JSON.stringify(cleanVendor).length;
+        // Don't return the full document to avoid bloated diagnostic response
+        testQuery.oneVendorId = testQuery.oneVendor._id;
+        delete testQuery.oneVendor;
+      }
+    } catch (e) {
+      testQuery.error = e.message;
+    }
+    diagnostics.testQuery = testQuery;
+
     // 3. CurrentOp (Admin)
     try {
       diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1 });
