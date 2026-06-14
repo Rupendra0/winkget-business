@@ -258,6 +258,35 @@ router.get("/health/db-ops", async (_req, res) => {
       diagnostics.usersStatsError = e.message;
     }
 
+    // 3b. CollStats for vendorproducts
+    try {
+      diagnostics.productsStats = await db.command({ collStats: "vendorproducts" }, { maxTimeMS: 2000 });
+    } catch (e) {
+      diagnostics.productsStatsError = e.message;
+    }
+
+    // 3c. Product test diagnostics for specific vendor
+    const productTest = {};
+    try {
+      const vId = new mongoose.Types.ObjectId("69eb9efd798b4167e137c2dd");
+      productTest.count = await db.collection("vendorproducts").countDocuments({ vendor: vId, isDeleted: { $ne: true } });
+      const oneProduct = await db.collection("vendorproducts").findOne(
+        { vendor: vId, isDeleted: { $ne: true } },
+        { maxTimeMS: 2000 }
+      );
+      if (oneProduct) {
+        productTest.oneProductSize = JSON.stringify(oneProduct).length;
+        productTest.imageLength = oneProduct.image ? oneProduct.image.length : 0;
+        productTest.imagePrefix = oneProduct.image ? oneProduct.image.substring(0, 50) : null;
+        productTest.galleryCount = oneProduct.gallery ? oneProduct.gallery.length : 0;
+        productTest.variantCount = oneProduct.variantData ? oneProduct.variantData.length : 0;
+        productTest.detailedBlocksCount = oneProduct.detailedDescriptionBlocks ? oneProduct.detailedDescriptionBlocks.length : 0;
+      }
+    } catch (e) {
+      productTest.error = e.message;
+    }
+    diagnostics.productTest = productTest;
+
     // 4. Test query latency & document size
     const testQuery = {};
     if (_req.query.test === "true") {
