@@ -260,34 +260,47 @@ router.get("/health/db-ops", async (_req, res) => {
 
     // 4. Test query latency & document size
     const testQuery = {};
-    try {
-      const t0 = Date.now();
-      testQuery.approvedCount = await db.collection("users").countDocuments(
-        { role: "vendor", vendorStatus: "approved" },
-        { maxTimeMS: 2000 }
-      );
-      testQuery.countMs = Date.now() - t0;
+    if (_req.query.test === "true") {
+      try {
+        const t0 = Date.now();
+        testQuery.approvedCount = await db.collection("users").countDocuments(
+          { role: "vendor", vendorStatus: "approved" },
+          { maxTimeMS: 2000 }
+        );
+        testQuery.countMs = Date.now() - t0;
 
-      const t1 = Date.now();
-      testQuery.oneVendor = await db.collection("users").findOne(
-        { role: "vendor", vendorStatus: "approved" },
-        { maxTimeMS: 2000 }
-      );
-      testQuery.findOneMs = Date.now() - t1;
-      if (testQuery.oneVendor) {
-        testQuery.oneVendorSize = JSON.stringify(testQuery.oneVendor).length;
-        const cleanVendor = { ...testQuery.oneVendor };
-        delete cleanVendor.image;
-        delete cleanVendor.shopBannerImage;
-        delete cleanVendor.myStoreImage;
-        delete cleanVendor.myStoreBannerImage;
-        delete cleanVendor.shopGallery;
-        testQuery.oneVendorCleanSize = JSON.stringify(cleanVendor).length;
-        testQuery.oneVendorId = testQuery.oneVendor._id;
-        delete testQuery.oneVendor;
+        const t1 = Date.now();
+        testQuery.oneVendor = await db.collection("users").findOne(
+          { role: "vendor", vendorStatus: "approved" },
+          { maxTimeMS: 2000 }
+        );
+        testQuery.findOneMs = Date.now() - t1;
+        if (testQuery.oneVendor) {
+          testQuery.oneVendorSize = JSON.stringify(testQuery.oneVendor).length;
+          const cleanVendor = { ...testQuery.oneVendor };
+          delete cleanVendor.image;
+          delete cleanVendor.shopBannerImage;
+          delete cleanVendor.myStoreImage;
+          delete cleanVendor.myStoreBannerImage;
+          delete cleanVendor.shopGallery;
+          testQuery.oneVendorCleanSize = JSON.stringify(cleanVendor).length;
+          testQuery.oneVendorId = testQuery.oneVendor._id;
+          delete testQuery.oneVendor;
+        }
+      } catch (e) {
+        testQuery.error = e.message;
       }
+    } else {
+      testQuery.skipped = "Use ?test=true to run count and findOne tests";
+    }
+
+    // Always fetch indexes
+    try {
+      const tIdx = Date.now();
+      testQuery.indexes = await db.collection("users").indexes();
+      testQuery.indexesMs = Date.now() - tIdx;
     } catch (e) {
-      testQuery.error = e.message;
+      testQuery.indexesError = e.message;
     }
     diagnostics.testQuery = testQuery;
 
