@@ -249,7 +249,7 @@ router.get("/health/db-ops", async (_req, res) => {
     // 1. Ping
     try {
       const pingStart = Date.now();
-      await db.command({ ping: 1 });
+      await db.command({ ping: 1 }, { maxTimeMS: 2000 });
       diagnostics.pingMs = Date.now() - pingStart;
     } catch (e) {
       diagnostics.pingError = e.message;
@@ -257,14 +257,14 @@ router.get("/health/db-ops", async (_req, res) => {
 
     // 2. DbStats
     try {
-      diagnostics.dbStats = await db.command({ dbStats: 1 });
+      diagnostics.dbStats = await db.command({ dbStats: 1 }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.dbStatsError = e.message;
     }
 
     // 2b. CollStats for users
     try {
-      diagnostics.usersStats = await db.command({ collStats: "users" });
+      diagnostics.usersStats = await db.command({ collStats: "users" }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.usersStatsError = e.message;
     }
@@ -273,11 +273,17 @@ router.get("/health/db-ops", async (_req, res) => {
     const testQuery = {};
     try {
       const t0 = Date.now();
-      testQuery.approvedCount = await db.collection("users").countDocuments({ role: "vendor", vendorStatus: "approved" });
+      testQuery.approvedCount = await db.collection("users").countDocuments(
+        { role: "vendor", vendorStatus: "approved" },
+        { maxTimeMS: 2000 }
+      );
       testQuery.countMs = Date.now() - t0;
 
       const t1 = Date.now();
-      testQuery.oneVendor = await db.collection("users").findOne({ role: "vendor", vendorStatus: "approved" });
+      testQuery.oneVendor = await db.collection("users").findOne(
+        { role: "vendor", vendorStatus: "approved" },
+        { maxTimeMS: 2000 }
+      );
       testQuery.findOneMs = Date.now() - t1;
       if (testQuery.oneVendor) {
         testQuery.oneVendorSize = JSON.stringify(testQuery.oneVendor).length;
@@ -299,21 +305,21 @@ router.get("/health/db-ops", async (_req, res) => {
 
     // 3. CurrentOp (Admin)
     try {
-      diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1 });
+      diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1 }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.currentOpAdminError = e.message;
     }
 
     // 4. CurrentOp (Local DB)
     try {
-      diagnostics.currentOpDb = await db.command({ currentOp: 1, $ownOps: true });
+      diagnostics.currentOpDb = await db.command({ currentOp: 1, $ownOps: true }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.currentOpDbError = e.message;
     }
 
     // 5. ServerStatus
     try {
-      diagnostics.serverStatus = await db.command({ serverStatus: 1 });
+      diagnostics.serverStatus = await db.command({ serverStatus: 1 }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.serverStatusError = e.message;
     }
