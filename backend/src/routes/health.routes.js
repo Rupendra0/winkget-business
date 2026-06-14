@@ -225,25 +225,14 @@ router.get("/health/diagnose", async (_req, res) => {
 });
 
 router.get("/health/db-ops", async (_req, res) => {
-  let client = null;
   try {
-    const mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri) {
-      return res.status(500).json({ ok: false, error: "MONGODB_URI env var is missing" });
+    const connection = mongoose.connection;
+    if (connection.readyState !== 1) {
+      return res.status(500).json({ ok: false, message: "Database not connected" });
     }
 
-    const MongoClient = mongoose.mongo.MongoClient;
-    client = new MongoClient(mongoUri, {
-      maxPoolSize: 1,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
-      connectTimeoutMS: 5000,
-    });
-
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DB || "winkget_business");
-    const adminDb = client.db().admin();
-
+    const db = connection.db;
+    const adminDb = db.admin();
     const diagnostics = {};
 
     // 1. Ping
@@ -262,14 +251,14 @@ router.get("/health/db-ops", async (_req, res) => {
       diagnostics.dbStatsError = e.message;
     }
 
-    // 2b. CollStats for users
+    // 3. CollStats for users
     try {
       diagnostics.usersStats = await db.command({ collStats: "users" }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.usersStatsError = e.message;
     }
 
-    // 2c. Test query latency & document size
+    // 4. Test query latency & document size
     const testQuery = {};
     try {
       const t0 = Date.now();
@@ -294,7 +283,6 @@ router.get("/health/db-ops", async (_req, res) => {
         delete cleanVendor.myStoreBannerImage;
         delete cleanVendor.shopGallery;
         testQuery.oneVendorCleanSize = JSON.stringify(cleanVendor).length;
-        // Don't return the full document to avoid bloated diagnostic response
         testQuery.oneVendorId = testQuery.oneVendor._id;
         delete testQuery.oneVendor;
       }
@@ -303,25 +291,11 @@ router.get("/health/db-ops", async (_req, res) => {
     }
     diagnostics.testQuery = testQuery;
 
-    // 3. CurrentOp (Admin)
+    // 5. CurrentOp (Admin)
     try {
       diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1 }, { maxTimeMS: 2000 });
     } catch (e) {
       diagnostics.currentOpAdminError = e.message;
-    }
-
-    // 4. CurrentOp (Local DB)
-    try {
-      diagnostics.currentOpDb = await db.command({ currentOp: 1, $ownOps: true }, { maxTimeMS: 2000 });
-    } catch (e) {
-      diagnostics.currentOpDbError = e.message;
-    }
-
-    // 5. ServerStatus
-    try {
-      diagnostics.serverStatus = await db.command({ serverStatus: 1 }, { maxTimeMS: 2000 });
-    } catch (e) {
-      diagnostics.serverStatusError = e.message;
     }
 
     return res.status(200).json({
@@ -334,14 +308,6 @@ router.get("/health/db-ops", async (_req, res) => {
       error: err.message,
       stack: err.stack,
     });
-  } finally {
-    if (client) {
-      try {
-        await client.close();
-      } catch (closeErr) {
-        // ignore
-      }
-    }
   }
 });
 
