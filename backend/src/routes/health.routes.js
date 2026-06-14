@@ -224,5 +224,19 @@ router.get("/health/diagnose", async (_req, res) => {
   }
 });
 
+router.get("/health/current-op", async (_req, res) => {
+  try {
+    const connection = mongoose.connection;
+    if (connection.readyState !== 1) {
+      return res.status(500).json({ ok: false, message: "Database not connected" });
+    }
+    const adminDb = connection.db.admin();
+    const ops = await adminDb.command({ currentOp: 1, $all: true });
+    return res.status(200).json({ ok: true, ops });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
 
