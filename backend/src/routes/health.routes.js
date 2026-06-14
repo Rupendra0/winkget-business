@@ -264,7 +264,7 @@ router.get("/health/db-ops", async (_req, res) => {
 
     // 3. CurrentOp (Admin)
     try {
-      diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1, $all: true });
+      diagnostics.currentOpAdmin = await adminDb.command({ currentOp: 1 });
     } catch (e) {
       diagnostics.currentOpAdminError = e.message;
     }
