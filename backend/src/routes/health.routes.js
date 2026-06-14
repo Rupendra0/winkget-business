@@ -122,12 +122,17 @@ router.get("/health/diagnose", async (_req, res) => {
 
     // Compute document sizes to detect huge base64 strings
     const docSizes = {};
-    const measureCollectionSizes = async (colName, modelObj) => {
+    const measureCollectionSizes = async (colName, modelObj, selectFields = "") => {
       try {
-        const docs = await modelObj.find({}).lean();
+        const startVal = Date.now();
+        // Limit query selection to avoid downloading huge payloads if we don't need to
+        const docs = await modelObj.find({}).select(selectFields).lean();
+        const queryTime = Date.now() - startVal;
+        
         let maxSize = 0;
         let totalSize = 0;
         let maxDocId = null;
+        const individualSizes = [];
         
         docs.forEach(doc => {
           const size = JSON.stringify(doc).length;
@@ -136,13 +141,20 @@ router.get("/health/diagnose", async (_req, res) => {
             maxSize = size;
             maxDocId = doc._id;
           }
+          individualSizes.push({
+            id: doc._id,
+            name: doc.businessName || doc.name || doc.key || undefined,
+            sizeChars: size
+          });
         });
         
         docSizes[colName] = {
           count: docs.length,
+          queryTimeMs: queryTime,
           avgSizeChars: docs.length > 0 ? Math.round(totalSize / docs.length) : 0,
           maxSizeChars: maxSize,
-          maxDocId: maxDocId
+          maxDocId: maxDocId,
+          details: individualSizes.slice(0, 15) // top 15 individual sizes
         };
       } catch (err) {
         docSizes[colName] = { error: err.message };
@@ -151,9 +163,36 @@ router.get("/health/diagnose", async (_req, res) => {
 
     const HomePlacement = require("../models/HomePlacement");
     const Category = require("../models/Category");
-    await measureCollectionSizes("users", User);
+    
+    // For users, let's select only metadata first, then do a separate trace on the image fields
+    await measureCollectionSizes("users_metadata", User, "_id name businessName role vendorStatus");
     await measureCollectionSizes("homeplacements", HomePlacement);
     await measureCollectionSizes("categories", Category);
+    
+    // Detailed image size trace for vendors
+    try {
+      const startVendors = Date.now();
+      const vendors = await User.find({ role: "vendor" })
+        .select("_id name businessName image shopBannerImage myStoreImage myStoreBannerImage shopGallery")
+        .lean();
+      
+      const vendorImageSizes = vendors.map(v => ({
+        id: v._id,
+        name: v.businessName || v.name,
+        imageLen: v.image ? v.image.length : 0,
+        shopBannerLen: v.shopBannerImage ? v.shopBannerImage.length : 0,
+        myStoreImageLen: v.myStoreImage ? v.myStoreImage.length : 0,
+        myStoreBannerLen: v.myStoreBannerImage ? v.myStoreBannerImage.length : 0,
+        galleryLen: v.shopGallery ? JSON.stringify(v.shopGallery).length : 0
+      }));
+      
+      docSizes["vendors_images"] = {
+        queryTimeMs: Date.now() - startVendors,
+        sizes: vendorImageSizes
+      };
+    } catch (vendorErr) {
+      docSizes["vendors_images"] = { error: vendorErr.message };
+    }
 
     return res.status(200).json({
       ok: true,
