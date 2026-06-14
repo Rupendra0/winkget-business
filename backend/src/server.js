@@ -31,16 +31,27 @@ async function startServer() {
   try {
     await connectDatabase();
 
-    // Ensure DB indexes match current schema so parent-scoped subcategory uniqueness works.
-    await User.syncIndexes();
-    await Category.syncIndexes();
-    await Subcategory.syncIndexes();
-    await Inquiry.syncIndexes();
-    await Review.syncIndexes();
-    await City.syncIndexes();
-    await FailureLog.syncIndexes();
-    await VendorProduct.syncIndexes();
-    await Order.syncIndexes();
+    // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
+    const syncModelIndexes = async (modelName, modelObj) => {
+      try {
+        await modelObj.syncIndexes();
+        // eslint-disable-next-line no-console
+        console.log(`Synced indexes for ${modelName}`);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to sync indexes for ${modelName}:`, error.message);
+      }
+    };
+
+    await syncModelIndexes("User", User);
+    await syncModelIndexes("Category", Category);
+    await syncModelIndexes("Subcategory", Subcategory);
+    await syncModelIndexes("Inquiry", Inquiry);
+    await syncModelIndexes("Review", Review);
+    await syncModelIndexes("City", City);
+    await syncModelIndexes("FailureLog", FailureLog);
+    await syncModelIndexes("VendorProduct", VendorProduct);
+    await syncModelIndexes("Order", Order);
 
     try {
       await ensureSearchIndex();

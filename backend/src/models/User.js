@@ -71,6 +71,10 @@ const userSchema = new Schema(
 userSchema.index({ role: 1, vendorStatus: 1, updatedAt: -1, businessName: 1, name: 1 });
 userSchema.index({ role: 1, vendorStatus: 1, businessCategory: 1, updatedAt: -1, businessName: 1, name: 1 });
 userSchema.index({ role: 1, vendorStatus: 1, businessSubcategory: 1, updatedAt: -1, businessName: 1, name: 1 });
+userSchema.index({ role: 1, vendorStatus: 1, city: 1, updatedAt: -1, businessName: 1, name: 1 });
+userSchema.index({ role: 1, vendorStatus: 1, city: 1, sublocality: 1, updatedAt: -1, businessName: 1, name: 1 });
+userSchema.index({ role: 1, vendorStatus: 1, businessCategory: 1, city: 1, updatedAt: -1, businessName: 1, name: 1 });
+userSchema.index({ role: 1, vendorStatus: 1, businessCategory: 1, city: 1, sublocality: 1, updatedAt: -1, businessName: 1, name: 1 });
 userSchema.index({ role: 1, vendorStatus: 1, updatedAt: -1 });
 userSchema.index({ role: 1, vendorStatus: 1, createdAt: -1 });
 userSchema.index({ role: 1, createdAt: -1 });

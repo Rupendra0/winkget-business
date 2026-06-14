@@ -68,7 +68,10 @@ export default function CityStrip() {
 
       try {
         const cityFilter = String(selectedCity || "").trim();
-        const liveVendors = await fetchVendors({ city: cityFilter || undefined });
+        const liveVendors = await fetchVendors({
+          city: cityFilter || undefined,
+          limit: 24,
+        });
         if (!active) return;
 
         if (liveVendors.length === 0) {

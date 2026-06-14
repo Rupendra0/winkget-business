@@ -101,11 +101,12 @@ async function connectDatabase() {
 
   const connectOptions = {
     dbName,
-    serverSelectionTimeoutMS: toPositiveInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS, 5000),
-    maxPoolSize: toPositiveInt(process.env.MONGODB_MAX_POOL_SIZE, 40),
-    minPoolSize: toPositiveInt(process.env.MONGODB_MIN_POOL_SIZE, 5),
+    serverSelectionTimeoutMS: toPositiveInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS, 10000),
+    maxPoolSize: toPositiveInt(process.env.MONGODB_MAX_POOL_SIZE, 10),
+    minPoolSize: toPositiveInt(process.env.MONGODB_MIN_POOL_SIZE, 2),
     maxIdleTimeMS: toPositiveInt(process.env.MONGODB_MAX_IDLE_TIME_MS, 30000),
     socketTimeoutMS: toPositiveInt(process.env.MONGODB_SOCKET_TIMEOUT_MS, 45000),
+    connectTimeoutMS: 30000,
     monitorCommands: true,
   };
 

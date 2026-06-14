@@ -335,6 +335,8 @@ export async function fetchVendors(filters: {
   city?: string;
   sublocality?: string;
   search?: string;
+  limit?: number;
+  page?: number;
 }): Promise<CatalogVendorSummary[]> {
   try {
     const query = toQueryString({
@@ -344,6 +346,8 @@ export async function fetchVendors(filters: {
       city: filters.city,
       sublocality: filters.sublocality,
       search: filters.search,
+      limit: filters.limit !== undefined ? String(filters.limit) : undefined,
+      page: filters.page !== undefined ? String(filters.page) : undefined,
     });
 
     const response = await fetch(`${BACKEND_URL}/api/vendors${query}`, {

@@ -663,12 +663,48 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       query.businessSubcategory = { $in: subcategoryFilterIds };
     }
 
+    let resolvedCity = "";
+    let resolvedSublocality = "";
+
     if (city) {
-      query.city = toSafeRegex(city);
+      const cityDoc = await City.findOne({
+        $or: [
+          { name: new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+          { slug: city.toLowerCase() }
+        ],
+        isActive: true
+      })
+        .select("name localities")
+        .lean();
+
+      if (cityDoc) {
+        resolvedCity = cityDoc.name;
+        if (sublocality) {
+          const matchedLocality = (cityDoc.localities || []).find(
+            (loc) =>
+              loc.name.toLowerCase() === sublocality.toLowerCase() ||
+              loc.slug === sublocality.toLowerCase()
+          );
+          if (matchedLocality) {
+            resolvedSublocality = matchedLocality.name;
+          } else {
+            resolvedSublocality = sublocality;
+          }
+        }
+      } else {
+        resolvedCity = city;
+        resolvedSublocality = sublocality;
+      }
+    } else if (sublocality) {
+      resolvedSublocality = sublocality;
     }
 
-    if (sublocality) {
-      query.sublocality = toSafeRegex(sublocality);
+    if (resolvedCity) {
+      query.city = resolvedCity;
+    }
+
+    if (resolvedSublocality) {
+      query.sublocality = resolvedSublocality;
     }
 
     if (search) {
@@ -676,7 +712,10 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       query.$or = [{ businessName: regex }, { name: regex }, { businessDescription: regex }, { serviceTags: regex }];
     }
 
-    const vendors = await User.find(query)
+    const limit = toPositiveInt(req.query.limit, 0);
+    const page = toPositiveInt(req.query.page, 1);
+
+    let dbQuery = User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
           "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
@@ -684,6 +723,12 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       .populate("businessCategory", "_id name slug")
       .populate("businessSubcategory", "_id name slug")
       .lean();
+
+    if (limit > 0) {
+      dbQuery = dbQuery.skip((page - 1) * limit).limit(limit);
+    }
+
+    const vendors = await dbQuery;
 
     const reviewSummaryByVendorId = await getVendorReviewSummaryMap(vendors.map((vendor) => vendor._id));
 

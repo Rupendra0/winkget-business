@@ -1,5 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const User = require("../models/User");
 
 const router = express.Router();
 
@@ -18,4 +19,66 @@ router.get("/health", async (_req, res) => {
   });
 });
 
+router.get("/health/diagnose", async (_req, res) => {
+  try {
+    const connection = mongoose.connection;
+    if (connection.readyState !== 1) {
+      return res.status(500).json({
+        ok: false,
+        message: "Database is not connected",
+        readyState: connection.readyState,
+      });
+    }
+
+    const db = connection.db;
+    const collections = await db.listCollections().toArray();
+    const collectionStats = [];
+    for (const col of collections) {
+      const count = await db.collection(col.name).countDocuments();
+      collectionStats.push({ name: col.name, count });
+    }
+
+    // Check users collection details
+    const usersCollection = db.collection("users");
+    const totalUsers = await usersCollection.countDocuments({});
+    const totalVendors = await usersCollection.countDocuments({ role: "vendor" });
+    const approvedVendors = await usersCollection.countDocuments({ role: "vendor", vendorStatus: "approved" });
+
+    // Check indexes on users collection
+    const userIndexes = await usersCollection.indexes();
+
+    // Query explanation
+    let queryExplain = null;
+    try {
+      queryExplain = await User.find({ role: "vendor", vendorStatus: "approved" })
+        .sort({ updatedAt: -1, businessName: 1, name: 1 })
+        .explain();
+    } catch (explainError) {
+      queryExplain = { error: explainError.message };
+    }
+
+    return res.status(200).json({
+      ok: true,
+      readyState: connection.readyState,
+      databaseName: connection.name,
+      collections: collectionStats,
+      users: {
+        total: totalUsers,
+        vendors: totalVendors,
+        approvedVendors,
+        indexes: userIndexes,
+      },
+      explain: queryExplain,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: "Diagnostics failed",
+      error: error.message,
+      stack: error.stack,
+    });
+  }
+});
+
 module.exports = router;
+
