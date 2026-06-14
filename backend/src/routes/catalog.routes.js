@@ -473,9 +473,10 @@ router.get("/home-placements", async (_req, res) => {
 
 router.get("/home-promo-cards", async (_req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY })
-      .populate("promoCards.category", "_id name slug isActive")
-      .lean();
+    const placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY }).lean();
+    if (placement) {
+      await HomePlacement.populate(placement, { path: "promoCards.category", select: "_id name slug isActive" });
+    }
 
     res.set("Cache-Control", "private, no-store");
 
@@ -490,9 +491,10 @@ router.get("/home-promo-cards", async (_req, res) => {
 
 router.get("/home-explore-cards", async (_req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY })
-      .populate("exploreCards.category", "_id name slug isActive")
-      .lean();
+    const placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY }).lean();
+    if (placement) {
+      await HomePlacement.populate(placement, { path: "exploreCards.category", select: "_id name slug isActive" });
+    }
 
     res.set("Cache-Control", "private, no-store");
 
@@ -507,9 +509,10 @@ router.get("/home-explore-cards", async (_req, res) => {
 
 router.get("/home-wellness-cards", async (_req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY })
-      .populate("wellnessCards.category", "_id name slug isActive")
-      .lean();
+    const placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY }).lean();
+    if (placement) {
+      await HomePlacement.populate(placement, { path: "wellnessCards.category", select: "_id name slug isActive" });
+    }
 
     res.set("Cache-Control", "private, no-store");
 
@@ -587,9 +590,10 @@ router.get("/subcategories", withPublicGetCache(async (req, res) => {
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
       .select("_id category parentSubcategory name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields")
-      .populate("category", "_id name")
-      .populate("parentSubcategory", "_id name")
       .lean();
+
+    await Subcategory.populate(subcategories, { path: "category", select: "_id name" });
+    await Subcategory.populate(subcategories, { path: "parentSubcategory", select: "_id name" });
 
     return res.status(200).json({
       ok: true,
@@ -756,8 +760,6 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
       .select(
           "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
       )
-      .populate("businessCategory", "_id name slug")
-      .populate("businessSubcategory", "_id name slug")
       .lean();
 
     if (limit > 0) {
@@ -767,6 +769,12 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     logStep("Executing User query");
     const vendors = await dbQuery;
     logStep("User query completed: " + vendors.length + " vendors fetched");
+
+    logStep("Populating Category");
+    await User.populate(vendors, { path: "businessCategory", select: "_id name slug" });
+    logStep("Populating Subcategory");
+    await User.populate(vendors, { path: "businessSubcategory", select: "_id name slug" });
+    logStep("Populate completed");
 
     logStep("Executing Review aggregate query");
     const reviewSummaryByVendorId = await getVendorReviewSummaryMap(vendors.map((vendor) => vendor._id));
@@ -802,13 +810,14 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       .select(
         "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
       )
-      .populate("businessCategory", "_id name slug")
-      .populate("businessSubcategory", "_id name slug")
       .lean();
 
     if (!vendor) {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
     }
+
+    await User.populate(vendor, { path: "businessCategory", select: "_id name slug" });
+    await User.populate(vendor, { path: "businessSubcategory", select: "_id name slug" });
 
     const reviewSummaryByVendorId = await getVendorReviewSummaryMap([vendor._id]);
 
