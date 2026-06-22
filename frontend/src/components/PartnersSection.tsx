@@ -114,7 +114,7 @@ export default function PartnersSection() {
 
   if (isLoading) {
     return (
-      <section className="px-3 pt-1 pb-24 md:pt-2 md:pb-32 lg:pt-2 lg:pb-40">
+      <section className="px-3 pt-1 pb-12 md:pt-2 md:pb-16 lg:pt-2 lg:pb-20">
         <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
           <div className="mb-5 h-8 w-56 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
@@ -229,7 +229,7 @@ export default function PartnersSection() {
   };
 
   return (
-    <section className="px-3 pt-1 pb-24 md:pt-2 md:pb-32 lg:pt-2 lg:pb-40">
+    <section className="px-3 pt-1 pb-12 md:pt-2 md:pb-16 lg:pt-2 lg:pb-20">
       <div className="w-full">
         <div className="mb-6 pl-1 md:pl-2.5">
           <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{heading}</h2>
