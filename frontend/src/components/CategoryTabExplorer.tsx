@@ -475,9 +475,9 @@ export default function CategoryTabExplorer() {
                       active ? "bg-white text-blue-600" : "bg-white text-slate-500"
                     }`}>
                       {cat.icon && cat.icon !== "none" ? (
-                        <img src={cat.icon} alt="" className="h-9 w-9 object-contain" />
+                        <img src={cat.icon} alt="" className="h-[42px] w-[42px] object-contain" />
                       ) : (
-                        <Layers size={24} />
+                        <Layers size={28} />
                       )}
                     </div>
                     <div className="flex flex-col min-w-0">
