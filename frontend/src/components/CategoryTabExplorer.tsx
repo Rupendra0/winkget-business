@@ -281,7 +281,7 @@ export default function CategoryTabExplorer() {
     return counts;
   }, [subcategories]);
 
-  // Sort categories by position/sortOrder ascending, and slice to exactly 7 for display
+  // Sort categories by position/sortOrder ascending, rendering all categories for a scrollable sidebar
   const displayedCategories = useMemo(() => {
     return [...categories]
       .map((cat) => ({
@@ -295,8 +295,7 @@ export default function CategoryTabExplorer() {
           return aOrder - bOrder;
         }
         return (a.name || "").localeCompare(b.name || "");
-      })
-      .slice(0, 7);
+      });
   }, [categories, subcategoryCountsMap]);
 
   // Set first displayed category as active automatically
@@ -430,7 +429,7 @@ export default function CategoryTabExplorer() {
         {/* Left Category List (Sidebar on Desktop w=297px, Sidebar-column on Mobile) */}
         <div className="w-[28%] min-w-[85px] sm:min-w-[150px] md:w-[22%] md:min-w-[220px] md:max-w-[300px]">
           {/* Category Tab list sidebar: Responsive height & styling */}
-          <div className="flex flex-col bg-white rounded-[12px] border border-slate-200 h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px] overflow-y-auto overflow-x-hidden">
+          <div className="flex flex-col bg-white rounded-[12px] border border-slate-200 h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px] overflow-y-auto overflow-x-hidden no-scrollbar">
             {displayedCategories.map((cat) => {
               const active = cat.id === activeCategoryId;
               const count = Math.max(subcategoryCountsMap[cat.id] || 0, 8);
