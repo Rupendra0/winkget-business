@@ -15,6 +15,10 @@ type CatalogSubcategory = {
     id: string;
     name: string;
   };
+  parentSubcategory?: {
+    id: string;
+    name?: string;
+  };
 };
 
 type CatalogCategory = {
@@ -242,16 +246,32 @@ export default function CategoryTabExplorer() {
     };
   }, []);
 
-  // Calculate subcategory counts per category ID in memory
+  // Calculate subcategory counts per category ID in memory (only count level 1 subcategories, unless level 1 count is < 6, then count total)
   const subcategoryCountsMap = useMemo(() => {
     const counts: Record<string, number> = {};
+    const catGroup: Record<string, { level1: number; total: number }> = {};
+
     subcategories.forEach((sub) => {
       const catId = sub.category?.id || sub.category || "";
       const idStr = typeof catId === "object" ? catId.id : String(catId);
-      if (idStr) {
-        counts[idStr] = (counts[idStr] || 0) + 1;
+      if (!idStr) return;
+
+      if (!catGroup[idStr]) {
+        catGroup[idStr] = { level1: 0, total: 0 };
       }
+
+      const isLevel1 = !sub.parentSubcategory || !sub.parentSubcategory.id;
+      if (isLevel1) {
+        catGroup[idStr].level1++;
+      }
+      catGroup[idStr].total++;
     });
+
+    Object.keys(catGroup).forEach((idStr) => {
+      const { level1, total } = catGroup[idStr];
+      counts[idStr] = level1 >= 6 ? level1 : total;
+    });
+
     return counts;
   }, [subcategories]);
 
@@ -286,19 +306,37 @@ export default function CategoryTabExplorer() {
   const activeSubcategories = useMemo(() => {
     if (!activeCategoryId) return [];
     
-    // Find real database subcategories for active category
-    const realSubs = subcategories.filter((sub) => {
+    // Find all database subcategories for active category
+    const categorySubs = subcategories.filter((sub) => {
       const catId = sub.category?.id || sub.category || "";
       const idStr = typeof catId === "object" ? catId.id : String(catId);
       return idStr === activeCategoryId;
     });
 
-    if (realSubs.length >= 6) {
-      return realSubs.slice(0, 6);
+    // Separate into level 1 and nested
+    const level1Subs = categorySubs.filter((sub) => !sub.parentSubcategory || !sub.parentSubcategory.id);
+    const nestedSubs = categorySubs.filter((sub) => sub.parentSubcategory && sub.parentSubcategory.id);
+
+    // If we have 6 or more level-1 subcategories, display them exclusively
+    if (level1Subs.length >= 6) {
+      return level1Subs.slice(0, 6);
     }
 
-    // Pad with realistic mock subcategories if count is less than 6
-    const padded = [...realSubs];
+    // Otherwise, fill up to 6 using nested subcategories
+    const combined = [...level1Subs];
+    for (const nested of nestedSubs) {
+      if (combined.length >= 6) break;
+      if (!combined.some((item) => item.id === nested.id)) {
+        combined.push(nested);
+      }
+    }
+
+    if (combined.length >= 6) {
+      return combined;
+    }
+
+    // Pad with realistic mock subcategories if total count is still less than 6
+    const padded = [...combined];
     const cat = categories.find((c) => c.id === activeCategoryId);
     const catName = cat ? cat.name : "Category";
 
