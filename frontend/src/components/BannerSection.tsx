@@ -134,7 +134,7 @@ export default function BannerSection() {
   };
 
   return (
-    <section className="px-3 py-3 md:py-4 lg:py-6">
+    <section className="px-3 pt-1 pb-3 md:pt-1.5 md:pb-4 lg:pt-2 lg:pb-6">
       <div className="md:hidden">
         <div
           className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm`}
@@ -168,28 +168,50 @@ export default function BannerSection() {
         </div>
       </div>
 
-      <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 lg:grid-cols-10">
-        {BANNER_LAYOUT.map((tile) => {
-          const imageUrl = placementByKey[tile.key];
+      <div className="hidden md:grid md:grid-cols-4 gap-4">
+        {/* Left Column: Main Banner */}
+        <div className="md:col-span-3 h-[180px] sm:h-[220px] md:h-[280px] lg:h-[340px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {placementByKey.leftImage ? (
+            <img
+              src={placementByKey.leftImage}
+              alt="Main Banner"
+              className="block h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
+          )}
+        </div>
 
-          return (
-            <div
-              key={tile.key}
-              className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${tile.className}`}
-            >
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={tile.title}
-                  className="block h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
-              )}
-            </div>
-          );
-        })}
+        {/* Right Column: Stacked Banners */}
+        <div className="md:col-span-1 flex flex-col gap-4 h-[180px] sm:h-[220px] md:h-[280px] lg:h-[340px]">
+          {/* Top Secondary Banner */}
+          <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {placementByKey.middleImage ? (
+              <img
+                src={placementByKey.middleImage}
+                alt="Secondary Banner Top"
+                className="block h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
+            )}
+          </div>
+          {/* Bottom Secondary Banner */}
+          <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {placementByKey.rightImage ? (
+              <img
+                src={placementByKey.rightImage}
+                alt="Secondary Banner Bottom"
+                className="block h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="h-full w-full animate-pulse bg-slate-100" aria-hidden="true" />
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

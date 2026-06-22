@@ -31,6 +31,7 @@ const subcategorySchema = new Schema(
     slug: { type: String, required: true, trim: true, lowercase: true },
     description: { type: String, trim: true },
     icon: { type: String, trim: true },
+    coverImage: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
     customFormEnabled: { type: Boolean, default: false },

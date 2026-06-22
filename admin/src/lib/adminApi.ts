@@ -461,6 +461,7 @@ export async function createSubcategoryNode(input: {
   parentSubcategoryId?: string;
   name: string;
   icon?: string;
+  coverImage?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -487,6 +488,7 @@ export async function updateSubcategoryNode(subcategoryId: string, input: {
   parentSubcategoryId?: string;
   name?: string;
   icon?: string;
+  coverImage?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;

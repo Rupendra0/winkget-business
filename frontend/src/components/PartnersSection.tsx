@@ -27,7 +27,7 @@ type SponsorCard = {
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-const SPONSOR_DEFAULT_HEADING = "Brand Partners";
+const SPONSOR_DEFAULT_HEADING = "Trusted by Leading Partners";
 const SPONSOR_LIMIT = 7;
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
@@ -194,16 +194,19 @@ export default function PartnersSection() {
     suppressTapRef.current = false;
   };
 
-  const renderSponsorCard = (card: SponsorCard, className: string) => {
+  const renderSponsorCard = (card: SponsorCard, className: string, nameElement?: React.ReactNode) => {
     const link = String(card.link || "").trim();
     const content = (
-      <div className={className}>
-        <img
-          src={card.image}
-          alt={card.name}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
+      <div className="flex flex-col items-center justify-center w-full">
+        <div className={className}>
+          <img
+            src={card.image}
+            alt={card.name}
+            className="h-full w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+        {nameElement}
       </div>
     );
 
@@ -215,7 +218,7 @@ export default function PartnersSection() {
     return (
       <a
         href={link}
-        className="block"
+        className="block w-full"
         onClickCapture={handleLinkCapture}
         target={external ? "_blank" : undefined}
         rel={external ? "noreferrer" : undefined}
@@ -228,29 +231,23 @@ export default function PartnersSection() {
   return (
     <section className="px-3 py-3 pb-8 md:py-4 md:pb-10 lg:py-6 lg:pb-12">
       <div className="w-full">
-        <div className="mb-3 text-center">
+        <div className="mb-4 text-center">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        {/* Mobile: Scrollable carousel showing 3 cards */}
-        <div className="flex w-full justify-between gap-4 overflow-x-auto pb-2 md:hidden no-scrollbar">
+        {/* Unified partners strip */}
+        <div className="flex w-full overflow-x-auto no-scrollbar bg-white">
           {cards.map((card) => (
-            <div key={`sponsor-mobile-${card.cardId}`} className="shrink-0 basis-[calc((100%-2rem)/3)]">
+            <div
+              key={`sponsor-${card.cardId}`}
+              className="flex-1 min-w-[120px] md:min-w-0 flex items-center justify-center py-5 px-4 transition-colors hover:bg-slate-50/50"
+            >
               {renderSponsorCard(
                 card,
-                "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/90 shadow-sm"
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop: Grid layout */}
-        <div className="hidden w-full justify-between gap-8 overflow-x-auto pb-2 md:flex no-scrollbar">
-          {cards.map((card) => (
-            <div key={`sponsor-desktop-${card.cardId}`}>
-              {renderSponsorCard(
-                card,
-                "mx-auto h-[112px] w-[112px] overflow-hidden rounded-full border border-gray-200 bg-white/80 shadow-sm transition hover:shadow-md"
+                "w-full h-10 md:h-12 flex items-center justify-center",
+                <span className="mt-2 text-xs font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
+                  {card.name}
+                </span>
               )}
             </div>
           ))}

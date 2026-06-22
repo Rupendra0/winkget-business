@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
 import Modal from "@/components/admin/Modal";
@@ -22,6 +22,14 @@ const sortCities = (cities: AdminCity[]) =>
   [...cities].sort((left, right) => {
     if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
     return left.name.localeCompare(right.name);
+  });
+
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
   });
 
 const sortLocalities = (city: AdminCity) =>
@@ -78,6 +86,7 @@ export default function ExtraPage() {
   const [cityState, setCityState] = useState("");
   const [citySortOrder, setCitySortOrder] = useState("0");
   const [cityActive, setCityActive] = useState(true);
+  const [cityImage, setCityImage] = useState("");
 
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [localityNameInput, setLocalityNameInput] = useState("");
@@ -87,7 +96,59 @@ export default function ExtraPage() {
   const [editCityState, setEditCityState] = useState("");
   const [editCitySortOrder, setEditCitySortOrder] = useState("0");
   const [editCityActive, setEditCityActive] = useState(true);
+  const [editCityImage, setEditCityImage] = useState("");
   const [savingCityEdit, setSavingCityEdit] = useState(false);
+
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [editImageUploadError, setEditImageUploadError] = useState<string | null>(null);
+
+  const handleAddCityImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setImageUploadError("Please select image files only.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setImageUploadError("Image must be below 2MB.");
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setCityImage(dataUrl);
+      setImageUploadError(null);
+    } catch {
+      setImageUploadError("Failed to read image file.");
+    }
+  };
+
+  const handleEditCityImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setEditImageUploadError("Please select image files only.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setEditImageUploadError("Image must be below 2MB.");
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setEditCityImage(dataUrl);
+      setEditImageUploadError(null);
+    } catch {
+      setEditImageUploadError("Failed to read image file.");
+    }
+  };
 
   const loadCities = useCallback(async () => {
     setLoading(true);
@@ -171,6 +232,7 @@ export default function ExtraPage() {
         state,
         sortOrder,
         isActive: cityActive,
+        image: cityImage.trim(),
       });
 
       setMessage(`City "${created.name}" created`);
@@ -178,6 +240,7 @@ export default function ExtraPage() {
       setCityState("");
       setCitySortOrder("0");
       setCityActive(true);
+      setCityImage("");
       await loadCities();
     } catch (createError) {
       setError(toErrorMessage(createError, "Unable to create city"));
@@ -194,6 +257,7 @@ export default function ExtraPage() {
     setEditCityState(String(city.state || "").trim());
     setEditCitySortOrder(String(city.sortOrder ?? 0));
     setEditCityActive(Boolean(city.isActive));
+    setEditCityImage(String(city.image || "").trim());
   };
 
   const closeEditCityModal = (force = false) => {
@@ -203,6 +267,8 @@ export default function ExtraPage() {
     setEditCityState("");
     setEditCitySortOrder("0");
     setEditCityActive(true);
+    setEditCityImage("");
+    setEditImageUploadError(null);
   };
 
   const handleEditCity = async (event: FormEvent<HTMLFormElement>) => {
@@ -238,6 +304,7 @@ export default function ExtraPage() {
         state,
         sortOrder,
         isActive: editCityActive,
+        image: editCityImage.trim(),
       });
 
       setMessage(`City "${updated.name}" updated`);
@@ -399,6 +466,50 @@ export default function ExtraPage() {
               step={1}
               className="rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
             />
+            {cityImage ? (
+              <div className="flex items-center gap-3 border border-(--border) bg-(--surface) rounded-lg p-2 h-[42px] min-h-[42px] max-h-[42px] overflow-hidden">
+                <img
+                  src={cityImage}
+                  alt="Preview"
+                  className="h-8 w-12 rounded object-cover border border-(--border) bg-slate-100 shrink-0"
+                />
+                <div className="flex gap-1.5 flex-1 min-w-0">
+                  <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-2 py-1 rounded text-[10px] font-semibold flex items-center justify-center text-center flex-1">
+                    Change
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAddCityImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCityImage("")}
+                    className="border border-(--border) bg-(--surface-muted) hover:bg-slate-100 text-(--text-soft) px-2 py-1 rounded text-[10px] font-semibold flex-1"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <div className="border border-dashed border-(--border) rounded-lg p-1.5 flex items-center justify-center bg-(--surface-muted) h-[42px] min-h-[42px] max-h-[42px]">
+                  <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-3 py-1.5 rounded-md text-[11px] font-semibold flex items-center justify-center w-full text-center">
+                    Upload Background
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAddCityImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {imageUploadError ? (
+                  <span className="text-[10px] text-rose-600 font-medium">{imageUploadError}</span>
+                ) : null}
+              </div>
+            )}
             <label className="inline-flex items-center gap-2 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text-soft)">
               <input
                 type="checkbox"
@@ -440,10 +551,21 @@ export default function ExtraPage() {
                     onClick={() => setSelectedCityId(city.id)}
                     className="w-full text-left"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-(--text-strong)">{city.name}</p>
-                        <p className="text-xs text-(--text-soft)">
+                    <div className="flex items-start gap-3">
+                      {city.image ? (
+                        <img
+                          src={city.image}
+                          alt={city.name}
+                          className="h-10 w-14 rounded object-cover border border-(--border) shrink-0 bg-slate-100"
+                        />
+                      ) : (
+                        <div className="h-10 w-14 rounded bg-slate-100/80 border border-dashed border-(--border) flex items-center justify-center shrink-0 text-[9px] text-(--text-soft) font-medium">
+                          No Bg
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-(--text-strong) truncate">{city.name}</p>
+                        <p className="text-xs text-(--text-soft) truncate">
                           {city.state || "No state"} | Position {city.sortOrder}
                         </p>
                       </div>
@@ -563,6 +685,53 @@ export default function ExtraPage() {
                   className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm outline-none focus:border-(--accent)"
                 />
               </label>
+
+              <div className="sm:col-span-2 block">
+                <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Background image</span>
+                {editCityImage ? (
+                  <div className="flex items-center gap-4 border border-(--border) bg-(--surface) rounded-lg p-3">
+                    <img
+                      src={editCityImage}
+                      alt="Preview"
+                      className="h-20 w-32 rounded-lg object-cover border border-(--border) bg-slate-100 shrink-0"
+                    />
+                    <div className="flex flex-col gap-2">
+                      <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center">
+                        Change Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleEditCityImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setEditCityImage("")}
+                        className="border border-(--border) bg-(--surface-muted) hover:bg-slate-100 text-(--text-soft) px-4 py-1.5 rounded-md text-xs font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-(--border) rounded-lg p-6 flex flex-col items-center justify-center text-center bg-(--surface-muted)">
+                    <p className="text-xs text-(--text-soft) mb-2">No background image uploaded yet</p>
+                    <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center">
+                      Upload Background
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditCityImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+                {editImageUploadError ? (
+                  <p className="mt-1 text-xs text-rose-600 font-medium">{editImageUploadError}</p>
+                ) : null}
+              </div>
 
               <label className="sm:col-span-2 inline-flex items-center gap-2 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text-soft)">
                 <input

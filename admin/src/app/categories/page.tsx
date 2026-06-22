@@ -220,6 +220,7 @@ function CategoriesPageContent() {
 
   const [nameInput, setNameInput] = useState("");
   const [iconImageInput, setIconImageInput] = useState("");
+  const [coverImageInput, setCoverImageInput] = useState("");
   const [sortOrderInput, setSortOrderInput] = useState("");
   const [activeInput, setActiveInput] = useState(true);
   const [customFormEnabledInput, setCustomFormEnabledInput] = useState(false);
@@ -290,6 +291,7 @@ function CategoriesPageContent() {
       setEditingSubcategoryId(null);
       setNameInput("");
       setIconImageInput("");
+      setCoverImageInput("");
       setSortOrderInput("");
       setActiveInput(true);
       setCustomFormEnabledInput(false);
@@ -480,6 +482,7 @@ function CategoriesPageContent() {
         setEditingSubcategoryId(null);
         setNameInput(category.name || "");
         setIconImageInput(String(category.icon || ""));
+        setCoverImageInput("");
         setSortOrderInput(String(Number.isFinite(Number(category.sortOrder)) ? category.sortOrder : 0));
         setActiveInput(Boolean(category.isActive));
         setCustomFormEnabledInput(Boolean(category.customFormEnabled));
@@ -504,6 +507,7 @@ function CategoriesPageContent() {
         setEditingSubcategoryId(entityId);
         setNameInput(subcategory.name || "");
         setIconImageInput(String(subcategory.icon || ""));
+        setCoverImageInput(String(subcategory.coverImage || ""));
         setSortOrderInput(String(Number.isFinite(Number(subcategory.sortOrder)) ? subcategory.sortOrder : 0));
         setActiveInput(Boolean(subcategory.isActive));
         setCustomFormEnabledInput(Boolean(subcategory.customFormEnabled));
@@ -544,6 +548,7 @@ function CategoriesPageContent() {
       const customFormTitle = customFormTitleInput.trim();
       const categoryIconImage = iconImageInput.trim();
       const subcategoryIconImage = iconImageInput.trim();
+      const subcategoryCoverImage = coverImageInput.trim();
 
       if (modalMode === "category" && !isValidCategoryMediaValue(categoryIconImage)) {
         throw new Error("Category icon must be a valid URL or uploaded image");
@@ -551,6 +556,10 @@ function CategoriesPageContent() {
 
       if (modalMode !== "category" && !isValidCategoryMediaValue(subcategoryIconImage)) {
         throw new Error("Subcategory icon must be a valid URL or uploaded image");
+      }
+
+      if (modalMode !== "category" && subcategoryCoverImage && !isValidCategoryMediaValue(subcategoryCoverImage)) {
+        throw new Error("Subcategory cover image must be a valid URL or uploaded image");
       }
 
       if (modalIntent === "create") {
@@ -583,6 +592,7 @@ function CategoriesPageContent() {
             parentSubcategoryId,
             name: cleanName,
             icon: subcategoryIconImage || undefined,
+            coverImage: subcategoryCoverImage || undefined,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -620,6 +630,7 @@ function CategoriesPageContent() {
             parentSubcategoryId: modalParentSubcategoryId || "",
             name: cleanName,
             icon: subcategoryIconImage,
+            coverImage: subcategoryCoverImage,
             sortOrder: parsedSortOrder,
             isActive: activeInput,
             customFormEnabled,
@@ -883,6 +894,7 @@ function CategoriesPageContent() {
         nameInput={nameInput}
         sortOrderInput={sortOrderInput}
         iconImageInput={iconImageInput}
+        coverImageInput={coverImageInput}
         activeInput={activeInput}
         customFormEnabledInput={customFormEnabledInput}
         customFormTitleInput={customFormTitleInput}
@@ -893,6 +905,7 @@ function CategoriesPageContent() {
         submitting={isSubmitting}
         onNameChange={setNameInput}
         onIconImageChange={setIconImageInput}
+        onCoverImageChange={setCoverImageInput}
         onSortOrderChange={setSortOrderInput}
         onActiveChange={setActiveInput}
         onCustomFormEnabledChange={setCustomFormEnabledInput}
@@ -954,6 +967,7 @@ type CreateNodeModalProps = {
   subcategories: AdminSubcategory[];
   nameInput: string;
   iconImageInput: string;
+  coverImageInput: string;
   sortOrderInput: string;
   activeInput: boolean;
   customFormEnabledInput: boolean;
@@ -965,6 +979,7 @@ type CreateNodeModalProps = {
   submitting: boolean;
   onNameChange: (value: string) => void;
   onIconImageChange: (value: string) => void;
+  onCoverImageChange: (value: string) => void;
   onSortOrderChange: (value: string) => void;
   onActiveChange: (value: boolean) => void;
   onCustomFormEnabledChange: (value: boolean) => void;
@@ -984,6 +999,7 @@ function CreateNodeModal({
   subcategories,
   nameInput,
   iconImageInput,
+  coverImageInput,
   sortOrderInput,
   activeInput,
   customFormEnabledInput,
@@ -995,6 +1011,7 @@ function CreateNodeModal({
   submitting,
   onNameChange,
   onIconImageChange,
+  onCoverImageChange,
   onSortOrderChange,
   onActiveChange,
   onCustomFormEnabledChange,
@@ -1006,11 +1023,13 @@ function CreateNodeModal({
   onSubmit,
 }: CreateNodeModalProps) {
   const [iconUploadError, setIconUploadError] = useState<string | null>(null);
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
 
   useEffect(() => {
     if (open) {
       setIconUploadError(null);
+      setCoverUploadError(null);
     }
   }, [open]);
 
@@ -1128,6 +1147,37 @@ function CreateNodeModal({
     void handleMediaFileUpload(event);
   };
 
+  const handleCoverMediaFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    const label = "Cover image";
+
+    if (!file.type.startsWith("image/")) {
+      setCoverUploadError("Please upload an image file only.");
+      return;
+    }
+
+    if (file.size > MAX_CATEGORY_MEDIA_UPLOAD_BYTES) {
+      setCoverUploadError(`${label} must be under 2MB.`);
+      return;
+    }
+
+    try {
+      const imageData = await fileToDataUrl(file);
+      onCoverImageChange(imageData);
+      setCoverUploadError(null);
+    } catch {
+      setCoverUploadError("Could not read the selected image. Please try again.");
+    }
+  };
+
+  const handleCoverFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    void handleCoverMediaFileUpload(event);
+  };
+
   const updateCustomField = (draftId: string, patch: Partial<DraftCustomFormField>) => {
     onCustomFormFieldsChange(
       customFormFieldsInput.map((field) => {
@@ -1231,86 +1281,129 @@ function CreateNodeModal({
       </label>
 
       {mode === "category" ? (
-        <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="space-y-2">
-            <label className="block space-y-1 text-sm text-(--text-soft)">
-              Category icon image (URL or upload)
-              <input
-                value={iconImageInput}
-                onChange={(event) => onIconImageChange(event.target.value)}
-                className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
-                placeholder="https://cdn.example.com/category-icon.png"
-              />
-            </label>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Category icon image</span>
+          {iconImageInput ? (
+            <div className="flex items-center gap-4 border border-slate-200 bg-white rounded-lg p-3">
+              <div className="h-16 w-16 rounded-lg border border-slate-200 bg-slate-105 flex items-center justify-center shrink-0 p-1">
+                <img
+                  src={iconImageInput}
+                  alt="Category icon preview"
+                  className="h-full w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center">
+                  Change Icon
+                  <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onIconImageChange("");
+                    setIconUploadError(null);
+                  }}
+                  className="border border-slate-200 bg-slate-50 hover:bg-slate-105 text-slate-600 px-4 py-1.5 rounded-md text-xs font-semibold"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center text-center bg-white">
+              <p className="text-xs text-slate-400 mb-2">No icon uploaded yet</p>
+              <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center">
                 Upload Icon
                 <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
               </label>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onIconImageChange("");
-                  setIconUploadError(null);
-                }}
-                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Clear
-              </button>
             </div>
-
-            {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
-
-            {iconImageInput.trim() && isValidCategoryMediaValue(iconImageInput) ? (
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
-                <img src={iconImageInput} alt="Category icon preview" className="h-16 w-16 rounded-lg object-cover" loading="lazy" />
-                <p className="text-xs text-slate-500">Home page category tile will prefer this icon.</p>
-              </div>
-            ) : null}
-          </div>
+          )}
+          {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
         </section>
       ) : null}
 
       {mode !== "category" ? (
-        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <label className="block space-y-1 text-sm text-(--text-soft)">
-            Subcategory icon image (URL or upload)
-            <input
-              value={iconImageInput}
-              onChange={(event) => onIconImageChange(event.target.value)}
-              className="w-full rounded-lg border border-(--border) bg-white px-3 py-2 outline-none focus:border-(--accent)"
-              placeholder="https://cdn.example.com/subcategory-icon.png"
-            />
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Upload Icon
-              <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => {
-                onIconImageChange("");
-                setIconUploadError(null);
-              }}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Clear
-            </button>
+        <section className="space-y-4">
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Subcategory icon image</span>
+            {iconImageInput ? (
+              <div className="flex items-center gap-4 border border-slate-200 bg-white rounded-lg p-3">
+                <div className="h-16 w-16 rounded-lg border border-slate-200 bg-slate-105 flex items-center justify-center shrink-0 p-1">
+                  <img
+                    src={iconImageInput}
+                    alt="Subcategory icon preview"
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center">
+                    Change Icon
+                    <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onIconImageChange("");
+                      setIconUploadError(null);
+                    }}
+                    className="border border-slate-200 bg-slate-50 hover:bg-slate-105 text-slate-600 px-4 py-1.5 rounded-md text-xs font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center text-center bg-white">
+                <p className="text-xs text-slate-400 mb-2">No icon uploaded yet</p>
+                <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center">
+                  Upload Icon
+                  <input type="file" accept="image/*" className="hidden" onChange={handleIconFileUpload} />
+                </label>
+              </div>
+            )}
+            {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
           </div>
 
-          {iconUploadError ? <p className="text-xs text-rose-700">{iconUploadError}</p> : null}
-
-          {iconImageInput.trim() && isValidCategoryMediaValue(iconImageInput) ? (
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
-              <img src={iconImageInput} alt="Subcategory icon preview" className="h-16 w-16 rounded-lg object-cover" loading="lazy" />
-              <p className="text-xs text-slate-500">Shown in subcategory-driven UI where available.</p>
-            </div>
-          ) : null}
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <span className="mb-1 block text-xs font-semibold text-(--text-soft)">Subcategory cover image</span>
+            {coverImageInput ? (
+              <div className="flex items-center gap-4 border border-slate-200 bg-white rounded-lg p-3">
+                <img
+                  src={coverImageInput}
+                  alt="Subcategory cover preview"
+                  className="h-20 w-32 rounded-lg object-cover border border-slate-200 bg-slate-105 shrink-0"
+                  loading="lazy"
+                />
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center">
+                    Change Image
+                    <input type="file" accept="image/*" className="hidden" onChange={handleCoverFileUpload} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCoverImageChange("");
+                      setCoverUploadError(null);
+                    }}
+                    className="border border-slate-200 bg-slate-50 hover:bg-slate-105 text-slate-600 px-4 py-1.5 rounded-md text-xs font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center text-center bg-white">
+                <p className="text-xs text-slate-400 mb-2">No cover image uploaded yet</p>
+                <label className="cursor-pointer bg-(--accent) hover:brightness-95 text-white px-4 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center">
+                  Upload Cover
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverFileUpload} />
+                </label>
+              </div>
+            )}
+            {coverUploadError ? <p className="text-xs text-rose-700">{coverUploadError}</p> : null}
+          </div>
         </section>
       ) : null}
 

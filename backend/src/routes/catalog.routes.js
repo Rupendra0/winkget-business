@@ -141,6 +141,7 @@ const toCitySummary = (city) => {
     slug: city.slug,
     state: city.state,
     sortOrder: city.sortOrder,
+    image: city.image,
     localities: visibleLocalities,
   };
 };
@@ -322,6 +323,7 @@ const toSubcategorySummary = (subcategory) => ({
   slug: subcategory.slug,
   description: subcategory.description,
   icon: subcategory.icon,
+  coverImage: subcategory.coverImage,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
   customFormEnabled: Boolean(subcategory.customFormEnabled),
@@ -444,7 +446,7 @@ router.get("/cities", withPublicGetCache(async (_req, res) => {
   try {
     const cities = await City.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug state isActive sortOrder localities")
+      .select("_id name slug state isActive sortOrder localities image")
       .lean();
 
     return res.status(200).json({
@@ -579,7 +581,7 @@ router.get("/subcategories", withPublicGetCache(async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields")
+      .select("_id category parentSubcategory name slug description icon coverImage isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .lean();
 
     await Subcategory.populate(subcategories, { path: "category", select: "_id name" });

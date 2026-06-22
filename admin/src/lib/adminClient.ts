@@ -125,6 +125,7 @@ export type AdminSubcategory = {
   slug: string;
   description?: string;
   icon?: string;
+  coverImage?: string;
   isActive: boolean;
   sortOrder: number;
   customFormEnabled?: boolean;
@@ -157,6 +158,7 @@ export type AdminCity = {
   state?: string;
   isActive: boolean;
   sortOrder: number;
+  image?: string;
   localities: AdminCityLocality[];
   createdAt?: string;
   updatedAt?: string;
@@ -651,6 +653,7 @@ export async function createSubcategory(input: {
   name: string;
   description?: string;
   icon?: string;
+  coverImage?: string;
   sortOrder?: number;
   isActive?: boolean;
   customFormEnabled?: boolean;
@@ -673,6 +676,7 @@ export async function updateSubcategory(
     name?: string;
     description?: string;
     icon?: string;
+    coverImage?: string;
     sortOrder?: number;
     isActive?: boolean;
     customFormEnabled?: boolean;
@@ -693,6 +697,7 @@ export async function createCity(input: {
   state: string;
   sortOrder?: number;
   isActive?: boolean;
+  image?: string;
 }): Promise<AdminCity> {
   const payload = await requestJson<{ city: AdminCity }>("/api/admin/cities", {
     method: "POST",
@@ -709,6 +714,7 @@ export async function updateCity(
     state?: string;
     sortOrder?: number;
     isActive?: boolean;
+    image?: string;
   }
 ): Promise<AdminCity> {
   const payload = await requestJson<{ city: AdminCity }>(`/api/admin/cities/${cityId}`, {

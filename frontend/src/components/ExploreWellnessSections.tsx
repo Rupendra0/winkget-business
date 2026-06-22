@@ -267,13 +267,13 @@ export default function ExploreWellnessSections() {
                 <Link
                   key={`explore-mobile-${card.cardId}`}
                   href={buildCategoryHref(card.categorySlug)}
-                  className="relative shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                  className="relative h-[42vw] min-h-[150px] shrink-0 basis-[calc((100%-1rem)/2)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                   onClickCapture={createLinkClickCapture(exploreSwipeRefs)}
                 >
                   <img
                     src={card.image}
                     alt={card.categoryName || "Explore"}
-                    className="h-[150px] w-full object-cover"
+                    className="h-full w-full object-cover"
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
@@ -289,12 +289,12 @@ export default function ExploreWellnessSections() {
                 <Link
                   key={`explore-desktop-${card.cardId}`}
                   href={buildCategoryHref(card.categorySlug)}
-                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                  className="group relative h-[18vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 >
                   <img
                     src={card.image}
                     alt={card.categoryName || "Explore"}
-                    className="h-[150px] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">

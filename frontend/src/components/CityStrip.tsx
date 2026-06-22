@@ -182,7 +182,7 @@ export default function CityStrip() {
 
               <div className="p-[10px]">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">
-                  <div className="h-10 min-w-0 overflow-hidden text-sm font-semibold text-gray-900">{partner.name}</div>
+                  <div className="min-w-0 text-sm font-semibold text-gray-900 line-clamp-1 truncate">{partner.name}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
                 <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>

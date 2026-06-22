@@ -350,6 +350,7 @@ const toSubcategorySummary = (subcategory) => ({
   slug: subcategory.slug,
   description: subcategory.description,
   icon: subcategory.icon,
+  coverImage: subcategory.coverImage,
   isActive: subcategory.isActive,
   sortOrder: subcategory.sortOrder,
   ...toCustomFormSummary(subcategory),
@@ -384,6 +385,7 @@ const toCitySummary = (city, includeInactiveLocalities = false) => {
     state: city.state,
     isActive: city.isActive,
     sortOrder: city.sortOrder,
+    image: city.image,
     localities: items,
     createdAt: city.createdAt,
     updatedAt: city.updatedAt,
@@ -2371,7 +2373,7 @@ router.get("/admin/subcategories", requireAdmin, async (req, res) => {
 
     const subcategories = await Subcategory.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id category parentSubcategory name slug description icon isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
+      .select("_id category parentSubcategory name slug description icon coverImage isActive sortOrder customFormEnabled customFormTitle customFormFields createdAt updatedAt")
       .populate("category", "_id name")
       .populate("parentSubcategory", "_id name")
       .lean();
@@ -2392,6 +2394,7 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
     const name = String(req.body?.name || "").trim();
     const description = String(req.body?.description || "").trim();
     const iconInput = String(req.body?.icon || "").trim();
+    const coverImageInput = String(req.body?.coverImage || "").trim();
     const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
     const customFormEnabled = req.body?.customFormEnabled !== undefined ? Boolean(req.body.customFormEnabled) : false;
@@ -2412,6 +2415,10 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
 
     if (iconInput && !isValidCategoryMediaValue(iconInput)) {
       return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
+    }
+
+    if (coverImageInput && !isValidCategoryMediaValue(coverImageInput)) {
+      return res.status(400).json({ ok: false, message: "Subcategory cover image must be a valid URL or image data" });
     }
 
     if (sortOrderRequest.error) {
@@ -2444,6 +2451,7 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
       slug,
       description: description || undefined,
       icon: iconInput || undefined,
+      coverImage: coverImageInput || undefined,
       isActive,
       sortOrder: sortOrderRequest.value || 0,
       customFormEnabled,
@@ -2595,6 +2603,14 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
         return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
       }
       subcategory.icon = icon || undefined;
+    }
+
+    if (req.body?.coverImage !== undefined) {
+      const coverImage = String(req.body.coverImage || "").trim();
+      if (coverImage && !isValidCategoryMediaValue(coverImage)) {
+        return res.status(400).json({ ok: false, message: "Subcategory cover image must be a valid URL or image data" });
+      }
+      subcategory.coverImage = coverImage || undefined;
     }
 
     if (req.body?.isActive !== undefined) {
@@ -2788,7 +2804,7 @@ router.get("/admin/cities", requireAdmin, async (req, res) => {
 
     const cities = await City.find(query)
       .sort({ sortOrder: 1, name: 1 })
-      .select("_id name slug state isActive sortOrder localities createdAt updatedAt")
+      .select("_id name slug state isActive sortOrder localities image createdAt updatedAt")
       .lean();
 
     return res.status(200).json({
@@ -2806,6 +2822,7 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
     const state = String(req.body?.state || "").trim();
     const sortOrderRequest = parseSortOrderRequest(req.body?.sortOrder);
     const isActive = req.body?.isActive !== undefined ? Boolean(req.body.isActive) : true;
+    const image = String(req.body?.image || "").trim();
 
     if (!name) {
       return res.status(400).json({ ok: false, message: "City name is required" });
@@ -2830,6 +2847,7 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
       slug,
       state,
       isActive,
+      image,
       sortOrder: sortOrderRequest.value || 0,
       createdBy: req.adminUser._id,
     });
@@ -2902,6 +2920,10 @@ router.patch("/admin/cities/:id", requireAdmin, async (req, res) => {
 
     if (req.body?.isActive !== undefined) {
       city.isActive = Boolean(req.body.isActive);
+    }
+
+    if (req.body?.image !== undefined) {
+      city.image = String(req.body.image || "").trim();
     }
 
     await city.save();

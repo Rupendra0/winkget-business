@@ -20,6 +20,7 @@ const citySchema = new Schema(
     state: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    image: { type: String, trim: true },
     localities: { type: [cityLocalitySchema], default: [] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
