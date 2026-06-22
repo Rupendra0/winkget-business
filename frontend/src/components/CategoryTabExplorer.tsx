@@ -252,7 +252,7 @@ export default function CategoryTabExplorer() {
     };
   }, []);
 
-  // Calculate subcategory counts per category ID in memory (only count level 1 subcategories, unless level 1 count is < 6, then count total)
+  // Calculate subcategory counts per category ID in memory (only count level 1 subcategories, unless level 1 count is < 8, then count total)
   const subcategoryCountsMap = useMemo(() => {
     const counts: Record<string, number> = {};
     const catGroup: Record<string, { level1: number; total: number }> = {};
@@ -275,7 +275,7 @@ export default function CategoryTabExplorer() {
 
     Object.keys(catGroup).forEach((idStr) => {
       const { level1, total } = catGroup[idStr];
-      counts[idStr] = level1 >= 6 ? level1 : total;
+      counts[idStr] = level1 >= 8 ? level1 : total;
     });
 
     return counts;
@@ -310,7 +310,7 @@ export default function CategoryTabExplorer() {
     return displayedCategories.find((cat) => cat.id === activeCategoryId);
   }, [displayedCategories, activeCategoryId]);
 
-  // Filtered subcategories for the active tab (exactly 6 items)
+  // Filtered subcategories for the active tab (exactly 8 items)
   const activeSubcategories = useMemo(() => {
     if (!activeCategoryId) return [];
     
@@ -325,34 +325,37 @@ export default function CategoryTabExplorer() {
     const level1Subs = categorySubs.filter((sub) => !sub.parentSubcategory || !sub.parentSubcategory.id);
     const nestedSubs = categorySubs.filter((sub) => sub.parentSubcategory && sub.parentSubcategory.id);
 
-    // If we have 6 or more level-1 subcategories, display them exclusively
-    if (level1Subs.length >= 6) {
-      return level1Subs.slice(0, 6);
+    // If we have 8 or more level-1 subcategories, display them exclusively
+    if (level1Subs.length >= 8) {
+      return level1Subs.slice(0, 8);
     }
 
-    // Otherwise, fill up to 6 using nested subcategories
+    // Otherwise, fill up to 8 using nested subcategories
     const combined = [...level1Subs];
     for (const nested of nestedSubs) {
-      if (combined.length >= 6) break;
+      if (combined.length >= 8) break;
       if (!combined.some((item) => item.id === nested.id)) {
         combined.push(nested);
       }
     }
 
-    if (combined.length >= 6) {
+    if (combined.length >= 8) {
       return combined;
     }
 
-    // Pad with realistic mock subcategories if total count is still less than 6
+    // Pad with realistic mock subcategories if total count is still less than 8
     const padded = [...combined];
     const cat = categories.find((c) => c.id === activeCategoryId);
     const catName = cat ? cat.name : "Category";
 
-    const defaultMocks = ["Specialist 1", "Specialist 2", "Specialist 3", "Specialist 4", "Specialist 5", "Specialist 6"];
+    const defaultMocks = ["Specialist 1", "Specialist 2", "Specialist 3", "Specialist 4", "Specialist 5", "Specialist 6", "Specialist 7", "Specialist 8"];
     const mockNames = MOCK_SUBCATEGORIES_MAP[catName] || MOCK_SUBCATEGORIES_MAP[catName.trim()] || defaultMocks;
 
-    for (let i = padded.length; i < 6; i++) {
-      const mockName = mockNames[i % mockNames.length];
+    for (let i = padded.length; i < 8; i++) {
+      let mockName = mockNames[i % mockNames.length];
+      if (padded.some((p) => p.name === mockName)) {
+        mockName = `${mockName} Plus`;
+      }
       padded.push({
         id: `mock-${activeCategoryId}-${i}`,
         name: mockName,
@@ -392,7 +395,7 @@ export default function CategoryTabExplorer() {
 
   if (loading && categories.length === 0) {
     return (
-      <section className="px-3 py-6 md:py-10">
+      <section className="px-3 pt-6 pb-2 md:pt-10 md:pb-4">
         <div className="h-6 w-32 bg-slate-100 animate-pulse rounded mb-4" />
         <div className="h-10 w-64 bg-slate-100 animate-pulse rounded mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[400px]">
@@ -404,7 +407,7 @@ export default function CategoryTabExplorer() {
   }
 
   return (
-    <section className="px-3 py-6 md:py-8 lg:py-10">
+    <section className="px-3 pt-6 pb-2 md:pt-8 md:pb-3 lg:pt-10 lg:pb-4">
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 md:mb-8">
         <div className="pl-1 md:pl-2.5">
@@ -423,70 +426,42 @@ export default function CategoryTabExplorer() {
         </button>
       </div>
 
-      {/* Tabs Layout Container */}
-      <div className="flex flex-col md:flex-row gap-[27px] items-stretch">
-        {/* Left Category List (Sidebar on Desktop w=297px h=600px, Horizontal chips on Mobile) */}
-        <div className="w-full md:w-[22%] md:min-w-[220px] md:max-w-[300px]">
-          {/* Mobile chips bar */}
-          <div className="flex md:hidden gap-2 overflow-x-auto pb-3 -mx-3 px-3 scrollbar-hide">
+      <div className="flex flex-row gap-3 md:gap-[27px] items-stretch">
+        {/* Left Category List (Sidebar on Desktop w=297px, Sidebar-column on Mobile) */}
+        <div className="w-[28%] min-w-[85px] sm:min-w-[150px] md:w-[22%] md:min-w-[220px] md:max-w-[300px]">
+          {/* Category Tab list sidebar: Responsive height & styling */}
+          <div className="flex flex-col bg-white rounded-[12px] border border-slate-200 h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px] overflow-y-auto overflow-x-hidden">
             {displayedCategories.map((cat) => {
               const active = cat.id === activeCategoryId;
-              const count = Math.max(subcategoryCountsMap[cat.id] || 0, 6);
-
-              return (
-                <button
-                  key={`mobile-tab-${cat.id}`}
-                  onClick={() => setActiveCategoryId(cat.id)}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${
-                    active
-                      ? "bg-blue-600 border-blue-600 text-white shadow-sm"
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                    active ? "bg-blue-700 text-blue-100" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Desktop Tab list: Width 297px, Height 781px */}
-          <div className="hidden md:flex flex-col bg-white rounded-[12px] border border-slate-200/80 shadow-sm h-[781px] min-h-[781px] max-h-[781px] overflow-y-auto overflow-x-hidden">
-            {displayedCategories.map((cat) => {
-              const active = cat.id === activeCategoryId;
-              const count = Math.max(subcategoryCountsMap[cat.id] || 0, 6);
+              const count = Math.max(subcategoryCountsMap[cat.id] || 0, 8);
 
               return (
                 <button
                   key={`desktop-tab-${cat.id}`}
                   onClick={() => setActiveCategoryId(cat.id)}
-                  className={`flex-1 flex items-center w-full px-5 border-b border-slate-100 last:border-b-0 border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
+                  className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-2 md:px-5 border-b border-slate-200 last:border-b-0 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
                     active
                       ? "bg-[#EFF6FF] text-blue-600 border-l-blue-600"
                       : "bg-white text-slate-800 border-l-transparent hover:bg-slate-50/30"
                   }`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`h-16 w-16 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                  <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3.5 min-w-0 w-full text-center md:text-left">
+                    <div className={`h-9 w-9 sm:h-11 sm:w-11 md:h-[52px] md:w-[52px] rounded-full flex items-center justify-center shrink-0 transition-all ${
                       active ? "bg-white text-blue-600" : "bg-white text-slate-500"
                     }`}>
                       {cat.icon && cat.icon !== "none" ? (
-                        <img src={cat.icon} alt="" className="h-[58px] w-[58px] object-contain" />
+                        <img src={cat.icon} alt="" className="h-7 w-7 sm:h-9 sm:w-9 md:h-[46px] md:w-[46px] object-contain" />
                       ) : (
-                        <Layers size={36} />
+                        <Layers className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
                       )}
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className={`truncate text-base font-bold transition-colors ${
+                    <div className="flex flex-col min-w-0 w-full">
+                      <span className={`truncate text-[10px] sm:text-xs md:text-base font-bold transition-colors block ${
                         active ? "text-blue-600" : "text-slate-900"
                       }`}>
                         {cat.name}
                       </span>
-                      <span className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      <span className="hidden md:block text-[11px] text-slate-500 font-semibold mt-1">
                         {count} Categories
                       </span>
                     </div>
@@ -497,11 +472,11 @@ export default function CategoryTabExplorer() {
           </div>
         </div>
 
-        {/* Right Subcategories Grid: Width 1050px, Height 781px to match Sidebar height exactly */}
-        <div className="flex-1 w-full md:h-[781px] md:min-h-[781px] md:max-h-[781px]">
+        {/* Right Subcategories Grid: Height matched to Sidebar */}
+        <div className="flex-1 w-full h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px]">
           {activeSubcategories.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[27px] h-full grid-rows-2">
-              {activeSubcategories.map((sub) => {
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-[27px] h-full grid-rows-2">
+              {activeSubcategories.map((sub, index) => {
                 const coverImage = sub.coverImage || getCategoryCoverImage(activeCategory?.slug || "", sub.name);
                 const listingCount = getListingCount(sub.name);
 
@@ -509,10 +484,12 @@ export default function CategoryTabExplorer() {
                   <Link
                     key={sub.id}
                     href={buildCategoryHref(activeCategory?.slug || "", sub.id)}
-                    className="group flex flex-col relative overflow-hidden rounded-[12px] border border-slate-200/80 bg-white hover:-translate-y-1 transition-all duration-300 h-full"
+                    className={`group flex-col relative overflow-hidden rounded-[12px] border border-slate-200 bg-white hover:-translate-y-1 transition-all duration-300 h-full ${
+                      index >= 4 ? "hidden md:flex" : "flex"
+                    }`}
                   >
-                    {/* Image Area - Height 240px */}
-                    <div className="relative h-[150px] md:h-[240px] w-full overflow-hidden bg-slate-100 rounded-t-[12px]">
+                    {/* Image Area - Height 160px (Desktop), 120px (Tablet), 85px (Mobile) */}
+                    <div className="relative h-[85px] sm:h-[120px] md:h-[160px] w-full overflow-hidden bg-slate-100 rounded-t-[12px]">
                       <img
                         src={coverImage}
                         alt={sub.name}
@@ -521,27 +498,27 @@ export default function CategoryTabExplorer() {
                       />
                     </div>
 
-                    {/* Icon Badge Overlay: Overlaps image bottom and title top (centered vertically at top-[240px]) */}
-                    <div className="absolute top-[150px] md:top-[240px] -translate-y-1/2 left-5 h-[72px] w-[72px] min-h-[72px] min-w-[72px] rounded-full border-4 border-white bg-white shadow-md flex items-center justify-center z-10 overflow-hidden">
+                    {/* Icon Badge Overlay: Overlaps image bottom and title top */}
+                    <div className="absolute top-[85px] sm:top-[120px] md:top-[160px] -translate-y-1/2 left-2 md:left-5 h-9 w-9 sm:h-11 sm:w-11 md:h-12 md:w-12 min-h-[36px] sm:min-h-[44px] md:min-h-[48px] min-w-[36px] sm:min-w-[44px] md:min-w-[48px] rounded-full border-2 md:border-4 border-white bg-white shadow-md flex items-center justify-center z-10 overflow-hidden">
                       {sub.icon && sub.icon !== "none" ? (
-                        <img src={sub.icon} alt="" className="h-[46px] w-[46px] object-contain" />
+                        <img src={sub.icon} alt="" className="h-6 w-6 sm:h-8 sm:w-8 md:h-[36px] md:w-[36px] object-contain" />
                       ) : (
-                        <Tag size={30} className="text-blue-600" strokeWidth={2.5} />
+                        <Tag className="h-4 w-4 sm:h-5 sm:w-5 md:h-5 md:w-5 text-blue-600" strokeWidth={2.5} />
                       )}
                     </div>
 
                     {/* Bottom Details Panel: Padding top adjusted to accommodate overlapping badge */}
-                    <div className="flex flex-col justify-between flex-1 p-5 pt-10 md:pt-12 pb-5">
+                    <div className="flex flex-col justify-between flex-1 p-2 pt-5 pb-2 sm:p-3 sm:pt-6 sm:pb-3 md:p-4 md:pt-8 md:pb-3">
                       <div className="min-w-0">
-                        <h3 className="font-bold text-[18px] text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                        <h3 className="font-bold text-xs sm:text-sm md:text-[18px] text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                           {sub.name}
                         </h3>
-                        <span className="text-xs font-semibold block mt-1" style={{ color: "#64748b" }}>
+                        <span className="text-[10px] sm:text-xs font-semibold block mt-0.5 md:mt-1" style={{ color: "#64748b" }}>
                           {listingCount} Listings
                         </span>
                       </div>
-                      <div className="flex justify-end pr-1">
-                        <ArrowRight size={20} className="text-slate-800 group-hover:text-blue-600 transition-colors" />
+                      <div className="flex justify-end pr-0.5 md:pr-1">
+                        <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-slate-800 group-hover:text-blue-600 transition-colors" />
                       </div>
                     </div>
                   </Link>
@@ -566,7 +543,7 @@ export default function CategoryTabExplorer() {
           />
           <div className="relative w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto flex flex-col animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">All Categories</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Browse all business categories in Winkget</p>
@@ -605,7 +582,7 @@ export default function CategoryTabExplorer() {
                     className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                       cat.id === activeCategoryId
                         ? "border-blue-500 bg-blue-50/30 text-blue-600 shadow-sm"
-                        : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50 text-slate-700"
+                        : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 text-slate-700"
                     }`}
                   >
                     <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">

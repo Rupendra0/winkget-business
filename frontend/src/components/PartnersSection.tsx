@@ -114,12 +114,12 @@ export default function PartnersSection() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-3 md:py-4 lg:py-6">
+      <section className="px-3 pt-1 pb-24 md:pt-2 md:pb-32 lg:pt-2 lg:pb-40">
         <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
-          <div className="mb-3 h-7 w-44 rounded bg-slate-200/70" />
+          <div className="mb-5 h-8 w-56 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
             {Array.from({ length: SPONSOR_LIMIT }).map((_, index) => (
-              <div key={`sponsor-skeleton-${index}`} className="h-[112px] w-[112px] shrink-0 rounded-full bg-slate-200/70" />
+              <div key={`sponsor-skeleton-${index}`} className="h-[110px] w-[110px] md:h-[130px] md:w-[130px] shrink-0 rounded-lg bg-slate-200/70" />
             ))}
           </div>
         </div>
@@ -229,28 +229,67 @@ export default function PartnersSection() {
   };
 
   return (
-    <section className="px-3 py-3 pb-8 md:py-4 md:pb-10 lg:py-6 lg:pb-12">
+    <section className="px-3 pt-1 pb-24 md:pt-2 md:pb-32 lg:pt-2 lg:pb-40">
       <div className="w-full">
-        <div className="mb-4 pl-1 md:pl-2.5">
-          <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
+        <div className="mb-6 pl-1 md:pl-2.5">
+          <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{heading}</h2>
         </div>
 
-        {/* Unified partners strip */}
-        <div className="flex w-full overflow-x-auto no-scrollbar bg-white">
-          {cards.map((card) => (
-            <div
-              key={`sponsor-${card.cardId}`}
-              className="flex-1 min-w-[120px] md:min-w-0 flex items-center justify-center py-5 px-4 transition-colors hover:bg-slate-50/50"
-            >
-              {renderSponsorCard(
-                card,
-                "w-full h-10 md:h-12 flex items-center justify-center",
-                <span className="mt-2 text-xs font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
-                  {card.name}
-                </span>
-              )}
-            </div>
-          ))}
+        {/* Infinite marquee ticker container */}
+        <div className="relative flex w-full overflow-hidden bg-white animate-marquee-paused py-2">
+          {/* Track Copy 1 */}
+          <div className="flex gap-12 md:gap-16 pr-12 md:pr-16 shrink-0 animate-marquee">
+            {cards.map((card, idx) => (
+              <div
+                key={`sponsor-c1-${card.cardId}-${idx}`}
+                className="w-[120px] md:w-[140px] shrink-0 flex items-center justify-center py-6 md:py-8 transition-colors hover:bg-slate-50/50 rounded-lg"
+              >
+                {renderSponsorCard(
+                  card,
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
+                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
+                    {card.name}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Track Copy 2 */}
+          <div className="flex gap-12 md:gap-16 pr-12 md:pr-16 shrink-0 animate-marquee" aria-hidden="true">
+            {cards.map((card, idx) => (
+              <div
+                key={`sponsor-c2-${card.cardId}-${idx}`}
+                className="w-[120px] md:w-[140px] shrink-0 flex items-center justify-center py-6 md:py-8 transition-colors hover:bg-slate-50/50 rounded-lg"
+              >
+                {renderSponsorCard(
+                  card,
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
+                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
+                    {card.name}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Track Copy 3 */}
+          <div className="flex gap-12 md:gap-16 pr-12 md:pr-16 shrink-0 animate-marquee" aria-hidden="true">
+            {cards.map((card, idx) => (
+              <div
+                key={`sponsor-c3-${card.cardId}-${idx}`}
+                className="w-[120px] md:w-[140px] shrink-0 flex items-center justify-center py-6 md:py-8 transition-colors hover:bg-slate-50/50 rounded-lg"
+              >
+                {renderSponsorCard(
+                  card,
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
+                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
+                    {card.name}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

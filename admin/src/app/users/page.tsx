@@ -1248,6 +1248,8 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   const [postalCode, setPostalCode] = useState(initialValue?.postalCode || "");
   const [gstNumber, setGstNumber] = useState(initialValue?.gstNumber || "");
   const [gstDocument, setGstDocument] = useState(initialValue?.gstDocument || "");
+  const [cardImage, setCardImage] = useState(initialValue?.cardImage || "");
+  const [selectedCardImageName, setSelectedCardImageName] = useState("");
   const [website, setWebsite] = useState(initialValue?.website || "");
   const [shopOpeningTime, setShopOpeningTime] = useState(initialValue?.shopOpeningTime || "");
   const [shopClosingTime, setShopClosingTime] = useState(initialValue?.shopClosingTime || "");
@@ -1381,7 +1383,10 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
   const canSubmit =
     name.trim().length > 0 && hasContact && passwordValid && vendorRequiredValid && !customFormValidationError;
 
-  const handleDocumentUpload = async (field: "idProofDocument" | "gstDocument", files: FileList | null) => {
+  const handleDocumentUpload = async (
+    field: "idProofDocument" | "gstDocument" | "cardImage",
+    files: FileList | null
+  ) => {
     const file = files?.[0];
     if (!file) return;
 
@@ -1402,9 +1407,12 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       if (field === "idProofDocument") {
         setIdProofDocument(dataUrl);
         setSelectedIdProofDocumentName(file.name);
-      } else {
+      } else if (field === "gstDocument") {
         setGstDocument(dataUrl);
         setSelectedGstDocumentName(file.name);
+      } else {
+        setCardImage(dataUrl);
+        setSelectedCardImageName(file.name);
       }
     } catch {
       setDocumentError("Failed to read selected file.");
@@ -1466,6 +1474,7 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
       payload.postalCode = postalCode.trim();
       payload.gstNumber = gstNumber.trim();
       payload.gstDocument = gstDocument.trim();
+      payload.cardImage = cardImage.trim() || undefined;
       payload.website = website.trim();
       payload.shopOpeningTime = shopOpeningTime.trim() || undefined;
       payload.shopClosingTime = shopClosingTime.trim() || undefined;
@@ -1872,6 +1881,43 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
                       onClick={() => {
                         setGstDocument("");
                         setSelectedGstDocumentName("");
+                      }}
+                      className="rounded-md border border-(--border) bg-(--surface) px-2 py-0.5 text-[11px] font-semibold text-(--text-soft)"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+              </label>
+
+              <label className="block space-y-1 text-sm text-(--text-soft) sm:col-span-2 lg:col-span-2">
+                Card View Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    void handleDocumentUpload("cardImage", event.target.files);
+                    event.currentTarget.value = "";
+                  }}
+                  className="w-full rounded-lg border border-(--border) bg-(--surface) px-2.5 py-2 text-xs"
+                />
+                <div className="flex flex-wrap items-center gap-3 text-xs text-(--text-soft)">
+                  {cardImage ? (
+                    <div className="relative h-12 w-20 overflow-hidden rounded border border-(--border) bg-white">
+                      <img src={cardImage} alt="Card preview" className="h-full w-full object-cover" />
+                    </div>
+                  ) : null}
+                  <span>
+                    {cardImage
+                      ? `Current: ${selectedCardImageName || "Uploaded card image"}`
+                      : "No card image uploaded"}
+                  </span>
+                  {cardImage ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardImage("");
+                        setSelectedCardImageName("");
                       }}
                       className="rounded-md border border-(--border) bg-(--surface) px-2 py-0.5 text-[11px] font-semibold text-(--text-soft)"
                     >

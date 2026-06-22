@@ -27,6 +27,7 @@ const userSchema = new Schema(
     serviceTags: [{ type: String, trim: true }],
     businessDescription: { type: String, trim: true },
     shopBannerImage: { type: String, trim: true },
+    cardImage: { type: String, trim: true },
     myStoreImage: { type: String, trim: true },
     myStoreBannerImage: { type: String, trim: true },
     shopGallery: [{ type: String, trim: true }],

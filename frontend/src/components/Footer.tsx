@@ -11,9 +11,9 @@ const MAX_CATEGORY_COLUMN_COUNT = 4;
 const ITEMS_PER_COLUMN = 10;
 const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
 
-const sectionTitleClass = "text-[0.85rem] font-semibold leading-tight text-white";
-const linkTextClass = "text-[0.85rem] leading-[1.3] text-slate-300 transition-colors hover:text-white";
-const inlineLinkClass = "text-[0.85rem] text-slate-300 transition-colors hover:text-white";
+const sectionTitleClass = "text-[0.85rem] font-semibold leading-tight text-slate-900";
+const linkTextClass = "text-[0.85rem] leading-[1.3] text-slate-600 transition-colors hover:text-slate-900";
+const inlineLinkClass = "text-[0.85rem] text-slate-600 transition-colors hover:text-slate-900";
 
 const footerRouteMap: Record<string, string> = {
   "My Account": "/profile",
@@ -196,7 +196,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer id="listing-footer" className="hidden bg-slate-950 md:block">
+    <footer id="listing-footer" className="hidden bg-white border-t border-slate-200 md:block">
       <div className="mx-auto w-full max-w-[1600px] px-8 py-10 lg:px-12">
         <div
           className={`grid pb-10 ${footerGridColumnClass}`}
@@ -213,7 +213,7 @@ export default function Footer() {
                 {column.map((category, itemIndex) => {
                   if (isLoadingCategories && columnIndex === 0 && itemIndex === 0) {
                     return (
-                      <p key="category-loading" className="text-[0.8rem] text-slate-400">
+                      <p key="category-loading" className="text-[0.8rem] text-slate-500">
                         Loading categories...
                       </p>
                     );
@@ -221,7 +221,7 @@ export default function Footer() {
 
                   if (!isLoadingCategories && dbCategories.length === 0 && columnIndex === 0 && itemIndex === 0) {
                     return (
-                      <p key="category-empty" className="text-[0.8rem] text-slate-400">
+                      <p key="category-empty" className="text-[0.8rem] text-slate-500">
                         No categories available.
                       </p>
                     );
@@ -284,7 +284,7 @@ export default function Footer() {
           </section>
         </div>
 
-        <div className="py-8">
+        <div className="py-8 border-t border-slate-200">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-12">
             <div className="flex items-center gap-4">
               <span className={sectionTitleClass}>Follow us on</span>
@@ -321,11 +321,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="py-6">
-          <p className="text-[0.85rem] text-slate-300">{footerData.copyright}</p>
+        <div className="py-6 border-t border-slate-200">
+          <p className="text-[0.85rem] text-slate-500">{footerData.copyright}</p>
         </div>
 
-        <div className="py-6">
+        <div className="py-6 border-t border-slate-200">
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {footerData.bottomLinks.map((item) => (
               <div key={`footer-bottom-${item}`}>{renderMappedLink(item, inlineLinkClass)}</div>

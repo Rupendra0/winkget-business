@@ -709,7 +709,7 @@ router.get("/auth/me", async (req, res) => {
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub)
       .select(
-        "_id name email phone alternatePhone businessName businessType role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
+        "_id name email phone alternatePhone businessName businessType role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear yearsInBusiness serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl idProofType idProofNumber idProofDocument marketingOptIn customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -754,6 +754,7 @@ router.get("/auth/me", async (req, res) => {
         businessDescription: user.businessDescription,
         image: user.image,
         shopBannerImage: user.shopBannerImage,
+        cardImage: user.cardImage,
         myStoreImage: user.myStoreImage,
         myStoreBannerImage: user.myStoreBannerImage,
         shopGallery: Array.isArray(user.shopGallery) ? user.shopGallery : [],
@@ -849,6 +850,10 @@ router.put("/auth/me", async (req, res) => {
       req.body?.shopBannerImage !== undefined
         ? normalizeMediaValue(req.body.shopBannerImage)
         : normalizeMediaValue(user.shopBannerImage);
+    const cardImageInput =
+      req.body?.cardImage !== undefined
+        ? normalizeMediaValue(req.body.cardImage)
+        : normalizeMediaValue(user.cardImage);
     const myStoreImageInput =
       req.body?.myStoreImage !== undefined
         ? normalizeMediaValue(req.body.myStoreImage)
@@ -995,6 +1000,10 @@ router.put("/auth/me", async (req, res) => {
 
     if (!isValidMediaValue(shopBannerImageInput)) {
       return res.status(400).json({ ok: false, message: "Shop banner must be a valid URL or image data" });
+    }
+
+    if (!isValidMediaValue(cardImageInput)) {
+      return res.status(400).json({ ok: false, message: "Card image must be a valid URL or image data" });
     }
 
     if (!isValidMediaValue(myStoreImageInput)) {
@@ -1195,6 +1204,7 @@ router.put("/auth/me", async (req, res) => {
       user.businessDescription = businessDescriptionInput || undefined;
       user.image = imageInput || undefined;
       user.shopBannerImage = shopBannerImageInput || undefined;
+      user.cardImage = cardImageInput || undefined;
       user.myStoreImage = myStoreImageInput || undefined;
       user.myStoreBannerImage = myStoreBannerImageInput || undefined;
       user.shopGallery = shopGallery;
@@ -1244,7 +1254,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
@@ -1280,6 +1290,7 @@ router.put("/auth/me", async (req, res) => {
         businessDescription: updatedUser.businessDescription,
         image: updatedUser.image,
         shopBannerImage: updatedUser.shopBannerImage,
+        cardImage: updatedUser.cardImage,
         myStoreImage: updatedUser.myStoreImage,
         myStoreBannerImage: updatedUser.myStoreBannerImage,
         shopGallery: Array.isArray(updatedUser.shopGallery) ? updatedUser.shopGallery : [],

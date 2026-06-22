@@ -42,6 +42,7 @@ export type VendorSession = {
   businessDescription?: string;
   image?: string;
   shopBannerImage?: string;
+  cardImage?: string;
   myStoreImage?: string;
   myStoreBannerImage?: string;
   shopGallery?: string[];
@@ -179,6 +180,7 @@ export type VendorProfileUpdateInput = {
   businessDescription?: string;
   image?: string;
   shopBannerImage?: string;
+  cardImage?: string;
   myStoreImage?: string;
   myStoreBannerImage?: string;
   shopGallery?: string[];

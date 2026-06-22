@@ -186,7 +186,7 @@ export default function PromoBanners() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-3 md:py-4 lg:py-6">
+      <section className="px-3 pt-1 pb-2 md:pt-2 md:pb-3 lg:pt-2 lg:pb-4">
         <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
           <div className="mb-4 h-7 w-44 rounded bg-slate-200/70" />
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
@@ -209,7 +209,7 @@ export default function PromoBanners() {
   }
 
   return (
-    <section className="px-3 py-3 md:py-4 lg:py-6">
+    <section className="px-3 pt-1 pb-2 md:pt-2 md:pb-3 lg:pt-2 lg:pb-4">
       <div className="w-full rounded-xl bg-white px-0 py-0">
         <div className="mb-3 pl-1 md:pl-2.5">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>

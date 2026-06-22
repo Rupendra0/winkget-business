@@ -95,6 +95,7 @@ export default function CityStrip() {
         const mappedPartners = createdOrderVendors.slice(0, 12).map((vendor, index) => {
           const category = vendor.subcategory || vendor.businessSubcategory?.name || vendor.businessCategory?.name || "Business service";
           const imageUrl =
+            String(vendor.cardImage || "").trim() ||
             String(vendor.shopBannerImage || "").trim() ||
             String(vendor.imageUrl || "").trim() ||
             (Array.isArray(vendor.shopGallery) ? String(vendor.shopGallery[0] || "").trim() : "") ||
@@ -133,7 +134,7 @@ export default function CityStrip() {
 
   if (isLoading) {
     return (
-      <section className="px-3 py-3 md:py-4 lg:py-6">
+      <section className="px-3 pt-1 pb-3 md:pt-2 md:pb-4 lg:pt-2 lg:pb-6">
         <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
           <div className="mb-3 h-7 w-40 rounded bg-slate-200/70" />
           <div className="overflow-x-auto overflow-y-hidden whitespace-nowrap scroll-smooth pb-2">
@@ -142,7 +143,7 @@ export default function CityStrip() {
                 key={`city-partner-skeleton-${index}`}
                 className="my-[1%] mr-[1%] inline-block w-[46%] overflow-hidden rounded-lg border border-[#e7e7e7] bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
               >
-                <div className="h-32 w-full bg-slate-200/70 lg:h-[10vw]" />
+                <div className="h-40 w-full bg-slate-200/70 sm:h-44 md:h-48 lg:h-[12vw]" />
                 <div className="space-y-2 p-3">
                   <div className="h-4 w-2/3 rounded bg-slate-200/70" />
                   <div className="h-3 w-1/2 rounded bg-slate-200/70" />
@@ -161,7 +162,7 @@ export default function CityStrip() {
   }
 
   return (
-    <section className="px-3 py-3 md:py-4 lg:py-6">
+    <section className="px-3 pt-1 pb-3 md:pt-2 md:pb-4 lg:pt-2 lg:pb-6">
       <div className="w-full rounded-xl bg-white px-0 py-0">
         <div className="mb-3 pl-1 md:pl-2.5">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
@@ -178,15 +179,15 @@ export default function CityStrip() {
                 <span className="absolute left-2 top-2 z-10 rounded bg-orange-500 px-2 py-1 text-xs text-white">New</span>
               ) : null}
 
-              <img src={partner.imageUrl} alt={partner.name} className="h-32 w-full rounded-t-lg border-b border-slate-100 object-cover lg:h-[10vw]" loading="lazy" />
+              <img src={partner.imageUrl} alt={partner.name} className="h-40 w-full rounded-t-lg border-b border-slate-200 object-cover sm:h-44 md:h-48 lg:h-[12vw]" loading="lazy" />
 
               <div className="p-[10px]">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">
                   <div className="min-w-0 text-sm font-semibold text-gray-900 line-clamp-1 truncate">{partner.name}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
-                <div className="mt-1 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
-                <div className="mt-1.5 h-8 line-clamp-2 text-xs text-gray-500">{partner.address}</div>
+                <div className="mt-2 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
+                <div className="mt-2.5 h-8 line-clamp-2 text-xs text-gray-500 leading-normal">{partner.address}</div>
               </div>
             </Link>
           ))}

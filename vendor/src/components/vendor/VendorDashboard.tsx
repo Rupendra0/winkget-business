@@ -133,6 +133,7 @@ type VendorBusinessStatus = {
 type ShopProfileFormState = {
   image: string;
   shopBannerImage: string;
+  cardImage: string;
   shopGalleryText: string;
   businessAddress: string;
   website: string;
@@ -820,6 +821,7 @@ function buildShopProfileForm(vendor: VendorSession | null): ShopProfileFormStat
   return {
     image: String(vendor?.image || "").trim(),
     shopBannerImage: String(vendor?.shopBannerImage || "").trim(),
+    cardImage: String(vendor?.cardImage || "").trim(),
     shopGalleryText: cleanedGallery.join("\n"),
     businessAddress: String(vendor?.businessAddress || "").trim(),
     website: String(vendor?.website || "").trim(),
@@ -1831,9 +1833,9 @@ function ShopProfileSection({
   businessName: string;
   onChange: (field: keyof ShopProfileFormState, value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onUploadSingle: (field: "image" | "shopBannerImage", files: FileList | null) => void;
+  onUploadSingle: (field: "image" | "shopBannerImage" | "cardImage", files: FileList | null) => void;
   onUploadGallery: (files: FileList | null) => void;
-  onRemoveImage: (field: "image" | "shopBannerImage") => void;
+  onRemoveImage: (field: "image" | "shopBannerImage" | "cardImage") => void;
   onRemoveGalleryItem: (value: string) => void;
   saving: boolean;
   message: string | null;
@@ -1910,7 +1912,7 @@ function ShopProfileSection({
           <h3 className="font-display text-lg font-semibold text-gray-900">Shop Profile</h3>
           
 
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-xs font-semibold text-gray-600">Shop Display Photo</p>
               <button
@@ -1930,6 +1932,24 @@ function ShopProfileSection({
                 className="mt-2 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200"
               >
                 Remove Banner
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-gray-50 p-3">
+              <p className="text-xs font-semibold text-gray-600">Card View Image</p>
+              {form.cardImage ? (
+                <div className="mt-1.5 relative h-16 w-24 overflow-hidden rounded border border-gray-200 bg-white">
+                  <img src={form.cardImage} alt="Card preview" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-400">No card image uploaded</p>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemoveImage("cardImage")}
+                className="mt-2 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200"
+              >
+                Remove Card Image
               </button>
             </div>
           </div>
@@ -1958,6 +1978,20 @@ function ShopProfileSection({
                 className="hidden"
                 onChange={(event) => {
                   onUploadSingle("shopBannerImage", event.currentTarget.files);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">
+              <ImagePlus className="h-4 w-4" aria-hidden="true" />
+              Upload Card Image
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  onUploadSingle("cardImage", event.currentTarget.files);
                   event.currentTarget.value = "";
                 }}
               />
@@ -5033,7 +5067,7 @@ export default function VendorDashboard() {
     }));
   };
 
-  const handleShopProfileSingleUpload = async (field: "image" | "shopBannerImage", files: FileList | null) => {
+  const handleShopProfileSingleUpload = async (field: "image" | "shopBannerImage" | "cardImage", files: FileList | null) => {
     if (!files?.length) return;
 
     const file = files[0];
@@ -5056,7 +5090,13 @@ export default function VendorDashboard() {
         ...current,
         [field]: imageData,
       }));
-      setShopProfileMessage(field === "image" ? "Shop DP selected." : "Shop banner selected.");
+      setShopProfileMessage(
+        field === "image"
+          ? "Shop DP selected."
+          : field === "shopBannerImage"
+            ? "Shop banner selected."
+            : "Card view image selected."
+      );
     } catch {
       setShopProfileError("Could not read image file. Please try again.");
     }
@@ -5106,12 +5146,18 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleShopProfileRemoveImage = (field: "image" | "shopBannerImage") => {
+  const handleShopProfileRemoveImage = (field: "image" | "shopBannerImage" | "cardImage") => {
     setShopProfileForm((current) => ({
       ...current,
       [field]: "",
     }));
-    setShopProfileMessage(field === "image" ? "Shop DP removed." : "Shop banner removed.");
+    setShopProfileMessage(
+      field === "image"
+        ? "Shop DP removed."
+        : field === "shopBannerImage"
+          ? "Shop banner removed."
+          : "Card view image removed."
+    );
     setShopProfileError(null);
   };
 
@@ -5145,6 +5191,7 @@ export default function VendorDashboard() {
         ...baselinePayload,
         image: shopProfileForm.image,
         shopBannerImage: shopProfileForm.shopBannerImage,
+        cardImage: shopProfileForm.cardImage,
         shopGallery: filterShopGalleryItems(
           parseShopGalleryInput(shopProfileForm.shopGalleryText),
           shopProfileForm.image,

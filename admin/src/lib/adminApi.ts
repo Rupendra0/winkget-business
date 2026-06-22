@@ -73,6 +73,7 @@ export type UserMutationInput = {
   marketingOptIn?: boolean;
   customFormData?: Record<string, string | number | string[]>;
   status?: "active" | "inactive";
+  cardImage?: string;
 };
 
 export type AdminUserDetail = AdminDirectoryUser & {
@@ -106,6 +107,7 @@ export type AdminUserDetail = AdminDirectoryUser & {
   customFormData?: Record<string, string | number | string[]>;
   effectiveCustomForm?: EffectiveCustomForm;
   vendorReviewNote?: string;
+  cardImage?: string;
 };
 
 export type OrderRecord = {

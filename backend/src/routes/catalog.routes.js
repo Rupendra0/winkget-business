@@ -277,6 +277,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     subcategory: vendor.businessSubcategory?.name || vendor.businessCategory?.name || "",
     imageUrl: vendor.image || DEFAULT_VENDOR_IMAGE,
     shopBannerImage: vendor.shopBannerImage || "",
+    cardImage: vendor.cardImage || "",
     myStoreImage: vendor.myStoreImage || "",
     myStoreBannerImage: vendor.myStoreBannerImage || "",
     shopGallery: Array.isArray(vendor.shopGallery) ? vendor.shopGallery.filter(Boolean) : [],
@@ -737,7 +738,7 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
     let dbQuery = User.find(query)
       .sort({ updatedAt: -1, businessName: 1, name: 1 })
       .select(
-          "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
+          "_id name businessName businessType city sublocality state businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image cardImage marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt"
       )
       .lean();
 
@@ -787,7 +788,7 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
       )
       .lean();
 

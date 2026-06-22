@@ -134,7 +134,7 @@ export default function BannerSection() {
   };
 
   return (
-    <section className="px-3 pt-1 pb-3 md:pt-1.5 md:pb-4 lg:pt-2 lg:pb-6">
+    <section className="px-3 pt-1 pb-2 md:pt-1.5 md:pb-3 lg:pt-2 lg:pb-4">
       <div className="md:hidden">
         <div
           className={`${BANNER_HEIGHT_CLASS} overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm`}

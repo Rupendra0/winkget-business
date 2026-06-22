@@ -771,6 +771,7 @@ const toUserDetail = (user) => ({
   postalCode: user.postalCode,
   gstNumber: user.gstNumber,
   gstDocument: user.gstDocument,
+  cardImage: user.cardImage,
   website: user.website,
   shopOpeningTime: user.shopOpeningTime,
   shopClosingTime: user.shopClosingTime,
@@ -1227,7 +1228,7 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
 
     const user = await User.findById(userId)
       .select(
-        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData role vendorStatus vendorReviewNote createdAt updatedAt"
+        "_id name email phone alternatePhone businessName businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument cardImage website shopOpeningTime shopClosingTime establishmentYear yearsInBusiness serviceTags businessDescription idProofType idProofNumber idProofDocument marketingOptIn customFormData role vendorStatus vendorReviewNote createdAt updatedAt"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields")
@@ -1266,6 +1267,7 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
     const postalCode = String(req.body?.postalCode || "").trim();
     const gstNumber = String(req.body?.gstNumber || "").trim();
     const gstDocument = String(req.body?.gstDocument || "").trim();
+    const cardImage = String(req.body?.cardImage || "").trim();
     const website = String(req.body?.website || "").trim();
     const shopOpeningTime = String(req.body?.shopOpeningTime || "").trim();
     const shopClosingTime = String(req.body?.shopClosingTime || "").trim();
@@ -1394,6 +1396,12 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
           return res.status(400).json({ ok: false, message: "GST document is too large" });
         }
       }
+
+      if (cardImage) {
+        if (!isValidCategoryMediaValue(cardImage)) {
+          return res.status(400).json({ ok: false, message: "Card image must be a valid URL or image data" });
+        }
+      }
     }
 
     let category = null;
@@ -1490,6 +1498,7 @@ router.post("/admin/users", requireAdmin, async (req, res) => {
       postalCode: role === "vendor" ? postalCode || undefined : undefined,
       gstNumber: role === "vendor" ? gstNumber || undefined : undefined,
       gstDocument: role === "vendor" ? gstDocument || undefined : undefined,
+      cardImage: role === "vendor" ? cardImage || undefined : undefined,
       website: role === "vendor" ? website || undefined : undefined,
       shopOpeningTime: role === "vendor" ? shopOpeningTime || undefined : undefined,
       shopClosingTime: role === "vendor" ? shopClosingTime || undefined : undefined,
@@ -1834,6 +1843,19 @@ router.patch("/admin/users/:id", requireAdmin, async (req, res) => {
         }
       }
       user.gstDocument = value || undefined;
+    }
+
+    if (req.body?.cardImage !== undefined) {
+      const vendorError = requireVendor();
+      if (vendorError) return vendorError;
+
+      const value = String(req.body.cardImage || "").trim();
+      if (value) {
+        if (!isValidCategoryMediaValue(value)) {
+          return res.status(400).json({ ok: false, message: "Card image must be a valid URL or image data" });
+        }
+      }
+      user.cardImage = value || undefined;
     }
 
     if (req.body?.website !== undefined) {

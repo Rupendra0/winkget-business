@@ -91,6 +91,7 @@ export type CatalogVendorSummary = {
   subcategory?: string;
   imageUrl?: string;
   shopBannerImage?: string;
+  cardImage?: string;
   myStoreImage?: string;
   myStoreBannerImage?: string;
   shopGallery?: string[];

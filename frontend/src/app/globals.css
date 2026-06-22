@@ -313,3 +313,24 @@ button {
 .page-scaled-fonts .text-\[15px\] {
   font-size: 16px !important;
 }
+
+/* Infinite marquee animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee-paused:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
