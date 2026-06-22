@@ -471,13 +471,13 @@ export default function CategoryTabExplorer() {
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className={`h-11 w-11 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                    <div className={`h-16 w-16 rounded-full flex items-center justify-center shrink-0 transition-all ${
                       active ? "bg-white text-blue-600" : "bg-white text-slate-500"
                     }`}>
                       {cat.icon && cat.icon !== "none" ? (
-                        <img src={cat.icon} alt="" className="h-[42px] w-[42px] object-contain" />
+                        <img src={cat.icon} alt="" className="h-[58px] w-[58px] object-contain" />
                       ) : (
-                        <Layers size={28} />
+                        <Layers size={36} />
                       )}
                     </div>
                     <div className="flex flex-col min-w-0">
