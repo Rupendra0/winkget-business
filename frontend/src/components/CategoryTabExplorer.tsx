@@ -27,6 +27,7 @@ type CatalogCategory = {
   slug: string;
   icon?: string;
   image?: string;
+  sortOrder?: number;
 };
 
 type CategoryApiResponse = {
@@ -220,7 +221,12 @@ export default function CategoryTabExplorer() {
           return;
         }
 
-        const sortedCats = catPayload.categories.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        const sortedCats = catPayload.categories.sort((a, b) => {
+          const aOrder = a.sortOrder ?? 0;
+          const bOrder = b.sortOrder ?? 0;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return (a.name || "").localeCompare(b.name || "");
+        });
 
         // Load all subcategories at once to calculate tab counts in memory
         const subRes = await fetch(`${BACKEND_URL}/api/subcategories`, { cache: "no-store" });
@@ -275,7 +281,7 @@ export default function CategoryTabExplorer() {
     return counts;
   }, [subcategories]);
 
-  // Sort categories by subcategory count descending, and slice to exactly 7 for display
+  // Sort categories by position/sortOrder ascending, and slice to exactly 7 for display
   const displayedCategories = useMemo(() => {
     return [...categories]
       .map((cat) => ({
@@ -283,8 +289,10 @@ export default function CategoryTabExplorer() {
         count: subcategoryCountsMap[cat.id] || 0,
       }))
       .sort((a, b) => {
-        if (b.count !== a.count) {
-          return b.count - a.count;
+        const aOrder = a.sortOrder ?? 0;
+        const bOrder = b.sortOrder ?? 0;
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
         }
         return (a.name || "").localeCompare(b.name || "");
       })
