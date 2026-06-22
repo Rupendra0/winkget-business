@@ -407,7 +407,7 @@ export default function CategoryTabExplorer() {
     <section className="px-3 py-6 md:py-8 lg:py-10">
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 md:mb-8">
-        <div>
+        <div className="pl-1 md:pl-2.5">
           <span className="text-[11px] font-bold uppercase tracking-[1.5px] text-blue-600">Explore</span>
           <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">Browse Categories</h2>
           <p className="text-slate-500 text-sm mt-1.5 max-w-2xl">

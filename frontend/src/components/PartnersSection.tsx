@@ -231,7 +231,7 @@ export default function PartnersSection() {
   return (
     <section className="px-3 py-3 pb-8 md:py-4 md:pb-10 lg:py-6 lg:pb-12">
       <div className="w-full">
-        <div className="mb-4 text-center">
+        <div className="mb-4 pl-1 md:pl-2.5">
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 

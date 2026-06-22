@@ -257,7 +257,7 @@ export default function ExploreWellnessSections() {
       {exploreCards.length > 0 ? (
         <section className="px-3 py-3 md:py-4 lg:py-6">
           <div className="w-full rounded-xl bg-white px-0 py-0">
-            <div className="mb-3">
+            <div className="mb-3 pl-1 md:pl-2.5">
               <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
             </div>
 
@@ -310,7 +310,7 @@ export default function ExploreWellnessSections() {
       {wellnessCards.length > 0 ? (
         <section className="px-3 py-3 md:py-4 lg:py-6">
           <div className="w-full rounded-xl bg-white px-0 py-0">
-            <div className="mb-3">
+            <div className="mb-3 pl-1 md:pl-2.5">
               <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
             </div>
 
