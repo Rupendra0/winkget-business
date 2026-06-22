@@ -246,10 +246,7 @@ export default function PartnersSection() {
               >
                 {renderSponsorCard(
                   card,
-                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
-                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
-                    {card.name}
-                  </span>
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center"
                 )}
               </div>
             ))}
@@ -264,10 +261,7 @@ export default function PartnersSection() {
               >
                 {renderSponsorCard(
                   card,
-                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
-                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
-                    {card.name}
-                  </span>
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center"
                 )}
               </div>
             ))}
@@ -282,10 +276,7 @@ export default function PartnersSection() {
               >
                 {renderSponsorCard(
                   card,
-                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center",
-                  <span className="mt-2 text-xs md:text-sm font-semibold text-slate-500 line-clamp-1 truncate max-w-full text-center">
-                    {card.name}
-                  </span>
+                  "w-full h-14 md:h-16 lg:h-18 flex items-center justify-center"
                 )}
               </div>
             ))}
