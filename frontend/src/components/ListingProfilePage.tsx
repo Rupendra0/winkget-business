@@ -205,6 +205,7 @@ export default function ListingProfilePage({
   profile: ListingProfile;
   storeData?: StorePageData | null;
 }) {
+  const [showAllServices, setShowAllServices] = useState(false);
   const isServiceProvider = profile.businessType === "service";
   const [activeTab, setActiveTab] = useState("overview");
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
@@ -1423,7 +1424,10 @@ export default function ListingProfilePage({
                 {/* 8. Review Button */}
                 <button
                   type="button"
-                  onClick={() => scrollToSection("listing-reviews")}
+                  onClick={() => {
+                    setActiveTab("reviews");
+                    scrollToSection("listing-reviews");
+                  }}
                   className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
                 >
                   <Pencil size={14} className="text-slate-500" />
@@ -1444,157 +1448,221 @@ export default function ListingProfilePage({
             {/* Left Column of Grid 1 */}
             <div className="space-y-6 min-w-0">
               
-              {/* Tab Navigation Bar */}
-              <div className="flex border-b border-slate-100 bg-white pl-2 sm:pl-3 pr-6 py-1 rounded-2xl">
-                {['Overview', 'Services', 'Photo', 'Address', 'Reviews'].map((tab) => {
-                  const tabKey = tab.toLowerCase();
-                  const isActive = activeTab === tabKey;
-                  return (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(tabKey);
-                        if (tabKey === 'reviews') scrollToSection("listing-reviews");
-                        else if (tabKey === 'services') scrollToSection("listing-services");
-                        else if (tabKey === 'photo') scrollToSection("listing-gallery");
-                        else if (tabKey === 'address') scrollToSection("listing-contact-details");
-                      }}
-                      className={`px-4 py-3 text-[15px] font-semibold border-b-2 -mb-[1px] transition-colors cursor-pointer font-heading ${
-                        isActive
-                          ? "border-[#2563eb] text-[#2563eb]"
-                          : "border-transparent text-slate-400 hover:text-slate-700"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Main Content Card with Inline Tabs Header */}
+              <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+                {/* Tab Navigation Bar */}
+                <div className="flex border-b border-slate-100 bg-white pl-6 sm:pl-8 pr-6 py-1">
+                  {['Overview', 'Services', 'Photo', 'Address', 'Reviews'].map((tab) => {
+                    const tabKey = tab.toLowerCase();
+                    const isActive = activeTab === tabKey;
+                    return (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tabKey);
+                          if (tabKey === 'reviews') scrollToSection("listing-reviews");
+                          else if (tabKey === 'photo') scrollToSection("listing-gallery");
+                          else if (tabKey === 'address') scrollToSection("listing-contact-details");
+                        }}
+                        className={`px-4 py-3 text-[15px] font-semibold border-b-2 -mb-[1px] transition-colors cursor-pointer font-heading ${
+                          isActive
+                            ? "border-[#2563eb] text-[#2563eb]"
+                            : "border-transparent text-slate-400 hover:text-slate-700"
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    );
+                  })}
+                </div>
 
-              {/* Main Content Card (Overview / Details / Services) */}
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 space-y-6">
+                {/* Inner Content Card Body */}
+                <div className="px-6 pb-6 pt-4 sm:px-8 sm:pb-8 sm:pt-5 space-y-6">
                 
-                {/* 1. Gallery Section */}
-                <section id="listing-gallery" className="space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900 font-heading">Gallery</h2>
-                    <button
-                      type="button"
-                      onClick={openAllPhotosModal}
-                      disabled={photoItems.length === 0}
-                      className="text-[15px] font-semibold text-[#2563eb] hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  {photoItems.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-4">
-                      {photoItems.slice(0, 3).map((photo, index) => (
-                        <button
-                          key={`${photo}-${index}`}
-                          type="button"
-                          onClick={() => openSinglePhotoModal(photo)}
-                          className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 aspect-[4/3] w-full cursor-pointer hover:opacity-95 transition"
-                          aria-label={`View photo ${index + 1}`}
-                        >
-                          <img
-                            src={photo}
-                            alt={`${profile.name} gallery ${index + 1}`}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-4">
-                      {DEFAULT_TILE_IMAGES.slice(0, 3).map((imgUrl, index) => (
-                        <div key={index} className="overflow-hidden rounded-2xl bg-slate-100 aspect-[4/3] w-full">
-                          <img
-                            src={imgUrl}
-                            alt="Placeholder gallery"
-                            className="h-full w-full object-cover opacity-60"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
-
-                {/* Divider */}
-                <div className="border-t border-slate-100" />
-
-                {/* 2. Business Details Section */}
-                <section className="space-y-3">
-                  <h2 className="text-xl font-bold text-slate-900 font-heading">Business Details</h2>
-                  
-                  <div className="divide-y divide-slate-100 text-[15px]">
-                    {/* Establishment Year */}
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-slate-500 font-medium">Establishment Year</span>
-                      <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
-                        {profile.establishmentYear ? `Since ${profile.establishmentYear}` : "Since 2000"}
-                      </span>
+                {/* 1. Gallery Section (only when NOT on services tab) */}
+                {activeTab !== "services" && (
+                  <section id="listing-gallery" className="space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-slate-900 font-heading">Gallery</h2>
+                      <button
+                        type="button"
+                        onClick={openAllPhotosModal}
+                        disabled={photoItems.length === 0}
+                        className="text-[15px] font-semibold text-[#2563eb] hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
+                      >
+                        View All
+                      </button>
                     </div>
 
-                    {/* GSTIN */}
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-slate-500 font-medium">GSTIN</span>
-                      <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 font-mono">
-                        {gstinValue || "07AABCE1234F1Z5"}
-                      </span>
-                    </div>
-
-                    {/* Business Type */}
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-slate-500 font-medium">Business Type</span>
-                      <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 uppercase tracking-wider text-[11px]">
-                        {profile.businessType ? profile.businessType : "Real Estate Developer"}
-                      </span>
-                    </div>
-
-                    {/* Service Area */}
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-slate-500 font-medium">Service Area</span>
-                      <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
-                        {profile.sublocality || profile.city || "Pan India"}
-                      </span>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Divider */}
-                <div className="border-t border-slate-100" />
-
-                {/* 3. Services Section */}
-                <section id="listing-services" className="space-y-3">
-                  <h2 className="text-xl font-bold text-slate-900 font-heading">Services</h2>
-                  
-                  <div className="divide-y divide-slate-100 text-[15px]">
-                    {serviceItems.length > 0 ? (
-                      serviceItems.map((service) => (
-                        <div key={service} className="flex items-center justify-between py-3">
-                          <span className="text-slate-700 font-semibold">{service}</span>
-                          <span className="rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-4 py-1 text-sm font-semibold text-[#16a34a]">
-                            Available
-                          </span>
-                        </div>
-                      ))
+                    {photoItems.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-4">
+                        {photoItems.slice(0, 3).map((photo, index) => (
+                          <button
+                            key={`${photo}-${index}`}
+                            type="button"
+                            onClick={() => openSinglePhotoModal(photo)}
+                            className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 aspect-[4/3] w-full cursor-pointer hover:opacity-95 transition"
+                            aria-label={`View photo ${index + 1}`}
+                          >
+                            <img
+                              src={photo}
+                              alt={`${profile.name} gallery ${index + 1}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     ) : (
-                      ["Estates", "Property", "Homes", "Flats", "Buildings"].map((service) => (
-                        <div key={service} className="flex items-center justify-between py-3">
-                          <span className="text-slate-700 font-semibold">{service}</span>
-                          <span className="rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-4 py-1 text-sm font-semibold text-[#16a34a]">
-                            Available
-                          </span>
-                        </div>
-                      ))
+                      <div className="grid grid-cols-3 gap-4">
+                        {DEFAULT_TILE_IMAGES.slice(0, 3).map((imgUrl, index) => (
+                          <div key={index} className="overflow-hidden rounded-2xl bg-slate-100 aspect-[4/3] w-full">
+                            <img
+                              src={imgUrl}
+                              alt="Placeholder gallery"
+                              className="h-full w-full object-cover opacity-60"
+                            />
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  </div>
-                </section>
+                  </section>
+                )}
 
+                {/* Divider (only for Overview / Default tab between Gallery and Business Details) */}
+                {activeTab !== "services" && (
+                  <div className="border-t border-slate-100" />
+                )}
+
+                {/* 2. Business Details Section (upward of services on default/main tab) */}
+                {activeTab !== "services" && (
+                  <section className="space-y-3">
+                    <h2 className="text-xl font-bold text-slate-900 font-heading">Business Details</h2>
+                    
+                    <div className="divide-y divide-slate-100 text-[15px]">
+                      {/* Establishment Year */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Establishment Year</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
+                          {profile.establishmentYear ? `Since ${profile.establishmentYear}` : "Since 2000"}
+                        </span>
+                      </div>
+
+                      {/* GSTIN */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">GSTIN</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 font-mono">
+                          {gstinValue || "07AABCE1234F1Z5"}
+                        </span>
+                      </div>
+
+                      {/* Business Type */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Business Type</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 uppercase tracking-wider text-[11px]">
+                          {profile.businessType ? profile.businessType : "Real Estate Developer"}
+                        </span>
+                      </div>
+
+                      {/* Service Area */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Service Area</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
+                          {profile.sublocality || profile.city || "Pan India"}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* Divider (only for Overview / Default tab between Business Details and Services) */}
+                {activeTab !== "services" && (
+                  <div className="border-t border-slate-100" />
+                )}
+
+                {/* 3. Services Section (rendered in both default layout and services tab layout) */}
+                {(() => {
+                  const defaultServices = ["Estates", "Property", "Homes", "Flats", "Buildings"];
+                  const displayServices = serviceItems.length > 0 ? serviceItems : defaultServices;
+                  const visibleServices = showAllServices ? displayServices : displayServices.slice(0, 10);
+                  return (
+                    <section id="listing-services" className="space-y-3">
+                      <h2 className="text-xl font-bold text-slate-900 font-heading">Services</h2>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-[15px]">
+                        {visibleServices.map((service) => (
+                          <div key={service} className="flex items-center justify-between py-2.5 border-b border-slate-100">
+                            <span className="text-slate-700 font-semibold">{service}</span>
+                            <span className="rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-3 py-0.5 text-xs font-semibold text-[#16a34a]">
+                              Available
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {displayServices.length > 10 && !showAllServices && (
+                        <div className="pt-4 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowAllServices(true)}
+                            className="w-full md:w-fit border border-slate-200 bg-white py-2.5 px-6 text-[14px] font-bold text-slate-700 rounded-full hover:bg-slate-50 cursor-pointer flex items-center justify-center transition duration-155"
+                          >
+                            View More Services
+                          </button>
+                        </div>
+                      )}
+                    </section>
+                  );
+                })()}
+
+                {/* Divider (only when switched to services tab, between Services and Business Details) */}
+                {activeTab === "services" && (
+                  <div className="border-t border-slate-100" />
+                )}
+
+                {/* 4. Business Details Section (rendered below services when switched to services tab) */}
+                {activeTab === "services" && (
+                  <section className="space-y-3">
+                    <h2 className="text-xl font-bold text-slate-900 font-heading">Business Details</h2>
+                    
+                    <div className="divide-y divide-slate-100 text-[15px]">
+                      {/* Establishment Year */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Establishment Year</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
+                          {profile.establishmentYear ? `Since ${profile.establishmentYear}` : "Since 2000"}
+                        </span>
+                      </div>
+
+                      {/* GSTIN */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">GSTIN</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 font-mono">
+                          {gstinValue || "07AABCE1234F1Z5"}
+                        </span>
+                      </div>
+
+                      {/* Business Type */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Business Type</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700 uppercase tracking-wider text-[11px]">
+                          {profile.businessType ? profile.businessType : "Real Estate Developer"}
+                        </span>
+                      </div>
+
+                      {/* Service Area */}
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-slate-500 font-medium">Service Area</span>
+                        <span className="rounded-full bg-slate-50 border border-slate-100 px-4 py-1 text-sm font-semibold text-slate-700">
+                          {profile.sublocality || profile.city || "Pan India"}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                </div>
               </div>
             </div>
 
@@ -1655,12 +1723,10 @@ export default function ListingProfilePage({
           ) : null}
 
           {/* Grid 2: Reviews & Ratings */}
-          <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
-            
+          <div id="listing-reviews" className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
             {/* Left Column of Grid 2 (Reviews Section) */}
-            <div id="listing-reviews" className="space-y-4 w-full min-w-0">
-              <h2 className="text-2xl font-bold text-slate-900 font-heading">Reviews</h2>
-              
+            <div className="space-y-4 w-full min-w-0">
+              <h2 className="text-xl font-bold text-slate-900 font-heading">Reviews</h2>
               {reviewsLoading ? (
                 <p className="text-sm font-medium text-slate-500">Loading reviews...</p>
               ) : reviewsToDisplay.length > 0 ? (
@@ -1669,12 +1735,11 @@ export default function ListingProfilePage({
                   const isOwnReview = Boolean(currentUser?.id && review.reviewerId === currentUser.id);
                   const isEditingThisReview = editingReviewId === review.id;
                   const reviewEditCount = Math.max(0, Number(review.editCount || 0));
-                  const editsRemaining = Math.max(0, 2 - reviewEditCount);
                   const reviewWasEdited = Boolean(review.isEdited || reviewEditCount > 0);
                   const authorInitials = review.author ? review.author.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) : 'U';
 
                   return (
-                    <div key={review.id} className="rounded-2xl border border-slate-100 bg-white p-6 space-y-3">
+                    <div key={review.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1953c2] text-sm font-bold text-white font-heading">
@@ -1715,7 +1780,6 @@ export default function ListingProfilePage({
                           </div>
                         </div>
                         
-                        {/* Edit / Delete own review buttons */}
                         {isOwnReview && !isEditingThisReview && (
                           <div className="flex items-center gap-1.5">
                             <button
@@ -1748,54 +1812,45 @@ export default function ListingProfilePage({
                                 key={`${review.id}-edit-${value}`}
                                 type="button"
                                 onClick={() => setEditReviewRating(value)}
-                                disabled={isUpdatingReview}
-                                className="rounded-full p-1 disabled:opacity-60"
-                                aria-label={`Set rating ${value}`}
+                                className="rounded-full p-0.5"
+                                aria-label={`Rate ${value}`}
                               >
                                 <Star
                                   size={16}
                                   className={
                                     value <= editReviewRating
                                       ? "fill-[#eab308] text-[#eab308]"
-                                      : "text-slate-300"
+                                      : "text-[#cbd5e1]"
                                   }
                                 />
                               </button>
                             ))}
                           </div>
-
                           <textarea
                             value={editReviewText}
                             onChange={(event) => setEditReviewText(event.target.value)}
-                            disabled={isUpdatingReview}
-                            className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[15px] font-medium text-slate-800 outline-none"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-3 text-[15px] font-medium text-slate-800 outline-none min-h-[80px]"
                           />
-
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex gap-2">
                             <button
                               type="button"
                               onClick={() => void handleUpdateReview(review)}
                               disabled={isUpdatingReview}
-                              className="inline-flex h-9 items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-4 text-xs font-semibold text-white disabled:opacity-60 cursor-pointer"
+                              className="inline-flex min-h-8 items-center justify-center rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 cursor-pointer"
                             >
                               {isUpdatingReview ? "Saving..." : "Save"}
                             </button>
                             <button
                               type="button"
                               onClick={cancelEditReview}
-                              disabled={isUpdatingReview}
-                              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                              className="inline-flex min-h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                             >
                               Cancel
                             </button>
-                            <span className="text-[11px] font-medium text-slate-400 ml-auto">
-                              {`Edits left: ${editsRemaining}`}
-                            </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-1.5">
-                          {/* Review Title */}
+                        <div className="space-y-1.5 pl-1">
                           <p className="text-[15px] font-bold text-slate-900 font-heading">
                             {review.id.startsWith("dummy") && (review as any).title 
                               ? (review as any).title 
@@ -1804,7 +1859,6 @@ export default function ListingProfilePage({
                           <p className="text-[15px] leading-relaxed text-slate-600">
                             {review.comment}
                           </p>
-                          
                           <div className="flex items-center justify-end pt-1">
                             <button type="button" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-600 cursor-pointer">
                               <span className="text-[13px]">👍</span> Helpful
@@ -1830,13 +1884,11 @@ export default function ListingProfilePage({
               )}
             </div>
 
-            {/* Right Column of Grid 2 (Ratings Section) */}
-            <div className="space-y-6 lg:self-start lg:sticky lg:top-24 min-w-0 w-full">
+            {/* Right Column (Ratings summary + Review form) */}
+            <div className="space-y-6 min-w-0 w-full lg:sticky lg:top-24">
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-slate-900 font-heading">Ratings</h2>
-                
-                {/* Ratings Card */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center space-y-4">
+                <h2 className="text-xl font-bold text-slate-900 font-heading">Ratings</h2>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 text-center space-y-4">
                   <div>
                     <p className="text-5xl font-extrabold text-slate-950 font-heading leading-none">
                       {roundedRating > 0 ? roundedRating.toFixed(1) : "5.0"}
@@ -1879,36 +1931,35 @@ export default function ListingProfilePage({
                   </div>
                 </div>
 
-                {/* Review Form / Login Prompt Box */}
-                <div className="rounded-2xl bg-white p-6 flex flex-col items-center text-center">
+                {/* Review Form Box */}
+                <div className="rounded-2xl bg-slate-50/50 p-6 flex flex-col items-center border border-slate-100">
                   {authLoading ? (
                     <p className="text-[15px] font-medium text-slate-500">Checking login status...</p>
                   ) : !currentUser ? (
                     <div className="space-y-4 w-full flex flex-col items-center">
-                      {/* Round pencil icon button */}
                       <div className="mx-auto h-12 w-12 rounded-full bg-[#eff6ff] flex items-center justify-center text-[#2563eb]">
                         <Pencil size={18} />
                       </div>
                       <div>
-                        <h4 className="text-xl font-bold text-slate-900 font-heading">Login to review</h4>
-                        <p className="mt-1 text-[15px] text-slate-400 font-medium">
+                        <h4 className="text-lg font-bold text-slate-900 font-heading text-center">Login to review</h4>
+                        <p className="mt-1 text-xs text-slate-400 font-medium text-center">
                           Share your experience
                         </p>
                       </div>
                       <Link
                         href="/auth"
-                        className="inline-flex h-10 px-8 items-center justify-center rounded-full border border-[#2563eb] bg-white text-[15px] font-semibold text-[#2563eb] hover:bg-blue-50/50 transition duration-150"
+                        className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-[#2563eb] hover:bg-blue-50/50 transition duration-150"
                       >
                         Login
                       </Link>
                     </div>
                   ) : hasAlreadyReviewed ? (
-                    <div className="space-y-3 w-full">
+                    <div className="space-y-3 w-full text-center">
                       <div className="mx-auto h-12 w-12 rounded-full border border-slate-200 bg-white shadow-sm flex items-center justify-center text-green-600">
                         <CheckCircle2 size={18} />
                       </div>
                       <div>
-                        <h4 className="text-xl font-bold text-slate-900 font-heading">Thanks for your review</h4>
+                        <h4 className="text-lg font-bold text-slate-900 font-heading">Thanks for your review</h4>
                         <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
                           You already reviewed this business. You can edit or delete your review on the left.
                         </p>
@@ -1916,10 +1967,10 @@ export default function ListingProfilePage({
                     </div>
                   ) : (
                     <form className="space-y-4 w-full text-left" onSubmit={handleSubmitReview}>
-                      <h4 className="text-xl font-bold text-slate-900 font-heading text-center">Write a review</h4>
+                      <h4 className="text-lg font-bold text-slate-900 font-heading text-center">Write a review</h4>
 
                       <div>
-                        <label className="block text-sm font-semibold text-slate-500 mb-1">
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">
                           Name
                         </label>
                         <input
@@ -1933,7 +1984,7 @@ export default function ListingProfilePage({
                       </div>
 
                       <div>
-                        <p className="text-sm font-semibold text-slate-500 mb-1">Rating</p>
+                        <p className="text-xs font-semibold text-slate-500 mb-1">Rating</p>
                         <div className="flex items-center gap-1">
                           {[1, 2, 3, 4, 5].map((value) => (
                             <button
@@ -1948,7 +1999,7 @@ export default function ListingProfilePage({
                                 className={
                                   value <= reviewRatingInput
                                     ? "fill-[#eab308] text-[#eab308]"
-                                    : "text-slate-300 stroke-[#eab308] fill-none"
+                                    : "text-[#cbd5e1]"
                                 }
                               />
                             </button>
@@ -1957,25 +2008,26 @@ export default function ListingProfilePage({
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-slate-500 mb-1">
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">
                           Review
                         </label>
                         <textarea
                           value={reviewText}
                           onChange={(event) => setReviewText(event.target.value)}
-                          className="min-h-[96px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[15px] font-medium text-slate-800 outline-none resize-none"
-                          placeholder="Write your review"
+                          disabled={!currentUser}
+                          className="w-full rounded-xl border border-slate-200 bg-white p-3 text-[15px] font-medium text-slate-800 outline-none min-h-[100px]"
+                          placeholder="Write your review here..."
                         />
                       </div>
 
                       {reviewFormMessage && (
-                        <p className="text-xs font-medium text-red-500">{reviewFormMessage}</p>
+                        <p className="text-xs font-semibold text-red-500 mt-1">{reviewFormMessage}</p>
                       )}
 
                       <button
                         type="submit"
-                        disabled={isSubmittingReview}
-                        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#2563eb] text-[15px] font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60 cursor-pointer"
+                        disabled={isSubmittingReview || !currentUser}
+                        className="w-full py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-md transition disabled:opacity-60 cursor-pointer"
                       >
                         {isSubmittingReview ? "Submitting..." : "Submit Review"}
                       </button>
@@ -1985,6 +2037,7 @@ export default function ListingProfilePage({
               </div>
             </div>
           </div>
+
         </section>
 
         {isPhotosModalOpen ? (
