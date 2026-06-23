@@ -470,7 +470,7 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
     isStoreOpen: typeof vendor.isStoreOpen === "boolean" ? vendor.isStoreOpen : vendor.isStoreOpen === null ? null : undefined,
     storeStatusSource: vendor.storeStatusSource,
     establishmentYear: vendor.establishmentYear,
-    imageUrl: vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
+    imageUrl: vendor.cardImage || vendor.shopBannerImage || vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
     ctaLabel: vendor.ctaLabel || "Inquiry",
     badges: Array.isArray(vendor.badges) ? vendor.badges : vendor.verified ? ["Verified"] : [],
     priceRange: vendor.priceRange,
