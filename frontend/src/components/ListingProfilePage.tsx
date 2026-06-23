@@ -205,7 +205,19 @@ export default function ListingProfilePage({
   profile: ListingProfile;
   storeData?: StorePageData | null;
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const [showAllServices, setShowAllServices] = useState(false);
+  const [mobileDescExpanded, setMobileDescExpanded] = useState(false);
   const isServiceProvider = profile.businessType === "service";
   const [activeTab, setActiveTab] = useState("overview");
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
@@ -350,6 +362,13 @@ export default function ListingProfilePage({
 
     return uniqueAddressParts.join(", ");
   }, [profile.address, profile.city, profile.postalCode, profile.state]);
+
+  const headerAddress = useMemo(() => {
+    return [profile.sublocality, profile.city]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .join(", ") || fullAddress;
+  }, [profile.sublocality, profile.city, fullAddress]);
 
   const phoneDigits = useMemo(() => normalizeDigits(profile.phone), [profile.phone]);
   const businessPhoneLabel = useMemo(
@@ -1233,7 +1252,8 @@ export default function ListingProfilePage({
                     {fullAddress && (
                       <span className="inline-flex items-center gap-1 min-w-0">
                         <MapPin size={14} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{fullAddress}</span>
+                        <span className="sm:hidden truncate">{headerAddress}</span>
+                        <span className="hidden sm:inline truncate">{fullAddress}</span>
                       </span>
                     )}
 
@@ -1285,20 +1305,20 @@ export default function ListingProfilePage({
           {/* Action Buttons Row */}
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-white border-b border-slate-100 py-3.5 mb-6">
             <div className="mx-auto w-full px-6 sm:px-12 md:px-16 lg:px-20">
-              <div className="no-scrollbar flex flex-nowrap items-center overflow-x-auto gap-3 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible">
+              <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:gap-3 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible">
                 
                 {/* 1. My Store / Services Button */}
                 {isServiceProvider ? (
                   storeHref ? (
                     <Link
                       href={storeHref}
-                      className="inline-flex min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-4 text-sm font-semibold text-white transition duration-150 shadow-sm shrink-0 gap-1.5"
+                      className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                     >
                       <Store size={15} className="text-white" />
                       My Store
                     </Link>
                   ) : (
-                    <span className="inline-flex min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-4 text-sm font-semibold text-white/90 shrink-0 gap-1.5">
+                    <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                       <Store size={15} className="text-white/80" />
                       My Store
                     </span>
@@ -1306,13 +1326,13 @@ export default function ListingProfilePage({
                 ) : storeHref ? (
                   <Link
                     href={storeHref}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-4 text-sm font-semibold text-white transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Store size={15} className="text-white" />
                     My Store
                   </Link>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-4 text-sm font-semibold text-white/90 shrink-0 gap-1.5">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Store size={15} className="text-white/80" />
                     My Store
                   </span>
@@ -1322,13 +1342,13 @@ export default function ListingProfilePage({
                 {phoneDigits ? (
                   <a
                     href={`tel:${phoneDigits}`}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Phone size={14} className="text-slate-500" />
                     Call
                   </a>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Phone size={14} className="text-slate-300" />
                     Call
                   </span>
@@ -1340,13 +1360,13 @@ export default function ListingProfilePage({
                     href={`https://wa.me/${whatsappDigits}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <MessageSquare size={14} className="text-slate-500" />
                     WhatsApp
                   </a>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <MessageSquare size={14} className="text-slate-300" />
                     WhatsApp
                   </span>
@@ -1356,13 +1376,13 @@ export default function ListingProfilePage({
                 {emailHref ? (
                   <a
                     href={emailHref}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Mail size={14} className="text-slate-500" />
                     Email
                   </a>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Mail size={14} className="text-slate-300" />
                     Email
                   </span>
@@ -1374,13 +1394,13 @@ export default function ListingProfilePage({
                     href={websiteHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Globe size={14} className="text-slate-500" />
                     Website
                   </a>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Globe size={14} className="text-slate-300" />
                     Website
                   </span>
@@ -1391,13 +1411,13 @@ export default function ListingProfilePage({
                   <button
                     type="button"
                     onClick={openInquiryModal}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Send size={14} className="text-slate-500" />
                     Inquiry
                   </button>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Send size={14} className="text-slate-300" />
                     Inquiry
                   </span>
@@ -1409,13 +1429,13 @@ export default function ListingProfilePage({
                     href={directionsHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Compass size={14} className="text-slate-500" />
                     Direction
                   </a>
                 ) : (
-                  <span className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-4 text-sm font-semibold text-slate-400 shrink-0 gap-1.5 opacity-60">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-100 bg-slate-50/50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-400 opacity-60 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Compass size={14} className="text-slate-300" />
                     Direction
                   </span>
@@ -1428,7 +1448,7 @@ export default function ListingProfilePage({
                     setActiveTab("reviews");
                     scrollToSection("listing-reviews");
                   }}
-                  className="inline-flex min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-150 shadow-sm shrink-0 gap-1.5"
+                  className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-slate-700 transition duration-150 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                 >
                   <Pencil size={14} className="text-slate-500" />
                   Review
@@ -1451,7 +1471,7 @@ export default function ListingProfilePage({
               {/* Main Content Card with Inline Tabs Header */}
               <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
                 {/* Tab Navigation Bar */}
-                <div className="flex border-b border-slate-100 bg-white pl-6 sm:pl-8 pr-6 py-1">
+                <div className="flex border-b border-slate-100 bg-white pl-4 sm:pl-8 pr-4 sm:pr-6 py-1 justify-between sm:justify-start">
                   {['Overview', 'Services', 'Photo', 'Address', 'Reviews'].map((tab) => {
                     const tabKey = tab.toLowerCase();
                     const isActive = activeTab === tabKey;
@@ -1465,7 +1485,9 @@ export default function ListingProfilePage({
                           else if (tabKey === 'photo') scrollToSection("listing-gallery");
                           else if (tabKey === 'address') scrollToSection("listing-contact-details");
                         }}
-                        className={`px-4 py-3 text-[15px] font-semibold border-b-2 -mb-[1px] transition-colors cursor-pointer font-heading ${
+                        className={`px-2 sm:px-4 py-2.5 sm:py-3 text-[13px] sm:text-[15px] font-semibold border-b-2 -mb-[1px] transition-colors cursor-pointer font-heading ${
+                          tabKey === 'reviews' ? 'hidden min-[360px]:inline-block' : 'inline-block'
+                        } ${
                           isActive
                             ? "border-[#2563eb] text-[#2563eb]"
                             : "border-transparent text-slate-400 hover:text-slate-700"
@@ -1585,7 +1607,9 @@ export default function ListingProfilePage({
                 {(() => {
                   const defaultServices = ["Estates", "Property", "Homes", "Flats", "Buildings"];
                   const displayServices = serviceItems.length > 0 ? serviceItems : defaultServices;
-                  const visibleServices = showAllServices ? displayServices : displayServices.slice(0, 10);
+                  const servicesLimit = isMobile ? 5 : 10;
+                  const visibleServices = showAllServices ? displayServices : displayServices.slice(0, servicesLimit);
+                  const hasMoreServices = displayServices.length > servicesLimit;
                   return (
                     <section id="listing-services" className="space-y-3">
                       <h2 className="text-xl font-bold text-slate-900 font-heading">Services</h2>
@@ -1601,7 +1625,7 @@ export default function ListingProfilePage({
                         ))}
                       </div>
 
-                      {displayServices.length > 10 && !showAllServices && (
+                      {hasMoreServices && !showAllServices && (
                         <div className="pt-4 flex justify-center">
                           <button
                             type="button"
@@ -1667,7 +1691,7 @@ export default function ListingProfilePage({
             </div>
 
             {/* Right Column of Grid 1 */}
-            <div className="space-y-6 min-w-0">
+            <div className="hidden lg:block space-y-6 min-w-0">
               {/* Enquiry Form Card */}
               <div className="rounded-2xl border border-slate-100 bg-white p-8">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
@@ -1681,8 +1705,8 @@ export default function ListingProfilePage({
 
           {/* Full-width Business Info Card (Spanning between Grid 1 and Grid 2) */}
           {profile.description ? (
-            <div className="mx-auto w-full px-6 sm:px-12 md:px-16 lg:px-20 mt-6">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6">
+            <div className="mx-auto w-full px-0 sm:px-12 md:px-16 lg:px-20 mt-6">
+              <div className="rounded-none border-x-0 sm:rounded-2xl border border-slate-100 bg-white p-6">
                 <div className="flex items-start gap-4">
                   {/* Logo fallback box */}
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
@@ -1725,7 +1749,7 @@ export default function ListingProfilePage({
           {/* Grid 2: Reviews & Ratings */}
           <div id="listing-reviews" className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
             {/* Left Column of Grid 2 (Reviews Section) */}
-            <div className="space-y-4 w-full min-w-0">
+            <div className="order-2 lg:order-1 space-y-4 w-full min-w-0">
               <h2 className="text-xl font-bold text-slate-900 font-heading">Reviews</h2>
               {reviewsLoading ? (
                 <p className="text-sm font-medium text-slate-500">Loading reviews...</p>
@@ -1885,7 +1909,7 @@ export default function ListingProfilePage({
             </div>
 
             {/* Right Column (Ratings summary + Review form) */}
-            <div className="space-y-6 min-w-0 w-full lg:sticky lg:top-24">
+            <div className="order-1 lg:order-2 space-y-6 min-w-0 w-full lg:sticky lg:top-24">
               <div className="space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 font-heading">Ratings</h2>
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 text-center space-y-4">
@@ -2036,6 +2060,18 @@ export default function ListingProfilePage({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Mobile-only Enquiry Form and Address & Contact Details Cards */}
+          <div className="block lg:hidden mt-6 space-y-6 w-full mx-auto px-6 sm:px-12 md:px-16">
+            {/* Enquiry Form Card */}
+            <div className="rounded-2xl border border-slate-100 bg-white p-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
+              {renderInquiryForm()}
+            </div>
+
+            {/* Address & Contact Details Card */}
+            {renderBusinessContactDetails("listing-contact-details-mobile")}
           </div>
 
         </section>
