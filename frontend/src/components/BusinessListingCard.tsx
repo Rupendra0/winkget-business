@@ -1,22 +1,15 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, MapPin, MessageSquareText, Phone, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { CategoryListing } from "@/data/categoryData";
 import { getBusinessOpenStatus, normalizePhoneDigits } from "@/lib/listingCardTheme";
 import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
 const DEFAULT_VENDOR_IMAGE =
   "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=60";
-
-const normalizeLocationPart = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/\./g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 
 type BusinessListingCardProps = {
   listing: CategoryListing;
@@ -31,25 +24,13 @@ function BusinessListingCardComponent({
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
-  const [visibleServiceChipCount, setVisibleServiceChipCount] = useState<number | null>(null);
   const hasPrefetchedRef = useRef(false);
-  const serviceChipMeasureRowRef = useRef<HTMLDivElement | null>(null);
-  const extendedListing = listing as CategoryListing & {
-    distance?: string;
-    distanceKm?: number | string;
-    responseTime?: string;
-    responseMinutes?: number;
-    startsFrom?: string;
-    startingPrice?: string;
-  };
 
   const detailsHref = `/listing/${listing.id}`;
-  const inquiryHref = `${detailsHref}?inquiry=true`;
   const displayName =
     String(listing.businessName || "").trim() ||
     String(listing.name || "").trim() ||
     "Business Profile";
-  const isVerified = listing.vendorStatus === "approved" || listing.verified;
 
   useEffect(() => {
     return subscribeVendorStoreStatus(listing.id, (payload) => {
@@ -80,177 +61,14 @@ function BusinessListingCardComponent({
   const callDigits = useMemo(() => normalizePhoneDigits(listing.businessPhone), [listing.businessPhone]);
   const callHref = callDigits ? `tel:${callDigits}` : "";
 
-  const locationLabel = useMemo(() => {
-    const baseParts = [String(listing.sublocality || "").trim(), String(listing.city || "").trim()];
-    const addressParts = String(listing.address || "")
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-    const uniqueParts: string[] = [];
-    const seen = new Set<string>();
-
-    for (const part of [...baseParts, ...addressParts]) {
-      if (!part) {
-        continue;
-      }
-
-      const normalized = normalizeLocationPart(part);
-      if (!normalized || seen.has(normalized)) {
-        continue;
-      }
-
-      seen.add(normalized);
-      uniqueParts.push(part);
+  const enquiriesCount = useMemo(() => {
+    const reviews = Number(listing.reviews || 0);
+    const base = reviews * 1.5 + 5;
+    if (base >= 1000) {
+      return `${(base / 1000).toFixed(1)}k Enquiries`;
     }
-
-    return uniqueParts.join(", ");
-  }, [listing.address, listing.city, listing.sublocality]);
-
-  const ratingText = Number(listing.rating || 0) > 0 ? Number(listing.rating || 0).toFixed(1) : "New";
-  const reviewText = Number(listing.reviews || 0) > 0 ? `${Number(listing.reviews)} reviews` : "No reviews";
-
-  const distanceText = useMemo(() => {
-    const explicitDistance = String(extendedListing.distance || "").trim();
-    if (explicitDistance) {
-      return explicitDistance;
-    }
-
-    const rawDistance = extendedListing.distanceKm;
-    if (typeof rawDistance === "number" && Number.isFinite(rawDistance)) {
-      return `${rawDistance.toFixed(rawDistance < 10 ? 1 : 0)} km`;
-    }
-
-    const normalizedDistance = String(rawDistance || "").trim();
-    if (!normalizedDistance) {
-      return "";
-    }
-
-    return /km/i.test(normalizedDistance) ? normalizedDistance : `${normalizedDistance} km`;
-  }, [extendedListing.distance, extendedListing.distanceKm]);
-
-  const serviceChips = useMemo(() => {
-    if (!Array.isArray(listing.tags)) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-    return listing.tags
-      .map((tag) => String(tag || "").trim())
-      .filter((tag) => {
-        if (!tag) return false;
-        const key = tag.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-  }, [listing.tags]);
-
-  useLayoutEffect(() => {
-    if (serviceChips.length === 0) {
-      setVisibleServiceChipCount(null);
-      return;
-    }
-
-    const measureRow = serviceChipMeasureRowRef.current;
-    if (!measureRow) {
-      return;
-    }
-
-    const calculateVisibleChipCount = () => {
-      const availableWidth = measureRow.clientWidth;
-      if (availableWidth <= 0) {
-        return;
-      }
-
-      const chipElements = Array.from(measureRow.querySelectorAll<HTMLElement>("[data-service-chip='true']"));
-      if (chipElements.length === 0) {
-        setVisibleServiceChipCount(null);
-        return;
-      }
-
-      let fitCount = 0;
-      for (const chipElement of chipElements) {
-        if (chipElement.offsetLeft + chipElement.offsetWidth <= availableWidth + 0.5) {
-          fitCount += 1;
-        } else {
-          break;
-        }
-      }
-
-      const nextCount = fitCount >= chipElements.length ? null : Math.max(1, fitCount);
-      setVisibleServiceChipCount((current) => (current === nextCount ? current : nextCount));
-    };
-
-    calculateVisibleChipCount();
-
-    const resizeObserver = new ResizeObserver(() => {
-      calculateVisibleChipCount();
-    });
-    resizeObserver.observe(measureRow);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [serviceChips]);
-
-  const visibleServiceChips =
-    visibleServiceChipCount === null ? serviceChips : serviceChips.slice(0, visibleServiceChipCount);
-
-  const responseTimeText = useMemo(() => {
-    const explicit = String(extendedListing.responseTime || "").trim();
-    if (explicit) {
-      return explicit;
-    }
-
-    if (
-      typeof extendedListing.responseMinutes === "number" &&
-      Number.isFinite(extendedListing.responseMinutes)
-    ) {
-      return `Replies in ${Math.max(1, Math.round(extendedListing.responseMinutes))} min`;
-    }
-
-    return "";
-  }, [extendedListing.responseMinutes, extendedListing.responseTime]);
-
-  const startsFromText = useMemo(() => {
-    const raw = String(
-      extendedListing.startsFrom || extendedListing.startingPrice || listing.priceRange || ""
-    ).trim();
-    if (!raw) {
-      return "";
-    }
-
-    return /^starts/i.test(raw) ? raw : `Starts ${raw}`;
-  }, [extendedListing.startsFrom, extendedListing.startingPrice, listing.priceRange]);
-
-  const statusLabel =
-    openStatus.isOpen === true
-      ? "Open"
-      : openStatus.isOpen === false
-        ? "Closed"
-        : "Hours unavailable";
-
-  const statusBadgeClass =
-    openStatus.isOpen === true
-      ? "bg-emerald-700 text-emerald-50"
-      : openStatus.isOpen === false
-        ? "bg-red-700 text-red-50"
-        : "bg-slate-600 text-slate-50";
-
-  const statusDotClass =
-    openStatus.isOpen === true
-      ? "bg-emerald-200"
-      : openStatus.isOpen === false
-        ? "bg-red-200"
-        : "bg-slate-300";
-
-  const statusAnimationClass =
-    openStatus.isOpen === true || openStatus.isOpen === false ? "animate-pulse" : "";
-
-  const establishmentYearText = listing.establishmentYear
-    ? `Establishment Year ${listing.establishmentYear}`
-    : "";
+    return `${Math.round(base)} Enquiries`;
+  }, [listing.reviews]);
 
   const stopCardNavigation = useCallback((event: React.SyntheticEvent) => {
     event.stopPropagation();
@@ -295,17 +113,11 @@ function BusinessListingCardComponent({
     [stopCardNavigation]
   );
 
-  const handleInquiryLinkClick = useCallback(
-    (event: React.MouseEvent<HTMLAnchorElement>) => {
-      stopCardNavigation(event);
-      setIsNavigating(true);
-    },
-    [stopCardNavigation]
-  );
-
   useEffect(() => {
     setIsNavigating(false);
   }, [listing.id]);
+
+  const isOpen = openStatus.isOpen === true;
 
   return (
     <article
@@ -316,7 +128,7 @@ function BusinessListingCardComponent({
       onMouseEnter={prefetchDetails}
       onTouchStart={prefetchDetails}
       onFocus={prefetchDetails}
-      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
         isNavigating ? "pointer-events-none" : ""
       } ${
         className || ""
@@ -336,145 +148,94 @@ function BusinessListingCardComponent({
         </div>
       ) : null}
 
-      <div className="h-12 bg-white" />
+      <div className="relative w-full h-52 overflow-hidden rounded-2xl">
+        <img
+          src={listing.imageUrl || DEFAULT_VENDOR_IMAGE}
+          alt={displayName}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
+        <span
+          className={`absolute left-3 top-3 bg-white px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+            isOpen ? "text-emerald-600" : "text-red-600"
+          }`}
+        >
+          {isOpen ? "Open" : "Closed"}
+        </span>
+      </div>
 
-      <div className="flex flex-1 flex-col px-5 pb-5">
-        <div className="-mt-9 flex min-w-0 items-start gap-3.5">
-          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-sm">
-            <img
-              src={listing.imageUrl || DEFAULT_VENDOR_IMAGE}
-              alt={displayName}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          </div>
+      <div className="flex flex-1 flex-col pt-3.5 pb-4 px-1">
+        {/* Title */}
+        <Link
+          href={detailsHref}
+          onClick={handleDetailsLinkClick}
+          className="text-lg md:text-[20px] font-bold text-slate-900 hover:text-blue-700 leading-snug line-clamp-1"
+        >
+          {displayName}
+        </Link>
 
-          <div className="min-w-0 flex-1 space-y-2.5 pt-2">
-            <div className="flex items-start gap-2.5">
-              <Link
-                href={detailsHref}
-                onClick={handleDetailsLinkClick}
-                className="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900 hover:text-blue-700"
-              >
-                {displayName}
-              </Link>
-
-              <span
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm ${statusBadgeClass} ${statusAnimationClass}`}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full ${statusDotClass}`} aria-hidden="true" />
-                {statusLabel}
-              </span>
-            </div>
-
-            <p className="inline-flex max-w-full flex-wrap items-center gap-1.5 text-base text-gray-900">
-              <Star size={13} className="fill-amber-400 text-amber-500" />
-              <span className="font-semibold">{ratingText}</span>
-              <span className="text-sm text-gray-400">|</span>
-              <span className="text-sm text-gray-500">{reviewText}</span>
-            </p>
-
-            <p className="flex max-w-full items-center gap-1.5 text-sm text-gray-600">
-              <MapPin size={12} className="text-gray-500" />
-              <span className="truncate font-semibold">{locationLabel || "Location unavailable"}</span>
-            </p>
-          </div>
+        {/* Rating Stars Row */}
+        <div className="flex items-center gap-1 mt-1.5">
+          {[...Array(5)].map((_, i) => {
+            const ratingValue = i + 1;
+            const rating = Number(listing.rating || 0);
+            const isFilled = ratingValue <= Math.round(rating);
+            return (
+              <Star
+                key={i}
+                size={14}
+                className={isFilled ? "fill-amber-400 text-amber-500" : "text-slate-200"}
+              />
+            );
+          })}
+          <span className="text-slate-500 text-xs md:text-sm font-medium ml-1.5">
+            ({listing.reviews || 0} Reviews)
+          </span>
         </div>
 
-        <div className="mt-4 space-y-2.5 border-t border-gray-100 pt-3.5">
-          {isVerified || establishmentYearText || distanceText ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              {establishmentYearText ? (
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-600">
-                  <CalendarDays size={11} className="text-gray-400" />
-                  {establishmentYearText}
-                </span>
-              ) : null}
-              {establishmentYearText && (isVerified || distanceText) ? <span className="text-gray-300">|</span> : null}
-              {isVerified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-sm font-medium text-green-600">
-                  <CheckCircle2 size={11} />
-                  Verified
-                </span>
-              ) : null}
-              {isVerified && distanceText ? <span className="text-gray-300">|</span> : null}
-              {distanceText ? <span>{distanceText}</span> : null}
-            </div>
-          ) : null}
-
-          {serviceChips.length > 0 ? (
-            <div className="relative">
-              <div className="-mx-1 flex flex-nowrap gap-1 overflow-hidden whitespace-nowrap px-1">
-                {visibleServiceChips.map((chip) => (
-                  <span
-                    key={`${listing.id}-${chip}`}
-                    className="inline-flex shrink-0 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-sm font-medium text-blue-700"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-
-              <div
-                ref={serviceChipMeasureRowRef}
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 h-0 overflow-hidden whitespace-nowrap opacity-0"
-              >
-                <div className="-mx-1 flex flex-nowrap gap-1 px-1">
-                  {serviceChips.map((chip) => (
-                    <span
-                      key={`measure-${listing.id}-${chip}`}
-                      data-service-chip="true"
-                      className="inline-flex shrink-0 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-sm font-medium text-blue-700"
-                    >
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {responseTimeText || startsFromText ? (
-            <p className="text-sm text-gray-500">
-              {[responseTimeText, startsFromText].filter(Boolean).join(" | ")}
-            </p>
-          ) : null}
+        {/* Address Block */}
+        <div className="mt-2 space-y-0.5">
+          <p className="text-xs md:text-sm text-slate-500 font-normal truncate">
+            {listing.sublocality || "Area"}
+          </p>
+          <p className="text-xs md:text-sm text-slate-400 font-normal truncate">
+            {listing.address || "Address"}
+          </p>
         </div>
 
-        <div className="mt-auto flex gap-2.5 pt-4">
-          <Link
-            href={inquiryHref}
-            onClick={handleInquiryLinkClick}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-blue-700"
-            aria-label={`Send inquiry to ${displayName}`}
-          >
-            <MessageSquareText size={14} />
-            Inquiry
-          </Link>
-
-          {callHref ? (
-            <a
-              href={callHref}
-              onClick={stopCardNavigation}
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e6fbef] px-3 py-2 text-sm font-medium text-[#15803d] transition-colors duration-200 hover:bg-[#dff3e6] border border-transparent"
-              aria-label={`Call ${displayName}`}
+        {/* Metrics & Action Row */}
+        <div className="mt-auto pt-3 border-t border-slate-100/50 flex items-center justify-between">
+          <span className="text-xs md:text-sm text-slate-500 font-medium">
+            {enquiriesCount}
+          </span>
+          <div className="flex items-center gap-2" onClick={stopCardNavigation}>
+            <Link
+              href={detailsHref}
+              onClick={handleDetailsLinkClick}
+              className="border border-blue-600 text-blue-600 hover:bg-blue-50/50 rounded-lg px-4 py-1.5 text-xs font-semibold transition"
             >
-              <Phone size={14} className="text-[#15803d]" />
-              Call
-            </a>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-[#dff3e6] bg-[#f4faf6] px-3 py-2 text-sm font-medium text-[#9ccfb3]"
-              aria-label={`Call unavailable for ${displayName}`}
-            >
-              Call
-            </button>
-          )}
+              View Details
+            </Link>
+            {callHref ? (
+              <a
+                href={callHref}
+                onClick={stopCardNavigation}
+                className="border border-slate-300 text-slate-700 hover:bg-slate-50/50 rounded-lg px-4 py-1.5 text-xs font-semibold transition"
+              >
+                Call
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="border border-slate-200 text-slate-400 rounded-lg px-4 py-1.5 text-xs font-semibold bg-slate-50 cursor-not-allowed"
+              >
+                Call
+              </button>
+            )}
           </div>
         </div>
+      </div>
     </article>
   );
 }

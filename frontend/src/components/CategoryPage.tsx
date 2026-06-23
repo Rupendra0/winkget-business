@@ -73,7 +73,9 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
   const [reviewUpdateVersion, setReviewUpdateVersion] = useState(0);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
 
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [filterVerified, setFilterVerified] = useState(false);
+  const [filterTopRated, setFilterTopRated] = useState(false);
+  const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
 
   useEffect(() => {
     setIsReviewHydrated(true);
@@ -104,6 +106,11 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     () => [{ id: "all", label: "All" }, ...subcategoryOptions],
     [subcategoryOptions]
   );
+
+  const displayedFilterOptions = useMemo(() => {
+    // Limit to All + first 5 subcategories to keep the toolbar compact and in a single row
+    return filterOptions.slice(0, 6);
+  }, [filterOptions]);
 
   const cityOptions = useMemo(() => {
     if (Array.isArray(data.availableCities) && data.availableCities.length > 0) {
@@ -148,6 +155,16 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     if (subcategoryFromQuery && subcategoryFromQuery !== selectedSubcategory) {
       setSelectedSubcategory(subcategoryFromQuery);
     }
+
+    const verifiedFromQuery = searchParams.get("verified") === "true";
+    if (verifiedFromQuery !== filterVerified) {
+      setFilterVerified(verifiedFromQuery);
+    }
+
+    const topRatedFromQuery = searchParams.get("topRated") === "true";
+    if (topRatedFromQuery !== filterTopRated) {
+      setFilterTopRated(topRatedFromQuery);
+    }
   }, [
     data.city,
     data.selectedCity,
@@ -157,6 +174,8 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     selectedCity,
     selectedSublocality,
     selectedSubcategory,
+    filterVerified,
+    filterTopRated,
   ]);
 
   const updateQuery = useCallback(
@@ -165,7 +184,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
 
       Object.entries(updates).forEach(([key, value]) => {
         const normalized = String(value || "").trim();
-        if (!normalized || normalized === "All" || normalized === "all") {
+        if (!normalized || normalized === "All" || normalized === "all" || normalized === "false") {
           params.delete(key);
         } else {
           params.set(key, normalized);
@@ -202,6 +221,18 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     updateQuery({ subcategoryId: nextSubcategoryId === "all" ? null : nextSubcategoryId });
   };
 
+  const handleVerifiedToggle = () => {
+    const nextVerified = !filterVerified;
+    setFilterVerified(nextVerified);
+    updateQuery({ verified: nextVerified ? "true" : null });
+  };
+
+  const handleTopRatedToggle = () => {
+    const nextTopRated = !filterTopRated;
+    setFilterTopRated(nextTopRated);
+    updateQuery({ topRated: nextTopRated ? "true" : null });
+  };
+
   const filteredListings = useMemo(() => {
     return listingsWithReviewStats.filter((listing) => {
       const matchesCity = !selectedCity || listing.city === selectedCity;
@@ -213,182 +244,241 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           (filterOptions.find((item) => item.id === selectedSubcategory)?.label || "").trim().toLowerCase();
       const matchesSublocality =
         selectedSublocality === "All" || listing.sublocality === selectedSublocality;
-      return matchesCity && matchesSubcategory && matchesSublocality;
+
+      const matchesVerified = !filterVerified || listing.vendorStatus === "approved" || listing.verified;
+      const matchesTopRated = !filterTopRated || Number(listing.rating || 0) >= 4.0;
+
+      return matchesCity && matchesSubcategory && matchesSublocality && matchesVerified && matchesTopRated;
     });
-  }, [filterOptions, listingsWithReviewStats, selectedCity, selectedSubcategory, selectedSublocality]);
+  }, [filterOptions, listingsWithReviewStats, selectedCity, selectedSubcategory, selectedSublocality, filterVerified, filterTopRated]);
 
   return (
-    <main className="w-full overflow-x-hidden px-0 py-0">
-      <div className="w-full space-y-6 pt-4">
-        <section className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 min-w-0 px-4 sm:px-6 lg:px-8">
-          <aside className="hidden md:block self-start glass-panel rounded-2xl p-5 space-y-6 h-fit md:sticky md:top-24">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <SlidersHorizontal size={16} className="text-blue-900" />
-              Filters
-            </div>
+    <main className="w-full overflow-x-hidden px-0 py-0 bg-slate-50/50">
+      {/* Header Section */}
+      <div className="w-full max-w-full px-4 md:px-12 pt-3 pb-2">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          {data.title} in {selectedCity}
+        </h1>
+        <p className="text-sm text-slate-500 font-medium mt-1">
+          Explore verified businesses and Services
+        </p>
+      </div>
 
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Sublocality</div>
-              <select
-                className="w-full appearance-none rounded-xl border border-[#cfd8ea] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-[0_1px_3px_rgba(15,23,42,0.06)] outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                value={selectedSublocality}
-                onChange={(event) => handleSublocalityChange(event.target.value)}
-              >
-                <option value="All">All areas</option>
-                {localitiesForSelectedCity.map((locality) => (
-                  <option key={locality} value={locality}>
-                    {locality}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Subcategory</div>
-              <div className="space-y-2">
-                {filterOptions.map((subcategory) => (
-                  <button
-                    key={subcategory.id}
-                    type="button"
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all btn-hover ${
-                      selectedSubcategory === subcategory.id
-                        ? "bg-blue-900 text-white"
-                        : "bg-white/60 text-gray-700 hover:bg-white"
-                    }`}
-                    onClick={() => handleSubcategoryChange(subcategory.id)}
-                  >
-                    {subcategory.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          <div className="min-w-0 space-y-4">
-            <div className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-2 no-scrollbar">
-              {filterOptions.map((subcategory) => (
+      {/* Horizontal Toolbar */}
+      <div className="w-full max-w-full px-4 md:px-12 py-4 border-b border-slate-200 bg-white">
+        <div className="flex flex-row items-center gap-3 flex-nowrap overflow-x-auto no-scrollbar">
+          {/* Subcategory Pills */}
+          <div className="flex flex-row items-center gap-2 shrink-0">
+            {displayedFilterOptions.map((subcategory) => {
+              const isActive = selectedSubcategory === subcategory.id;
+              return (
                 <button
                   key={subcategory.id}
                   type="button"
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm transition-all btn-hover ${
-                    selectedSubcategory === subcategory.id
-                      ? "bg-blue-900 text-white"
-                      : "bg-white/70 text-gray-700 hover:bg-white"
-                  }`}
                   onClick={() => handleSubcategoryChange(subcategory.id)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg border transition-all ${
+                    isActive
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                  }`}
                 >
                   {subcategory.label}
                 </button>
-              ))}
-            </div>
-
-            {filteredListings.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-2">
-                  {filteredListings.map((listing) => (
-                    <BusinessListingCard
-                      key={listing.id}
-                      listing={listing}
-                      categoryKey={listing.subcategoryId || listing.subcategory || data.categoryId || data.slug}
-                      className="card-float"
-                    />
-                  ))}
-                </div>
-            ) : (
-              <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-                No vendors found for this subcategory.
-              </div>
-            )}
+              );
+            })}
           </div>
-        </section>
-      </div>
 
-      {!mobileFilterOpen ? (
-        <button
-          type="button"
-          onClick={() => setMobileFilterOpen(true)}
-          className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-4 z-40 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg md:hidden"
-        >
-          <span className="inline-flex items-center gap-2 text-sm font-semibold">
-            <SlidersHorizontal size={16} />
-            Filters
-          </span>
-        </button>
-      ) : null}
+          <div className="h-6 w-px bg-slate-200 shrink-0 hidden md:block" />
 
-      {mobileFilterOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Locality Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer"
+              value={selectedSublocality}
+              onChange={(event) => handleSublocalityChange(event.target.value)}
+            >
+              <option value="All">All areas</option>
+              {localitiesForSelectedCity.map((locality) => (
+                <option key={locality} value={locality}>
+                  {locality}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Verified Toggle */}
           <button
             type="button"
-            className="absolute inset-0 bg-black/35"
-            onClick={() => setMobileFilterOpen(false)}
-            aria-label="Close filters"
+            onClick={handleVerifiedToggle}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
+              filterVerified
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            Verified
+          </button>
+
+          {/* Top Rated Toggle */}
+          <button
+            type="button"
+            onClick={handleTopRatedToggle}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
+              filterTopRated
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            Top Rated
+          </button>
+
+          {/* Budget Dropdown Placeholder */}
+          <div className="relative shrink-0">
+            <select
+              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-semibold text-slate-700 outline-none transition cursor-pointer"
+              disabled
+            >
+              <option>Budget</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* More Filters Button */}
+          <button
+            type="button"
+            onClick={() => setIsMoreFiltersOpen(true)}
+            className="px-4 py-2 text-sm font-semibold rounded-lg border bg-white text-slate-700 border-slate-300 hover:bg-slate-50 flex items-center gap-2 shrink-0"
+          >
+            <SlidersHorizontal size={14} />
+            More Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Card Grid Layout */}
+      <div className="w-full max-w-full px-4 md:px-12 py-8 min-h-[400px]">
+        {filteredListings.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredListings.map((listing) => (
+              <BusinessListingCard
+                key={listing.id}
+                listing={listing}
+                categoryKey={listing.subcategoryId || listing.subcategory || data.categoryId || data.slug}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+            No vendors found matching the filter criteria.
+          </div>
+        )}
+      </div>
+
+      <div className="w-full max-w-full px-4 md:px-12 mt-10">
+        <Footer />
+      </div>
+
+      {/* More Filters Overlay Modal */}
+      {isMoreFiltersOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setIsMoreFiltersOpen(false)}
           />
 
-          <section className="fixed bottom-0 left-0 w-full bg-white rounded-t-2xl p-5 shadow-xl md:hidden max-h-[80vh] overflow-y-auto">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Filters</h3>
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md bg-white rounded-2xl p-6 shadow-xl border border-slate-100 z-10 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <SlidersHorizontal size={18} className="text-blue-600" />
+                More Filters
+              </h3>
               <button
                 type="button"
-                onClick={() => setMobileFilterOpen(false)}
-                className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-600"
-                aria-label="Close filter panel"
+                onClick={() => setIsMoreFiltersOpen(false)}
+                className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-600 hover:bg-slate-100 transition"
+                aria-label="Close filters"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="flex-1 overflow-y-auto py-4 space-y-6 pr-1 no-scrollbar">
+              {/* Locality Section */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Sublocality</div>
-                <select
-                  className="w-full appearance-none rounded-xl border border-[#cfd8ea] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-[0_1px_3px_rgba(15,23,42,0.06)] outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                  value={selectedSublocality}
-                  onChange={(event) => handleSublocalityChange(event.target.value)}
-                >
-                  <option value="All">All areas</option>
-                  {localitiesForSelectedCity.map((locality) => (
-                    <option key={locality} value={locality}>
-                      {locality}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Subcategory</div>
-                <div className="space-y-2">
-                  {filterOptions.map((subcategory) => (
-                    <button
-                      key={subcategory.id}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all btn-hover ${
-                        selectedSubcategory === subcategory.id
-                          ? "bg-blue-900 text-white"
-                          : "bg-slate-50 text-gray-700 hover:bg-slate-100"
-                      }`}
-                      onClick={() => handleSubcategoryChange(subcategory.id)}
-                    >
-                      {subcategory.label}
-                    </button>
-                  ))}
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Sublocality / Area
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer shadow-sm"
+                    value={selectedSublocality}
+                    onChange={(event) => handleSublocalityChange(event.target.value)}
+                  >
+                    <option value="All">All areas</option>
+                    {localitiesForSelectedCity.map((locality) => (
+                      <option key={locality} value={locality}>
+                        {locality}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
 
+              {/* Subcategories Section */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Subcategory
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {filterOptions.map((subcategory) => {
+                    const isActive = selectedSubcategory === subcategory.id;
+                    return (
+                      <button
+                        key={subcategory.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                          isActive
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70"
+                        }`}
+                        onClick={() => handleSubcategoryChange(subcategory.id)}
+                      >
+                        {subcategory.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setMobileFilterOpen(false)}
-                className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"
+                onClick={() => setIsMoreFiltersOpen(false)}
+                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-md transition"
               >
                 Apply Filters
               </button>
             </div>
-          </section>
+          </div>
         </div>
-      ) : null}
-
-      <div className="mt-10 px-4 sm:px-6 lg:px-8">
-        <Footer />
-      </div>
+      )}
     </main>
   );
 }
