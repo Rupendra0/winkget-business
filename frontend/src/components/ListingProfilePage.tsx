@@ -771,7 +771,7 @@ export default function ListingProfilePage({
   );
 
   const renderBusinessContactDetails = (sectionId?: string) => (
-    <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-8">
+    <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-slate-900">
         <MapPin size={20} className="text-[#2563eb]" />
         <h3 className="text-xl font-bold font-heading">Address & Contact Details</h3>
@@ -1190,9 +1190,9 @@ export default function ListingProfilePage({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-white px-0 pb-24 md:pb-10 lg:overflow-visible">
+    <main className="min-h-screen overflow-x-hidden bg-slate-50 sm:bg-white px-0 pb-24 md:pb-10 lg:overflow-visible">
       <div className="mx-auto w-full space-y-0">
-        <section className="bg-white pb-4 pt-0 sm:pb-5 sm:pt-0">
+        <section className="bg-slate-50 sm:bg-white pb-4 pt-0 sm:pb-5 sm:pt-0">
           {/* Banner Section */}
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-white">
             <div className="relative h-48 sm:h-60 lg:h-[300px] w-full">
@@ -1211,7 +1211,7 @@ export default function ListingProfilePage({
 
           {/* Details Card Section */}
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-white border-b border-slate-100">
-            <div className="mx-auto w-full px-6 sm:px-12 md:px-16 lg:px-20 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="mx-auto w-full px-2 sm:px-12 md:px-16 lg:px-20 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               
               {/* Left Side: Logo & Vendor Info */}
               <div className="flex items-center gap-4 sm:gap-5 min-w-0">
@@ -1239,7 +1239,7 @@ export default function ListingProfilePage({
                       {profile.name}
                     </h1>
                     {isVerified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
+                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
                         <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
                         Verified
                       </span>
@@ -1257,8 +1257,8 @@ export default function ListingProfilePage({
                       </span>
                     )}
 
-                    {/* Open Now Badge */}
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#dcfce7] text-[#15803d]`}>
+                    {/* Open Now Badge (Desktop only) */}
+                    <span className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#dcfce7] text-[#15803d]">
                       <Clock size={12} className="shrink-0" />
                       {liveStoreOpenState === true ? "Open Now" : liveStoreOpenState === false ? "Closed" : "Open Now"}
                     </span>
@@ -1284,11 +1284,25 @@ export default function ListingProfilePage({
                       </span>
                     </span>
                   </div>
+
+                  {/* Pills Row (Mobile only, placed below the reviews/ratings line) */}
+                  <div className="flex sm:hidden items-center gap-2 mt-2">
+                    {isVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
+                        <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
+                        Verified
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#dcfce7] text-[#15803d]">
+                      <Clock size={12} className="shrink-0" />
+                      {liveStoreOpenState === true ? "Open Now" : liveStoreOpenState === false ? "Closed" : "Open Now"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Right Side: Follow Button */}
-              <div className="flex items-center shrink-0 self-start md:self-center">
+              <div className="hidden sm:flex items-center shrink-0 self-start md:self-center">
                 <button
                   type="button"
                   onClick={handleShare}
@@ -1304,8 +1318,8 @@ export default function ListingProfilePage({
 
           {/* Action Buttons Row */}
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-white border-b border-slate-100 py-3.5 mb-6">
-            <div className="mx-auto w-full px-6 sm:px-12 md:px-16 lg:px-20">
-              <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:gap-3 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible">
+            <div className="mx-auto w-full px-2 sm:px-12 md:px-16 lg:px-20">
+              <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:gap-3 pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible">
                 
                 {/* 1. My Store / Services Button */}
                 {isServiceProvider ? (
@@ -1463,7 +1477,7 @@ export default function ListingProfilePage({
           ) : null}
 
           {/* Grid 1: Upper Content (Overview & Contact/Enquiry details) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
+          <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-2 sm:px-12 md:px-16 lg:px-20">
             
             {/* Left Column of Grid 1 */}
             <div className="space-y-6 min-w-0">
@@ -1500,7 +1514,7 @@ export default function ListingProfilePage({
                 </div>
 
                 {/* Inner Content Card Body */}
-                <div className="px-6 pb-6 pt-4 sm:px-8 sm:pb-8 sm:pt-5 space-y-6">
+                <div className="px-4 pb-6 pt-4 sm:px-8 sm:pb-8 sm:pt-5 space-y-6">
                 
                 {/* 1. Gallery Section (only when NOT on services tab) */}
                 {activeTab !== "services" && (
@@ -1705,8 +1719,8 @@ export default function ListingProfilePage({
 
           {/* Full-width Business Info Card (Spanning between Grid 1 and Grid 2) */}
           {profile.description ? (
-            <div className="mx-auto w-full px-0 sm:px-12 md:px-16 lg:px-20 mt-6">
-              <div className="rounded-none border-x-0 sm:rounded-2xl border border-slate-100 bg-white p-6">
+            <div className="mx-auto w-full px-2 sm:px-12 md:px-16 lg:px-20 mt-6">
+              <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-6">
                 {/* Desktop View (sm and up) */}
                 <div className="hidden sm:flex items-start gap-4">
                   {/* Logo fallback box */}
@@ -1800,7 +1814,7 @@ export default function ListingProfilePage({
           ) : null}
 
           {/* Grid 2: Reviews & Ratings */}
-          <div id="listing-reviews" className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-6 sm:px-12 md:px-16 lg:px-20">
+          <div id="listing-reviews" className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start mt-6 w-full mx-auto px-2 sm:px-12 md:px-16 lg:px-20">
             {/* Left Column of Grid 2 (Reviews Section) */}
             <div className="order-2 lg:order-1 space-y-4 w-full min-w-0">
               <h2 className="text-xl font-bold text-slate-900 font-heading">Reviews</h2>
@@ -1816,7 +1830,7 @@ export default function ListingProfilePage({
                   const authorInitials = review.author ? review.author.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) : 'U';
 
                   return (
-                    <div key={review.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 space-y-3">
+                    <div key={review.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 sm:p-6 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1953c2] text-sm font-bold text-white font-heading">
@@ -1965,7 +1979,7 @@ export default function ListingProfilePage({
             <div className="order-1 lg:order-2 space-y-6 min-w-0 w-full lg:sticky lg:top-24">
               <div className="space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 font-heading">Ratings</h2>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 text-center space-y-4">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 sm:p-6 text-center space-y-4">
                   <div>
                     <p className="text-5xl font-extrabold text-slate-950 font-heading leading-none">
                       {roundedRating > 0 ? roundedRating.toFixed(1) : "5.0"}
@@ -2009,7 +2023,7 @@ export default function ListingProfilePage({
                 </div>
 
                 {/* Review Form Box */}
-                <div className="rounded-2xl bg-slate-50/50 p-6 flex flex-col items-center border border-slate-100">
+                <div className="rounded-2xl bg-slate-50/50 p-3 sm:p-6 flex flex-col items-center border border-slate-100">
                   {authLoading ? (
                     <p className="text-[15px] font-medium text-slate-500">Checking login status...</p>
                   ) : !currentUser ? (
@@ -2116,9 +2130,9 @@ export default function ListingProfilePage({
           </div>
 
           {/* Mobile-only Enquiry Form and Address & Contact Details Cards */}
-          <div className="block lg:hidden mt-6 space-y-6 w-full mx-auto px-6 sm:px-12 md:px-16">
+          <div className="block lg:hidden mt-6 space-y-6 w-full mx-auto px-2 sm:px-12 md:px-16">
             {/* Enquiry Form Card */}
-            <div className="rounded-2xl border border-slate-100 bg-white p-8">
+            <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
               <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
               {renderInquiryForm()}
             </div>
