@@ -512,8 +512,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
 
     return withoutShippingKeyword || normalized;
   }, [shippingLabel]);
-  const availabilityCompactValue = isStoreClosed ? "No" : "Yes";
-  const shippingCompactValue = /free/i.test(shippingValue) ? "Free" : "Yes";
   const joinedLabel = useMemo(() => {
     const createdAtValue = String(data.createdAt || "").trim();
     if (createdAtValue) {
@@ -1021,95 +1019,6 @@ export default function StorePage({ data }: { data: StorePageData }) {
               </div>
             </div>
           </div>
-        </section>
-
-        <section className="hidden rounded-2xl bg-white/90 p-2.5 sm:-mt-6 sm:block sm:p-3 lg:-mt-9 lg:relative lg:left-1/2 lg:w-[100dvw] lg:-translate-x-1/2">
-          <div className="grid grid-cols-4 gap-2 sm:hidden">
-            <article className="rounded-lg bg-amber-50/80 px-1.5 py-2 text-center">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Rate</p>
-              <div className="mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold text-slate-900">
-                <Star size={11} className="fill-amber-400 text-amber-400" aria-hidden="true" />
-                <span>{ratingLabel(storeReviewStats.rating)}</span>
-              </div>
-            </article>
-
-            <article className={`rounded-lg px-1.5 py-2 text-center ${availabilityCardClass}`}>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Avail</p>
-              <div className={`mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold ${availabilityToneClass}`}>
-                <Truck size={11} aria-hidden="true" />
-                <span>{availabilityCompactValue}</span>
-              </div>
-            </article>
-
-            <article className={`rounded-lg px-1.5 py-2 text-center ${statusCardClass}`}>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
-              <div className={`mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold ${statusToneClass}`}>
-                <Store size={11} aria-hidden="true" />
-                <span>{statusLabel}</span>
-              </div>
-            </article>
-
-            <article className="rounded-lg px-1.5 py-2 text-center">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ship</p>
-              <div className="mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold text-emerald-700">
-                <CheckCircle2 size={11} aria-hidden="true" />
-                <span>{shippingCompactValue}</span>
-              </div>
-            </article>
-          </div>
-
-          <div className="hidden gap-2.5 sm:grid sm:grid-cols-4">
-            <article className="rounded-2xl border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ratings</p>
-              <div className="mt-2.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star
-                      key={`store-rating-star-${index}`}
-                      size={15}
-                      className={index < ratingStars ? "fill-amber-400 text-amber-400" : "text-slate-300"}
-                      aria-hidden="true"
-                    />
-                  ))}
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold leading-none text-slate-900">{ratingLabel(storeReviewStats.rating)}</p>
-                  <p className="mt-1 text-[11px] font-medium leading-none text-slate-500">{storeReviewStats.reviews} reviews</p>
-                </div>
-              </div>
-            </article>
-
-            <article className={`rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ${availabilityCardClass}`}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Availability</p>
-              <div className="mt-2 flex items-center gap-2.5">
-                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-current/10 bg-emerald-50 ${availabilityToneClass}`}>
-                  <Truck size={17} aria-hidden="true" />
-                </span>
-                <p className={`text-base font-semibold leading-tight sm:text-lg ${availabilityToneClass}`}>{availabilityLabel}</p>
-              </div>
-            </article>
-
-            <article className={`rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ${statusCardClass}`}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Status</p>
-              <div className="mt-2 flex items-center gap-2.5">
-                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-current/10 bg-emerald-50 ${statusToneClass}`}>
-                  <Store size={17} aria-hidden="true" />
-                </span>
-                <p className={`text-base font-semibold leading-tight sm:text-lg ${statusToneClass}`}>{statusLabel}</p>
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Shipping</p>
-              <div className="mt-2 flex items-center gap-2.5">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
-                  <CheckCircle2 size={17} aria-hidden="true" />
-                </span>
-                <p className="text-base font-semibold leading-tight text-emerald-700 sm:text-lg">{shippingValue}</p>
-              </div>
-            </article>
-          </div>
-                  <div className="mt-1 mb-0 h-[1px] w-full bg-gradient-to-r from-transparent via-gray-300 to-transparent sm:my-2"></div>
         </section>
 
         <section className="-mt-6 sm:-mt-6 lg:mt-0">
