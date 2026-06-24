@@ -396,6 +396,32 @@ export async function fetchVendorById(id: string): Promise<CatalogVendorDetail |
   }
 }
 
+export async function fetchVendorPublicProfileById(id: string): Promise<CatalogVendorDetail | null> {
+  const vendorId = String(id || "").trim();
+  if (!vendorId) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}/public-profile`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as VendorDetailResponse;
+    if (!payload.ok || !payload.vendor) {
+      return null;
+    }
+
+    return payload.vendor;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchVendorStoreProducts(
   vendorId: string,
   filters?: {

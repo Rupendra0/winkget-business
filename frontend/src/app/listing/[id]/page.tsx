@@ -1,5 +1,5 @@
 import ListingProfilePage from "@/components/ListingProfilePage";
-import { fetchVendorById, toListingProfileFromVendor } from "@/lib/catalogClient";
+import { fetchVendorPublicProfileById, toListingProfileFromVendor } from "@/lib/catalogClient";
 import { resolveStoreDataById } from "@/lib/storeCatalog";
 import { notFound } from "next/navigation";
 
@@ -9,14 +9,15 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const liveVendor = await fetchVendorById(id);
+  const liveVendor = await fetchVendorPublicProfileById(id);
 
   if (!liveVendor) {
     notFound();
   }
 
-  const storeData = await resolveStoreDataById(id);
   const profile = toListingProfileFromVendor(liveVendor);
+  const shouldLoadStoreData = String(profile.category || "").trim().toLowerCase() === "restaurant";
+  const storeData = shouldLoadStoreData ? await resolveStoreDataById(id) : null;
 
   // Listing profile should primarily reflect Shop media.
   // Use MyStore media only as fallback when Shop media is not set.

@@ -161,6 +161,8 @@ const formatReviewDate = (value: string) => {
 
 const INQUIRY_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INQUIRY_PHONE_REGEX = /^[0-9]{10}$/;
+const INITIAL_REVIEW_LIMIT = 5;
+const FULL_REVIEW_LIMIT = 40;
 
 const toStoreProductsFromMenuItems = (profile: ListingProfile): StoreProduct[] => {
   if (!Array.isArray(profile.menuItems) || profile.menuItems.length === 0) {
@@ -246,6 +248,8 @@ export default function ListingProfilePage({
   const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false);
+  const [hasLoadedFullReviewBatch, setHasLoadedFullReviewBatch] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [inquiryName, setInquiryName] = useState("");
   const [inquiryPhone, setInquiryPhone] = useState("");
@@ -294,13 +298,16 @@ export default function ListingProfilePage({
       setViewerHasReviewed(false);
       setReviewActionMessage(null);
       setEditingReviewId(null);
-      const result = await fetchBusinessReviews(profile.id, 40);
+      setShowAllReviews(false);
+      setHasLoadedFullReviewBatch(false);
+      const result = await fetchBusinessReviews(profile.id, INITIAL_REVIEW_LIMIT);
       if (!active) return;
 
       if (result.ok) {
         setReviews(result.reviews);
         setReviewSummary(result.summary);
         setViewerHasReviewed(result.viewerHasReviewed);
+        setHasLoadedFullReviewBatch(result.reviews.length >= Math.min(FULL_REVIEW_LIMIT, Math.max(0, Number(result.summary.reviews || 0))));
       }
 
       setReviewsLoading(false);
@@ -487,6 +494,25 @@ export default function ListingProfilePage({
     return reviews.find((review) => review.reviewerId === currentUser.id) || null;
   }, [currentUser?.id, reviews]);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const handleLoadMoreReviews = useCallback(async () => {
+    if (hasLoadedFullReviewBatch || isLoadingMoreReviews) {
+      setShowAllReviews(true);
+      return;
+    }
+
+    setIsLoadingMoreReviews(true);
+    const result = await fetchBusinessReviews(profile.id, FULL_REVIEW_LIMIT);
+
+    if (result.ok) {
+      setReviews(result.reviews);
+      setReviewSummary(result.summary);
+      setViewerHasReviewed(result.viewerHasReviewed);
+      setHasLoadedFullReviewBatch(true);
+    }
+
+    setShowAllReviews(true);
+    setIsLoadingMoreReviews(false);
+  }, [hasLoadedFullReviewBatch, isLoadingMoreReviews, profile.id]);
   const reviewsToDisplay = useMemo(() => {
     const combined = [...DUMMY_REVIEWS, ...reviews.filter(r => !DUMMY_REVIEWS.some(d => d.id === r.id))];
     if (!showAllReviews) {
@@ -1967,10 +1993,11 @@ export default function ListingProfilePage({
               {!showAllReviews && (
                 <button
                   type="button"
-                  onClick={() => setShowAllReviews(true)}
-                  className="w-full border border-slate-200 bg-white py-3 px-6 text-[15px] font-semibold text-slate-700 rounded-full hover:bg-slate-50 cursor-pointer flex items-center justify-center transition duration-155"
+                  onClick={handleLoadMoreReviews}
+                  disabled={isLoadingMoreReviews}
+                  className="w-full border border-slate-200 bg-white py-3 px-6 text-[15px] font-semibold text-slate-700 rounded-full hover:bg-slate-50 cursor-pointer flex items-center justify-center transition duration-155 disabled:cursor-wait disabled:opacity-70"
                 >
-                  Load More Reviews
+                  {isLoadingMoreReviews ? "Loading Reviews..." : "Load More Reviews"}
                 </button>
               )}
             </div>

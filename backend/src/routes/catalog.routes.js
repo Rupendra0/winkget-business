@@ -318,6 +318,14 @@ const toVendorDetail = (vendor, reviewSummaryByVendorId) => {
   };
 };
 
+const toVendorPublicProfile = (vendor, reviewSummaryByVendorId) => {
+  const detail = toVendorDetail(vendor, reviewSummaryByVendorId);
+  return {
+    ...detail,
+    gstNumber: undefined,
+  };
+};
+
 const toSubcategorySummary = (subcategory) => ({
   id: String(subcategory._id),
   name: subcategory.name,
@@ -772,6 +780,41 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
   } catch (error) {
     logStep("Error caught in handler: " + error.message);
     return res.status(500).json({ ok: false, message: "Failed to load vendors", error: error.message });
+  }
+}));
+
+router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) => {
+  try {
+    const vendorId = String(req.params.id || "").trim();
+    if (!OBJECT_ID_REGEX.test(vendorId)) {
+      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
+    }
+
+    const vendor = await User.findOne({
+      _id: vendorId,
+      role: "vendor",
+      vendorStatus: "approved",
+    })
+      .select(
+        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+      )
+      .lean();
+
+    if (!vendor) {
+      return res.status(404).json({ ok: false, message: "Vendor not found" });
+    }
+
+    await User.populate(vendor, { path: "businessCategory", select: "_id name slug" });
+    await User.populate(vendor, { path: "businessSubcategory", select: "_id name slug" });
+
+    const reviewSummaryByVendorId = await getVendorReviewSummaryMap([vendor._id]);
+
+    return res.status(200).json({
+      ok: true,
+      vendor: toVendorPublicProfile(vendor, reviewSummaryByVendorId),
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load vendor public profile", error: error.message });
   }
 }));
 
