@@ -1092,32 +1092,78 @@ export default function StorePage({ data }: { data: StorePageData }) {
           </section>
 
           <div className="mt-4 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:min-w-0 lg:grid-cols-[240px_minmax(0,1fr)]">
-            <aside className="hidden rounded-2xl bg-white/80 p-5 space-y-6 h-fit lg:block lg:sticky lg:top-24">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Filter size={16} />
-                Filters
+            <aside className="hidden h-fit rounded-lg bg-white px-4 py-4 lg:sticky lg:top-24 lg:block">
+              <div className="flex items-center justify-between">
+                <div className="text-[14px] font-bold text-[#1f2937]">Filters</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFilters({});
+                    setSelectedCategoryBarItemId("");
+                  }}
+                  className="text-[12px] font-semibold text-[#0b7cff]"
+                >
+                  Clear All
+                </button>
               </div>
 
-              {data.filters.map((group) => (
-                <div key={group.label}>
-                  <div className="text-xs font-semibold text-slate-500 uppercase mb-2">
-                    {group.label}
-                  </div>
-                  <div className="space-y-2">
-                    {group.options.map((option) => (
-                      <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300"
-                          checked={isFilterChecked(group.label, option)}
-                          onChange={() => toggleFilterOption(group.label, option)}
-                        />
-                        {option}
-                      </label>
-                    ))}
-                  </div>
+              <label className="mt-4 block">
+                <span className="mb-2 block text-[13px] font-semibold text-[#374151]">Search Products</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[#0b7cff]">
+                    <Filter size={13} aria-hidden="true" />
+                  </span>
+                  <input
+                    type="search"
+                    placeholder="Search in store"
+                    className="w-full rounded border border-[#dce3ee] py-2 pl-7 pr-2 text-[12px] font-medium text-[#374151] outline-none focus:border-[#0b7cff]"
+                  />
                 </div>
-              ))}
+              </label>
+
+              <div className="mt-4">
+                <p className="mb-1.5 text-[13px] font-semibold text-[#374151]">Price Range</p>
+                <input type="range" className="w-full accent-[#0b7cff]" />
+                <div className="mt-1 flex justify-between text-[12px] font-medium text-[#6b7280]">
+                  <span>₹500</span>
+                  <span>₹5,00,000+</span>
+                </div>
+              </div>
+
+              <div className="mt-3 divide-y divide-[#edf0f4] border-t border-[#edf0f4]">
+                {data.filters.map((group) => (
+                  <details key={group.label} className="group py-2.5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold text-[#374151]">
+                      {group.label}
+                      <ChevronDown size={14} className="text-[#6b7280] transition group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-2 space-y-1.5">
+                      {group.options.map((option) => (
+                        <label key={option} className="flex items-center gap-2 text-[13px] text-[#4b5563]">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-slate-300 accent-[#0b7cff]"
+                            checked={isFilterChecked(group.label, option)}
+                            onChange={() => toggleFilterOption(group.label, option)}
+                          />
+                          <span className="line-clamp-1">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                setActiveFilters({});
+                setSelectedCategoryBarItemId("");
+              }}
+                className="mt-20 w-full rounded border border-[#0b7cff] bg-white px-3 py-2.5 text-[13px] font-bold text-[#0b7cff] transition hover:bg-blue-50"
+              >
+                Clear Filters
+              </button>
             </aside>
 
             <div className="space-y-8 lg:min-w-0">
@@ -1362,7 +1408,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-slate-200 bg-white p-5">
+              <div className="grid grid-cols-2 gap-3 border-t border-slate-200 bg-white p-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFilters({});
+                    setSelectedCategoryBarItemId("");
+                  }}
+                  className="w-full rounded-xl border border-blue-600 bg-white px-4 py-3 text-sm font-semibold text-blue-700"
+                >
+                  Clear Filters
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsMobileFiltersOpen(false)}
