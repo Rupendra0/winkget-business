@@ -1707,7 +1707,8 @@ export default function ListingProfilePage({
           {profile.description ? (
             <div className="mx-auto w-full px-0 sm:px-12 md:px-16 lg:px-20 mt-6">
               <div className="rounded-none border-x-0 sm:rounded-2xl border border-slate-100 bg-white p-6">
-                <div className="flex items-start gap-4">
+                {/* Desktop View (sm and up) */}
+                <div className="hidden sm:flex items-start gap-4">
                   {/* Logo fallback box */}
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
                     {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
@@ -1737,6 +1738,58 @@ export default function ListingProfilePage({
                       </div>
                       <div>
                         <p className="text-[16px] font-bold text-slate-900 font-heading">10,000+</p>
+                        <p className="text-xs text-slate-400 font-medium">Happy Families</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile View (below sm) */}
+                <div className="flex sm:hidden flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    {/* Logo fallback box */}
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
+                      {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-xl font-bold text-slate-900 font-heading">Business Info</h3>
+                      <span className="text-slate-400 inline-flex items-center justify-center bg-slate-50 border border-slate-100 rounded-full h-4 w-4 text-[10px] font-bold">i</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 min-w-0">
+                    <p className={`text-[15px] leading-relaxed text-slate-600 ${!mobileDescExpanded ? 'line-clamp-4' : ''}`}>
+                      {profile.description}
+                    </p>
+
+                    {profile.description.length > 150 && (
+                      <div className="pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setMobileDescExpanded(!mobileDescExpanded)}
+                          className="inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-[#2563eb] transition duration-155 cursor-pointer"
+                        >
+                          {mobileDescExpanded ? "Read Less" : "Read More"}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Stats Row */}
+                    <div className="pt-3 flex flex-wrap gap-8">
+                      <div>
+                        <p className="text-[15px] font-bold text-slate-900 font-heading">
+                          {profile.establishmentYear 
+                            ? `${Math.max(1, new Date().getFullYear() - Number(profile.establishmentYear))}+ Years`
+                            : "25+ Years"}
+                        </p>
+                        <p className="text-xs text-slate-400 font-medium">of Experience</p>
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-bold text-slate-900 font-heading">50+ Projects</p>
+                        <p className="text-xs text-slate-400 font-medium">Completed</p>
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-bold text-slate-900 font-heading">10,000+</p>
                         <p className="text-xs text-slate-400 font-medium">Happy Families</p>
                       </div>
                     </div>
