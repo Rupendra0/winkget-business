@@ -259,7 +259,7 @@ const uniqueStrings = (values: string[]) => {
 export async function fetchCategories(): Promise<CatalogCategory[]> {
   try {
     const response = await fetch(`${BACKEND_URL}/api/categories`, {
-      cache: "no-store",
+      next: { revalidate: 300 },
     });
 
     if (!response.ok) {
@@ -280,7 +280,7 @@ export async function fetchCategories(): Promise<CatalogCategory[]> {
 export async function fetchCities(): Promise<CatalogCity[]> {
   try {
     const response = await fetch(`${BACKEND_URL}/api/cities`, {
-      cache: "no-store",
+      next: { revalidate: 300 },
     });
 
     if (!response.ok) {
@@ -311,7 +311,7 @@ export async function fetchSubcategories(filters: {
     });
 
     const response = await fetch(`${BACKEND_URL}/api/subcategories${query}`, {
-      cache: "no-store",
+      next: { revalidate: 300 },
     });
 
     if (!response.ok) {
@@ -396,15 +396,24 @@ export async function fetchVendorById(id: string): Promise<CatalogVendorDetail |
   }
 }
 
-export async function fetchVendorPublicProfileById(id: string): Promise<CatalogVendorDetail | null> {
+export async function fetchVendorPublicProfileById(
+  id: string,
+  options?: {
+    view?: "store";
+  }
+): Promise<CatalogVendorDetail | null> {
   const vendorId = String(id || "").trim();
   if (!vendorId) {
     return null;
   }
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}/public-profile`, {
-      cache: "no-store",
+    const query = toQueryString({
+      view: options?.view,
+    });
+    const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}/public-profile${query}`, {
+      cache: options?.view === "store" ? "no-store" : undefined,
+      next: options?.view === "store" ? undefined : { revalidate: 30 },
     });
 
     if (!response.ok) {
@@ -428,6 +437,7 @@ export async function fetchVendorStoreProducts(
     status?: "draft" | "pending" | "live" | "rejected" | "archived";
     search?: string;
     limit?: number;
+    view?: "store";
   }
 ): Promise<CatalogVendorProduct[]> {
   const normalizedVendorId = String(vendorId || "").trim();
@@ -440,10 +450,12 @@ export async function fetchVendorStoreProducts(
       status: filters?.status,
       search: filters?.search,
       limit: Number.isFinite(Number(filters?.limit)) ? String(filters?.limit) : undefined,
+      view: filters?.view,
     });
 
     const response = await fetch(`${BACKEND_URL}/api/vendors/${normalizedVendorId}/products${query}`, {
-      cache: "no-store",
+      cache: filters?.view === "store" ? "no-store" : undefined,
+      next: filters?.view === "store" ? undefined : { revalidate: 30 },
     });
 
     if (!response.ok) {

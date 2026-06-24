@@ -419,7 +419,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
     [data.id, data.rating, data.reviews, isReviewHydrated, reviewUpdateVersion]
   );
 
-  const productMap = buildProductMap(data.products);
+  const productMap = useMemo(() => buildProductMap(data.products), [data.products]);
 
   const buildProductHref = useCallback(
     (product: StoreProduct) =>
@@ -482,13 +482,15 @@ export default function StorePage({ data }: { data: StorePageData }) {
     setCartItemQuantity(productId, nextQuantity);
   }, []);
 
-  const allProducts = data.products;
-  const rawFeaturedProducts = data.featured.productIds
-    .map((id) => productMap.get(id))
-    .filter(Boolean);
-  const rawTrendingProducts = data.trending.productIds
-    .map((id) => productMap.get(id))
-    .filter(Boolean);
+  const allProducts = useMemo(() => data.products, [data.products]);
+  const rawFeaturedProducts = useMemo(
+    () => data.featured.productIds.map((id) => productMap.get(id)).filter(Boolean),
+    [data.featured.productIds, productMap]
+  );
+  const rawTrendingProducts = useMemo(
+    () => data.trending.productIds.map((id) => productMap.get(id)).filter(Boolean),
+    [data.trending.productIds, productMap]
+  );
 
   const ratingStars = Math.max(0, Math.min(5, Math.round(storeReviewStats.rating)));
   const ratingSummary = `${ratingLabel(storeReviewStats.rating)} (${storeReviewStats.reviews})`;

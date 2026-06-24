@@ -2,6 +2,8 @@ import StorePage from "@/components/StorePage";
 import { resolveStoreDataById } from "@/lib/storeCatalog";
 import { notFound } from "next/navigation";
 
+export const revalidate = 30;
+
 export default async function StoreProfilePage({
   params,
 }: {

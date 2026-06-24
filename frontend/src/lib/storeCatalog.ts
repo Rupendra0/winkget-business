@@ -10,7 +10,7 @@ import {
 import { buildProductSlug, parseProductSlug, toSlugToken } from "@/data/productSlug";
 import {
   fetchSubcategories,
-  fetchVendorById,
+  fetchVendorPublicProfileById,
   fetchVendorStoreProducts,
   toListingProfileFromVendor,
   type CatalogSubcategory,
@@ -98,6 +98,7 @@ const parsePriceValue = (value: string | number | undefined, fallback = 0) => {
 
 const formatPriceText = (value: number) => `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const STORE_PRODUCT_LOAD_LIMIT = 40;
 
 const uniqueStrings = (values: Array<string | undefined>) => {
   const seen = new Set<string>();
@@ -789,7 +790,7 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
 
   const shouldPreferLiveVendor = OBJECT_ID_REGEX.test(resolvedId);
   const resolveLiveVendorStore = async () => {
-    const liveVendor = await fetchVendorById(resolvedId);
+    const liveVendor = await fetchVendorPublicProfileById(resolvedId, { view: "store" });
     if (!liveVendor) {
       return null;
     }
@@ -798,12 +799,12 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
     const [liveProducts, liveSubcategories] = await Promise.all([
       fetchVendorStoreProducts(resolvedId, {
         status: "live",
-        limit: 300,
+        limit: STORE_PRODUCT_LOAD_LIMIT,
+        view: "store",
       }),
       businessCategoryId
         ? fetchSubcategories({
             categoryId: businessCategoryId,
-            cacheBust: `store-${Date.now()}`,
           })
         : Promise.resolve([]),
     ]);

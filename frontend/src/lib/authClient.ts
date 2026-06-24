@@ -71,6 +71,7 @@ export type AuthUser = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const AUTH_TOKEN_KEY = "winkget:auth:token:v1";
+let currentUserRequest: Promise<AuthUser | null> | null = null;
 
 export function getStoredAuthToken(): string {
   if (typeof window === "undefined") return "";
@@ -158,23 +159,33 @@ if (typeof window !== "undefined" && !(window as any).__winkget_fetch_intercepte
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
-  try {
-    const headers = getAuthHeaders();
-    const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
-      credentials: "include",
-      cache: "no-store",
-      headers,
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload = await response.json();
-    return payload.user || null;
-  } catch {
-    return null;
+  if (currentUserRequest) {
+    return currentUserRequest;
   }
+
+  currentUserRequest = (async () => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        credentials: "include",
+        cache: "no-store",
+        headers,
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = await response.json();
+      return payload.user || null;
+    } catch {
+      return null;
+    } finally {
+      currentUserRequest = null;
+    }
+  })();
+
+  return currentUserRequest;
 }
 
 export const AUTH_BACKEND_URL = BACKEND_URL;

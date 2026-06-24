@@ -326,6 +326,14 @@ const toVendorPublicProfile = (vendor, reviewSummaryByVendorId) => {
   };
 };
 
+const toVendorStoreProfile = (vendor, reviewSummaryByVendorId) => {
+  const detail = toVendorPublicProfile(vendor, reviewSummaryByVendorId);
+  return {
+    ...detail,
+    shopGallery: [],
+  };
+};
+
 const toSubcategorySummary = (subcategory) => ({
   id: String(subcategory._id),
   name: subcategory.name,
@@ -790,13 +798,16 @@ router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) =>
       return res.status(400).json({ ok: false, message: "Invalid vendor id" });
     }
 
+    const isStoreView = String(req.query.view || "").trim().toLowerCase() === "store";
     const vendor = await User.findOne({
       _id: vendorId,
       role: "vendor",
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+        isStoreView
+          ? "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+          : "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
       )
       .lean();
 
@@ -811,7 +822,9 @@ router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) =>
 
     return res.status(200).json({
       ok: true,
-      vendor: toVendorPublicProfile(vendor, reviewSummaryByVendorId),
+      vendor: isStoreView
+        ? toVendorStoreProfile(vendor, reviewSummaryByVendorId)
+        : toVendorPublicProfile(vendor, reviewSummaryByVendorId),
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load vendor public profile", error: error.message });
