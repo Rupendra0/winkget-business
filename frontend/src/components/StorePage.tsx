@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Star,
   Filter,
@@ -307,6 +307,11 @@ export default function StorePage({ data }: { data: StorePageData }) {
   const [wishlistProductIds, setWishlistProductIds] = useState<Set<string>>(() => new Set());
   const [selectedCategoryBarItemId, setSelectedCategoryBarItemId] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, Set<string>>>({});
+  const [optimisticCategoryBarItemId, setOptimisticCategoryBarItemId] = useState("");
+  const [optimisticActiveFilters, setOptimisticActiveFilters] = useState<Record<string, Set<string>>>({});
+  const [isStoreFilterLoading, setIsStoreFilterLoading] = useState(false);
+  const [isStoreFilterPending, startStoreFilterTransition] = useTransition();
+  const isStoreFiltering = isStoreFilterPending || isStoreFilterLoading;
   const categoryRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -326,7 +331,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
     const optionKey = normalizeFilterToken(optionLabel);
     if (!groupKey || !optionKey) return;
 
-    setActiveFilters((prev) => {
+    const buildNextFilters = (prev: Record<string, Set<string>>) => {
       const next = { ...prev };
       const existing = new Set(next[groupKey] || []);
 
@@ -343,6 +348,12 @@ export default function StorePage({ data }: { data: StorePageData }) {
       }
 
       return next;
+    };
+
+    setIsStoreFilterLoading(true);
+    setOptimisticActiveFilters((prev) => buildNextFilters(prev));
+    startStoreFilterTransition(() => {
+      setActiveFilters((prev) => buildNextFilters(prev));
     });
   }, []);
 
@@ -350,10 +361,17 @@ export default function StorePage({ data }: { data: StorePageData }) {
     (groupLabel: string, optionLabel: string) => {
       const groupKey = normalizeFilterToken(groupLabel);
       const optionKey = normalizeFilterToken(optionLabel);
-      return Boolean(groupKey && optionKey && activeFilters[groupKey]?.has(optionKey));
+      return Boolean(groupKey && optionKey && optimisticActiveFilters[groupKey]?.has(optionKey));
     },
-    [activeFilters]
+    [optimisticActiveFilters]
   );
+
+  useEffect(() => {
+    if (!isStoreFilterLoading) return;
+
+    const loadingTimer = window.setTimeout(() => setIsStoreFilterLoading(false), 260);
+    return () => window.clearTimeout(loadingTimer);
+  }, [activeFilters, isStoreFilterLoading, selectedCategoryBarItemId]);
 
   useEffect(() => {
     const syncCartState = () => {
@@ -1041,14 +1059,19 @@ export default function StorePage({ data }: { data: StorePageData }) {
               >
                 {categoryItems.map((categoryItem) => {
                   const IconComponent = categoryItem.IconComponent;
-                  const isSelected = selectedCategoryBarItemId === categoryItem.id;
+                  const isSelected = optimisticCategoryBarItemId === categoryItem.id;
                   return (
                     <button
                       key={categoryItem.id}
                       type="button"
-                      onClick={() =>
-                        setSelectedCategoryBarItemId((current) => (current === categoryItem.id ? "" : categoryItem.id))
-                      }
+                      onClick={() => {
+                        const nextCategoryId = optimisticCategoryBarItemId === categoryItem.id ? "" : categoryItem.id;
+                        setOptimisticCategoryBarItemId(nextCategoryId);
+                        setIsStoreFilterLoading(true);
+                        startStoreFilterTransition(() => {
+                          setSelectedCategoryBarItemId(nextCategoryId);
+                        });
+                      }}
                       className="group min-w-[72px] shrink-0 snap-start text-center sm:min-w-[108px] lg:min-w-[128px]"
                       aria-pressed={isSelected}
                     >
@@ -1098,8 +1121,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <button
                   type="button"
                   onClick={() => {
+                    setOptimisticActiveFilters({});
+                    setOptimisticCategoryBarItemId("");
+                    setIsStoreFilterLoading(true);
+                    startStoreFilterTransition(() => {
                     setActiveFilters({});
                     setSelectedCategoryBarItemId("");
+                    });
                   }}
                   className="text-[12px] font-semibold text-[#0b7cff]"
                 >
@@ -1157,16 +1185,31 @@ export default function StorePage({ data }: { data: StorePageData }) {
               <button
                 type="button"
                 onClick={() => {
-                setActiveFilters({});
-                setSelectedCategoryBarItemId("");
-              }}
+                  setOptimisticActiveFilters({});
+                  setOptimisticCategoryBarItemId("");
+                  setIsStoreFilterLoading(true);
+                  startStoreFilterTransition(() => {
+                    setActiveFilters({});
+                    setSelectedCategoryBarItemId("");
+                  });
+                }}
                 className="mt-20 w-full rounded border border-[#0b7cff] bg-white px-3 py-2.5 text-[13px] font-bold text-[#0b7cff] transition hover:bg-blue-50"
               >
                 Clear Filters
               </button>
             </aside>
 
-            <div className="space-y-8 lg:min-w-0">
+            <div className="relative lg:min-w-0" aria-busy={isStoreFiltering}>
+              {isStoreFiltering ? (
+                <div className="absolute inset-0 z-10 flex items-start justify-center bg-white pt-16">
+                  <div className="text-center">
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">Updating products...</p>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className={isStoreFiltering ? "pointer-events-none space-y-8 transition-opacity" : "space-y-8 transition-opacity"}>
 
             {selectedCategoryBarItem && visibleProducts.length === 0 ? (
             <section className="rounded-2xl bg-white/80 p-2.5 sm:p-5 lg:min-w-0">
@@ -1227,6 +1270,7 @@ export default function StorePage({ data }: { data: StorePageData }) {
             </section>
 
             
+              </div>
           </div>
           </div>
 
@@ -1412,8 +1456,13 @@ export default function StorePage({ data }: { data: StorePageData }) {
                 <button
                   type="button"
                   onClick={() => {
+                    setOptimisticActiveFilters({});
+                    setOptimisticCategoryBarItemId("");
+                    setIsStoreFilterLoading(true);
+                    startStoreFilterTransition(() => {
                     setActiveFilters({});
                     setSelectedCategoryBarItemId("");
+                    });
                   }}
                   className="w-full rounded-xl border border-blue-600 bg-white px-4 py-3 text-sm font-semibold text-blue-700"
                 >

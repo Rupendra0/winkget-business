@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import Footer from "@/components/Footer";
@@ -76,6 +76,13 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
   const [filterVerified, setFilterVerified] = useState(false);
   const [filterTopRated, setFilterTopRated] = useState(false);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
+  const [optimisticSubcategory, setOptimisticSubcategory] = useState<string>(data.selectedSubcategoryId || "all");
+  const [optimisticSublocality, setOptimisticSublocality] = useState<string>("All");
+  const [optimisticVerified, setOptimisticVerified] = useState(false);
+  const [optimisticTopRated, setOptimisticTopRated] = useState(false);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [isFilterPending, startFilterTransition] = useTransition();
+  const isFiltering = isFilterPending || isFilterLoading;
 
   useEffect(() => {
     setIsReviewHydrated(true);
@@ -149,21 +156,25 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     const sublocalityFromQuery = String(searchParams.get("sublocality") || data.selectedSublocality || "All").trim();
     if (sublocalityFromQuery && sublocalityFromQuery !== selectedSublocality) {
       setSelectedSublocality(sublocalityFromQuery);
+      setOptimisticSublocality(sublocalityFromQuery);
     }
 
     const subcategoryFromQuery = String(searchParams.get("subcategoryId") || data.selectedSubcategoryId || "all").trim();
     if (subcategoryFromQuery && subcategoryFromQuery !== selectedSubcategory) {
       setSelectedSubcategory(subcategoryFromQuery);
+      setOptimisticSubcategory(subcategoryFromQuery);
     }
 
     const verifiedFromQuery = searchParams.get("verified") === "true";
     if (verifiedFromQuery !== filterVerified) {
       setFilterVerified(verifiedFromQuery);
+      setOptimisticVerified(verifiedFromQuery);
     }
 
     const topRatedFromQuery = searchParams.get("topRated") === "true";
     if (topRatedFromQuery !== filterTopRated) {
       setFilterTopRated(topRatedFromQuery);
+      setOptimisticTopRated(topRatedFromQuery);
     }
   }, [
     data.city,
@@ -207,30 +218,54 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     if (selectedCity && cityOptions.length > 0 && !cityOptions.includes(selectedCity)) {
       setSelectedCity(cityOptions[0]);
       setSelectedSublocality("All");
+      setOptimisticSublocality("All");
       updateQuery({ city: cityOptions[0], sublocality: null });
     }
   }, [cityOptions, selectedCity, updateQuery]);
 
+  useEffect(() => {
+    if (!isFilterLoading) return;
+
+    const loadingTimer = window.setTimeout(() => setIsFilterLoading(false), 260);
+    return () => window.clearTimeout(loadingTimer);
+  }, [filterTopRated, filterVerified, isFilterLoading, selectedSubcategory, selectedSublocality]);
+
   const handleSublocalityChange = (nextSublocality: string) => {
-    setSelectedSublocality(nextSublocality);
-    updateQuery({ sublocality: nextSublocality === "All" ? null : nextSublocality });
+    setOptimisticSublocality(nextSublocality);
+    setIsFilterLoading(true);
+    startFilterTransition(() => {
+      setSelectedSublocality(nextSublocality);
+      updateQuery({ sublocality: nextSublocality === "All" ? null : nextSublocality });
+    });
   };
 
   const handleSubcategoryChange = (nextSubcategoryId: string) => {
-    setSelectedSubcategory(nextSubcategoryId);
-    updateQuery({ subcategoryId: nextSubcategoryId === "all" ? null : nextSubcategoryId });
+    setOptimisticSubcategory(nextSubcategoryId);
+    setIsFilterLoading(true);
+    startFilterTransition(() => {
+      setSelectedSubcategory(nextSubcategoryId);
+      updateQuery({ subcategoryId: nextSubcategoryId === "all" ? null : nextSubcategoryId });
+    });
   };
 
   const handleVerifiedToggle = () => {
-    const nextVerified = !filterVerified;
-    setFilterVerified(nextVerified);
-    updateQuery({ verified: nextVerified ? "true" : null });
+    const nextVerified = !optimisticVerified;
+    setOptimisticVerified(nextVerified);
+    setIsFilterLoading(true);
+    startFilterTransition(() => {
+      setFilterVerified(nextVerified);
+      updateQuery({ verified: nextVerified ? "true" : null });
+    });
   };
 
   const handleTopRatedToggle = () => {
-    const nextTopRated = !filterTopRated;
-    setFilterTopRated(nextTopRated);
-    updateQuery({ topRated: nextTopRated ? "true" : null });
+    const nextTopRated = !optimisticTopRated;
+    setOptimisticTopRated(nextTopRated);
+    setIsFilterLoading(true);
+    startFilterTransition(() => {
+      setFilterTopRated(nextTopRated);
+      updateQuery({ topRated: nextTopRated ? "true" : null });
+    });
   };
 
   const filteredListings = useMemo(() => {
@@ -270,7 +305,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           {/* Subcategory Pills */}
           <div className="flex flex-row items-center gap-2 shrink-0">
             {displayedFilterOptions.map((subcategory) => {
-              const isActive = selectedSubcategory === subcategory.id;
+              const isActive = optimisticSubcategory === subcategory.id;
               return (
                 <button
                   key={subcategory.id}
@@ -294,7 +329,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           <div className="relative shrink-0">
             <select
               className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer"
-              value={selectedSublocality}
+              value={optimisticSublocality}
               onChange={(event) => handleSublocalityChange(event.target.value)}
             >
               <option value="All">All areas</option>
@@ -316,7 +351,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             type="button"
             onClick={handleVerifiedToggle}
             className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
-              filterVerified
+              optimisticVerified
                 ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
             }`}
@@ -329,7 +364,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             type="button"
             onClick={handleTopRatedToggle}
             className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
-              filterTopRated
+              optimisticTopRated
                 ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
             }`}
@@ -365,7 +400,17 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
       </div>
 
       {/* Card Grid Layout */}
-      <div className="w-full max-w-full px-4 md:px-12 py-8 min-h-[400px]">
+      <div className="relative w-full max-w-full px-4 md:px-12 py-8 min-h-[400px]" aria-busy={isFiltering}>
+        {isFiltering ? (
+          <div className="absolute inset-0 z-10 flex items-start justify-center bg-white pt-20">
+            <div className="text-center">
+              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+              <p className="mt-4 text-sm font-semibold text-slate-700">Updating results...</p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className={isFiltering ? "pointer-events-none transition-opacity" : "transition-opacity"}>
         {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredListings.map((listing) => (
@@ -377,10 +422,11 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+          <p className="py-12 text-center text-sm text-slate-500">
             No vendors found matching the filter criteria.
-          </div>
+          </p>
         )}
+        </div>
       </div>
 
       <div className="w-full max-w-full px-4 md:px-12 mt-10">
@@ -422,7 +468,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                 <div className="relative">
                   <select
                     className="w-full appearance-none rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer shadow-sm"
-                    value={selectedSublocality}
+                    value={optimisticSublocality}
                     onChange={(event) => handleSublocalityChange(event.target.value)}
                   >
                     <option value="All">All areas</option>
@@ -447,7 +493,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {filterOptions.map((subcategory) => {
-                    const isActive = selectedSubcategory === subcategory.id;
+                    const isActive = optimisticSubcategory === subcategory.id;
                     return (
                       <button
                         key={subcategory.id}
