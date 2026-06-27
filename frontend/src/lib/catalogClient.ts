@@ -412,8 +412,8 @@ export async function fetchVendorPublicProfileById(
       view: options?.view,
     });
     const response = await fetch(`${BACKEND_URL}/api/vendors/${vendorId}/public-profile${query}`, {
-      cache: options?.view === "store" ? "no-store" : undefined,
-      next: options?.view === "store" ? undefined : { revalidate: 30 },
+      cache: options?.view === "store" ? undefined : "no-store",
+      next: options?.view === "store" ? { revalidate: 30 } : undefined,
     });
 
     if (!response.ok) {
@@ -454,8 +454,8 @@ export async function fetchVendorStoreProducts(
     });
 
     const response = await fetch(`${BACKEND_URL}/api/vendors/${normalizedVendorId}/products${query}`, {
-      cache: filters?.view === "store" ? "no-store" : undefined,
-      next: filters?.view === "store" ? undefined : { revalidate: 30 },
+      cache: filters?.view === "store" ? undefined : "no-store",
+      next: filters?.view === "store" ? { revalidate: 30 } : undefined,
     });
 
     if (!response.ok) {

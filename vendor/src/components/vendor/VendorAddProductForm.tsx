@@ -36,8 +36,9 @@ type VariantDraft = {
   variantMrp: string;
   variantSellingPrice: string;
   variantStock: string;
-  variantImage: File | null;
-  variantExistingImage: string;
+  variantImages: File[];
+  variantExistingImages: string[];
+  customFields?: Record<string, string>;
 };
 
 type DescriptionBlock = {
@@ -52,10 +53,14 @@ type SpecificationPair = {
   value: string;
 };
 
+type DescriptionPoint = {
+  heading: string;
+  content: string;
+};
+
 type FieldValues = {
   productName: string;
   shortDescription: string;
-  longDescription: string;
   mrp: string;
   sellingPrice: string;
   stock: string;
@@ -64,10 +69,11 @@ type FieldValues = {
   badge: string;
   brand: string;
   tagsText: string;
-  attributesText: string;
   mainImage: File | null;
   images: File[];
   storePlacement: "none" | "featured" | "trending";
+  originCountry: string;
+  sellerName: string;
 };
 
 type CategorySelection = {
@@ -84,7 +90,6 @@ type ImagePreview = {
 
 const MAX_PRODUCT_NAME_WORDS = 10;
 const MAX_SHORT_DESCRIPTION_WORDS = 50;
-const MAX_KEY_ATTRIBUTES = 6;
 
 const HIGHLIGHT_OPTIONS = [
   { key: "isCancellable", label: "Cancellable" },
@@ -93,7 +98,47 @@ const HIGHLIGHT_OPTIONS = [
   { key: "fastDelivery", label: "Fast Delivery" },
   { key: "warrantyIncluded", label: "Warranty Included" },
   { key: "featuredQuality", label: "Featured Quality" },
+  { key: "showDeliveryBadge", label: "Delivery Badge" },
+  { key: "showTopBrand", label: "Top Brand" },
+  { key: "showFreeDelivery", label: "Free Delivery" },
+  { key: "showSecureTransaction", label: "Secure Transaction" },
+  { key: "show7DaySupport", label: "7 Day Support" },
+  { key: "showAssured", label: "Assured" },
 ] as const;
+
+function VariantImageItem({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    const previewUrl = URL.createObjectURL(file);
+    setUrl(previewUrl);
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [file]);
+
+  if (!url) return null;
+
+  return (
+    <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
+      <img src={url} alt="Variant preview" className="h-full w-full object-contain" />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm hover:bg-rose-600 transition-colors"
+        title="Remove image"
+      >
+        &times;
+      </button>
+    </div>
+  );
+}
 
 const createVariant = (): VariantDraft => ({
   id: `variant-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -102,8 +147,9 @@ const createVariant = (): VariantDraft => ({
   variantMrp: "",
   variantSellingPrice: "",
   variantStock: "",
-  variantImage: null,
-  variantExistingImage: "",
+  variantImages: [],
+  variantExistingImages: [],
+  customFields: {},
 });
 
 const createDescriptionBlock = (): DescriptionBlock => ({
@@ -189,7 +235,6 @@ const readAttributeValue = (attributes: VendorProductRecord["keyAttributes"] | u
 const createDefaultFieldValues = (initialProduct?: VendorProductRecord | null): FieldValues => ({
   productName: String(initialProduct?.productName || "").trim(),
   shortDescription: String(initialProduct?.shortDescription || "").trim(),
-  longDescription: String(initialProduct?.description || "").trim(),
   mrp: Number.isFinite(Number(initialProduct?.oldPrice)) ? String(initialProduct?.oldPrice || "") : "",
   sellingPrice: Number.isFinite(Number(initialProduct?.price)) ? String(initialProduct?.price || "") : "",
   stock: Number.isFinite(Number(initialProduct?.inventory)) ? String(initialProduct?.inventory || "") : "",
@@ -198,12 +243,11 @@ const createDefaultFieldValues = (initialProduct?: VendorProductRecord | null): 
   badge: String(initialProduct?.badge || "").trim(),
   brand: String(initialProduct?.brand || "").trim(),
   tagsText: Array.isArray(initialProduct?.tags) ? initialProduct.tags.join(", ") : "",
-  attributesText: Array.isArray(initialProduct?.keyAttributes)
-    ? initialProduct.keyAttributes.map((item) => `${item.label}: ${item.value}`).join("\n")
-    : "",
   mainImage: null,
   images: [],
   storePlacement: normalizePlacement(initialProduct?.storePlacement),
+  originCountry: String(initialProduct?.originCountry || "India").trim(),
+  sellerName: String(initialProduct?.sellerName || "").trim(),
 });
 
 const createInitialVariants = (initialProduct?: VendorProductRecord | null): VariantDraft[] => {
@@ -211,16 +255,37 @@ const createInitialVariants = (initialProduct?: VendorProductRecord | null): Var
     return [createVariant()];
   }
 
-  return initialProduct.variantData.map((variant, index) => ({
-    id: `variant-existing-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    variantSize: String(variant.size || "").trim(),
-    variantColor: String(variant.color || "").trim(),
-    variantMrp: Number.isFinite(Number(variant.mrp)) ? String(variant.mrp || "") : "",
-    variantSellingPrice: Number.isFinite(Number(variant.sellingPrice)) ? String(variant.sellingPrice || "") : "",
-    variantStock: Number.isFinite(Number(variant.stock)) ? String(variant.stock || "") : "",
-    variantImage: null,
-    variantExistingImage: String(variant.image || "").trim(),
-  }));
+  return initialProduct.variantData.map((variant, index) => {
+    let existing: string[] = [];
+    const rawImage = String(variant.image || "").trim();
+    if (rawImage) {
+      if (rawImage.startsWith("[") && rawImage.endsWith("]")) {
+        try {
+          existing = JSON.parse(rawImage);
+        } catch {
+          existing = [rawImage];
+        }
+      } else {
+        existing = [rawImage];
+      }
+    }
+    const gallery = (variant as any).gallery || (variant as any).images;
+    if (Array.isArray(gallery)) {
+      existing = Array.from(new Set([...existing, ...gallery.map(String).filter(Boolean)]));
+    }
+
+    return {
+      id: `variant-existing-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      variantSize: String(variant.size || "").trim(),
+      variantColor: String(variant.color || "").trim(),
+      variantMrp: Number.isFinite(Number(variant.mrp)) ? String(variant.mrp || "") : "",
+      variantSellingPrice: Number.isFinite(Number(variant.sellingPrice)) ? String(variant.sellingPrice || "") : "",
+      variantStock: Number.isFinite(Number(variant.stock)) ? String(variant.stock || "") : "",
+      variantImages: [],
+      variantExistingImages: existing,
+      customFields: (variant as any).customFields || {},
+    };
+  });
 };
 
 const createInitialDescriptionBlocks = (initialProduct?: VendorProductRecord | null): DescriptionBlock[] => {
@@ -236,6 +301,16 @@ const createInitialDescriptionBlocks = (initialProduct?: VendorProductRecord | n
   return [createDescriptionBlock()];
 };
 
+const createInitialDescriptionPoints = (initialProduct?: VendorProductRecord | null): DescriptionPoint[] => {
+  if (Array.isArray((initialProduct as any)?.descriptionPoints) && (initialProduct as any).descriptionPoints.length > 0) {
+    return (initialProduct as any).descriptionPoints.map((p: any) => ({
+      heading: String(p?.heading || "").trim(),
+      content: String(p?.content || "").trim(),
+    }));
+  }
+  return [{ heading: "", content: "" }];
+};
+
 const createInitialHighlightValues = (initialProduct?: VendorProductRecord | null): Record<string, boolean> => {
   const highlightLabels = new Set(
     (Array.isArray(initialProduct?.highlights) ? initialProduct.highlights : [])
@@ -246,10 +321,16 @@ const createInitialHighlightValues = (initialProduct?: VendorProductRecord | nul
   return {
     isCancellable: Boolean(initialProduct?.isCancellable) || highlightLabels.has("cancellable"),
     isReturnable: Boolean(initialProduct?.isReturnable) || highlightLabels.has("returnable"),
-    cashOnDelivery: highlightLabels.has("cash on delivery"),
-    fastDelivery: highlightLabels.has("fast delivery"),
+    cashOnDelivery: highlightLabels.has("cash on delivery") || Boolean((initialProduct as any)?.showCashOnDelivery),
+    fastDelivery: highlightLabels.has("fast delivery") || Boolean((initialProduct as any)?.showDeliveryBadge),
     warrantyIncluded: highlightLabels.has("warranty included"),
     featuredQuality: highlightLabels.has("featured quality"),
+    showDeliveryBadge: Boolean((initialProduct as any)?.showDeliveryBadge),
+    showTopBrand: Boolean((initialProduct as any)?.showTopBrand),
+    showFreeDelivery: Boolean((initialProduct as any)?.showFreeDelivery),
+    showSecureTransaction: Boolean((initialProduct as any)?.showSecureTransaction),
+    show7DaySupport: Boolean((initialProduct as any)?.show7DaySupport),
+    showAssured: Boolean((initialProduct as any)?.showAssured),
   };
 };
 
@@ -281,35 +362,20 @@ function parseTagList(value: string): string[] {
   );
 }
 
-function parseLabelValueLines(value: string): Array<{ label: string; value: string }> {
-  return String(value || "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const colonIndex = line.indexOf(":");
-      if (colonIndex < 0) {
-        return null;
-      }
 
-      const label = line.slice(0, colonIndex).trim();
-      const lineValue = line.slice(colonIndex + 1).trim();
-      if (!label || !lineValue) {
-        return null;
-      }
 
-      return { label, value: lineValue };
-    })
-    .filter((item): item is { label: string; value: string } => Boolean(item))
-    .slice(0, MAX_KEY_ATTRIBUTES);
-}
+const calculateDiscountPercentage = (mrpValue: string, sellingPriceValue: string) => {
+  const mrp = Number(mrpValue);
+  const sellingPrice = Number(sellingPriceValue);
 
-function limitAttributeInput(value: string): string {
-  return String(value || "")
-    .split(/\r?\n/)
-    .slice(0, MAX_KEY_ATTRIBUTES)
-    .join("\n");
-}
+  if (!Number.isFinite(mrp) || mrp <= 0 || !Number.isFinite(sellingPrice) || sellingPrice < 0 || sellingPrice >= mrp) {
+    return "";
+  }
+
+  const discount = ((mrp - sellingPrice) / mrp) * 100;
+  const roundedDiscount = Number(discount.toFixed(2));
+  return roundedDiscount > 0 ? String(roundedDiscount) : "";
+};
 
 const findNestedSubcategoryMatch = (
   categoryOptions: VendorCatalogSubcategory[],
@@ -433,6 +499,11 @@ export default function VendorAddProductForm({
   const [variants, setVariants] = useState<VariantDraft[]>(() => createInitialVariants(initialProduct));
   const [descriptionBlocks, setDescriptionBlocks] = useState<DescriptionBlock[]>(() => createInitialDescriptionBlocks(initialProduct));
   const [specPairs, setSpecPairs] = useState<SpecificationPair[]>(() => parseSpecificationsInput(initialProduct?.specifications || []));
+  const [descPairs, setDescPairs] = useState<DescriptionPoint[]>(() => createInitialDescriptionPoints(initialProduct));
+  const [customVariantFields, setCustomVariantFields] = useState<string[]>([]);
+  const [newCustomFieldName, setNewCustomFieldName] = useState("");
+  const [brandProfiles, setBrandProfiles] = useState<any[]>([]);
+
   const [existingMainImageUrl, setExistingMainImageUrl] = useState(() => String(initialProduct?.image || "").trim());
   const [existingGalleryUrls, setExistingGalleryUrls] = useState<string[]>(() =>
     Array.isArray(initialProduct?.gallery) ? initialProduct.gallery.map((item) => String(item || "").trim()).filter(Boolean) : []
@@ -444,6 +515,75 @@ export default function VendorAddProductForm({
   const [isHighlightOptionsOpen, setIsHighlightOptionsOpen] = useState(false);
   const [highlightValues, setHighlightValues] = useState<Record<string, boolean>>(() => createInitialHighlightValues(initialProduct));
 
+  // Fetch brand profiles
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    fetch(`${backendUrl}/api/brands/public`)
+      .then((res) => res.json())
+      .then((data) => {
+        const rows = Array.isArray(data?.brands) ? data.brands : [];
+        setBrandProfiles(rows);
+      })
+      .catch(() => {});
+  }, []);
+
+  const brandOptions = useMemo(() => {
+    const safeCategorySlug = String(categorySlug || "").trim().toLowerCase();
+    const safeSubcategorySlug = String(subcategorySlug || "").trim().toLowerCase();
+
+    const matchesCategorySubcategory = (brand: any) => {
+      const groups = Array.isArray(brand?.categorySelections) && brand.categorySelections.length
+        ? brand.categorySelections
+        : [{ category: brand?.category, subcategories: brand?.subcategories }];
+
+      return groups.some((group: any) => {
+        const groupCategory = String(group?.category || "").trim().toLowerCase();
+        if (!groupCategory || groupCategory !== safeCategorySlug) {
+          return false;
+        }
+
+        const groupSubs = Array.isArray(group?.subcategories)
+          ? group.subcategories
+              .map((item: any) => {
+                if (item && typeof item === "object") {
+                  return String(item?.slug || item?.name || item?.label || "").trim().toLowerCase();
+                }
+                return String(item || "").trim().toLowerCase();
+              })
+              .filter(Boolean)
+          : [];
+
+        return groupSubs.includes(safeSubcategorySlug);
+      });
+    };
+
+    const options = brandProfiles
+      .filter((brand) => matchesCategorySubcategory(brand))
+      .map((brand) => String(brand?.name || "").trim())
+      .filter(Boolean);
+
+    const unique = Array.from(new Set(options));
+    const currentBrand = String(fieldValues.brand || "").trim();
+    if (currentBrand && !unique.includes(currentBrand)) {
+      unique.unshift(currentBrand);
+    }
+
+    return unique;
+  }, [brandProfiles, categorySlug, subcategorySlug, fieldValues.brand]);
+
+  // Sync discount dynamically
+  useEffect(() => {
+    const nextDiscount = calculateDiscountPercentage(fieldValues.mrp, fieldValues.sellingPrice);
+    if (String(fieldValues.discount || "") === nextDiscount) {
+      return;
+    }
+
+    setFieldValues((current) => ({
+      ...current,
+      discount: calculateDiscountPercentage(current.mrp, current.sellingPrice),
+    }));
+  }, [fieldValues.mrp, fieldValues.sellingPrice, fieldValues.discount]);
+
   useEffect(() => {
     const nextSelection = resolveCategorySelection(initialProduct);
     setCategorySlug(nextSelection.categorySlug);
@@ -452,12 +592,24 @@ export default function VendorAddProductForm({
     setVariants(createInitialVariants(initialProduct));
     setDescriptionBlocks(createInitialDescriptionBlocks(initialProduct));
     setSpecPairs(parseSpecificationsInput(initialProduct?.specifications || []));
+    setDescPairs(createInitialDescriptionPoints(initialProduct));
     setExistingMainImageUrl(String(initialProduct?.image || "").trim());
     setExistingGalleryUrls(
       Array.isArray(initialProduct?.gallery) ? initialProduct.gallery.map((item) => String(item || "").trim()).filter(Boolean) : []
     );
     setHighlightValues(createInitialHighlightValues(initialProduct));
     setFieldErrors({});
+
+    // Load custom variant fields
+    const loadedCustomFields = new Set<string>();
+    if (Array.isArray(initialProduct?.variantData)) {
+      initialProduct.variantData.forEach((variant: any) => {
+        if (variant?.customFields && typeof variant.customFields === "object") {
+          Object.keys(variant.customFields).forEach((k) => loadedCustomFields.add(k));
+        }
+      });
+    }
+    setCustomVariantFields(Array.from(loadedCustomFields));
   }, [initialProduct, resolveCategorySelection]);
 
   const selectedCategory = useMemo(
@@ -625,7 +777,7 @@ export default function VendorAddProductForm({
       name === "productName" && typeof value === "string"
         ? trimToWordLimit(value, MAX_PRODUCT_NAME_WORDS)
         : name === "shortDescription" && typeof value === "string"
-          ? trimToWordLimit(value, MAX_SHORT_DESCRIPTION_WORDS)
+          ? value.slice(0, 150)
           : value;
 
     setFieldValues((current) => ({ ...current, [name]: nextValue }));
@@ -729,6 +881,37 @@ export default function VendorAddProductForm({
     setVariants((current) => current.map((item) => (item.id === variantId ? { ...item, [key]: value } : item)));
   };
 
+  const handleAddCustomVariantField = () => {
+    const cleaned = String(newCustomFieldName || "").trim();
+    if (!cleaned) return;
+    const standardNames = ["Size", "Color", "MRP", "Selling Price", "Stock", "Upload Image"];
+    if (standardNames.map(s => s.toLowerCase()).includes(cleaned.toLowerCase()) || 
+        ["size", "color", "mrp", "sellingprice", "stock", "image"].includes(cleaned.toLowerCase())) {
+      alert("This is a standard variant field.");
+      return;
+    }
+    if (customVariantFields.map(f => f.toLowerCase()).includes(cleaned.toLowerCase())) {
+      alert("This field already exists.");
+      return;
+    }
+    setCustomVariantFields((prev) => [...prev, cleaned]);
+    setNewCustomFieldName("");
+  };
+
+  const handleRemoveCustomVariantField = (fieldName: string) => {
+    setCustomVariantFields((prev) => prev.filter((f) => f !== fieldName));
+    setVariants((current) =>
+      current.map((variant) => {
+        const nextCustom = { ...(variant.customFields || {}) };
+        delete nextCustom[fieldName];
+        return {
+          ...variant,
+          customFields: nextCustom,
+        };
+      })
+    );
+  };
+
   const addSpecification = () => {
     setSpecPairs((current) => [...current, { label: "", value: "" }]);
   };
@@ -739,6 +922,18 @@ export default function VendorAddProductForm({
 
   const updateSpecification = (index: number, key: keyof SpecificationPair, value: string) => {
     setSpecPairs((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)));
+  };
+
+  const addDescriptionPoint = () => {
+    setDescPairs((prev) => [...prev, { heading: "", content: "" }]);
+  };
+
+  const removeDescriptionPoint = (index: number) => {
+    setDescPairs((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : [{ heading: "", content: "" }]));
+  };
+
+  const updateDescriptionPoint = (index: number, key: keyof DescriptionPoint, value: string) => {
+    setDescPairs((prev) => prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
   };
 
   const addDescriptionBlock = () => {
@@ -792,14 +987,28 @@ export default function VendorAddProductForm({
       );
 
       const serializedVariantsRaw = await Promise.all(
-        variants.map(async (variant) => ({
-          size: String(variant.variantSize || "").trim(),
-          color: String(variant.variantColor || "").trim(),
-          mrp: Number(variant.variantMrp) || 0,
-          sellingPrice: Number(variant.variantSellingPrice) || 0,
-          stock: Number(variant.variantStock) || 0,
-          image: variant.variantImage ? await readFileAsDataUrl(variant.variantImage) : String(variant.variantExistingImage || "").trim(),
-        }))
+        variants.map(async (variant) => {
+          const newUrls = await Promise.all((variant.variantImages || []).map((file) => readFileAsDataUrl(file)));
+          const existingUrls = Array.isArray(variant.variantExistingImages) ? variant.variantExistingImages : [];
+          const combined = [...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean);
+          
+          let serializedImage = "";
+          if (combined.length === 1) {
+            serializedImage = combined[0];
+          } else if (combined.length > 1) {
+            serializedImage = JSON.stringify(combined);
+          }
+
+          return {
+            size: String(variant.variantSize || "").trim(),
+            color: String(variant.variantColor || "").trim(),
+            mrp: Number(variant.variantMrp) || 0,
+            sellingPrice: Number(variant.variantSellingPrice) || 0,
+            stock: Number(variant.variantStock) || 0,
+            image: serializedImage,
+            customFields: variant.customFields || {},
+          };
+        })
       );
       const serializedVariants = compactMode
         ? []
@@ -816,7 +1025,7 @@ export default function VendorAddProductForm({
       );
       const filteredDescriptionBlocks = serializedDescriptionBlocks.filter((block) => block.image || block.headline || block.text);
 
-      const keyAttributes = parseLabelValueLines(fieldValues.attributesText);
+      const keyAttributes: Array<{ label: string; value: string }> = [];
       const purchasePrice = String(fieldValues.purchasePrice || "").trim();
       const discount = String(fieldValues.discount || "").trim();
       if (purchasePrice) keyAttributes.push({ label: "Purchase Price", value: purchasePrice });
@@ -846,7 +1055,7 @@ export default function VendorAddProductForm({
         badge: compactMode ? undefined : String(fieldValues.badge || "").trim() || undefined,
         brand: compactMode ? undefined : String(fieldValues.brand || "").trim() || undefined,
         shortDescription: String(fieldValues.shortDescription || "").trim() || undefined,
-        description: String(fieldValues.longDescription || "").trim() || undefined,
+        description: String(fieldValues.shortDescription || "").trim() || undefined,
         tags: compactMode ? undefined : parseTagList(fieldValues.tagsText),
         keyAttributes: compactMode ? undefined : keyAttributes,
         specifications: compactMode ? undefined : specificationPayload,
@@ -855,12 +1064,21 @@ export default function VendorAddProductForm({
         detailedDescriptionBlocks: compactMode ? undefined : filteredDescriptionBlocks,
         moq: Number.isFinite(Number(initialProduct?.moq)) && Number(initialProduct?.moq) > 0 ? Number(initialProduct?.moq) : 1,
         status: isEditMode ? initialProduct?.status || "live" : "live",
-        sellerName: String(sellerName || "").trim() || "Vendor",
+        sellerName: String(fieldValues.sellerName || sellerName || "").trim() || "Vendor",
         vendorSource: "vendor-panel",
         sourcePlatform: "winkget_vendor",
         storePlacement: placement,
         isCancellable: compactMode ? undefined : highlightValues.isCancellable,
         isReturnable: compactMode ? undefined : highlightValues.isReturnable,
+        descriptionPoints: descPairs.map((p) => ({ heading: String(p?.heading || "").trim(), content: String(p?.content || "").trim() })).filter((p) => p.heading || p.content),
+        showDeliveryBadge: highlightValues.showDeliveryBadge,
+        showTopBrand: highlightValues.showTopBrand,
+        showFreeDelivery: highlightValues.showFreeDelivery,
+        showSecureTransaction: highlightValues.showSecureTransaction,
+        showCashOnDelivery: highlightValues.cashOnDelivery,
+        show7DaySupport: highlightValues.show7DaySupport,
+        showAssured: highlightValues.showAssured,
+        originCountry: String(fieldValues.originCountry || "").trim(),
       };
 
       await onSubmitProduct(payload);
@@ -964,6 +1182,22 @@ export default function VendorAddProductForm({
                   {fieldErrors.subcategorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.subcategorySlug}</p> : null}
                 </label>
 
+                <label className="block text-sm text-slate-700">
+                  Origin Country<span className="ml-1 text-rose-500">*</span>
+                  <select
+                    value={fieldValues.originCountry}
+                    onChange={(event) => updateField("originCountry", event.target.value)}
+                    className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                  >
+                    <option value="India">India</option>
+                    <option value="Nepal">Nepal</option>
+                    <option value="China">China</option>
+                    <option value="USA">USA</option>
+                    <option value="UK">UK</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
                 <label className="block text-sm text-slate-700 md:col-span-2">
                   Short Description
                   <textarea
@@ -973,19 +1207,51 @@ export default function VendorAddProductForm({
                     placeholder={isServiceVendor ? "Enter short service description" : "Enter short product description"}
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    Word limit: {countWords(fieldValues.shortDescription)}/{MAX_SHORT_DESCRIPTION_WORDS}
+                    Character limit: {fieldValues.shortDescription.length}/150
                   </p>
                 </label>
 
-                <label className="block text-sm text-slate-700 md:col-span-2">
-                  Description
-                  <textarea
-                    value={fieldValues.longDescription}
-                    onChange={(event) => updateField("longDescription", event.target.value)}
-                    className="mt-1 min-h-[120px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder={isServiceVendor ? "Enter long service description" : "Enter long product description"}
-                  />
-                </label>
+                {/* --- Description Points (two-column: heading + content) --- */}
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-700">Description</p>
+                    <span className="text-xs text-slate-500">Heading &amp; sub-content per row</span>
+                  </div>
+                  <div className="mt-2 grid gap-2">
+                    {descPairs.map((pair, index) => (
+                      <div key={`desc-point-${index}`} className="grid grid-cols-2 gap-2">
+                        <textarea
+                          value={pair.heading}
+                          onChange={(e) => updateDescriptionPoint(index, "heading", e.target.value)}
+                          placeholder="Heading"
+                          className="h-16 w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
+                        />
+                        <div className="relative">
+                          <textarea
+                            value={pair.content}
+                            onChange={(e) => updateDescriptionPoint(index, "content", e.target.value)}
+                            placeholder="Sub-content"
+                            className="h-16 w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDescriptionPoint(index)}
+                            className="absolute right-1 top-1 text-sm font-semibold text-red-600"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addDescriptionPoint}
+                      className="mt-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-center font-bold text-slate-700 hover:border-slate-400"
+                    >
+                      Add Description
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -1018,17 +1284,30 @@ export default function VendorAddProductForm({
                   {fieldErrors.sellingPrice ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.sellingPrice}</p> : null}
                 </label>
                 {isServiceVendor ? null : (
-                  <label className="block text-sm text-slate-700">
-                    Stock
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={fieldValues.stock}
-                      onChange={(event) => updateField("stock", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    />
-                  </label>
+                  <>
+                    <label className="block text-sm text-slate-700">
+                      Purchase Price
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={fieldValues.purchasePrice}
+                        onChange={(event) => updateField("purchasePrice", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </label>
+                    <label className="block text-sm text-slate-700">
+                      Stock<span className="ml-1 text-rose-500">*</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={fieldValues.stock}
+                        onChange={(event) => updateField("stock", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </label>
+                  </>
                 )}
                 <label className="block text-sm text-slate-700">
                   Store Placement
@@ -1042,25 +1321,6 @@ export default function VendorAddProductForm({
                     <option value="trending">{isServiceVendor ? "Trending Service" : "Trending Product"}</option>
                   </select>
                 </label>
-                {isServiceVendor ? null : (
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-slate-700">Selected Details</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).length ? (
-                        HIGHLIGHT_OPTIONS.filter((option) => highlightValues[option.key]).map((option) => (
-                          <span
-                            key={option.key}
-                            className="rounded-full border border-[#d9ccb7] bg-[#fff4e1] px-3 py-1 text-xs font-semibold text-slate-700"
-                          >
-                            {option.label}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-500">No details selected yet.</span>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </section>
 
@@ -1070,23 +1330,38 @@ export default function VendorAddProductForm({
                 {isServiceVendor ? null : (
                   <label className="block text-sm text-slate-700">
                     Brand
-                    <input
-                      type="text"
+                    <select
                       value={fieldValues.brand}
                       onChange={(event) => updateField("brand", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                      placeholder="Brand name"
-                    />
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    >
+                      <option value="">Select Brand</option>
+                      {brandOptions.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 )}
-                <label className={`block text-sm text-slate-700 ${isServiceVendor ? "md:col-span-2" : ""}`}>
+                <label className="block text-sm text-slate-700">
+                  Sold By
+                  <input
+                    type="text"
+                    value={fieldValues.sellerName}
+                    onChange={(event) => updateField("sellerName", event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    placeholder="Enter seller/store name"
+                  />
+                </label>
+                <label className="block text-sm text-slate-700 md:col-span-2">
                   Tags
                   <input
                     type="text"
                     value={fieldValues.tagsText}
                     onChange={(event) => updateField("tagsText", event.target.value)}
                     className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="skincare, facewash"
+                    placeholder="Comma separated tags"
                   />
                 </label>
               </div>
@@ -1104,34 +1379,199 @@ export default function VendorAddProductForm({
                     + Add Variant
                   </button>
                 </div>
+
+                {/* Custom variant columns input form */}
+                <div className="mt-3 rounded-xl border border-dashed border-[#d9ccb7] bg-[#fffaf2] p-3">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-slate-600">
+                        Add Custom Variant Field (e.g. RAM, Storage)
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomFieldName}
+                        onChange={(e) => setNewCustomFieldName(e.target.value)}
+                        placeholder="Enter field name..."
+                        className="mt-1 h-9 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddCustomVariantField}
+                      className="h-9 rounded-lg bg-[#b49267] px-4 text-xs font-bold text-white hover:bg-[#967751] transition-colors"
+                    >
+                      Add Field
+                    </button>
+                  </div>
+
+                  {customVariantFields.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {customVariantFields.map((field) => (
+                        <span
+                          key={field}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[#f3eae1] px-3 py-1 text-xs font-medium text-slate-700"
+                        >
+                          {field}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomVariantField(field)}
+                            className="text-slate-400 hover:text-slate-600 font-bold text-sm leading-none"
+                            title={`Remove ${field}`}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-3 space-y-3">
                   {variants.map((variant) => (
                     <div key={variant.id} className="rounded-xl border-2 border-[#d9ccb7] bg-[#fff8ef] p-3">
                       <div className="grid gap-3 md:grid-cols-3">
                         <label className="block text-sm text-slate-700">
                           Size
-                          <input value={variant.variantSize} onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                          <input
+                            value={variant.variantSize}
+                            onChange={(event) => onVariantChange(variant.id, "variantSize", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
                         </label>
                         <label className="block text-sm text-slate-700">
                           Color
-                          <input value={variant.variantColor} onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                          <input
+                            value={variant.variantColor}
+                            onChange={(event) => onVariantChange(variant.id, "variantColor", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
                         </label>
                         <label className="block text-sm text-slate-700">
                           MRP
-                          <input type="number" value={variant.variantMrp} onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                          <input
+                            type="number"
+                            value={variant.variantMrp}
+                            onChange={(event) => onVariantChange(variant.id, "variantMrp", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
                         </label>
                         <label className="block text-sm text-slate-700">
                           Selling Price
-                          <input type="number" value={variant.variantSellingPrice} onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                          <input
+                            type="number"
+                            value={variant.variantSellingPrice}
+                            onChange={(event) => onVariantChange(variant.id, "variantSellingPrice", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
                         </label>
                         <label className="block text-sm text-slate-700">
                           Stock
-                          <input type="number" value={variant.variantStock} onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+                          <input
+                            type="number"
+                            value={variant.variantStock}
+                            onChange={(event) => onVariantChange(variant.id, "variantStock", event.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                          />
                         </label>
-                        <label className="block text-sm text-slate-700 md:col-span-3">
-                          Variant Image
-                          <input type="file" accept="image/*" onChange={(event) => onVariantChange(variant.id, "variantImage", event.target.files?.[0] || null)} className="mt-1 block w-full text-sm" />
-                        </label>
+
+                        {/* Custom fields inputs */}
+                        {customVariantFields.map((fieldName) => (
+                          <label key={fieldName} className="block text-sm text-slate-700">
+                            {fieldName}
+                            <input
+                              type="text"
+                              value={(variant.customFields && variant.customFields[fieldName]) || ""}
+                              onChange={(event) => {
+                                const val = event.target.value;
+                                setVariants((current) =>
+                                  current.map((item) =>
+                                    item.id === variant.id
+                                      ? {
+                                          ...item,
+                                          customFields: {
+                                            ...(item.customFields || {}),
+                                            [fieldName]: val,
+                                          },
+                                        }
+                                      : item
+                                  )
+                                );
+                              }}
+                              className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                            />
+                          </label>
+                        ))}
+
+                        <div className="block text-sm text-slate-700 md:col-span-3">
+                          <span className="block text-sm font-semibold text-slate-700">Upload Variant Images</span>
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={(event) => (event.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
+                              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-[#fffaf3] transition-colors"
+                            >
+                              Choose files
+                            </button>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(event) => {
+                                const files = Array.from(event.target.files || []);
+                                if (files.length > 0) {
+                                  onVariantChange(variant.id, "variantImages", [...(variant.variantImages || []), ...files]);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onVariantChange(variant.id, "variantImages", []);
+                                onVariantChange(variant.id, "variantExistingImages", []);
+                              }}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                            >
+                              Clear images
+                            </button>
+                          </div>
+
+                          {/* Previews */}
+                          {((variant.variantExistingImages && variant.variantExistingImages.length > 0) || 
+                            (variant.variantImages && variant.variantImages.length > 0)) && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {/* Existing Previews */}
+                              {(variant.variantExistingImages || []).map((url, idx) => (
+                                <div key={`exist-${idx}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
+                                  <img src={url} alt="Variant existing" className="h-full w-full object-contain" />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = variant.variantExistingImages.filter((_, i) => i !== idx);
+                                      onVariantChange(variant.id, "variantExistingImages", updated);
+                                    }}
+                                    className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm hover:bg-rose-600 transition-colors"
+                                    title="Remove image"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
+                              ))}
+                              
+                              {/* New Previews using helper component */}
+                              {(variant.variantImages || []).map((file, idx) => (
+                                <VariantImageItem
+                                  key={`new-${idx}`}
+                                  file={file}
+                                  onRemove={() => {
+                                    const updated = variant.variantImages.filter((_, i) => i !== idx);
+                                    onVariantChange(variant.id, "variantImages", updated);
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -1257,23 +1697,23 @@ export default function VendorAddProductForm({
               </div>
             </section>
 
-            {isServiceVendor ? null : (
-              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-                <h3 className="text-lg font-semibold text-slate-900">Attributes</h3>
-                <label className="mt-3 block text-sm text-slate-700">
-                  Key Attributes
-                  <textarea value={fieldValues.attributesText} onChange={(event) => updateField("attributesText", limitAttributeInput(event.target.value))} className="mt-1 min-h-[100px] w-full rounded-lg border border-[#d9ccb7] px-3 py-2 text-sm outline-none transition focus:border-[#c7a97a]" placeholder="Material: Cotton" />
-                  <p className="mt-1 text-xs text-slate-500">Maximum 6 attributes.</p>
-                </label>
-              </section>
-            )}
-
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
               <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <label className="block text-sm text-slate-700">
-                  Badge
-                  <input value={fieldValues.badge} onChange={(event) => updateField("badge", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
+                  Trust Badge
+                  <select
+                    value={fieldValues.badge}
+                    onChange={(event) => updateField("badge", event.target.value)}
+                    className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                  >
+                    <option value="">Select Trust Badge</option>
+                    <option value="New">New</option>
+                    <option value="Hot">Hot</option>
+                    <option value="Sale">Sale</option>
+                    <option value="Best Seller">Best Seller</option>
+                    <option value="Assured">Assured</option>
+                  </select>
                 </label>
                 {isServiceVendor ? null : (
                   <>
@@ -1282,7 +1722,7 @@ export default function VendorAddProductForm({
                       <div ref={highlightOptionsPopupRef} className="relative mt-1">
                         <button type="button" onClick={() => setIsHighlightOptionsOpen((previous) => !previous)} className="flex h-11 w-full items-center justify-between rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm font-medium text-slate-700">
                           <span>{selectedExtraOptionsCount ? `${selectedExtraOptionsCount} option(s) selected` : "Select Highlight Options"}</span>
-                          <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">v</span>
+                          <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
                         </button>
                         {isHighlightOptionsOpen ? (
                           <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-[#d9ccb7] bg-white p-2.5 shadow-lg">
@@ -1303,10 +1743,6 @@ export default function VendorAddProductForm({
                         ) : null}
                       </div>
                     </div>
-                    <label className="block text-sm text-slate-700">
-                      Purchase Price
-                      <input type="number" min="0" step="0.01" value={fieldValues.purchasePrice} onChange={(event) => updateField("purchasePrice", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
-                    </label>
                     <label className="block text-sm text-slate-700">
                       Discount (%)
                       <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
@@ -1343,7 +1779,7 @@ export default function VendorAddProductForm({
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold text-slate-900">Detailed Description</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Long Description</h3>
                 <button type="button" onClick={addDescriptionBlock} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   Add Block
                 </button>

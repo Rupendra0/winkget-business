@@ -175,7 +175,6 @@ type VendorProductFormState = {
   isCancellable: boolean;
   isReturnable: boolean;
   highlightsText: string;
-  keyAttributesText: string;
   specificationsText: string;
   tagsText: string;
   variantDataText: string;
@@ -3895,16 +3894,7 @@ function VendorProductsSection({
             />
           </label>
 
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-gray-600">Key Attributes (Label: Value)</span>
-            <textarea
-              value={form.keyAttributesText}
-              onChange={(event) => onFormChange("keyAttributesText", limitAttributeInput(event.target.value))}
-              className="min-h-[90px] w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
-              placeholder="Skin Type: All"
-            />
-            <span className="mt-1 block text-[11px] text-gray-500">Maximum 6 attributes.</span>
-          </label>
+
 
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-gray-600">Specifications (Label: Value)</span>
@@ -6389,7 +6379,6 @@ function getDefaultProductForm(vendor: VendorSession | null): VendorProductFormS
     isCancellable: true,
     isReturnable: true,
     highlightsText: "",
-    keyAttributesText: "",
     specificationsText: "",
     tagsText: "",
     variantDataText: "",
@@ -6429,9 +6418,6 @@ function toProductFormState(product: VendorProductRecord, vendor: VendorSession 
     isCancellable: Boolean(product.isCancellable),
     isReturnable: Boolean(product.isReturnable),
     highlightsText: Array.isArray(product.highlights) ? product.highlights.join("\n") : "",
-    keyAttributesText: Array.isArray(product.keyAttributes)
-      ? product.keyAttributes.map((item) => `${item.label}: ${item.value}`).join("\n")
-      : "",
     specificationsText: Array.isArray(product.specifications)
       ? product.specifications.map((item) => `${item.label}: ${item.value}`).join("\n")
       : "",
@@ -6491,7 +6477,7 @@ function buildVendorProductPayload(
     isCancellable: Boolean(form.isCancellable),
     isReturnable: Boolean(form.isReturnable),
     highlights: splitLineItems(form.highlightsText),
-    keyAttributes: parseAttributeLines(form.keyAttributesText),
+    keyAttributes: [],
     specifications: parseAttributeLines(form.specificationsText),
     tags: String(form.tagsText || "")
       .split(",")

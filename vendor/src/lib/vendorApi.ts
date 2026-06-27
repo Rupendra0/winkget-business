@@ -311,6 +311,15 @@ export type VendorProductRecord = {
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
+  descriptionPoints?: Array<{ heading: string; content: string }>;
+  showDeliveryBadge?: boolean;
+  showTopBrand?: boolean;
+  showFreeDelivery?: boolean;
+  showSecureTransaction?: boolean;
+  showCashOnDelivery?: boolean;
+  show7DaySupport?: boolean;
+  showAssured?: boolean;
+  originCountry?: string;
 };
 
 export type VendorProductUpsertInput = {
@@ -351,6 +360,15 @@ export type VendorProductUpsertInput = {
   storePlacement?: "featured" | "trending";
   sourcePlatform?: string;
   sourceRecordId?: string;
+  descriptionPoints?: Array<{ heading: string; content: string }>;
+  showDeliveryBadge?: boolean;
+  showTopBrand?: boolean;
+  showFreeDelivery?: boolean;
+  showSecureTransaction?: boolean;
+  showCashOnDelivery?: boolean;
+  show7DaySupport?: boolean;
+  showAssured?: boolean;
+  originCountry?: string;
 };
 
 function normalizeVendorSession(user: VendorSession | null | undefined): VendorSession | null {

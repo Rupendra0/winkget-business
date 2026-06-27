@@ -111,6 +111,12 @@ const verifyToken = (token) => {
   return jwt.verify(token, secret);
 };
 
+//This is route to singup of users/custimers, Vendors ,Admins etc etc.....
+//Here we demai]nding alll things like name email phone and password
+//also checking that those fields like phone number and email are not already exists or present
+//Here er also following the format regex thing which wioll validate the format of email and password
+//We also created thing as duplicate params which willprevent the duplicacy of emails and phone numbers
+
 router.post("/auth/signup", async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
@@ -193,6 +199,9 @@ router.post("/auth/signup", async (req, res) => {
   }
 });
 
+// Router to logged in for user/vendor/admin on different dashboard or platforms
+// This also validate the login of vendor , admin on theri respextive playforms
+
 router.post("/auth/login", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim();
@@ -269,6 +278,8 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+
+//route to signup of vendor 
 router.post("/auth/vendor/signup", async (req, res) => {
   try {
     const businessName = String(req.body?.businessName || "").trim();
@@ -588,6 +599,7 @@ router.post("/auth/vendor/signup", async (req, res) => {
   }
 });
 
+//Route for vendor login
 router.post("/auth/vendor/login", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim();
@@ -693,6 +705,8 @@ router.post("/auth/vendor/login", async (req, res) => {
   }
 });
 
+//route to check validatuion where we need auth and authorisation to visit the user/admin/vendor
+//This is injected where we need some kind of validation of any kind of auth
 router.get("/auth/me", async (req, res) => {
   try {
     const authContext = normalizeAuthContext(req.query?.context || req.headers["x-auth-context"], "customer");
@@ -781,6 +795,7 @@ router.get("/auth/me", async (req, res) => {
   }
 });
 
+//Route to logout the user/admin/vendor from their respective dashboards or platforms
 router.post("/auth/logout", async (req, res) => {
   const authContext = req.body?.authContext || req.query?.context || req.headers["x-auth-context"];
   const resolvedAuthContext = authContext ? normalizeAuthContext(authContext, "customer") : "customer";
@@ -804,6 +819,7 @@ router.post("/auth/logout", async (req, res) => {
   clearAuthCookie(res, resolvedAuthContext);
   return res.status(200).json({ ok: true, message: "Logged out successfully" });
 });
+
 
 router.put("/auth/me", async (req, res) => {
   try {
@@ -1320,6 +1336,8 @@ router.put("/auth/me", async (req, res) => {
   }
 });
 
+//this is status of vendor controlled by socket.io on live trail form 
+//Here vendor can update his status open/close beyon dthe default schedule of shop opening and closing 
 router.patch("/vendor/store-status", async (req, res) => {
   try {
     const token = resolveTokenFromRequest(req, "vendor");
@@ -1398,6 +1416,20 @@ router.patch("/vendor/store-status", async (req, res) => {
   }
 });
 
+
+// Route to change the password opf authenticated user 
+// Why this request is POST most genuine question ??
+// Now since PATCH request is used to and small update like name update only on event while during  password change we have to 
+// do multiple events :
+
+// 1 -> Verify the current password which is existing in the data base
+// 2 -> have to match the current pass with the help of bycrypt compare function
+// 3 -> if sucessfull then we have to match the password regx demand 
+// 4 -> Then we have to hash this new password and then save ot into database
+// 5 -> Next time we will use this same hash to login or validation of user 
+// since all these multiple events can be done only using POST request and 
+// PATCH is only used to do an single updation event like name or number 
+// lets say we have to update some thing that doesnot require validation or multiple events that must be done POST  request
 router.post("/auth/change-password", async (req, res) => {
   try {
     const authContext = normalizeAuthContext(req.body?.authContext || req.query?.context || req.headers["x-auth-context"], "customer");
