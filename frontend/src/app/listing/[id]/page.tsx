@@ -16,7 +16,7 @@ export default async function ListingPage({
   }
 
   const profile = toListingProfileFromVendor(liveVendor);
-  const shouldLoadStoreData = String(profile.category || "").trim().toLowerCase() === "restaurant";
+  const shouldLoadStoreData = String(profile.category || "").trim().toLowerCase() === "restaurant" || profile.businessType === "service";
   const storeData = shouldLoadStoreData ? await resolveStoreDataById(id) : null;
 
   // Listing profile should primarily reflect Shop media.
