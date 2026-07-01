@@ -1203,21 +1203,23 @@ export default function VendorAddProductForm({
                   {fieldErrors.subcategorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.subcategorySlug}</p> : null}
                 </label>
 
-                <label className="block text-sm text-slate-700">
-                  Origin Country<span className="ml-1 text-rose-500">*</span>
-                  <select
-                    value={fieldValues.originCountry}
-                    onChange={(event) => updateField("originCountry", event.target.value)}
-                    className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  >
-                    <option value="India">India</option>
-                    <option value="Nepal">Nepal</option>
-                    <option value="China">China</option>
-                    <option value="USA">USA</option>
-                    <option value="UK">UK</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </label>
+                {isServiceVendor ? null : (
+                  <label className="block text-sm text-slate-700">
+                    Origin Country<span className="ml-1 text-rose-500">*</span>
+                    <select
+                      value={fieldValues.originCountry}
+                      onChange={(event) => updateField("originCountry", event.target.value)}
+                      className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    >
+                      <option value="India">India</option>
+                      <option value="Nepal">Nepal</option>
+                      <option value="China">China</option>
+                      <option value="USA">USA</option>
+                      <option value="UK">UK</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
+                )}
 
                 <label className="block text-sm text-slate-700 md:col-span-2">
                   Short Description
@@ -1330,18 +1332,20 @@ export default function VendorAddProductForm({
                     </label>
                   </>
                 )}
-                <label className="block text-sm text-slate-700">
-                  Store Placement
-                  <select
-                    value={fieldValues.storePlacement}
-                    onChange={(event) => updateField("storePlacement", event.target.value as FieldValues["storePlacement"])}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  >
-                    <option value="none">None</option>
-                    <option value="featured">{isServiceVendor ? "Featured Service" : "Featured Product"}</option>
-                    <option value="trending">{isServiceVendor ? "Trending Service" : "Trending Product"}</option>
-                  </select>
-                </label>
+                {isServiceVendor ? null : (
+                  <label className="block text-sm text-slate-700">
+                    Store Placement
+                    <select
+                      value={fieldValues.storePlacement}
+                      onChange={(event) => updateField("storePlacement", event.target.value as FieldValues["storePlacement"])}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    >
+                      <option value="none">None</option>
+                      <option value="featured">{isServiceVendor ? "Featured Service" : "Featured Product"}</option>
+                      <option value="trending">{isServiceVendor ? "Trending Service" : "Trending Product"}</option>
+                    </select>
+                  </label>
+                )}
               </div>
             </section>
 
@@ -1842,40 +1846,42 @@ export default function VendorAddProductForm({
               </section>
             )}
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold text-slate-900">Long Description</h3>
-                <button type="button" onClick={addDescriptionBlock} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  Add Block
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">Add image, headline, and text blocks that appear in detailed description sections.</p>
-              <div className="mt-3 space-y-3">
-                {descriptionBlocks.map((block, index) => {
-                  const imagePreview = descriptionBlockPreviews[block.id]?.url || "";
-                  return (
-                    <div key={block.id} className="rounded-xl border border-[#d9ccb7] bg-white p-2.5">
-                      <div className="mb-2 flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-500">Block {index + 1}</p>
-                        {descriptionBlocks.length > 1 ? (
-                          <button type="button" onClick={() => removeDescriptionBlock(block.id)} className="text-sm font-semibold text-rose-600">
-                            Remove
+            {isServiceVendor ? null : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-slate-900">Long Description</h3>
+                  <button type="button" onClick={addDescriptionBlock} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                    Add Block
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">Add image, headline, and text blocks that appear in detailed description sections.</p>
+                <div className="mt-3 space-y-3">
+                  {descriptionBlocks.map((block, index) => {
+                    const imagePreview = descriptionBlockPreviews[block.id]?.url || "";
+                    return (
+                      <div key={block.id} className="rounded-xl border border-[#d9ccb7] bg-white p-2.5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-xs font-semibold text-slate-500">Block {index + 1}</p>
+                          {descriptionBlocks.length > 1 ? (
+                            <button type="button" onClick={() => removeDescriptionBlock(block.id)} className="text-sm font-semibold text-rose-600">
+                              Remove
+                            </button>
+                          ) : null}
+                        </div>
+                        <label className="block text-xs text-slate-600">
+                          <input type="file" accept="image/*" onChange={(event) => onDescriptionBlockChange(block.id, "image", event.target.files?.[0] || null)} className="sr-only" />
+                          <button type="button" onClick={(event) => (event.currentTarget.previousElementSibling as HTMLInputElement | null)?.click()} className="grid h-40 w-full place-items-center overflow-hidden rounded-lg border border-dashed border-[#d9ccb7] bg-[#f8f5ef]">
+                            {imagePreview ? <img src={imagePreview} alt={`Long description ${index + 1}`} className="h-full w-full object-contain" /> : <span className="text-sm font-medium text-slate-500">Upload image</span>}
                           </button>
-                        ) : null}
+                        </label>
+                        <textarea value={block.headline} onChange={(event) => onDescriptionBlockChange(block.id, "headline", event.target.value)} placeholder="Enter headline here" className="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <textarea value={block.text} onChange={(event) => onDescriptionBlockChange(block.id, "text", event.target.value)} placeholder="Enter text here" className="mt-2 min-h-[84px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                       </div>
-                      <label className="block text-xs text-slate-600">
-                        <input type="file" accept="image/*" onChange={(event) => onDescriptionBlockChange(block.id, "image", event.target.files?.[0] || null)} className="sr-only" />
-                        <button type="button" onClick={(event) => (event.currentTarget.previousElementSibling as HTMLInputElement | null)?.click()} className="grid h-40 w-full place-items-center overflow-hidden rounded-lg border border-dashed border-[#d9ccb7] bg-[#f8f5ef]">
-                          {imagePreview ? <img src={imagePreview} alt={`Long description ${index + 1}`} className="h-full w-full object-contain" /> : <span className="text-sm font-medium text-slate-500">Upload image</span>}
-                        </button>
-                      </label>
-                      <textarea value={block.headline} onChange={(event) => onDescriptionBlockChange(block.id, "headline", event.target.value)} placeholder="Enter headline here" className="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                      <textarea value={block.text} onChange={(event) => onDescriptionBlockChange(block.id, "text", event.target.value)} placeholder="Enter text here" className="mt-2 min-h-[84px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </div>
         </div>
 

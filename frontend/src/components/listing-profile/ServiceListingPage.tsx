@@ -2556,6 +2556,213 @@ export default function ServiceListingPage({
             </section>
           </div>
         ) : null}
+
+        {/* Service Details Modal Popup */}
+        {selectedService && (() => {
+          const service = selectedService;
+          const serviceCartQuantity = Math.max(0, Number(cartQuantities[service.id] || 0));
+          const reviewSummaryForProduct = isReviewHydrated
+            ? getBusinessReviewAggregate(
+                toProductReviewBusinessKey(service.id),
+                Number(service.rating || 0),
+                Math.max(0, Number(service.reviews || 0))
+              )
+            : {
+                rating: Number(service.rating || 0),
+                reviews: Math.max(0, Number(service.reviews || 0)),
+              };
+          const ratingValue = Number(reviewSummaryForProduct.rating || 0);
+          const reviewCountValue = Math.max(0, Math.round(Number(reviewSummaryForProduct.reviews || 0)));
+          const currentPriceValue = toPriceValue(service.price);
+          const oldPriceValue = Number(service.oldPriceValue || 0);
+          const hasComparablePrice = Number.isFinite(oldPriceValue) && oldPriceValue > currentPriceValue && currentPriceValue > 0;
+          const discountPercent = hasComparablePrice
+            ? Math.round(((oldPriceValue - currentPriceValue) / oldPriceValue) * 100)
+            : 0;
+          const currentPriceLabel =
+            currentPriceValue > 0
+              ? formatIndianCurrency(currentPriceValue)
+              : String(service.price || "").trim() || "Price unavailable";
+          const imageUrl = String(service.imageUrl || profile.logoImage || "").trim();
+
+          return (
+            <div 
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity cursor-pointer"
+              onClick={() => setSelectedService(null)}
+            >
+              <div 
+                className="relative w-full md:w-[80vw] md:max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl transition-all md:flex md:h-[620px] max-h-[90vh] cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedService(null)}
+                  className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X size={18} />
+                </button>
+
+                {/* Image Column */}
+                <div className="relative h-48 md:h-full md:w-1/2 bg-slate-100 shrink-0">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={service.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-semibold text-slate-400">
+                      Service
+                    </div>
+                  )}
+                  {discountPercent > 0 && (
+                    <span className="absolute left-3 top-3 z-10 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                      {discountPercent}% OFF
+                    </span>
+                  )}
+                </div>
+
+                {/* Details Column */}
+                <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 overflow-y-auto">
+                  <div className="mb-2">
+                    <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wider">
+                      {service.categoryLabel || service.category || "Service"}
+                    </span>
+                  </div>
+
+                  <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
+                    {service.name}
+                  </h2>
+
+                  <p className="text-sm font-semibold text-slate-500 mb-4">
+                    {service.sellerName || profile.name}
+                  </p>
+
+                  <div className="flex items-center gap-1.5 text-xs mb-4">
+                    <span className="font-extrabold text-amber-600">{ratingLabel(ratingValue)}</span>
+                    <div className="flex items-center gap-0.5 text-amber-500">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                          key={index}
+                          size={14}
+                          className={index < Math.round(ratingValue) ? "fill-amber-500 text-amber-500" : "text-slate-300"}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-slate-400">({reviewCountValue} ratings)</span>
+                  </div>
+
+                  <div className="flex-1 min-h-[4rem] mb-6">
+                    {/* 1. Highlights Section */}
+                    {service.highlights && service.highlights.length > 0 && (
+                      <div className="mb-6 pb-4 border-b border-slate-100">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">What's Included:</h4>
+                        <ul className="space-y-1.5 text-sm font-medium text-slate-600">
+                          {service.highlights.map((highlight, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <span className="text-emerald-500 font-extrabold">✓</span>
+                              <span>{highlight.replace(/^✓\s*/, '')}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 2. Specifications Section */}
+                    {service.specifications && service.specifications.length > 0 && (
+                      <div className="mb-6 pb-4 border-b border-slate-100">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Specifications:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600">
+                          {service.specifications.map((spec, index) => (
+                            <div key={index} className="flex items-center justify-between py-1 border-b border-slate-50">
+                              <span className="font-semibold text-slate-500">{spec.label}</span>
+                              <span className="font-bold text-slate-850">{spec.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Detailed Description Section */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Service Details:</h4>
+                      {service.descriptionPoints && service.descriptionPoints.length > 0 ? (
+                        <div className="space-y-3.5">
+                          {service.descriptionPoints.map((point, index) => (
+                            <div key={index} className="space-y-1">
+                              {point.heading ? (
+                                <h4 className="text-sm font-bold text-slate-900">{point.heading}</h4>
+                              ) : null}
+                              {point.content ? (
+                                <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">{point.content}</p>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : service.description || service.shortDescription ? (
+                        <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
+                          {service.description || service.shortDescription}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No description available.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-400">Price</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-extrabold text-slate-950">{currentPriceLabel}</span>
+                        {hasComparablePrice && (
+                          <span className="text-sm text-slate-400 line-through">
+                            {formatIndianCurrency(oldPriceValue)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="w-40 shrink-0">
+                      {serviceCartQuantity > 0 ? (
+                        <div className="grid h-11 w-full grid-cols-3 overflow-hidden rounded-xl bg-[#2f9e44] text-white shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity - 1)}
+                            className="grid place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
+                            aria-label="Decrease quantity"
+                          >
+                            -
+                          </button>
+                          <div className="grid place-items-center bg-[#2f9e44] text-sm font-extrabold text-white">
+                            {serviceCartQuantity}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity + 1)}
+                            className="grid place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
+                            aria-label="Increase quantity"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(service)}
+                          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition cursor-pointer"
+                        >
+                          Book Now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div id="listing-footer" className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">

@@ -97,6 +97,7 @@ export type StoreProduct = {
   keyAttributes?: Array<{ label: string; value: string }>;
   specifications?: Array<{ label: string; value: string }>;
   tags?: string[];
+  descriptionPoints?: Array<{ heading?: string; content?: string }>;
   detailedDescriptionBlocks?: Array<{ image?: string; headline?: string; text?: string }>;
   showDeliveryBadge?: boolean;
   showTopBrand?: boolean;
