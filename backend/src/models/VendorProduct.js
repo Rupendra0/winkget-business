@@ -41,6 +41,17 @@ const descriptionBlockSchema = new Schema(
   }
 );
 
+const descriptionPointSchema = new Schema(
+  {
+    heading: { type: String, trim: true },
+    content: { type: String, trim: true },
+  },
+  {
+    _id: false,
+    versionKey: false,
+  }
+);
+
 const vendorProductSchema = new Schema(
   {
     vendor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -85,6 +96,7 @@ const vendorProductSchema = new Schema(
     tags: [{ type: String, trim: true }],
     variantData: { type: [variantSchema], default: [] },
     detailedDescriptionBlocks: { type: [descriptionBlockSchema], default: [] },
+    descriptionPoints: { type: [descriptionPointSchema], default: [] },
 
     status: { type: String, enum: STATUS_VALUES, default: "draft" },
     storePlacement: { type: String, enum: STORE_PLACEMENT_VALUES },

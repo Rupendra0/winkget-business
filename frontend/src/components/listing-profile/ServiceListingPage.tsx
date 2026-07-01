@@ -1296,7 +1296,7 @@ export default function ServiceListingPage({
           <Link 
             href={serviceHref} 
             onClick={(e) => handleCardClick(e, service)}
-            className="line-clamp-2 min-h-[2.7rem] text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading cursor-pointer"
+            className="line-clamp-2 text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading cursor-pointer"
           >
             {service.name}
           </Link>
@@ -1319,18 +1319,12 @@ export default function ServiceListingPage({
             <span className="text-slate-400">({reviewCountValue})</span>
           </div>
 
-          {service.shortDescription || service.description ? (
-            <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">
-              {service.shortDescription || service.description}
-            </p>
-          ) : null}
-
           {service.highlights && service.highlights.length > 0 ? (
             <ul className="mt-3.5 space-y-1 text-xs font-semibold text-slate-600">
-              {service.highlights.slice(0, 3).map((highlight, index) => (
+              {service.highlights.map((highlight, index) => (
                 <li key={index} className="flex items-center gap-1.5 truncate">
                   <span className="text-emerald-500 font-extrabold">✓</span>
-                  <span>{highlight.replace(/^✓\s*/, '')}</span>
+                  <span className="font-bold text-slate-800">{highlight.replace(/^✓\s*/, '')}</span>
                 </li>
               ))}
             </ul>

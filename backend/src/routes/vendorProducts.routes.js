@@ -176,6 +176,25 @@ const toDescriptionBlockArray = (input) => {
     .filter(Boolean);
 };
 
+const toDescriptionPointArray = (input) => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      const heading = normalizeString(item?.heading);
+      const content = normalizeString(item?.content);
+
+      if (!heading && !content) {
+        return null;
+      }
+
+      return { heading, content };
+    })
+    .filter(Boolean);
+};
+
 const toProductSummary = (product) => ({
   id: String(product._id),
   vendorId: String(product.vendor),
@@ -215,6 +234,7 @@ const toProductSummary = (product) => ({
   tags: Array.isArray(product.tags) ? product.tags : [],
   variantData: Array.isArray(product.variantData) ? product.variantData : [],
   detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks) ? product.detailedDescriptionBlocks : [],
+  descriptionPoints: Array.isArray(product.descriptionPoints) ? product.descriptionPoints : [],
   status: product.status,
   storePlacement: product.storePlacement,
   showDeliveryBadge: Boolean(product.showDeliveryBadge),
@@ -425,6 +445,9 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
   const detailedDescriptionBlocks = toDescriptionBlockArray(
     body?.detailedDescriptionBlocks ?? existingProduct?.detailedDescriptionBlocks
   );
+  const descriptionPoints = toDescriptionPointArray(
+    body?.descriptionPoints ?? existingProduct?.descriptionPoints
+  );
 
   const payload = {
     categorySlug,
@@ -469,6 +492,7 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     tags,
     variantData,
     detailedDescriptionBlocks,
+    descriptionPoints,
     status,
     storePlacement,
     sourcePlatform: normalizeString(body?.sourcePlatform || existingProduct?.sourcePlatform || "vendor-panel"),
