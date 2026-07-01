@@ -515,6 +515,25 @@ export default function VendorAddProductForm({
   const [isHighlightOptionsOpen, setIsHighlightOptionsOpen] = useState(false);
   const [highlightValues, setHighlightValues] = useState<Record<string, boolean>>(() => createInitialHighlightValues(initialProduct));
 
+  const [customHighlights, setCustomHighlights] = useState<string[]>(() => {
+    const existing = initialProduct?.highlights || [];
+    return existing.length > 0 ? existing : [""];
+  });
+
+  const addCustomHighlight = () => {
+    setCustomHighlights((current) => [...current, ""]);
+  };
+
+  const removeCustomHighlight = (index: number) => {
+    setCustomHighlights((current) => current.filter((_, i) => i !== index));
+  };
+
+  const updateCustomHighlight = (index: number, value: string) => {
+    setCustomHighlights((current) =>
+      current.map((item, i) => (i === index ? value : item))
+    );
+  };
+
   // Fetch brand profiles
   useEffect(() => {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -1059,7 +1078,9 @@ export default function VendorAddProductForm({
         tags: compactMode ? undefined : parseTagList(fieldValues.tagsText),
         keyAttributes: compactMode ? undefined : keyAttributes,
         specifications: compactMode ? undefined : specificationPayload,
-        highlights: compactMode ? undefined : [...highlights, ...variantHighlights],
+        highlights: isServiceVendor
+          ? customHighlights.map((h) => String(h || "").trim()).filter(Boolean)
+          : (compactMode ? undefined : [...highlights, ...variantHighlights]),
         variantData: compactMode ? undefined : serializedVariants,
         detailedDescriptionBlocks: compactMode ? undefined : filteredDescriptionBlocks,
         moq: Number.isFinite(Number(initialProduct?.moq)) && Number(initialProduct?.moq) > 0 ? Number(initialProduct?.moq) : 1,
@@ -1640,60 +1661,62 @@ export default function VendorAddProductForm({
                   {fieldErrors.mainImage ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.mainImage}</p> : null}
                 </div>
 
-                <div
-                  className={`rounded-xl border-2 border-dashed p-3 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
-                  onDragEnter={(event) => {
-                    event.preventDefault();
-                    setGalleryDragOver(true);
-                  }}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDragLeave={() => setGalleryDragOver(false)}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    setGalleryDragOver(false);
-                    handleGalleryFiles(event.dataTransfer?.files);
-                  }}
-                >
-                  <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={(event) => handleGalleryFiles(event.target.files)} className="sr-only" />
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-700">Gallery images</p>
-                      <p className="mt-1 text-xs text-slate-500">Drop multiple images or pick files. Click Set Main on any thumbnail.</p>
-                    </div>
-                    {combinedGalleryPreviews.length ? (
-                      <button type="button" onClick={clearGalleryImages} className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700">
-                        Clear gallery
-                      </button>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 justify-items-start gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                    {combinedGalleryPreviews.map((image) => (
-                      <div key={image.id} className="group w-full max-w-[160px] overflow-hidden rounded-xl border border-[#d9ccb7] bg-[#fffdf8] shadow-sm">
-                        <button type="button" onClick={() => setGalleryImageAsMain(image)} className="relative h-20 w-full overflow-hidden bg-white p-1" title="Set as main image">
-                          <img src={image.url} alt={image.name} className="h-full w-full object-contain" />
+                {isServiceVendor ? null : (
+                  <div
+                    className={`rounded-xl border-2 border-dashed p-3 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      setGalleryDragOver(true);
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDragLeave={() => setGalleryDragOver(false)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setGalleryDragOver(false);
+                      handleGalleryFiles(event.dataTransfer?.files);
+                    }}
+                  >
+                    <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={(event) => handleGalleryFiles(event.target.files)} className="sr-only" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-700">Gallery images</p>
+                        <p className="mt-1 text-xs text-slate-500">Drop multiple images or pick files. Click Set Main on any thumbnail.</p>
+                      </div>
+                      {combinedGalleryPreviews.length ? (
+                        <button type="button" onClick={clearGalleryImages} className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                          Clear gallery
                         </button>
-                        <div className="flex flex-wrap items-center gap-1 px-2 py-1.5">
-                          <button type="button" onClick={() => removeGalleryImage(image.id)} className="flex-1 rounded-md border border-rose-200 px-2 py-1 text-center text-[10px] font-semibold text-rose-600">
-                            Remove
+                      ) : null}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 justify-items-start gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                      {combinedGalleryPreviews.map((image) => (
+                        <div key={image.id} className="group w-full max-w-[160px] overflow-hidden rounded-xl border border-[#d9ccb7] bg-[#fffdf8] shadow-sm">
+                          <button type="button" onClick={() => setGalleryImageAsMain(image)} className="relative h-20 w-full overflow-hidden bg-white p-1" title="Set as main image">
+                            <img src={image.url} alt={image.name} className="h-full w-full object-contain" />
                           </button>
-                          <button type="button" onClick={() => setGalleryImageAsMain(image)} className="flex-1 whitespace-nowrap rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[10px] font-semibold text-blue-700">
-                            Set Main
-                          </button>
+                          <div className="flex flex-wrap items-center gap-1 px-2 py-1.5">
+                            <button type="button" onClick={() => removeGalleryImage(image.id)} className="flex-1 rounded-md border border-rose-200 px-2 py-1 text-center text-[10px] font-semibold text-rose-600">
+                              Remove
+                            </button>
+                            <button type="button" onClick={() => setGalleryImageAsMain(image)} className="flex-1 whitespace-nowrap rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[10px] font-semibold text-blue-700">
+                              Set Main
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => galleryInputRef.current?.click()}
-                      className="flex h-24 w-full max-w-[160px] items-center justify-center rounded-xl border-2 border-dashed border-[#d9ccb7] bg-[#fffdf8] text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="flex flex-col items-center gap-2 text-slate-600">
-                        <div className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-xl text-slate-700">+</div>
-                        <span className="text-xs font-medium">Add Image</span>
-                      </div>
-                    </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="flex h-24 w-full max-w-[160px] items-center justify-center rounded-xl border-2 border-dashed border-[#d9ccb7] bg-[#fffdf8] text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div className="flex flex-col items-center gap-2 text-slate-600">
+                          <div className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-xl text-slate-700">+</div>
+                          <span className="text-xs font-medium">Add Image</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </section>
 
@@ -1752,30 +1775,72 @@ export default function VendorAddProductForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 font-semibold">
-                  {isServiceVendor ? "Service Specifications" : "Product Specifications"}
-                </h3>
-                <span className="text-xs text-slate-500">One per row - label and value</span>
-              </div>
-              <div className="mt-3 grid gap-2">
-                {specPairs.map((pair, index) => (
-                  <div key={`spec-${index}`} className="grid grid-cols-2 gap-2">
-                    <textarea value={pair.label} onChange={(event) => updateSpecification(index, "label", event.target.value)} placeholder="Enter label (e.g. Warranty)" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                    <div className="relative">
-                      <textarea value={pair.value} onChange={(event) => updateSpecification(index, "value", event.target.value)} placeholder="Enter text here" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                      <button type="button" onClick={() => removeSpecification(index)} className="absolute right-1 top-1 text-sm font-semibold text-red-600">
-                        Remove
-                      </button>
+            {isServiceVendor ? null : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900 font-semibold">
+                    Product Specifications
+                  </h3>
+                  <span className="text-xs text-slate-500">One per row - label and value</span>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {specPairs.map((pair, index) => (
+                    <div key={`spec-${index}`} className="grid grid-cols-2 gap-2">
+                      <textarea value={pair.label} onChange={(event) => updateSpecification(index, "label", event.target.value)} placeholder="Enter label (e.g. Warranty)" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                      <div className="relative">
+                        <textarea value={pair.value} onChange={(event) => updateSpecification(index, "value", event.target.value)} placeholder="Enter text here" className="h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <button type="button" onClick={() => removeSpecification(index)} className="absolute right-1 top-1 text-sm font-semibold text-red-600">
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <button type="button" onClick={addSpecification} className="mt-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-center font-bold text-slate-700 hover:border-slate-400">
-                  Add Specification
-                </button>
-              </div>
-            </section>
+                  ))}
+                  <button type="button" onClick={addSpecification} className="mt-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-center font-bold text-slate-700 hover:border-slate-400">
+                    Add Specification
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {isServiceVendor && (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Highlights / Key Points
+                  </h3>
+                  <span className="text-xs text-slate-500">Key features (e.g. ✓ Includes document drafting)</span>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {customHighlights.map((highlight, index) => (
+                    <div key={`highlight-${index}`} className="relative flex items-center">
+                      <input
+                        type="text"
+                        value={highlight}
+                        onChange={(event) => updateCustomHighlight(index, event.target.value)}
+                        placeholder="e.g. Includes document drafting"
+                        className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none transition focus:border-[#c7a97a] pr-12"
+                      />
+                      {customHighlights.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeCustomHighlight(index)}
+                          className="absolute right-3 text-sm font-semibold text-red-600"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addCustomHighlight}
+                    className="mt-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-3 text-center font-bold text-slate-700 hover:border-slate-400 text-sm"
+                  >
+                    + Add Highlight Point
+                  </button>
+                </div>
+              </section>
+            )}
 
             <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
               <div className="flex items-center justify-between gap-3">

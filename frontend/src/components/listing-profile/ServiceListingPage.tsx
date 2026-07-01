@@ -243,6 +243,7 @@ export default function ServiceListingPage({
   const [, setReviewUpdateVersion] = useState(0);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
   const [wishlistProductIds, setWishlistProductIds] = useState<Set<string>>(() => new Set());
+  const [selectedService, setSelectedService] = useState<StoreProduct | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1206,6 +1207,11 @@ export default function ServiceListingPage({
     setCartItemQuantity(productId, nextQuantity);
   }, []);
 
+  const handleCardClick = useCallback((e: React.MouseEvent, service: StoreProduct) => {
+    e.preventDefault();
+    setSelectedService(service);
+  }, []);
+
   const renderServiceCard = (service: StoreProduct) => {
     const serviceHref = buildProductHref(service);
     const serviceCartQuantity = Math.max(0, Number(cartQuantities[service.id] || 0));
@@ -1224,6 +1230,9 @@ export default function ServiceListingPage({
     const currentPriceValue = toPriceValue(service.price);
     const oldPriceValue = Number(service.oldPriceValue || 0);
     const hasComparablePrice = Number.isFinite(oldPriceValue) && oldPriceValue > currentPriceValue && currentPriceValue > 0;
+    const discountPercent = hasComparablePrice
+      ? Math.round(((oldPriceValue - currentPriceValue) / oldPriceValue) * 100)
+      : 0;
     const currentPriceLabel =
       currentPriceValue > 0
         ? formatIndianCurrency(currentPriceValue)
@@ -1235,7 +1244,16 @@ export default function ServiceListingPage({
         key={service.id}
         className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition hover:-translate-y-0.5"
       >
-        <Link href={serviceHref} className="relative block aspect-video w-full overflow-hidden bg-slate-100 font-heading">
+        <Link 
+          href={serviceHref} 
+          onClick={(e) => handleCardClick(e, service)}
+          className="relative block aspect-video w-full overflow-hidden bg-slate-100 font-heading cursor-pointer"
+        >
+          {discountPercent > 0 ? (
+            <span className="absolute left-3 top-3 z-10 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+              {discountPercent}% OFF
+            </span>
+          ) : null}
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -1253,7 +1271,7 @@ export default function ServiceListingPage({
         <button
           type="button"
           onClick={() => handleToggleWishlist(service)}
-          className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-400 transition hover:text-rose-500 shadow-sm"
+          className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-400 transition hover:text-rose-500 shadow-sm cursor-pointer"
           aria-label={`${wishlistProductIds.has(service.id) ? "Remove from" : "Add to"} wishlist`}
         >
           <Heart
@@ -1264,7 +1282,11 @@ export default function ServiceListingPage({
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col p-4">
-          <Link href={serviceHref} className="line-clamp-2 min-h-[2.7rem] text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading">
+          <Link 
+            href={serviceHref} 
+            onClick={(e) => handleCardClick(e, service)}
+            className="line-clamp-2 min-h-[2.7rem] text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading cursor-pointer"
+          >
             {service.name}
           </Link>
 
@@ -1292,6 +1314,17 @@ export default function ServiceListingPage({
             </p>
           ) : null}
 
+          {service.highlights && service.highlights.length > 0 ? (
+            <ul className="mt-3.5 space-y-1 text-xs font-semibold text-slate-600">
+              {service.highlights.slice(0, 3).map((highlight, index) => (
+                <li key={index} className="flex items-center gap-1.5 truncate">
+                  <span className="text-emerald-500 font-extrabold">✓</span>
+                  <span>{highlight.replace(/^✓\s*/, '')}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-lg font-extrabold text-slate-950">{currentPriceLabel}</span>
             {hasComparablePrice ? (
@@ -1307,7 +1340,7 @@ export default function ServiceListingPage({
                 <button
                   type="button"
                   onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
                   aria-label={`Decrease quantity for ${service.name}`}
                 >
                   -
@@ -1318,7 +1351,7 @@ export default function ServiceListingPage({
                 <button
                   type="button"
                   onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
                   aria-label={`Increase quantity for ${service.name}`}
                 >
                   +
@@ -1328,7 +1361,7 @@ export default function ServiceListingPage({
               <button
                 type="button"
                 onClick={() => handleAddToCart(service)}
-                className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
               >
                 Book Now
               </button>
