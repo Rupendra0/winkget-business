@@ -304,6 +304,17 @@ export default function ServiceListingPage({
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedService) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedService]);
+
   const [showAllServices, setShowAllServices] = useState(false);
   const [mobileDescExpanded, setMobileDescExpanded] = useState(false);
   const isServiceProvider = profile.businessType === "service";
@@ -2625,39 +2636,43 @@ export default function ServiceListingPage({
                 </div>
 
                 {/* Details Column */}
-                <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 overflow-y-auto">
-                  <div className="mb-2">
-                    <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wider">
-                      {service.categoryLabel || service.category || "Service"}
-                    </span>
-                  </div>
-
-                  <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
-                    {service.name}
-                  </h2>
-
-                  <p className="text-sm font-semibold text-slate-500 mb-4">
-                    {service.sellerName || profile.name}
-                  </p>
-
-                  <div className="flex items-center gap-1.5 text-xs mb-4">
-                    <span className="font-extrabold text-amber-600">{ratingLabel(ratingValue)}</span>
-                    <div className="flex items-center gap-0.5 text-amber-500">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star
-                          key={index}
-                          size={14}
-                          className={index < Math.round(ratingValue) ? "fill-amber-500 text-amber-500" : "text-slate-300"}
-                        />
-                      ))}
+                <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-full overflow-hidden">
+                  {/* Fixed Header */}
+                  <div className="mb-4 shrink-0">
+                    <div className="mb-2">
+                      <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wider">
+                        {service.categoryLabel || service.category || "Service"}
+                      </span>
                     </div>
-                    <span className="text-slate-400">({reviewCountValue} ratings)</span>
+
+                    <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
+                      {service.name}
+                    </h2>
+
+                    <p className="text-sm font-semibold text-slate-500">
+                      {service.sellerName || profile.name}
+                    </p>
                   </div>
 
-                  <div className="flex-1 min-h-[4rem] mb-6">
+                  {/* Scrollable Middle Content Area */}
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="font-extrabold text-amber-600">{ratingLabel(ratingValue)}</span>
+                      <div className="flex items-center gap-0.5 text-amber-500">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            size={14}
+                            className={index < Math.round(ratingValue) ? "fill-amber-500 text-amber-500" : "text-slate-300"}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-slate-400">({reviewCountValue} ratings)</span>
+                    </div>
+
                     {/* 1. Highlights Section */}
                     {service.highlights && service.highlights.length > 0 && (
-                      <div className="mb-6 pb-4 border-b border-slate-100">
+                      <div className="pb-4 border-b border-slate-100">
                         <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">What's Included:</h4>
                         <ul className="space-y-1.5 text-sm font-medium text-slate-600">
                           {service.highlights.map((highlight, index) => (
@@ -2672,7 +2687,7 @@ export default function ServiceListingPage({
 
                     {/* 2. Specifications Section */}
                     {service.specifications && service.specifications.length > 0 && (
-                      <div className="mb-6 pb-4 border-b border-slate-100">
+                      <div className="pb-4 border-b border-slate-100">
                         <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Specifications:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600">
                           {service.specifications.map((spec, index) => (
@@ -2711,7 +2726,8 @@ export default function ServiceListingPage({
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                  {/* Fixed Footer */}
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
                     <div className="flex flex-col">
                       <span className="text-xs font-medium text-slate-400">Price</span>
                       <div className="flex items-baseline gap-2">
