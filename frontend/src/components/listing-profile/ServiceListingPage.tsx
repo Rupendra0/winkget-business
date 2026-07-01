@@ -1256,15 +1256,15 @@ export default function ServiceListingPage({
         className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition hover:-translate-y-0.5"
       >
         <Link 
-          href={serviceHref} 
+          href="#" 
           onClick={(e) => handleCardClick(e, service)}
           className="relative block aspect-video w-full overflow-hidden bg-slate-100 font-heading cursor-pointer"
         >
-          {discountPercent > 0 ? (
-            <span className="absolute left-3 top-3 z-10 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-              {discountPercent}% OFF
+          {service.badge && (
+            <span className="absolute left-3 top-3 z-10 rounded-full bg-[#10b981] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm uppercase tracking-wider">
+              {service.badge}
             </span>
-          ) : null}
+          )}
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -1294,7 +1294,7 @@ export default function ServiceListingPage({
 
         <div className="flex min-w-0 flex-1 flex-col p-4">
           <Link 
-            href={serviceHref} 
+            href="#" 
             onClick={(e) => handleCardClick(e, service)}
             className="line-clamp-2 text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading cursor-pointer"
           >
@@ -1330,12 +1330,19 @@ export default function ServiceListingPage({
             </ul>
           ) : null}
 
-          <div className="mt-4 flex items-baseline gap-2">
+          <div className="mt-4 flex items-baseline gap-2 flex-wrap">
             <span className="text-lg font-extrabold text-slate-950">{currentPriceLabel}</span>
             {hasComparablePrice ? (
-              <span className="text-sm text-slate-400 line-through">
-                {formatIndianCurrency(oldPriceValue)}
-              </span>
+              <>
+                <span className="text-sm text-slate-400 line-through">
+                  {formatIndianCurrency(oldPriceValue)}
+                </span>
+                {discountPercent > 0 && (
+                  <span className="text-xs font-bold text-[#10b981]">
+                    {discountPercent}% OFF
+                  </span>
+                )}
+              </>
             ) : null}
           </div>
 
@@ -1622,36 +1629,7 @@ export default function ServiceListingPage({
             <div className="mx-auto w-full px-2 sm:px-12 md:px-16 lg:px-20">
               <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:overflow-x-auto sm:gap-3 pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible">
                 
-                {/* 1. My Store / Services Button */}
-                {isServiceProvider ? (
-                  storeHref ? (
-                    <Link
-                      href={storeHref}
-                      className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
-                    >
-                      <Store size={15} className="text-white" />
-                      My Store
-                    </Link>
-                  ) : (
-                    <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
-                      <Store size={15} className="text-white/80" />
-                      My Store
-                    </span>
-                  )
-                ) : storeHref ? (
-                  <Link
-                    href={storeHref}
-                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
-                  >
-                    <Store size={15} className="text-white" />
-                    My Store
-                  </Link>
-                ) : (
-                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
-                    <Store size={15} className="text-white/80" />
-                    My Store
-                  </span>
-                )}
+
 
                 {/* 2. Call Button */}
                 {phoneDigits ? (
@@ -2622,9 +2600,9 @@ export default function ServiceListingPage({
                       Service
                     </div>
                   )}
-                  {discountPercent > 0 && (
-                    <span className="absolute left-3 top-3 z-10 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-                      {discountPercent}% OFF
+                  {service.badge && (
+                    <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white shadow-md uppercase tracking-wider">
+                      {service.badge}
                     </span>
                   )}
                 </div>
@@ -2649,7 +2627,7 @@ export default function ServiceListingPage({
                   </div>
 
                   {/* Scrollable Middle Content Area */}
-                  <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
                     <div className="flex items-center gap-1.5 text-xs">
                       <span className="font-extrabold text-amber-600">{ratingLabel(ratingValue)}</span>
                       <div className="flex items-center gap-0.5 text-amber-500">
@@ -2668,29 +2646,14 @@ export default function ServiceListingPage({
                     {service.highlights && service.highlights.length > 0 && (
                       <div className="pb-4 border-b border-slate-100">
                         <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">What's Included:</h4>
-                        <ul className="space-y-1.5 text-sm font-medium text-slate-600">
+                        <ul className="space-y-1.5 text-sm text-slate-600">
                           {service.highlights.map((highlight, index) => (
                             <li key={index} className="flex items-center gap-2">
                               <span className="text-emerald-500 font-extrabold">✓</span>
-                              <span>{highlight.replace(/^✓\s*/, '')}</span>
+                              <span className="font-bold text-slate-800">{highlight.replace(/^✓\s*/, '')}</span>
                             </li>
                           ))}
                         </ul>
-                      </div>
-                    )}
-
-                    {/* 2. Specifications Section */}
-                    {service.specifications && service.specifications.length > 0 && (
-                      <div className="pb-4 border-b border-slate-100">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Specifications:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600">
-                          {service.specifications.map((spec, index) => (
-                            <div key={index} className="flex items-center justify-between py-1 border-b border-slate-50">
-                              <span className="font-semibold text-slate-500">{spec.label}</span>
-                              <span className="font-bold text-slate-850">{spec.value}</span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     )}
 
@@ -2709,9 +2672,9 @@ export default function ServiceListingPage({
                             </div>
                           ))}
                         </div>
-                      ) : service.description || service.shortDescription ? (
+                      ) : service.description ? (
                         <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                          {service.description || service.shortDescription}
+                          {service.description}
                         </p>
                       ) : (
                         <p className="text-sm text-slate-400 italic">No description available.</p>
@@ -2723,12 +2686,19 @@ export default function ServiceListingPage({
                   <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
                     <div className="flex flex-col">
                       <span className="text-xs font-medium text-slate-400">Price</span>
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-2xl font-extrabold text-slate-950">{currentPriceLabel}</span>
                         {hasComparablePrice && (
-                          <span className="text-sm text-slate-400 line-through">
-                            {formatIndianCurrency(oldPriceValue)}
-                          </span>
+                          <>
+                            <span className="text-sm text-slate-400 line-through">
+                              {formatIndianCurrency(oldPriceValue)}
+                            </span>
+                            {discountPercent > 0 && (
+                              <span className="text-sm font-bold text-[#10b981]">
+                                {discountPercent}% OFF
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
