@@ -757,7 +757,19 @@ function isRestaurantVendorProfile(vendor: VendorSession | null): boolean {
 }
 
 function isServiceVendorProfile(vendor: VendorSession | null): boolean {
-  return vendor?.businessType === "service";
+  if (!vendor) return false;
+  if (vendor.businessType === "service") return true;
+
+  const categoryName = String(vendor.businessCategory?.name || "").toLowerCase();
+  const subcategoryName = String(vendor.businessSubcategory?.name || "").toLowerCase();
+
+  return (
+    categoryName.includes("service") ||
+    subcategoryName.includes("service") ||
+    categoryName.includes("legal") ||
+    categoryName.includes("lawyer") ||
+    categoryName.includes("advocate")
+  );
 }
 
 function buildInquirySummary(inquiries: VendorInquiry[]): VendorInquirySnapshot["summary"] {

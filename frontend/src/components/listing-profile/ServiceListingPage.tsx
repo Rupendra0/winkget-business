@@ -2702,7 +2702,6 @@ export default function ServiceListingPage({
 
                     {/* 3. Detailed Description Section */}
                     <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Service Details:</h4>
                       {service.descriptionPoints && service.descriptionPoints.length > 0 ? (
                         <div className="space-y-3.5">
                           {service.descriptionPoints.map((point, index) => (
