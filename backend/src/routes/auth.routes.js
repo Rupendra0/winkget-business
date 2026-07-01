@@ -905,6 +905,8 @@ router.put("/auth/me", async (req, res) => {
     const sublocalityInput =
       req.body?.sublocality !== undefined ? String(req.body.sublocality || "").trim() : user.sublocality || "";
     const stateInput = req.body?.state !== undefined ? String(req.body.state || "").trim() : user.state || "";
+    const postalCodeInput =
+      req.body?.postalCode !== undefined ? String(req.body.postalCode || "").trim() : user.postalCode || "";
     const idProofDocumentInput =
       req.body?.idProofDocument !== undefined ? String(req.body.idProofDocument || "").trim() : user.idProofDocument || "";
     const idProofTypeInput =
@@ -1258,6 +1260,12 @@ router.put("/auth/me", async (req, res) => {
       user.idProofType = idProofTypeInput || user.idProofType;
       user.idProofNumber = idProofNumberInput || user.idProofNumber;
       user.idProofDocument = idProofDocumentInput || user.idProofDocument;
+    } else if (user.role === "customer") {
+      user.businessAddress = businessAddressInput || undefined;
+      user.city = cityInput || undefined;
+      user.sublocality = sublocalityInput || undefined;
+      user.state = stateInput || undefined;
+      user.postalCode = postalCodeInput || undefined;
     }
 
     await user.save();
@@ -1270,7 +1278,7 @@ router.put("/auth/me", async (req, res) => {
 
     const updatedUser = await User.findById(user._id)
       .select(
-        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state gstNumber gstDocument website businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
+        "_id name email phone alternatePhone businessName role vendorStatus businessCategory businessSubcategory businessEmail businessPhone businessAlternatePhone businessAddress city sublocality state postalCode gstNumber gstDocument website businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery instagramUrl facebookUrl youtubeUrl shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt establishmentYear serviceTags customFormData"
       )
       .populate("businessCategory", "_id name customFormEnabled customFormTitle customFormFields")
       .populate("businessSubcategory", "_id name customFormEnabled customFormTitle customFormFields");
@@ -1300,6 +1308,7 @@ router.put("/auth/me", async (req, res) => {
         city: updatedUser.city,
         sublocality: updatedUser.sublocality,
         state: updatedUser.state,
+        postalCode: updatedUser.postalCode,
         gstNumber: updatedUser.gstNumber,
         gstDocument: updatedUser.gstDocument,
         website: updatedUser.website,

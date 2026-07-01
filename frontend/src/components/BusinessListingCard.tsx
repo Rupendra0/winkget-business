@@ -128,7 +128,7 @@ function BusinessListingCardComponent({
       onMouseEnter={prefetchDetails}
       onTouchStart={prefetchDetails}
       onFocus={prefetchDetails}
-      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
+      className={`group relative flex h-full min-w-0 flex-col p-4 pb-7 overflow-hidden rounded-2xl bg-white border border-slate-200 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 ${
         isNavigating ? "pointer-events-none" : ""
       } ${
         className || ""
@@ -148,7 +148,7 @@ function BusinessListingCardComponent({
         </div>
       ) : null}
 
-      <div className="relative w-full h-52 overflow-hidden rounded-2xl">
+      <div className="relative w-full h-52 overflow-hidden rounded-xl">
         <img
           src={listing.imageUrl || DEFAULT_VENDOR_IMAGE}
           alt={displayName}
@@ -164,7 +164,7 @@ function BusinessListingCardComponent({
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col pt-3.5 pb-4 px-1">
+      <div className="flex flex-1 flex-col pt-3 pb-1 px-0.5">
         {/* Title */}
         <Link
           href={detailsHref}
