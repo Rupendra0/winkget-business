@@ -436,6 +436,14 @@ const toStoreProductsFromVendorProducts = (
             }))
             .filter((item) => item.image || item.headline || item.text)
         : undefined,
+      descriptionPoints: Array.isArray(product.descriptionPoints)
+        ? product.descriptionPoints
+            .map((item) => ({
+              heading: normalizeString(item?.heading),
+              content: normalizeString(item?.content),
+            }))
+            .filter((item) => item.heading || item.content)
+        : undefined,
       showDeliveryBadge: product.showDeliveryBadge === true,
       showTopBrand: product.showTopBrand === true,
       showFreeDelivery: product.showFreeDelivery === true,

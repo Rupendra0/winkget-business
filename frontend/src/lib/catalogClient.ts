@@ -176,6 +176,10 @@ export type CatalogVendorProduct = {
     headline?: string;
     text?: string;
   }>;
+  descriptionPoints?: Array<{
+    heading?: string;
+    content?: string;
+  }>;
   status?: "draft" | "pending" | "live" | "rejected" | "archived";
   storePlacement?: "featured" | "trending";
   showDeliveryBadge?: boolean;
