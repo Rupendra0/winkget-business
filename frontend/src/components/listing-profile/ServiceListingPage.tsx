@@ -1321,7 +1321,7 @@ export default function ServiceListingPage({
 
           {service.highlights && service.highlights.length > 0 ? (
             <ul className="mt-3.5 space-y-1 text-xs font-semibold text-slate-600">
-              {service.highlights.map((highlight, index) => (
+              {service.highlights.slice(0, 4).map((highlight, index) => (
                 <li key={index} className="flex items-center gap-1.5 truncate">
                   <span className="text-emerald-500 font-extrabold">✓</span>
                   <span className="font-bold text-slate-800">{highlight.replace(/^✓\s*/, '')}</span>
