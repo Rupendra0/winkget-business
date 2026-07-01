@@ -1253,12 +1253,11 @@ export default function ServiceListingPage({
     return (
       <article
         key={service.id}
-        className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition hover:-translate-y-0.5"
+        onClick={(e) => handleCardClick(e, service)}
+        className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white border border-slate-100 shadow-sm transition hover:-translate-y-0.5 cursor-pointer"
       >
-        <Link 
-          href="#" 
-          onClick={(e) => handleCardClick(e, service)}
-          className="relative block aspect-video w-full overflow-hidden bg-slate-100 font-heading cursor-pointer"
+        <div 
+          className="relative block aspect-video w-full overflow-hidden bg-slate-100 font-heading"
         >
           {service.badge && (
             <span className="absolute left-3 top-3 z-10 rounded-full bg-[#10b981] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm uppercase tracking-wider">
@@ -1277,11 +1276,11 @@ export default function ServiceListingPage({
               Service
             </div>
           )}
-        </Link>
+        </div>
 
         <button
           type="button"
-          onClick={() => handleToggleWishlist(service)}
+          onClick={(e) => { e.stopPropagation(); handleToggleWishlist(service); }}
           className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-400 transition hover:text-rose-500 shadow-sm cursor-pointer"
           aria-label={`${wishlistProductIds.has(service.id) ? "Remove from" : "Add to"} wishlist`}
         >
@@ -1293,13 +1292,9 @@ export default function ServiceListingPage({
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col p-4">
-          <Link 
-            href="#" 
-            onClick={(e) => handleCardClick(e, service)}
-            className="line-clamp-2 text-[15px] font-bold leading-5 text-slate-900 hover:text-blue-700 font-heading cursor-pointer"
-          >
+          <h3 className="line-clamp-2 text-[15px] font-bold leading-5 text-slate-900 group-hover:text-blue-700 font-heading">
             {service.name}
-          </Link>
+          </h3>
 
           <p className="mt-1 truncate text-sm font-medium text-slate-500">
             {service.sellerName || profile.name}
@@ -1351,7 +1346,7 @@ export default function ServiceListingPage({
               <div className="grid h-10 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg bg-[#2f9e44] text-white">
                 <button
                   type="button"
-                  onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity - 1)}
+                  onClick={(e) => { e.stopPropagation(); updateServiceCartQuantity(service.id, serviceCartQuantity - 1); }}
                   className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
                   aria-label={`Decrease quantity for ${service.name}`}
                 >
@@ -1362,7 +1357,7 @@ export default function ServiceListingPage({
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity + 1)}
+                  onClick={(e) => { e.stopPropagation(); updateServiceCartQuantity(service.id, serviceCartQuantity + 1); }}
                   className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
                   aria-label={`Increase quantity for ${service.name}`}
                 >
@@ -1372,7 +1367,7 @@ export default function ServiceListingPage({
             ) : (
               <button
                 type="button"
-                onClick={() => handleAddToCart(service)}
+                onClick={(e) => { e.stopPropagation(); handleAddToCart(service); }}
                 className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
               >
                 Book Now
