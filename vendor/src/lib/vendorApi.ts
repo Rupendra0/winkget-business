@@ -973,6 +973,15 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
         .filter((block) => block.image || block.headline || block.text)
     : [];
 
+  const descriptionPoints = Array.isArray(input.descriptionPoints)
+    ? input.descriptionPoints
+        .map((item) => ({
+          heading: String(item?.heading || "").trim(),
+          content: String(item?.content || "").trim(),
+        }))
+        .filter((item) => item.heading || item.content)
+    : [];
+
   const statusInput = String(input.status || "draft").trim().toLowerCase();
   const status =
     statusInput === "pending" ||
@@ -1026,6 +1035,7 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
     tags: Array.isArray(input.tags) ? input.tags.map((value) => String(value || "").trim()).filter(Boolean) : [],
     variantData,
     detailedDescriptionBlocks,
+    descriptionPoints,
     status,
     storePlacement,
     sourcePlatform: String(input.sourcePlatform || "").trim() || undefined,
