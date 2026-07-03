@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
@@ -238,6 +239,7 @@ export default function ServiceListingPage({
   profile: ListingProfile;
   storeData?: StorePageData | null;
 }) {
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isReviewHydrated, setIsReviewHydrated] = useState(false);
   const [, setReviewUpdateVersion] = useState(0);
@@ -897,7 +899,7 @@ export default function ServiceListingPage({
     <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-slate-900">
         <MapPin size={20} className="text-[#2563eb]" />
-        <h3 className="text-xl font-bold font-heading">Address & Contact Details</h3>
+        <h3 className="text-base sm:text-lg xl:text-xl font-bold font-heading whitespace-nowrap">Address & Contact Details</h3>
       </div>
 
       <div className="space-y-4">
@@ -1214,6 +1216,14 @@ export default function ServiceListingPage({
     [buildProductHref, profile.id, profile.name, profile.storeId]
   );
 
+  const handleBookNow = useCallback(
+    (product: StoreProduct) => {
+      handleAddToCart(product);
+      router.push("/checkout");
+    },
+    [handleAddToCart, router]
+  );
+
   const updateServiceCartQuantity = useCallback((productId: string, nextQuantity: number) => {
     setCartItemQuantity(productId, nextQuantity);
   }, []);
@@ -1319,7 +1329,7 @@ export default function ServiceListingPage({
               {service.highlights.slice(0, 4).map((highlight, index) => (
                 <li key={index} className="flex items-center gap-1.5 truncate">
                   <span className="text-emerald-500 font-extrabold">✓</span>
-                  <span className="font-bold text-slate-800">{highlight.replace(/^✓\s*/, '')}</span>
+                  <span className="font-semibold text-slate-600">{highlight.replace(/^✓\s*/, '')}</span>
                 </li>
               ))}
             </ul>
@@ -1367,7 +1377,7 @@ export default function ServiceListingPage({
             ) : (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); handleAddToCart(service); }}
+                onClick={(e) => { e.stopPropagation(); handleBookNow(service); }}
                 className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
               >
                 Book Now
@@ -2645,7 +2655,7 @@ export default function ServiceListingPage({
                           {service.highlights.map((highlight, index) => (
                             <li key={index} className="flex items-center gap-2">
                               <span className="text-emerald-500 font-extrabold">✓</span>
-                              <span className="font-bold text-slate-800">{highlight.replace(/^✓\s*/, '')}</span>
+                              <span className="font-semibold text-slate-600">{highlight.replace(/^✓\s*/, '')}</span>
                             </li>
                           ))}
                         </ul>
@@ -2724,7 +2734,7 @@ export default function ServiceListingPage({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleAddToCart(service)}
+                          onClick={() => handleBookNow(service)}
                           className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition cursor-pointer"
                         >
                           Book Now

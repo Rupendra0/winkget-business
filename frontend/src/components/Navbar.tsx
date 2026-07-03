@@ -527,15 +527,15 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className={`sticky top-0 z-50 bg-white/70 pt-[calc(env(safe-area-inset-top)+0.5rem)] font-medium backdrop-blur-md md:pt-0 ${
+      <nav className={`sticky top-0 z-50 bg-white/70 pt-[env(safe-area-inset-top)] font-medium backdrop-blur-md md:pt-0 ${
         isNavbarHiddenOnMobile ? "hidden md:block" : ""
       }`}>
         <div className="w-full px-[10px]">
           <div
             className={`mx-0.5 flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out md:mx-0 ${
               isMobileSearchOnly
-                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-28 md:overflow-visible md:py-4 md:opacity-100"
-                : "max-h-20 pt-1 pb-1 opacity-100 md:max-h-28 md:py-4"
+                ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-16 md:overflow-visible md:py-2 md:opacity-100"
+                : "max-h-20 pt-1 pb-1 opacity-100 md:max-h-16 md:py-2"
             }`}
           >
           {/* Logo */}
@@ -576,7 +576,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60"
+                className="inline-flex items-center gap-3 rounded-lg border border-slate-200/60 bg-white px-3 py-2 text-slate-700 shadow-none disabled:opacity-60"
               >
                 <MapPin size={18} className="text-orange-500" />
                 <div className="flex flex-col items-start leading-tight">
@@ -591,7 +591,7 @@ export default function Navbar() {
 
             {/* Search Bar */}
             <div className="flex-1 relative" ref={desktopSuggestRef}>
-              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-100 bg-white px-[15px] shadow-sm">
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200/60 bg-white px-[15px] shadow-none">
                 {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
                 <input
                   type="text"
@@ -639,7 +639,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-[10px] px-[10px]">
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="inline-flex h-11 items-center rounded-lg px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 btn-hover shadow-sm"
+              className="inline-flex h-11 items-center rounded-lg px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 shadow-none"
             >
               Sell on Winkget
             </a>
@@ -647,13 +647,26 @@ export default function Navbar() {
             {/* Wishlist Button */}
             <Link
               href="/wishlist"
-              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 border-0 shadow-none"
               aria-label="Wishlist"
             >
               <Heart size={18} className="text-gray-700" />
               <span className="text-sm mr-2">Wishlist</span>
               <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
                 {wishlistCount}
+              </span>
+            </Link>
+
+            {/* Cart Button (Moved next to Wishlist) */}
+            <Link
+              href="/cart"
+              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 border-0 shadow-none"
+              aria-label="Cart"
+            >
+              <ShoppingCart size={18} className="text-gray-700" />
+              <span className="text-sm mr-2">Cart</span>
+              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+                {cartCount}
               </span>
             </Link>
 
@@ -665,7 +678,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 btn-hover shadow-sm"
+                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 border-0 shadow-none"
                 >
                   <UserRound size={18} className="text-white" />
                   <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
@@ -724,25 +737,12 @@ export default function Navbar() {
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 btn-hover shadow-sm"
+                className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 border-0 shadow-none"
               >
                 <UserRound size={18} className="text-white" />
                 <span className="text-sm">Login</span>
               </Link>
             )}
-
-            {/* Cart Button */}
-            <Link
-              href="/cart"
-              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 btn-hover shadow-sm"
-              aria-label="Cart"
-            >
-              <ShoppingCart size={18} className="text-gray-700" />
-              <span className="text-sm mr-2">Cart</span>
-              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
-                {cartCount}
-              </span>
-            </Link>
           </div>
 
           {/* Mobile Menu */}

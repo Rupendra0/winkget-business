@@ -800,7 +800,7 @@ export default function ProductListingPage({
     <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-slate-900">
         <MapPin size={20} className="text-[#2563eb]" />
-        <h3 className="text-xl font-bold font-heading">Address & Contact Details</h3>
+        <h3 className="text-base sm:text-lg xl:text-xl font-bold font-heading whitespace-nowrap">Address & Contact Details</h3>
       </div>
 
       <div className="space-y-4">

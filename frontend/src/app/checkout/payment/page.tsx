@@ -186,6 +186,10 @@ export default function CheckoutPaymentPage() {
     return recoveredDraft;
   }, [userId]);
 
+  const totalAmount = checkoutDraft?.totals.total || 0;
+  const displayTotal = giftCardApplied ? Math.max(0, totalAmount - 2000) : totalAmount;
+  const isHighValue = totalAmount > 15000;
+
   const selectedAddressId = checkoutDraft?.addressId || "";
 
   const selectedAddress = useMemo(() => {
@@ -380,9 +384,6 @@ export default function CheckoutPaymentPage() {
               
               {/* Computed Display Totals for UI interaction */}
               {(() => {
-                const totalAmount = checkoutDraft.totals.total;
-                const displayTotal = giftCardApplied ? Math.max(0, totalAmount - 2000) : totalAmount;
-                const isHighValue = totalAmount > 15000;
 
                 return (
                   <>
@@ -415,7 +416,19 @@ export default function CheckoutPaymentPage() {
                                 isExpanded ? "bg-slate-50/50" : "bg-white hover:bg-slate-50/30"
                               } ${isUnavailable ? "opacity-60 cursor-pointer" : ""}`}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex items-start gap-3.5">
+                                {/* Selection Dot */}
+                                <div className="mt-1 shrink-0 flex items-center justify-center">
+                                  <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                                    isExpanded 
+                                      ? "border-blue-600 bg-white" 
+                                      : "border-gray-300 bg-white"
+                                  }`}>
+                                    {isExpanded && (
+                                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                                    )}
+                                  </div>
+                                </div>
                                 <option.Icon size={18} className={`mt-0.5 shrink-0 ${isUnavailable ? "text-gray-400" : "text-gray-500"}`} />
                                 <div className="leading-tight">
                                   <p className={`text-sm font-semibold ${isUnavailable ? "text-gray-400" : "text-gray-900"}`}>{option.title}</p>
@@ -818,23 +831,7 @@ export default function CheckoutPaymentPage() {
                                       </p>
                                     )}
 
-                                    {/* Main Blue Theme Action Button inside Expanded Panel (except if already applied giftcard) */}
-                                    {!(option.value === "giftcard" && giftCardApplied) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => void handlePlaceOrder()}
-                                        disabled={!canPlaceOrder || (option.value === "emi" && emiOption === "winkget" && !emiEligible)}
-                                        className="w-fit px-8 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold uppercase tracking-wider text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 mt-4 mx-auto block"
-                                      >
-                                        {placingOrder
-                                          ? "Processing..."
-                                          : option.value === "cod"
-                                            ? `Place Order ${formatPrice(displayTotal)}`
-                                            : option.value === "emi" && emiOption === "winkget"
-                                              ? `Pay ${formatPrice(displayTotal)} with Winkget EMI`
-                                              : `Pay ${formatPrice(displayTotal)}`}
-                                      </button>
-                                    )}
+
                                   </>
                                 )}
                               </div>
@@ -903,24 +900,70 @@ export default function CheckoutPaymentPage() {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-lg border border-[#e2e8f0] bg-blue-50/50 p-3 text-xs text-[#475569]">
-                <p className="font-semibold text-[#0f172a]">Deliver to</p>
-                <p className="mt-1">{selectedAddress.fullName}</p>
-                <p>{selectedAddress.line1}</p>
-                {selectedAddress.line2 ? <p>{selectedAddress.line2}</p> : null}
-                <p>
-                  {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postalCode}
-                </p>
-                <p className="mt-1">Phone: {selectedAddress.phone}</p>
-              </div>
+
 
               <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-[#475569]">
                 <ShieldCheck size={14} className="text-[#16a34a]" /> Secure checkout protected by encrypted session
               </p>
+              
+              <button
+                type="button"
+                onClick={() => void handlePlaceOrder()}
+                disabled={!canPlaceOrder || (selectedMethod === "emi" && emiOption === "winkget" && !emiEligible)}
+                className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 mt-4"
+              >
+                {placingOrder
+                  ? "Processing..."
+                  : selectedMethod === "cod"
+                    ? `Place Order ${formatPrice(displayTotal)}`
+                    : selectedMethod === "emi" && emiOption === "winkget"
+                      ? `Pay ${formatPrice(displayTotal)} with Winkget EMI`
+                      : `Pay ${formatPrice(displayTotal)}`}
+              </button>
             </aside>
           </div>
         )}
       </div>
+
+      {/* Sticky Bottom Bar for Mobile View */}
+      {user && checkoutDraft && selectedAddress && (
+        <div className="fixed bottom-[calc(62px+env(safe-area-inset-bottom))] left-0 right-0 z-40 flex flex-col border-t border-gray-200 bg-white lg:hidden">
+          {/* Savings Ribbon */}
+          {checkoutDraft.totals.savings > 0 && (
+            <div className="bg-[#f0faf5] px-4 py-2 border-b border-[#e1f5eb] flex items-center justify-center gap-1.5 text-xs text-[#166534] font-bold">
+              <span>You'll save {formatPrice(checkoutDraft.totals.savings)} on this order!</span>
+            </div>
+          )}
+          
+          {/* Main Price & Action Row */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex flex-col">
+              {checkoutDraft.totals.savings > 0 && (
+                <span className="text-[10px] text-gray-400 line-through leading-none">
+                  {formatPrice(checkoutDraft.totals.mrp + checkoutDraft.totals.shippingFee + checkoutDraft.totals.platformFee)}
+                </span>
+              )}
+              <span className="text-base font-bold text-gray-900 flex items-center gap-1 mt-0.5 leading-none">
+                {formatPrice(displayTotal)}
+                <span className="text-gray-400 text-xs font-normal">ⓘ</span>
+              </span>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => void handlePlaceOrder()}
+              disabled={!canPlaceOrder || (selectedMethod === "emi" && emiOption === "winkget" && !emiEligible)}
+              className="inline-flex items-center justify-center rounded bg-blue-600 px-6 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {placingOrder
+                ? "Processing..."
+                : selectedMethod === "cod"
+                  ? "Place Order"
+                  : "Pay Now"}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
