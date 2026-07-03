@@ -1352,37 +1352,13 @@ export default function ServiceListingPage({
           </div>
 
           <div className="mt-auto pt-4">
-            {serviceCartQuantity > 0 ? (
-              <div className="grid h-10 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg bg-[#2f9e44] text-white">
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); updateServiceCartQuantity(service.id, serviceCartQuantity - 1); }}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
-                  aria-label={`Decrease quantity for ${service.name}`}
-                >
-                  -
-                </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-sm font-extrabold text-white">
-                  {serviceCartQuantity}
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); updateServiceCartQuantity(service.id, serviceCartQuantity + 1); }}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
-                  aria-label={`Increase quantity for ${service.name}`}
-                >
-                  +
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); handleBookNow(service); }}
-                className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
-              >
-                Book Now
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleBookNow(service); }}
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 cursor-pointer"
+            >
+              Book Now
+            </button>
           </div>
         </div>
       </article>
@@ -2709,37 +2685,13 @@ export default function ServiceListingPage({
                     </div>
 
                     <div className="w-40 shrink-0">
-                      {serviceCartQuantity > 0 ? (
-                        <div className="grid h-11 w-full grid-cols-3 overflow-hidden rounded-xl bg-[#2f9e44] text-white shadow-sm">
-                          <button
-                            type="button"
-                            onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity - 1)}
-                            className="grid place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
-                            aria-label="Decrease quantity"
-                          >
-                            -
-                          </button>
-                          <div className="grid place-items-center bg-[#2f9e44] text-sm font-extrabold text-white">
-                            {serviceCartQuantity}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity + 1)}
-                            className="grid place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a] cursor-pointer"
-                            aria-label="Increase quantity"
-                          >
-                            +
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleBookNow(service)}
-                          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition cursor-pointer"
-                        >
-                          Book Now
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleBookNow(service)}
+                        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition cursor-pointer"
+                      >
+                        Book Now
+                      </button>
                     </div>
                   </div>
                 </div>
