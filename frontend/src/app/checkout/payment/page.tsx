@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Coins,
   CreditCard,
@@ -44,6 +45,12 @@ const PAYMENT_OPTIONS: Array<{
   Icon: typeof CreditCard;
 }> = [
   {
+    value: "cod",
+    title: "Cash on Delivery",
+    subtitle: "Pay when order arrives",
+    Icon: Coins,
+  },
+  {
     value: "card",
     title: "Credit / Debit / ATM Card",
     subtitle: "Add and secure cards as per RBI guidelines",
@@ -68,12 +75,6 @@ const PAYMENT_OPTIONS: Array<{
     Icon: Gift,
   },
   {
-    value: "cod",
-    title: "Cash on Delivery",
-    subtitle: "Pay when order arrives",
-    Icon: Coins,
-  },
-  {
     value: "upi",
     title: "UPI",
     subtitle: "Use any UPI app",
@@ -88,12 +89,22 @@ export default function CheckoutPaymentPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | "emi" | "giftcard">("card");
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | "emi" | "giftcard">("cod");
   const [upiId, setUpiId] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [cardName, setCardName] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
+  
+  // Billing Address editable states
+  const [billingSameAsDelivery, setBillingSameAsDelivery] = useState(true);
+  const [billingName, setBillingName] = useState("");
+  const [billingLine1, setBillingLine1] = useState("");
+  const [billingLine2, setBillingLine2] = useState("");
+  const [billingCity, setBillingCity] = useState("");
+  const [billingState, setBillingState] = useState("");
+  const [billingPostalCode, setBillingPostalCode] = useState("");
   const [paymentError, setPaymentError] = useState("");
   
   // EMI custom states
@@ -186,6 +197,17 @@ export default function CheckoutPaymentPage() {
     return addresses.find((item) => item.id === selectedAddressId) || null;
   }, [selectedAddressId, userId]);
 
+  useEffect(() => {
+    if (selectedAddress) {
+      setBillingName((current) => current || selectedAddress.fullName || "");
+      setBillingLine1((current) => current || selectedAddress.line1 || "");
+      setBillingLine2((current) => current || selectedAddress.line2 || "");
+      setBillingCity((current) => current || selectedAddress.city || "");
+      setBillingState((current) => current || selectedAddress.state || "");
+      setBillingPostalCode((current) => current || selectedAddress.postalCode || "");
+    }
+  }, [selectedAddress]);
+
   const canPlaceOrder = Boolean(user && checkoutDraft && selectedAddress && !placingOrder);
 
   const handlePlaceOrder = async () => {
@@ -207,9 +229,15 @@ export default function CheckoutPaymentPage() {
     }
 
     if (selectedMethod === "card") {
-      if (!String(cardNumber || "").trim() || !String(cardExpiry || "").trim() || !String(cardCvv || "").trim()) {
-        setPaymentError("Please fill card number, expiry and CVV.");
+      if (!String(cardNumber || "").trim() || !String(cardExpiry || "").trim() || !String(cardCvv || "").trim() || !String(cardName || "").trim()) {
+        setPaymentError("Please fill card number, expiration date, security code, and name on card.");
         return;
+      }
+      if (!billingSameAsDelivery) {
+        if (!String(billingName || "").trim() || !String(billingLine1 || "").trim() || !String(billingCity || "").trim() || !String(billingState || "").trim() || !String(billingPostalCode || "").trim()) {
+          setPaymentError("Please fill all required billing address fields.");
+          return;
+        }
       }
     }
 
@@ -222,11 +250,6 @@ export default function CheckoutPaymentPage() {
 
     if (selectedMethod === "giftcard" && !giftCardApplied) {
       setPaymentError("Please enter a valid Gift Card number/PIN and click Apply.");
-      return;
-    }
-
-    if (selectedMethod === "cod" && (checkoutDraft?.totals.total || 0) > 15000) {
-      setPaymentError("Cash on Delivery is unavailable for orders above ₹15,000.");
       return;
     }
 
@@ -374,30 +397,13 @@ export default function CheckoutPaymentPage() {
                       </span>
                     </div>
 
-                    {/* Green Discount Block */}
-                    <div className="bg-[#eafaf1] border border-[#d3f4e2] px-4 py-3.5 mx-3 mb-4 rounded-lg flex items-center justify-between text-xs text-emerald-800">
-                      <div className="flex flex-col leading-tight">
-                        <span className="font-bold text-emerald-700 text-sm">10% instant discount</span>
-                        <span className="text-[11px] text-emerald-600 font-medium mt-0.5">Claim now with payment offers</span>
-                      </div>
-                      <div className="flex items-center -space-x-1 shrink-0">
-                        <div className="h-6 w-6 rounded-full bg-[#ff5f00] flex items-center justify-center text-[7px] font-bold text-white border border-white shadow-sm" title="Mastercard">
-                          mc
-                        </div>
-                        <div className="h-6.5 w-6.5 rounded-full bg-[#1a1f71] flex items-center justify-center text-[7px] font-bold text-white border border-white shadow-sm" title="Visa">
-                          V
-                        </div>
-                        <div className="h-6 w-6 rounded-full bg-white flex items-center justify-center text-[8px] font-bold text-gray-600 border border-gray-200 shadow-sm" title="3 more offers">
-                          +3
-                        </div>
-                      </div>
-                    </div>
+
 
                     {/* Accordion List */}
                     <div className="divide-y divide-gray-100">
                       {PAYMENT_OPTIONS.map((option) => {
                         const isExpanded = selectedMethod === option.value;
-                        const isUnavailable = (option.value === "cod" || option.value === "upi") && isHighValue;
+                        const isUnavailable = option.value === "upi" && isHighValue;
 
                         return (
                           <div key={option.value} className="w-full">
@@ -447,46 +453,156 @@ export default function CheckoutPaymentPage() {
                                   <>
                                     {/* 1. Credit Card Expanded */}
                                     {option.value === "card" && (
-                                      <div className="space-y-3">
-                                        <p className="text-[11px] text-blue-700 bg-blue-50/40 border border-blue-100 rounded-lg p-2.5 leading-relaxed font-medium">
-                                          Note: Please ensure your card can be used for online transactions. <a href="#" className="underline font-semibold hover:text-blue-800">Learn More</a>
-                                        </p>
-                                        <div className="grid gap-3.5">
+                                      <div className="space-y-4">
+                                        <h3 className="text-sm font-bold text-gray-900 border-b border-gray-150 pb-2 mb-2">Add new card</h3>
+                                        <div className="space-y-3">
                                           <div className="relative">
-                                            <label className="text-xs text-gray-500 font-semibold mb-1 block">Card Number</label>
-                                            <input
-                                              type="text"
-                                              value={cardNumber}
-                                              onChange={(event) => setCardNumber(event.target.value)}
-                                              placeholder="XXXX XXXX XXXX XXXX"
-                                              className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
-                                            />
-                                            <CreditCard size={16} className="absolute right-3 top-9 text-gray-400" />
+                                            <label className="text-xs font-bold text-gray-700 mb-1 block">Card number</label>
+                                            <div className="relative">
+                                              <input
+                                                type="text"
+                                                value={cardNumber}
+                                                onChange={(event) => setCardNumber(event.target.value)}
+                                                className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-10 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                              />
+                                              <CreditCard size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-800" />
+                                              <Lock size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-800" />
+                                            </div>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-3.5">
+                                          
+                                          <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                              <label className="text-xs text-gray-500 font-semibold mb-1 block">Valid Thru</label>
+                                              <label className="text-xs font-bold text-gray-700 mb-1 block">Expiration date</label>
                                               <input
                                                 type="text"
                                                 value={cardExpiry}
                                                 onChange={(event) => setCardExpiry(event.target.value)}
-                                                placeholder="MM / YY"
-                                                className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                                placeholder="MM/YY"
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                                               />
                                             </div>
-                                            <div className="relative">
-                                              <label className="text-xs text-gray-500 font-semibold mb-1 block">CVV</label>
+                                            <div>
+                                              <div className="flex items-center gap-1 mb-1">
+                                                <label className="text-xs font-bold text-gray-700 block">Security code</label>
+                                                <HelpCircle size={14} className="text-gray-700 cursor-pointer" />
+                                              </div>
                                               <input
                                                 type="password"
                                                 value={cardCvv}
                                                 onChange={(event) => setCardCvv(event.target.value)}
-                                                placeholder="CVV"
-                                                className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 pr-8"
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                                               />
-                                              <HelpCircle size={16} className="absolute right-3 top-9 text-gray-400" />
                                             </div>
                                           </div>
+                                          
+                                          <div>
+                                            <label className="text-xs font-bold text-gray-700 mb-1 block">Name on card</label>
+                                            <input
+                                              type="text"
+                                              value={cardName}
+                                              onChange={(event) => setCardName(event.target.value)}
+                                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                            />
+                                          </div>
                                         </div>
+                                        
+                                        {/* Billing address section */}
+                                        {billingSameAsDelivery ? (
+                                          <div className="border border-gray-200 rounded-xl p-4 bg-white mt-4">
+                                            <div className="flex items-center gap-2 mb-3.5">
+                                              <input 
+                                                type="checkbox" 
+                                                id="billingSame" 
+                                                checked={billingSameAsDelivery} 
+                                                onChange={(e) => setBillingSameAsDelivery(e.target.checked)}
+                                                className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                              />
+                                              <label htmlFor="billingSame" className="text-xs font-bold text-gray-750 cursor-pointer select-none">Billing address is same as delivery address</label>
+                                            </div>
+                                            <div className="text-xs text-gray-800 leading-normal pl-6">
+                                              <span className="font-bold block text-gray-900 mb-1.5">Billing address</span>
+                                              <p>{selectedAddress.fullName}, {selectedAddress.line1}, {selectedAddress.line2 ? selectedAddress.line2 + ', ' : ''}{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postalCode}</p>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="border border-gray-200 rounded-xl p-4 bg-white mt-4 space-y-3.5">
+                                            <div className="flex items-center gap-2">
+                                              <input 
+                                                type="checkbox" 
+                                                id="billingSame" 
+                                                checked={billingSameAsDelivery} 
+                                                onChange={(e) => setBillingSameAsDelivery(e.target.checked)}
+                                                className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                              />
+                                              <label htmlFor="billingSame" className="text-xs font-bold text-gray-750 cursor-pointer select-none">Billing address is same as delivery address</label>
+                                            </div>
+                                            
+                                            <div className="space-y-3.5 pl-6 border-t border-gray-100 pt-3">
+                                              <span className="font-bold block text-xs text-gray-900">Edit billing address</span>
+                                              
+                                              <div>
+                                                <label className="text-[11px] font-bold text-gray-700 mb-1 block">Full Name</label>
+                                                <input
+                                                  type="text"
+                                                  value={billingName}
+                                                  onChange={(e) => setBillingName(e.target.value)}
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                />
+                                              </div>
+                                              
+                                              <div>
+                                                <label className="text-[11px] font-bold text-gray-700 mb-1 block">Address Line 1</label>
+                                                <input
+                                                  type="text"
+                                                  value={billingLine1}
+                                                  onChange={(e) => setBillingLine1(e.target.value)}
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                />
+                                              </div>
+                                              
+                                              <div>
+                                                <label className="text-[11px] font-bold text-gray-700 mb-1 block">Address Line 2 (Optional)</label>
+                                                <input
+                                                  type="text"
+                                                  value={billingLine2}
+                                                  onChange={(e) => setBillingLine2(e.target.value)}
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                />
+                                              </div>
+                                              
+                                              <div className="grid grid-cols-2 gap-3.5">
+                                                <div>
+                                                  <label className="text-[11px] font-bold text-gray-700 mb-1 block">City</label>
+                                                  <input
+                                                    type="text"
+                                                    value={billingCity}
+                                                    onChange={(e) => setBillingCity(e.target.value)}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="text-[11px] font-bold text-gray-700 mb-1 block">State / Region</label>
+                                                  <input
+                                                    type="text"
+                                                    value={billingState}
+                                                    onChange={(e) => setBillingState(e.target.value)}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  />
+                                                </div>
+                                              </div>
+                                              
+                                              <div className="w-1/2">
+                                                <label className="text-[11px] font-bold text-gray-700 mb-1 block">Postal Code / PIN</label>
+                                                <input
+                                                  type="text"
+                                                  value={billingPostalCode}
+                                                  onChange={(e) => setBillingPostalCode(e.target.value)}
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                />
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
 
@@ -677,8 +793,8 @@ export default function CheckoutPaymentPage() {
 
                                     {/* 5. Cash on Delivery Expanded */}
                                     {option.value === "cod" && (
-                                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3.5 leading-relaxed font-medium">
-                                        Cash on Delivery is available. Pay securely at your doorstep when your order arrives.
+                                      <p className="text-xs text-gray-500 leading-relaxed font-medium text-center">
+                                        Pay securely with cash, card, or UPI at your doorstep when your order arrives. No extra handling fees apply.
                                       </p>
                                     )}
 
@@ -708,7 +824,7 @@ export default function CheckoutPaymentPage() {
                                         type="button"
                                         onClick={() => void handlePlaceOrder()}
                                         disabled={!canPlaceOrder || (option.value === "emi" && emiOption === "winkget" && !emiEligible)}
-                                        className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 mt-4"
+                                        className="w-fit px-8 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold uppercase tracking-wider text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 mt-4 mx-auto block"
                                       >
                                         {placingOrder
                                           ? "Processing..."
