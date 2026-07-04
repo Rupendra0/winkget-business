@@ -17,6 +17,7 @@ export type ListingProfile = {
   category: string;
   coverImage: string;
   logoImage: string;
+  paymentQrCode?: string;
   heroTitle?: string;
   heroSubtitle?: string;
   rating: number;

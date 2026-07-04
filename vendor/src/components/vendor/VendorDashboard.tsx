@@ -147,6 +147,7 @@ type ShopProfileFormState = {
 type MyStoreMediaFormState = {
   image: string;
   bannerImage: string;
+  paymentQrCode: string;
 };
 
 type VendorProductFormState = {
@@ -851,6 +852,7 @@ function buildMyStoreMediaForm(vendor: VendorSession | null): MyStoreMediaFormSt
   return {
     image: String(vendor?.myStoreImage || "").trim(),
     bannerImage: String(vendor?.myStoreBannerImage || "").trim(),
+    paymentQrCode: String(vendor?.paymentQrCode || "").trim(),
   };
 }
 
@@ -965,6 +967,7 @@ function MyStorePreviewSection({
   businessName,
   profileImage,
   bannerImage,
+  paymentQrCode,
   address,
   description,
   savingField,
@@ -976,18 +979,21 @@ function MyStorePreviewSection({
   businessName: string;
   profileImage: string;
   bannerImage: string;
+  paymentQrCode: string;
   address: string;
   description: string;
-  savingField: "image" | "banner" | null;
+  savingField: "image" | "banner" | "qr" | null;
   message: string | null;
   error: string | null;
-  onUpload: (field: "image" | "banner", files: FileList | null) => void;
-  onRemove: (field: "image" | "banner") => void;
+  onUpload: (field: "image" | "banner" | "qr", files: FileList | null) => void;
+  onRemove: (field: "image" | "banner" | "qr") => void;
 }) {
   const displayBanner = String(bannerImage || "").trim() || DEFAULT_VENDOR_BANNER;
   const displayAvatar = String(profileImage || "").trim() || DEFAULT_VENDOR_AVATAR;
+  const displayQrCode = String(paymentQrCode || "").trim();
   const hasCustomProfileImage = Boolean(String(profileImage || "").trim());
   const hasCustomBannerImage = Boolean(String(bannerImage || "").trim());
+  const hasCustomPaymentQrCode = Boolean(displayQrCode);
 
   return (
     <section className="space-y-4">
@@ -1009,7 +1015,7 @@ function MyStorePreviewSection({
         </div>
 
         <div className="space-y-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5">
               <p className="text-[11px] font-semibold text-gray-600">MyStore DP</p>
               <div className="mt-2 flex items-center gap-2">
@@ -1074,6 +1080,45 @@ function MyStorePreviewSection({
                   {savingField === "banner" ? "Deleting..." : "Delete"}
                 </button>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+              <p className="text-[11px] font-semibold text-gray-600">Payment QR Code</p>
+              <div className="mt-2 flex items-center gap-2">
+                <label
+                  className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 ${
+                    savingField === "qr" ? "pointer-events-none opacity-60" : ""
+                  }`}
+                >
+                  <Upload className="h-3 w-3" aria-hidden="true" />
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      onUpload("qr", event.currentTarget.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => onRemove("qr")}
+                  disabled={savingField === "qr" || !hasCustomPaymentQrCode}
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                  {savingField === "qr" ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+              {hasCustomPaymentQrCode && (
+                <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
+                  <span className="text-emerald-600 font-semibold">✓ QR Uploaded</span>
+                  <a href={displayQrCode} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View</a>
+                </div>
+              )}
             </div>
           </div>
 
@@ -4216,7 +4261,7 @@ export default function VendorDashboard() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [shopProfileForm, setShopProfileForm] = useState<ShopProfileFormState>(() => buildShopProfileForm(null));
   const [myStoreMediaForm, setMyStoreMediaForm] = useState<MyStoreMediaFormState>(() => buildMyStoreMediaForm(null));
-  const [myStoreMediaSavingField, setMyStoreMediaSavingField] = useState<"image" | "banner" | null>(null);
+  const [myStoreMediaSavingField, setMyStoreMediaSavingField] = useState<"image" | "banner" | "qr" | null>(null);
   const [myStoreMediaMessage, setMyStoreMediaMessage] = useState<string | null>(null);
   const [myStoreMediaError, setMyStoreMediaError] = useState<string | null>(null);
   const [shopProfileSaving, setShopProfileSaving] = useState(false);
@@ -5223,7 +5268,7 @@ export default function VendorDashboard() {
     }
   };
 
-  const persistMyStoreMedia = async (field: "image" | "banner", nextImage: string, nextBannerImage: string) => {
+  const persistMyStoreMedia = async (field: "image" | "banner" | "qr", nextImage: string, nextBannerImage: string, nextPaymentQrCode: string) => {
     if (!vendor) return;
 
     setMyStoreMediaSavingField(field);
@@ -5241,17 +5286,20 @@ export default function VendorDashboard() {
         ...baselinePayload,
         myStoreImage: nextImage,
         myStoreBannerImage: nextBannerImage,
+        paymentQrCode: nextPaymentQrCode,
       });
 
       setVendor(updatedVendor);
       setMyStoreMediaForm(buildMyStoreMediaForm(updatedVendor));
       setShopProfileForm(buildShopProfileForm(updatedVendor));
       setSettingsForm(buildSettingsForm(updatedVendor));
-      const wasRemoved = field === "image" ? !nextImage : !nextBannerImage;
+      const wasRemoved = field === "image" ? !nextImage : field === "banner" ? !nextBannerImage : !nextPaymentQrCode;
       if (field === "image") {
         setMyStoreMediaMessage(wasRemoved ? "MyStore DP removed successfully." : "MyStore DP updated successfully.");
-      } else {
+      } else if (field === "banner") {
         setMyStoreMediaMessage(wasRemoved ? "MyStore banner removed successfully." : "MyStore banner updated successfully.");
+      } else {
+        setMyStoreMediaMessage(wasRemoved ? "Payment QR removed successfully." : "Payment QR updated successfully.");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update MyStore media";
@@ -5262,7 +5310,7 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleMyStoreMediaUpload = async (field: "image" | "banner", files: FileList | null) => {
+  const handleMyStoreMediaUpload = async (field: "image" | "banner" | "qr", files: FileList | null) => {
     if (!vendor || !files?.length || myStoreMediaSavingField) return;
 
     const file = files[0];
@@ -5282,31 +5330,35 @@ export default function VendorDashboard() {
       const imageData = await fileToDataUrl(file);
       const nextImage = field === "image" ? imageData : String(myStoreMediaForm.image || "").trim();
       const nextBannerImage = field === "banner" ? imageData : String(myStoreMediaForm.bannerImage || "").trim();
+      const nextPaymentQrCode = field === "qr" ? imageData : String(myStoreMediaForm.paymentQrCode || "").trim();
 
       setMyStoreMediaForm({
         image: nextImage,
         bannerImage: nextBannerImage,
+        paymentQrCode: nextPaymentQrCode,
       });
 
-      await persistMyStoreMedia(field, nextImage, nextBannerImage);
+      await persistMyStoreMedia(field, nextImage, nextBannerImage, nextPaymentQrCode);
     } catch {
       setMyStoreMediaMessage(null);
       setMyStoreMediaError("Could not process image file. Please try again.");
     }
   };
 
-  const handleMyStoreMediaRemove = async (field: "image" | "banner") => {
+  const handleMyStoreMediaRemove = async (field: "image" | "banner" | "qr") => {
     if (!vendor || myStoreMediaSavingField) return;
 
     const nextImage = field === "image" ? "" : String(myStoreMediaForm.image || "").trim();
     const nextBannerImage = field === "banner" ? "" : String(myStoreMediaForm.bannerImage || "").trim();
+    const nextPaymentQrCode = field === "qr" ? "" : String(myStoreMediaForm.paymentQrCode || "").trim();
 
     setMyStoreMediaForm({
       image: nextImage,
       bannerImage: nextBannerImage,
+      paymentQrCode: nextPaymentQrCode,
     });
 
-    await persistMyStoreMedia(field, nextImage, nextBannerImage);
+    await persistMyStoreMedia(field, nextImage, nextBannerImage, nextPaymentQrCode);
   };
 
   const handleVendorStoreStatusChange = async (
@@ -5749,6 +5801,7 @@ export default function VendorDashboard() {
           businessName={businessName}
           profileImage={myStoreMediaForm.image}
           bannerImage={myStoreMediaForm.bannerImage}
+          paymentQrCode={myStoreMediaForm.paymentQrCode}
           address={shopProfileForm.businessAddress}
           description={shopProfileForm.businessDescription}
           savingField={myStoreMediaSavingField}

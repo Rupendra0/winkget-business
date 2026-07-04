@@ -45,6 +45,7 @@ export type VendorSession = {
   cardImage?: string;
   myStoreImage?: string;
   myStoreBannerImage?: string;
+  paymentQrCode?: string;
   shopGallery?: string[];
   instagramUrl?: string;
   facebookUrl?: string;
@@ -183,6 +184,7 @@ export type VendorProfileUpdateInput = {
   cardImage?: string;
   myStoreImage?: string;
   myStoreBannerImage?: string;
+  paymentQrCode?: string;
   shopGallery?: string[];
   instagramUrl?: string;
   facebookUrl?: string;

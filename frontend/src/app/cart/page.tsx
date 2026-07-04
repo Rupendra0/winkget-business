@@ -104,7 +104,7 @@ export default function CartPage() {
   };
 
   return (
-    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-32">
       <div className="mx-auto w-full max-w-6xl space-y-0">
         {items.length === 0 ? (
           <div className="border-y border-gray-200 sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">

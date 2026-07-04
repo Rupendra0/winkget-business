@@ -279,6 +279,7 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
     shopBannerImage: vendor.shopBannerImage || "",
     cardImage: vendor.cardImage || "",
     myStoreImage: vendor.myStoreImage || "",
+    paymentQrCode: vendor.paymentQrCode || "",
     myStoreBannerImage: vendor.myStoreBannerImage || "",
     shopGallery: Array.isArray(vendor.shopGallery) ? vendor.shopGallery.filter(Boolean) : [],
     ctaLabel: "Inquiry",
@@ -806,8 +807,8 @@ router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) =>
     })
       .select(
         isStoreView
-          ? "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
-          : "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+          ? "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
+          : "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
       )
       .lean();
 
@@ -844,7 +845,7 @@ router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
       vendorStatus: "approved",
     })
       .select(
-        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt createdAt"
+        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
       )
       .lean();
 

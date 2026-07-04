@@ -108,6 +108,7 @@ export type CatalogVendorSummary = {
   storeStatusMode?: "auto" | "manual";
   manualStoreStatus?: "open" | "closed" | null;
   manualStoreStatusUpdatedAt?: string | null;
+  paymentQrCode?: string;
   isStoreOpen?: boolean | null;
   storeStatusSource?: "manual" | "schedule" | "unknown" | "vendor-status";
   serviceTags?: string[];
@@ -693,6 +694,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     category: categoryLabel,
     coverImage,
     logoImage,
+    paymentQrCode: vendor.paymentQrCode || "",
     heroTitle: (vendor as any).heroTitle || displayName,
     heroSubtitle: (vendor as any).heroSubtitle || (vendor as any).tagline || (categoryLabel ? `${categoryLabel} - Trusted by Thousands` : "Trusted by Thousands"),
     rating: Number(vendor.rating || 0),

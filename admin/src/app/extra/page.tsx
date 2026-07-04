@@ -544,48 +544,43 @@ export default function ExtraPage() {
               return (
                 <article
                   key={city.id}
-                  className="group rounded-xl border border-(--border) bg-(--surface) p-3 transition hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)]"
+                  onClick={() => setSelectedCityId(city.id)}
+                  className="group rounded-xl border border-(--border) bg-(--surface) p-3 transition hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)] cursor-pointer"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCityId(city.id)}
-                    className="w-full text-left"
-                  >
-                    <div className="flex items-start gap-3">
-                      {city.image ? (
-                        <img
-                          src={city.image}
-                          alt={city.name}
-                          className="h-10 w-14 rounded object-cover border border-(--border) shrink-0 bg-slate-100"
-                        />
-                      ) : (
-                        <div className="h-10 w-14 rounded bg-slate-100/80 border border-dashed border-(--border) flex items-center justify-center shrink-0 text-[9px] text-(--text-soft) font-medium">
-                          No Bg
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-(--text-strong) truncate">{city.name}</p>
-                        <p className="text-xs text-(--text-soft) truncate">
-                          {city.state || "No state"} | Position {city.sortOrder}
-                        </p>
+                  <div className="flex items-start gap-3">
+                    {city.image ? (
+                      <img
+                        src={city.image}
+                        alt={city.name}
+                        className="h-10 w-14 rounded object-cover border border-(--border) shrink-0 bg-slate-100"
+                      />
+                    ) : (
+                      <div className="h-10 w-14 rounded bg-slate-100/80 border border-dashed border-(--border) flex items-center justify-center shrink-0 text-[9px] text-(--text-soft) font-medium">
+                        No Bg
                       </div>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                          city.isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {city.isActive ? "active" : "inactive"}
-                      </span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-(--text-strong) truncate">{city.name}</p>
+                      <p className="text-xs text-(--text-soft) truncate">
+                        {city.state || "No state"} | Position {city.sortOrder}
+                      </p>
                     </div>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                        city.isActive
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {city.isActive ? "active" : "inactive"}
+                    </span>
+                  </div>
 
-                    <p className="mt-3 text-xs text-(--text-soft)">
-                      {city.localities.length} localities configured
-                    </p>
-                  </button>
+                  <p className="mt-3 text-xs text-(--text-soft)">
+                    {city.localities.length} localities configured
+                  </p>
 
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={() => openEditCity(city)}

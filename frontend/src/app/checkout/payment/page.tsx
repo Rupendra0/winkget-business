@@ -290,7 +290,7 @@ export default function CheckoutPaymentPage() {
 
   if (!isMounted) {
     return (
-      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-32">
         <div className="mx-auto w-full max-w-6xl animate-pulse space-y-4 pt-0 sm:pt-4">
           <div className="h-12 bg-white rounded border border-gray-200" />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -303,7 +303,7 @@ export default function CheckoutPaymentPage() {
   }
 
   return (
-    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-32">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {!authChecked ? (
           <div className="border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
@@ -388,7 +388,7 @@ export default function CheckoutPaymentPage() {
                 return (
                   <>
                     {/* Blue Total Block */}
-                    <div className="bg-[#edf2ff] border-b border-[#dbe4ff] sm:border px-4 py-3.5 mx-0 sm:mx-3 mt-0 sm:mt-3 mb-3 rounded-none sm:rounded-lg flex items-center justify-between text-sm font-semibold text-blue-900 sticky top-[60px] z-20 sm:relative sm:top-auto sm:z-auto">
+                    <div className="bg-blue-50 border-b border-blue-100 sm:border px-4 py-3.5 mx-0 sm:mx-3 mt-0 sm:mt-3 mb-3 rounded-none sm:rounded-lg flex items-center justify-between text-sm font-semibold text-blue-900 sticky top-[60px] z-20 sm:relative sm:top-auto sm:z-auto">
                       <div className="flex items-center gap-1">
                         <span className="text-blue-800 font-bold">Total Amount</span>
                         <ChevronDown size={14} className="text-blue-700 mt-0.5" />
@@ -476,7 +476,7 @@ export default function CheckoutPaymentPage() {
                                                 type="text"
                                                 value={cardNumber}
                                                 onChange={(event) => setCardNumber(event.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-10 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-10 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                               />
                                               <CreditCard size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-800" />
                                               <Lock size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-800" />
@@ -491,7 +491,7 @@ export default function CheckoutPaymentPage() {
                                                 value={cardExpiry}
                                                 onChange={(event) => setCardExpiry(event.target.value)}
                                                 placeholder="MM/YY"
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                               />
                                             </div>
                                             <div>
@@ -503,7 +503,7 @@ export default function CheckoutPaymentPage() {
                                                 type="password"
                                                 value={cardCvv}
                                                 onChange={(event) => setCardCvv(event.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                               />
                                             </div>
                                           </div>
@@ -514,7 +514,7 @@ export default function CheckoutPaymentPage() {
                                               type="text"
                                               value={cardName}
                                               onChange={(event) => setCardName(event.target.value)}
-                                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                             />
                                           </div>
                                         </div>
@@ -528,7 +528,7 @@ export default function CheckoutPaymentPage() {
                                                 id="billingSame" 
                                                 checked={billingSameAsDelivery} 
                                                 onChange={(e) => setBillingSameAsDelivery(e.target.checked)}
-                                                className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                                className="rounded text-blue-600 focus:ring-blue-600 cursor-pointer h-4 w-4"
                                               />
                                               <label htmlFor="billingSame" className="text-xs font-bold text-gray-750 cursor-pointer select-none">Billing address is same as delivery address</label>
                                             </div>
@@ -545,7 +545,7 @@ export default function CheckoutPaymentPage() {
                                                 id="billingSame" 
                                                 checked={billingSameAsDelivery} 
                                                 onChange={(e) => setBillingSameAsDelivery(e.target.checked)}
-                                                className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                                className="rounded text-blue-600 focus:ring-blue-600 cursor-pointer h-4 w-4"
                                               />
                                               <label htmlFor="billingSame" className="text-xs font-bold text-gray-750 cursor-pointer select-none">Billing address is same as delivery address</label>
                                             </div>
@@ -559,7 +559,7 @@ export default function CheckoutPaymentPage() {
                                                   type="text"
                                                   value={billingName}
                                                   onChange={(e) => setBillingName(e.target.value)}
-                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                 />
                                               </div>
                                               
@@ -569,7 +569,7 @@ export default function CheckoutPaymentPage() {
                                                   type="text"
                                                   value={billingLine1}
                                                   onChange={(e) => setBillingLine1(e.target.value)}
-                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                 />
                                               </div>
                                               
@@ -579,7 +579,7 @@ export default function CheckoutPaymentPage() {
                                                   type="text"
                                                   value={billingLine2}
                                                   onChange={(e) => setBillingLine2(e.target.value)}
-                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                 />
                                               </div>
                                               
@@ -590,7 +590,7 @@ export default function CheckoutPaymentPage() {
                                                     type="text"
                                                     value={billingCity}
                                                     onChange={(e) => setBillingCity(e.target.value)}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                   />
                                                 </div>
                                                 <div>
@@ -599,7 +599,7 @@ export default function CheckoutPaymentPage() {
                                                     type="text"
                                                     value={billingState}
                                                     onChange={(e) => setBillingState(e.target.value)}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                   />
                                                 </div>
                                               </div>
@@ -610,7 +610,7 @@ export default function CheckoutPaymentPage() {
                                                   type="text"
                                                   value={billingPostalCode}
                                                   onChange={(e) => setBillingPostalCode(e.target.value)}
-                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                                                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
                                                 />
                                               </div>
                                             </div>
@@ -634,7 +634,7 @@ export default function CheckoutPaymentPage() {
                                               type="radio"
                                               checked={emiOption === "winkget"}
                                               onChange={() => setEmiOption("winkget")}
-                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-600"
                                             />
                                             <div className="flex-1">
                                               <div className="flex items-center">
@@ -685,7 +685,7 @@ export default function CheckoutPaymentPage() {
                                               type="radio"
                                               checked={emiOption === "cc"}
                                               onChange={() => setEmiOption("cc")}
-                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-600"
                                             />
                                             <div className="flex-1">
                                               <div className="flex items-center justify-between">
@@ -713,7 +713,7 @@ export default function CheckoutPaymentPage() {
                                               type="radio"
                                               checked={emiOption === "bajaj"}
                                               onChange={() => setEmiOption("bajaj")}
-                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-600"
                                             />
                                             <div className="flex-1 flex justify-between items-center">
                                               <div>
@@ -740,7 +740,7 @@ export default function CheckoutPaymentPage() {
                                     {option.value === "netbanking" && (
                                       <div className="space-y-3">
                                         <select
-                                          className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 font-medium text-gray-700"
+                                          className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 font-medium text-gray-700"
                                           defaultValue=""
                                         >
                                           <option value="" disabled>
@@ -766,7 +766,7 @@ export default function CheckoutPaymentPage() {
                                               value={giftCardNumber}
                                               onChange={(event) => setGiftCardNumber(event.target.value)}
                                               placeholder="Enter 16-digit card number"
-                                              className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                              className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600"
                                             />
                                           </div>
                                           <div>
@@ -776,7 +776,7 @@ export default function CheckoutPaymentPage() {
                                               value={giftCardPin}
                                               onChange={(event) => setGiftCardPin(event.target.value)}
                                               placeholder="Enter 6-digit PIN"
-                                              className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                              className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600"
                                             />
                                           </div>
                                         </div>
@@ -820,7 +820,7 @@ export default function CheckoutPaymentPage() {
                                           value={upiId}
                                           onChange={(event) => setUpiId(event.target.value)}
                                           placeholder="yourname@upi"
-                                          className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                          className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600"
                                         />
                                       </div>
                                     )}

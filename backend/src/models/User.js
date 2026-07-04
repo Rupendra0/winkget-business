@@ -29,6 +29,7 @@ const userSchema = new Schema(
     shopBannerImage: { type: String, trim: true },
     cardImage: { type: String, trim: true },
     myStoreImage: { type: String, trim: true },
+    paymentQrCode: { type: String, trim: true },
     myStoreBannerImage: { type: String, trim: true },
     shopGallery: [{ type: String, trim: true }],
     instagramUrl: { type: String, trim: true },

@@ -654,7 +654,7 @@ export default function ProfilePage() {
           </p>
           <Link
             href={buildAuthHref(pathname || "/profile")}
-            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+            className="inline-flex w-full items-center justify-center bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-700 transition"
           >
             Login to Account
           </Link>

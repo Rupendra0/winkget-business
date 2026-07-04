@@ -296,7 +296,7 @@ export default function CheckoutPage() {
 
   if (!isMounted) {
     return (
-      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-32">
         <div className="mx-auto w-full max-w-6xl animate-pulse space-y-4 pt-0 sm:pt-4">
           <div className="h-12 bg-white rounded border border-gray-200" />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -309,7 +309,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-6">
+    <main className="page-scaled-fonts min-h-[calc(100vh-84px)] bg-[#f1f3f6] px-0 pt-0 pb-44 sm:px-4 lg:px-12 lg:pb-32">
       <div className="mx-auto w-full max-w-6xl space-y-0 pt-0 sm:pt-0">
         {items.length === 0 ? (
           <div className="border-none sm:border sm:rounded-2xl overflow-hidden bg-white divide-y divide-gray-100">
@@ -785,7 +785,7 @@ export default function CheckoutPage() {
                   <ShieldCheck size={14} className="text-[#16a34a]" /> 100% secure payment checkout
                 </p>
                 <p className="inline-flex items-center gap-1.5">
-                  <Truck size={14} className="text-[#2563eb]" /> Fast delivery updates on your orders page
+                  <Truck size={14} className="text-blue-600" /> Fast delivery updates on your orders page
                 </p>
                 <p className="inline-flex items-center gap-1.5">
                   <MapPin size={14} className="text-[#0f766e]" /> Easy address management for repeat orders

@@ -399,7 +399,7 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 pt-3 pb-32 sm:px-4 lg:px-6">
         <div className="mx-auto h-72 w-full max-w-none animate-pulse bg-white rounded-xl" />
       </main>
     );
@@ -418,7 +418,7 @@ export default function OrderDetailPage() {
           </p>
           <Link
             href={buildAuthHref(pathname || `/orders/${orderId}`)}
-            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+            className="inline-flex w-full items-center justify-center bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-700 transition"
           >
             Login to Account
           </Link>
@@ -429,7 +429,7 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-3 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 pt-3 pb-32 sm:px-4 lg:px-6">
         <div className="mx-auto w-full max-w-6xl bg-white p-7 rounded-xl border border-slate-200/80">
           <p className="text-xl font-bold text-slate-900">Order not found</p>
           <p className="mt-2 text-sm text-slate-600">This order is unavailable or does not belong to your account.</p>
@@ -466,7 +466,7 @@ export default function OrderDetailPage() {
   const otherItems = order.items.slice(1);
 
   return (
-    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
+    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 pt-4 pb-32 sm:px-4 lg:px-12">
       <div className="mx-auto w-full max-w-6xl">
         
         {/* Desktop-only Breadcrumbs */}

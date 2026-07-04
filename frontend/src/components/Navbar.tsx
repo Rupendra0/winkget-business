@@ -652,7 +652,7 @@ export default function Navbar() {
             >
               <Heart size={18} className="text-gray-700" />
               <span className="text-sm mr-2">Wishlist</span>
-              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
                 {wishlistCount}
               </span>
             </Link>
@@ -665,7 +665,7 @@ export default function Navbar() {
             >
               <ShoppingCart size={18} className="text-gray-700" />
               <span className="text-sm mr-2">Cart</span>
-              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
                 {cartCount}
               </span>
             </Link>
@@ -678,7 +678,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 border-0 shadow-none"
+                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-white font-medium hover:bg-blue-700 border-0 shadow-none"
                 >
                   <UserRound size={18} className="text-white" />
                   <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
@@ -737,7 +737,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="flex h-11 items-center gap-2 rounded-lg bg-blue-500 px-4 text-white font-medium hover:bg-blue-600 border-0 shadow-none"
+                className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-white font-medium hover:bg-blue-700 border-0 shadow-none"
               >
                 <UserRound size={18} className="text-white" />
                 <span className="text-sm">Login</span>
@@ -753,7 +753,7 @@ export default function Navbar() {
               aria-label="Cart"
             >
               <ShoppingCart size={18} strokeWidth={2.4} />
-              <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-500 px-1 text-[8px] font-bold text-white">
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-600 px-1 text-[8px] font-bold text-white">
                 {cartCount}
               </span>
             </Link>

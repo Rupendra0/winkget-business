@@ -210,6 +210,34 @@ export default function ProductListingPage({
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+      
+      // Instantly scroll to top
+      window.scrollTo({ top: 0, behavior: 'instant' as any });
+
+      // Continuously reset scroll position for the first 500ms as elements/images load and layout
+      let frameId: number;
+      const startTime = Date.now();
+      
+      const forceScrollTop = () => {
+        window.scrollTo({ top: 0, behavior: 'instant' as any });
+        if (Date.now() - startTime < 500) {
+          frameId = requestAnimationFrame(forceScrollTop);
+        }
+      };
+      
+      frameId = requestAnimationFrame(forceScrollTop);
+
+      return () => {
+        cancelAnimationFrame(frameId);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -789,7 +817,7 @@ export default function ProductListingPage({
       <button
         type="submit"
         disabled={isSubmittingInquiry}
-        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#2563eb] text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-[#1d4ed8] disabled:opacity-60 shadow-sm shadow-blue-100 cursor-pointer"
+        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-blue-600 text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-blue-700 disabled:opacity-60 shadow-sm shadow-blue-100 cursor-pointer"
       >
         {isSubmittingInquiry ? "Sending..." : "Send Enquiry"}
       </button>
@@ -799,7 +827,7 @@ export default function ProductListingPage({
   const renderBusinessContactDetails = (sectionId?: string) => (
     <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-slate-900">
-        <MapPin size={20} className="text-[#2563eb]" />
+        <MapPin size={20} className="text-blue-600" />
         <h3 className="text-base sm:text-lg xl:text-xl font-bold font-heading whitespace-nowrap">Address & Contact Details</h3>
       </div>
 
@@ -832,7 +860,7 @@ export default function ProductListingPage({
             <div className="space-y-1">
               <a
                 href={`tel:${businessPhoneDigits}`}
-                className="text-[15px] font-semibold text-[#2563eb] hover:underline block w-fit"
+                className="text-[15px] font-semibold text-blue-600 hover:underline block w-fit"
               >
                 {businessPhoneLabel || businessPhoneDigits}
               </a>
@@ -840,7 +868,7 @@ export default function ProductListingPage({
               {profile.businessAlternatePhone && normalizeDigits(profile.businessAlternatePhone) !== businessPhoneDigits && (
                 <a
                   href={`tel:${normalizeDigits(profile.businessAlternatePhone)}`}
-                  className="text-[15px] font-semibold text-[#2563eb] hover:underline block w-fit"
+                  className="text-[15px] font-semibold text-blue-600 hover:underline block w-fit"
                 >
                   {profile.businessAlternatePhone}
                 </a>
@@ -862,7 +890,7 @@ export default function ProductListingPage({
           {emailHref ? (
             <a
               href={emailHref}
-              className="text-[15px] font-semibold text-[#2563eb] hover:underline block break-all w-fit"
+              className="text-[15px] font-semibold text-blue-600 hover:underline block break-all w-fit"
             >
               {businessEmail}
             </a>
@@ -1252,8 +1280,8 @@ export default function ProductListingPage({
                       {profile.name}
                     </h1>
                     {isVerified && (
-                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
-                        <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
+                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-200">
+                        <BadgeCheck size={12} className="fill-blue-600 text-white" />
                         Verified
                       </span>
                     )}
@@ -1301,8 +1329,8 @@ export default function ProductListingPage({
                   {/* Pills Row (Mobile only, placed below the reviews/ratings line) */}
                   <div className="flex sm:hidden items-center gap-2 mt-2">
                     {isVerified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
-                        <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-200">
+                        <BadgeCheck size={12} className="fill-blue-600 text-white" />
                         Verified
                       </span>
                     )}
@@ -1319,9 +1347,9 @@ export default function ProductListingPage({
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cbd5e1] hover:border-[#2563eb] bg-white px-5 py-2 text-[15px] font-semibold text-[#2563eb] hover:bg-[#eff6ff] transition duration-150 cursor-pointer shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cbd5e1] hover:border-[#2563eb] bg-white px-5 py-2 text-[15px] font-semibold text-blue-600 hover:bg-blue-50 transition duration-150 cursor-pointer shadow-sm"
                 >
-                  <Heart size={14} className="text-[#2563eb]" />
+                  <Heart size={14} className="text-blue-600" />
                   Follow
                 </button>
               </div>
@@ -1339,13 +1367,13 @@ export default function ProductListingPage({
                   storeHref ? (
                     <Link
                       href={storeHref}
-                      className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
+                      className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                     >
                       <Store size={15} className="text-white" />
                       My Store
                     </Link>
                   ) : (
-                    <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
+                    <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-blue-600/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                       <Store size={15} className="text-white/80" />
                       My Store
                     </span>
@@ -1353,13 +1381,13 @@ export default function ProductListingPage({
                 ) : storeHref ? (
                   <Link
                     href={storeHref}
-                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb] hover:bg-[#1d4ed8] px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
+                    className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white transition duration-155 shadow-sm gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0"
                   >
                     <Store size={15} className="text-white" />
                     My Store
                   </Link>
                 ) : (
-                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-[#2563eb]/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
+                  <span className="inline-flex min-h-[34px] sm:min-h-[36px] items-center justify-center rounded-full bg-blue-600/60 px-1 sm:px-4 text-[11px] sm:text-sm font-semibold text-white/90 gap-1 sm:gap-1.5 w-full sm:w-auto sm:shrink-0">
                     <Store size={15} className="text-white/80" />
                     My Store
                   </span>
@@ -1516,7 +1544,7 @@ export default function ProductListingPage({
                           tabKey === 'reviews' ? 'hidden min-[360px]:inline-block' : 'inline-block'
                         } ${
                           isActive
-                            ? "border-[#2563eb] text-[#2563eb]"
+                            ? "border-[#2563eb] text-blue-600"
                             : "border-transparent text-slate-400 hover:text-slate-700"
                         }`}
                       >
@@ -1538,7 +1566,7 @@ export default function ProductListingPage({
                         type="button"
                         onClick={openAllPhotosModal}
                         disabled={photoItems.length === 0}
-                        className="text-[15px] font-semibold text-[#2563eb] hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
+                        className="text-[15px] font-semibold text-blue-600 hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
                       >
                         View All
                       </button>
@@ -1718,7 +1746,7 @@ export default function ProductListingPage({
             </div>
 
             {/* Right Column of Grid 1 */}
-            <div className="hidden lg:block space-y-6 min-w-0">
+            <div className="hidden lg:block space-y-6 min-w-0 lg:sticky lg:top-20 lg:self-start">
               {/* Enquiry Form Card */}
               <div className="rounded-2xl border border-slate-100 bg-white p-8">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
@@ -1736,9 +1764,20 @@ export default function ProductListingPage({
               <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-6">
                 {/* Desktop View (sm and up) */}
                 <div className="hidden sm:flex items-start gap-4">
-                  {/* Logo fallback box */}
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
-                    {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                  {/* Logo / DP Box */}
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                    {logoImage ? (
+                      <img
+                        src={logoImage}
+                        alt={`${profile.name} logo`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
+                        {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -1774,9 +1813,20 @@ export default function ProductListingPage({
                 {/* Mobile View (below sm) */}
                 <div className="flex sm:hidden flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    {/* Logo fallback box */}
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
-                      {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                    {/* Logo / DP Box */}
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                      {logoImage ? (
+                        <img
+                          src={logoImage}
+                          alt={`${profile.name} logo`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
+                          {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-xl font-bold text-slate-900 font-heading">Business Info</h3>
@@ -1794,7 +1844,7 @@ export default function ProductListingPage({
                         <button
                           type="button"
                           onClick={() => setMobileDescExpanded(!mobileDescExpanded)}
-                          className="inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-[#2563eb] transition duration-155 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-blue-600 transition duration-155 cursor-pointer"
                         >
                           {mobileDescExpanded ? "Read Less" : "Read More"}
                         </button>
@@ -2042,7 +2092,7 @@ export default function ProductListingPage({
                     <p className="text-[15px] font-medium text-slate-500">Checking login status...</p>
                   ) : !currentUser ? (
                     <div className="space-y-4 w-full flex flex-col items-center">
-                      <div className="mx-auto h-12 w-12 rounded-full bg-[#eff6ff] flex items-center justify-center text-[#2563eb]">
+                      <div className="mx-auto h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                         <Pencil size={18} />
                       </div>
                       <div>
@@ -2053,7 +2103,7 @@ export default function ProductListingPage({
                       </div>
                       <Link
                         href="/auth"
-                        className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-[#2563eb] hover:bg-blue-50/50 transition duration-150"
+                        className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-blue-600 hover:bg-blue-50/50 transition duration-150"
                       >
                         Login
                       </Link>
@@ -2195,7 +2245,7 @@ export default function ProductListingPage({
                       type="button"
                       onClick={showPreviousPhoto}
                       disabled={selectedPhotoIndex <= 0}
-                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       Previous
                     </button>
@@ -2208,7 +2258,7 @@ export default function ProductListingPage({
                       type="button"
                       onClick={showNextPhoto}
                       disabled={selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1}
-                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       Next
                     </button>

@@ -43,6 +43,7 @@ import {
   readWishlist,
   setCartItemQuantity,
   toggleWishlist,
+  setBuyNowSelection,
 } from "@/lib/shopStorage";
 import { subscribeVendorStoreStatus, type VendorStoreStatusSocketPayload } from "@/lib/storeStatusRealtime";
 
@@ -246,6 +247,36 @@ export default function ServiceListingPage({
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
   const [wishlistProductIds, setWishlistProductIds] = useState<Set<string>>(() => new Set());
   const [selectedService, setSelectedService] = useState<StoreProduct | null>(null);
+  const [selectedServiceForPayment, setSelectedServiceForPayment] = useState<StoreProduct | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+      
+      // Instantly scroll to top
+      window.scrollTo({ top: 0, behavior: 'instant' as any });
+
+      // Continuously reset scroll position for the first 500ms as elements/images load and layout
+      let frameId: number;
+      const startTime = Date.now();
+      
+      const forceScrollTop = () => {
+        window.scrollTo({ top: 0, behavior: 'instant' as any });
+        if (Date.now() - startTime < 500) {
+          frameId = requestAnimationFrame(forceScrollTop);
+        }
+      };
+      
+      frameId = requestAnimationFrame(forceScrollTop);
+
+      return () => {
+        cancelAnimationFrame(frameId);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -307,7 +338,7 @@ export default function ServiceListingPage({
   }, []);
 
   useEffect(() => {
-    if (selectedService) {
+    if (selectedService || isPaymentModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -315,7 +346,7 @@ export default function ServiceListingPage({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [selectedService]);
+  }, [selectedService, isPaymentModalOpen]);
 
   const [showAllServices, setShowAllServices] = useState(false);
   const [mobileDescExpanded, setMobileDescExpanded] = useState(false);
@@ -888,7 +919,7 @@ export default function ServiceListingPage({
       <button
         type="submit"
         disabled={isSubmittingInquiry}
-        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#2563eb] text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-[#1d4ed8] disabled:opacity-60 shadow-sm shadow-blue-100 cursor-pointer"
+        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-blue-600 text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-blue-700 disabled:opacity-60 shadow-sm shadow-blue-100 cursor-pointer"
       >
         {isSubmittingInquiry ? "Sending..." : "Send Enquiry"}
       </button>
@@ -898,7 +929,7 @@ export default function ServiceListingPage({
   const renderBusinessContactDetails = (sectionId?: string) => (
     <section id={sectionId} className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-slate-900">
-        <MapPin size={20} className="text-[#2563eb]" />
+        <MapPin size={20} className="text-blue-600" />
         <h3 className="text-base sm:text-lg xl:text-xl font-bold font-heading whitespace-nowrap">Address & Contact Details</h3>
       </div>
 
@@ -931,7 +962,7 @@ export default function ServiceListingPage({
             <div className="space-y-1">
               <a
                 href={`tel:${businessPhoneDigits}`}
-                className="text-[15px] font-semibold text-[#2563eb] hover:underline block w-fit"
+                className="text-[15px] font-semibold text-blue-600 hover:underline block w-fit"
               >
                 {businessPhoneLabel || businessPhoneDigits}
               </a>
@@ -939,7 +970,7 @@ export default function ServiceListingPage({
               {profile.businessAlternatePhone && normalizeDigits(profile.businessAlternatePhone) !== businessPhoneDigits && (
                 <a
                   href={`tel:${normalizeDigits(profile.businessAlternatePhone)}`}
-                  className="text-[15px] font-semibold text-[#2563eb] hover:underline block w-fit"
+                  className="text-[15px] font-semibold text-blue-600 hover:underline block w-fit"
                 >
                   {profile.businessAlternatePhone}
                 </a>
@@ -961,7 +992,7 @@ export default function ServiceListingPage({
           {emailHref ? (
             <a
               href={emailHref}
-              className="text-[15px] font-semibold text-[#2563eb] hover:underline block break-all w-fit"
+              className="text-[15px] font-semibold text-blue-600 hover:underline block break-all w-fit"
             >
               {businessEmail}
             </a>
@@ -1218,10 +1249,10 @@ export default function ServiceListingPage({
 
   const handleBookNow = useCallback(
     (product: StoreProduct) => {
-      handleAddToCart(product);
-      router.push("/checkout");
+      setSelectedServiceForPayment(product);
+      setIsPaymentModalOpen(true);
     },
-    [handleAddToCart, router]
+    []
   );
 
   const updateServiceCartQuantity = useCallback((productId: string, nextQuantity: number) => {
@@ -1528,8 +1559,8 @@ export default function ServiceListingPage({
                       {profile.name}
                     </h1>
                     {isVerified && (
-                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
-                        <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
+                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-200">
+                        <BadgeCheck size={12} className="fill-blue-600 text-white" />
                         Verified
                       </span>
                     )}
@@ -1577,8 +1608,8 @@ export default function ServiceListingPage({
                   {/* Pills Row (Mobile only, placed below the reviews/ratings line) */}
                   <div className="flex sm:hidden items-center gap-2 mt-2">
                     {isVerified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-xs font-semibold text-[#2563eb] border border-[#bfdbfe]">
-                        <BadgeCheck size={12} className="fill-[#2563eb] text-white" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-200">
+                        <BadgeCheck size={12} className="fill-blue-600 text-white" />
                         Verified
                       </span>
                     )}
@@ -1595,9 +1626,9 @@ export default function ServiceListingPage({
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cbd5e1] hover:border-[#2563eb] bg-white px-5 py-2 text-[15px] font-semibold text-[#2563eb] hover:bg-[#eff6ff] transition duration-150 cursor-pointer shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cbd5e1] hover:border-[#2563eb] bg-white px-5 py-2 text-[15px] font-semibold text-blue-600 hover:bg-blue-50 transition duration-150 cursor-pointer shadow-sm"
                 >
-                  <Heart size={14} className="text-[#2563eb]" />
+                  <Heart size={14} className="text-blue-600" />
                   Follow
                 </button>
               </div>
@@ -1763,7 +1794,7 @@ export default function ServiceListingPage({
                           tabKey === 'reviews' ? 'hidden min-[360px]:inline-block' : 'inline-block'
                         } ${
                           isActive
-                            ? "border-[#2563eb] text-[#2563eb]"
+                            ? "border-[#2563eb] text-blue-600"
                             : "border-transparent text-slate-400 hover:text-slate-700"
                         }`}
                       >
@@ -1785,7 +1816,7 @@ export default function ServiceListingPage({
                         type="button"
                         onClick={openAllPhotosModal}
                         disabled={photoItems.length === 0}
-                        className="text-[15px] font-semibold text-[#2563eb] hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
+                        className="text-[15px] font-semibold text-blue-600 hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
                       >
                         View All
                       </button>
@@ -1857,7 +1888,7 @@ export default function ServiceListingPage({
                           }
                         }}
                         disabled={services.length === 0}
-                        className="text-[15px] font-semibold text-[#2563eb] hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
+                        className="text-[15px] font-semibold text-blue-600 hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline"
                       >
                         View All
                       </button>
@@ -1973,7 +2004,7 @@ export default function ServiceListingPage({
             </div>
 
             {/* Right Column of Grid 1 */}
-            <div className="hidden lg:block space-y-6 min-w-0">
+            <div className="hidden lg:block space-y-6 min-w-0 lg:sticky lg:top-20 lg:self-start">
               {/* Enquiry Form Card */}
               <div className="rounded-2xl border border-slate-100 bg-white p-8">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
@@ -1991,9 +2022,20 @@ export default function ServiceListingPage({
               <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-6">
                 {/* Desktop View (sm and up) */}
                 <div className="hidden sm:flex items-start gap-4">
-                  {/* Logo fallback box */}
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
-                    {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                  {/* Logo / DP Box */}
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                    {logoImage ? (
+                      <img
+                        src={logoImage}
+                        alt={`${profile.name} logo`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
+                        {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -2029,9 +2071,20 @@ export default function ServiceListingPage({
                 {/* Mobile View (below sm) */}
                 <div className="flex sm:hidden flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    {/* Logo fallback box */}
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
-                      {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                    {/* Logo / DP Box */}
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                      {logoImage ? (
+                        <img
+                          src={logoImage}
+                          alt={`${profile.name} logo`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-xl font-extrabold font-heading">
+                          {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-xl font-bold text-slate-900 font-heading">Business Info</h3>
@@ -2049,7 +2102,7 @@ export default function ServiceListingPage({
                         <button
                           type="button"
                           onClick={() => setMobileDescExpanded(!mobileDescExpanded)}
-                          className="inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-[#2563eb] transition duration-155 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 hover:bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-blue-600 transition duration-155 cursor-pointer"
                         >
                           {mobileDescExpanded ? "Read Less" : "Read More"}
                         </button>
@@ -2297,7 +2350,7 @@ export default function ServiceListingPage({
                     <p className="text-[15px] font-medium text-slate-500">Checking login status...</p>
                   ) : !currentUser ? (
                     <div className="space-y-4 w-full flex flex-col items-center">
-                      <div className="mx-auto h-12 w-12 rounded-full bg-[#eff6ff] flex items-center justify-center text-[#2563eb]">
+                      <div className="mx-auto h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                         <Pencil size={18} />
                       </div>
                       <div>
@@ -2308,7 +2361,7 @@ export default function ServiceListingPage({
                       </div>
                       <Link
                         href="/auth"
-                        className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-[#2563eb] hover:bg-blue-50/50 transition duration-150"
+                        className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-blue-600 hover:bg-blue-50/50 transition duration-150"
                       >
                         Login
                       </Link>
@@ -2450,7 +2503,7 @@ export default function ServiceListingPage({
                       type="button"
                       onClick={showPreviousPhoto}
                       disabled={selectedPhotoIndex <= 0}
-                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       Previous
                     </button>
@@ -2463,7 +2516,7 @@ export default function ServiceListingPage({
                       type="button"
                       onClick={showNextPhoto}
                       disabled={selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1}
-                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-[#2563eb] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                      className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[#cbd5e1] bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       Next
                     </button>
@@ -2520,6 +2573,157 @@ export default function ServiceListingPage({
             </section>
           </div>
         ) : null}
+
+        {/* Manual Payment Modal Popup */}
+        {isPaymentModalOpen && selectedServiceForPayment && (() => {
+          const service = selectedServiceForPayment;
+          const price = toPriceValue(service.price);
+          
+          // QR code image URL: if paymentQrCode exists, use it. Otherwise, null.
+          const qrCodeUrl = profile.paymentQrCode || null;
+
+          // Pre-filled WhatsApp message text
+          const whatsappText = `Hi ${profile.name}, I am booking the service "${service.name}" for Rs. ${price}. Here is my payment transaction proof.`;
+          const whatsappLink = `https://wa.me/${profile.phone}?text=${encodeURIComponent(whatsappText)}`;
+
+          return (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-visible flex flex-col animate-scale-in">
+                {/* Header */}
+                <div className="bg-white p-5 pr-12 border-b border-slate-100 shrink-0">
+                  <h3 className="text-xl font-bold text-slate-900 font-heading">Complete Manual Payment</h3>
+                  <p className="text-xs text-slate-500 mt-1">Scan the QR code below to transfer funds directly to the vendor.</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="absolute top-5 right-4 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-50 p-1.5 transition cursor-pointer"
+                    aria-label="Close modal"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Body (Scrollable Content) */}
+                <div className="px-6 pt-0 pb-6 space-y-4">
+                  {/* Service Summary Card */}
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex gap-4 items-center">
+                    {service.imageUrl ? (
+                      <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-white border border-slate-200 p-1 flex items-center justify-center">
+                        <img src={service.imageUrl} alt={service.name} className="max-h-full max-w-full object-contain mx-auto" />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 shrink-0 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Store size={28} />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-slate-900 truncate leading-snug">{service.name}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Provider: {service.sellerName || profile.name}</p>
+                      <p className="text-lg font-extrabold text-slate-900 mt-1">Rs. {price.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-6 items-stretch">
+                    {/* QR Code Column */}
+                    <div className="flex h-full flex-col items-center justify-center p-6 md:p-8 border border-slate-200/80 rounded-xl bg-white shadow-sm space-y-4 overflow-hidden">
+                      {qrCodeUrl ? (
+                        <>
+                          <p className="text-xs font-bold text-slate-800 tracking-wide uppercase text-center">Scan to Pay via UPI</p>
+                          <div className="flex h-[215px] w-full max-w-[240px] items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white px-3 py-3 shadow-inner md:h-[245px] md:max-w-[260px]">
+                            <img src={qrCodeUrl} alt="Payment QR Code" className="block h-full w-full object-contain" />
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-medium font-sans text-center pt-1">GPay, PhonePe, Paytm, BHIM, or any UPI App</p>
+                        </>
+                      ) : (
+                        <div className="w-full flex-1 flex items-center justify-center text-center py-6 px-4 space-y-2">
+                          <div>
+                            <div className="mx-auto w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-2">
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                            </div>
+                            <p className="text-xs font-bold text-slate-800">QR Code Not Available</p>
+                            <p className="text-[11px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+                              This service provider has not uploaded their payment QR code yet. Please tap <strong>"WhatsApp Receipt"</strong> below to connect with them directly and request payment details.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instructions Column */}
+                    <div className="flex h-full flex-col justify-between gap-6">
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-heading">Payment Instructions</h4>
+                        <ol className="text-xs text-slate-600 space-y-2.5 list-decimal pl-4">
+                          {qrCodeUrl ? (
+                            <>
+                              <li>
+                                <strong>Scan the QR code:</strong> Open any UPI application on your smartphone and scan the QR code above.
+                              </li>
+                              <li>
+                                <strong>Send exactly Rs. {price.toLocaleString()}:</strong> Complete the payment transaction of the specified service amount.
+                              </li>
+                            </>
+                          ) : (
+                            <>
+                              <li>
+                                <strong>Request payment details:</strong> Tap the WhatsApp button below to request the provider's payment details (UPI ID or QR).
+                              </li>
+                              <li>
+                                <strong>Send exactly Rs. {price.toLocaleString()}:</strong> Send the specified service amount using their provided details.
+                              </li>
+                            </>
+                          )}
+                          <li>
+                            <strong>WhatsApp the Transaction ID:</strong> Take a screenshot of the successful transaction receipt and send it along with the Transaction ID/Reference Number to the vendor via WhatsApp below.
+                          </li>
+                        </ol>
+                      </div>
+
+                      {/* Precaution Box */}
+                      <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex gap-3 text-rose-800">
+                        <div className="shrink-0 mt-0.5 text-rose-500">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold leading-tight font-heading">Precautionary Disclaimer</h4>
+                          <p className="text-[11px] leading-relaxed text-rose-700 font-sans">
+                            This is a direct peer-to-peer manual payment method. The platform does not process, hold, or handle this payment. Winkget will not be responsible for any scams, unfulfilled bookings, or disputes. Always verify the service provider details before sending funds.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="bg-slate-50 border-t border-slate-100 p-4 flex gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="flex-1 h-11 inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-11 inline-flex items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 hover:shadow-lg transition cursor-pointer gap-2"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.022-.079-.116-.16-.307-.256-.19-.096-1.129-.557-1.303-.619-.174-.062-.3-.092-.43.096-.128.189-.5.626-.612.753-.113.128-.227.144-.417.048-.19-.096-.8-.294-1.523-.938-.563-.5-1.01-1.117-1.121-1.305-.113-.192-.012-.295.083-.39.085-.085.19-.22.285-.33.095-.108.127-.184.19-.307.064-.124.032-.232-.016-.328-.048-.096-.43-1.037-.588-1.424-.155-.375-.312-.325-.43-.331-.109-.006-.234-.007-.36-.007a.69.69 0 00-.5.234c-.174.19-.664.648-.664 1.58 0 .933.678 1.834.773 1.962.095.128 1.332 2.036 3.228 2.853.45.195.802.312 1.076.4.453.143.865.123 1.192.074.364-.055 1.129-.462 1.288-.908.16-.446.16-.828.112-.908-.048-.08-.184-.128-.374-.224zM12 2C6.48 2 2 6.48 2 12c0 2.17.7 4.19 1.89 5.84L2.1 22l4.31-1.13C8.01 21.5 10.02 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1.4 16.25c-1.17.65-2.52.88-3.83.66-2.12-.36-3.84-2.08-4.2-4.2-.22-1.31.01-2.66.66-3.83L5.4 7.6l3.29.63c1.17-.65 2.52-.88 3.83-.66 2.12.36 3.84 2.08 4.2 4.2.22 1.31-.01 2.66-.66 3.83l.63 3.29-3.29-.63z" />
+                    </svg>
+                    WhatsApp Receipt
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Service Details Modal Popup */}
         {selectedService && (() => {

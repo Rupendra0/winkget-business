@@ -204,7 +204,7 @@ export default function AuthPage() {
               <span className="mb-1.5 block text-sm font-medium text-slate-700">
                 Full name <RequiredMark />
               </span>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
                 <User size={16} className="text-slate-500" />
                 <input
                   type="text"
@@ -222,7 +222,7 @@ export default function AuthPage() {
               <span className="mb-1.5 block text-sm font-medium text-slate-700">
                 Email or phone number <RequiredMark />
               </span>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
                 <Mail size={16} className="text-slate-500" />
                 <input
                   type="text"
@@ -237,7 +237,7 @@ export default function AuthPage() {
             <>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
                   <Mail size={16} className="text-slate-500" />
                   <input
                     type="email"
@@ -251,7 +251,7 @@ export default function AuthPage() {
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone number</span>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
                   <Phone size={16} className="text-slate-500" />
                   <input
                     type="tel"
@@ -273,7 +273,7 @@ export default function AuthPage() {
             <span className="mb-1.5 block text-sm font-medium text-slate-700">
               Password <RequiredMark />
             </span>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
               <Lock size={16} className="text-slate-500" />
               <input
                 type="password"
@@ -290,7 +290,7 @@ export default function AuthPage() {
               <span className="mb-1.5 block text-sm font-medium text-slate-700">
                 Confirm Password <RequiredMark />
               </span>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-400">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
                 <Lock size={16} className="text-slate-500" />
                 <input
                   type="password"
@@ -308,7 +308,7 @@ export default function AuthPage() {
 
           <button
             type="button"
-            className="w-full rounded-xl bg-blue-900 text-white py-3 text-sm font-semibold hover:bg-blue-800 btn-hover"
+            className="w-full rounded-xl bg-blue-600 text-white py-3 text-sm font-semibold hover:bg-blue-700 btn-hover"
             onClick={handlePrimaryAuth}
             disabled={loading}
           >

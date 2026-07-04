@@ -136,7 +136,7 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-6 sm:px-4 lg:px-6">
+      <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 pt-6 pb-32 sm:px-4 lg:px-6">
         <div className="mx-auto h-64 w-full max-w-6xl animate-pulse bg-white rounded-xl" />
       </main>
     );
@@ -155,7 +155,7 @@ export default function OrdersPage() {
           </p>
           <Link
             href={buildAuthHref(pathname || "/orders")}
-            className="inline-flex w-full items-center justify-center bg-blue-900 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-800 transition"
+            className="inline-flex w-full items-center justify-center bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-700 transition"
           >
             Login to Account
           </Link>
@@ -238,7 +238,7 @@ export default function OrdersPage() {
   );
 
   return (
-    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 py-4 sm:px-4 lg:px-12">
+    <main className="page-scaled-fonts min-h-[calc(100vh-80px)] bg-[#f1f3f6] px-2 pt-4 pb-32 sm:px-4 lg:px-12">
       <div className="mx-auto w-full max-w-6xl">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 px-1">

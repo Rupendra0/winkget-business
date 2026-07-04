@@ -257,7 +257,7 @@ const buildSubcategoryDocument = (subcategory, cities) => {
 const buildSearchDocuments = async () => {
   const vendors = await User.find({ role: "vendor", vendorStatus: "approved" })
     .select(
-      "_id name businessName businessCategory businessSubcategory city sublocality businessPhone phone serviceTags businessDescription myStoreImage image shopBannerImage cardImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime updatedAt createdAt"
+      "_id name businessName businessCategory businessSubcategory city sublocality businessPhone phone serviceTags businessDescription myStoreImage image shopBannerImage cardImage myStoreBannerImage vendorStatus storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt shopOpeningTime shopClosingTime paymentQrCode paymentQrCode updatedAt createdAt"
     )
     .populate("businessCategory", "_id name slug")
     .populate("businessSubcategory", "_id name slug")
