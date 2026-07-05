@@ -31,14 +31,6 @@ async function startServer() {
   try {
     await connectDatabase();
 
-    // Trigger one-time base64 image migration to uploads folder
-    try {
-      const { runMigration } = require("./lib/startupMigration");
-      runMigration().catch((err) => console.error("Startup migration failed:", err));
-    } catch (err) {
-      console.error("Failed to run startup migration:", err.message);
-    }
-
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
     const syncModelIndexes = async (modelName, modelObj) => {
       try {
