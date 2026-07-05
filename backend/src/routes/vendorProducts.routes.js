@@ -1,5 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 const User = require("../models/User");
 const VendorProduct = require("../models/VendorProduct");
 const {
@@ -67,6 +69,40 @@ const slugify = (value) =>
 
 const normalizeMediaValue = (value) => normalizeString(value);
 
+const UPLOADS_DIR = path.join(__dirname, "../../../uploads");
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const processImageValue = (value) => {
+  const normalized = normalizeMediaValue(value);
+  if (!normalized) return "";
+
+  if (normalized.startsWith("data:image/")) {
+    try {
+      const matches = normalized.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (!matches || matches.length < 3) {
+        return normalized;
+      }
+      
+      const ext = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, "base64");
+      
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + "." + ext;
+      const filePath = path.join(UPLOADS_DIR, uniqueName);
+      
+      fs.writeFileSync(filePath, buffer);
+      return `/uploads/${uniqueName}`;
+    } catch (err) {
+      console.error("Error processing base64 image:", err);
+      return normalized;
+    }
+  }
+  
+  return normalized;
+};
+
 const isValidMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
   if (!normalized) return true;
@@ -124,7 +160,7 @@ const toVariantArray = (input) => {
     .map((item) => {
       const size = normalizeString(item?.size);
       const color = normalizeString(item?.color);
-      const image = normalizeMediaValue(item?.image);
+      const image = processImageValue(normalizeMediaValue(item?.image));
 
       if (image && !isValidMediaValue(image)) {
         return null;
@@ -159,7 +195,7 @@ const toDescriptionBlockArray = (input) => {
 
   return input
     .map((item) => {
-      const image = normalizeMediaValue(item?.image);
+      const image = processImageValue(normalizeMediaValue(item?.image));
       const headline = normalizeString(item?.headline);
       const text = normalizeString(item?.text);
 
@@ -422,14 +458,14 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     return { error: "Product name is required" };
   }
 
-  const image = normalizeMediaValue(body?.image ?? existingProduct?.image);
-  const heroImage = normalizeMediaValue(body?.heroImage ?? existingProduct?.heroImage);
-  const subcategoryImage = normalizeMediaValue(body?.subcategoryImage ?? existingProduct?.subcategoryImage);
+  const image = processImageValue(normalizeMediaValue(body?.image ?? existingProduct?.image));
+  const heroImage = processImageValue(normalizeMediaValue(body?.heroImage ?? existingProduct?.heroImage));
+  const subcategoryImage = processImageValue(normalizeMediaValue(body?.subcategoryImage ?? existingProduct?.subcategoryImage));
   const gallery = Array.isArray(body?.gallery)
     ? Array.from(
         new Set(
           body.gallery
-            .map((item) => normalizeMediaValue(item))
+            .map((item) => processImageValue(normalizeMediaValue(item)))
             .filter(Boolean)
         )
       )

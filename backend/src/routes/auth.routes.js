@@ -1,6 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 const User = require("../models/User");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
@@ -47,6 +49,40 @@ const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(value)}$`, "i");
 const normalizeMediaValue = (value) => String(value || "").trim();
+
+const UPLOADS_DIR = path.join(__dirname, "../../../uploads");
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const processImageValue = (value) => {
+  const normalized = normalizeMediaValue(value);
+  if (!normalized) return "";
+
+  if (normalized.startsWith("data:image/")) {
+    try {
+      const matches = normalized.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (!matches || matches.length < 3) {
+        return normalized;
+      }
+      
+      const ext = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, "base64");
+      
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + "." + ext;
+      const filePath = path.join(UPLOADS_DIR, uniqueName);
+      
+      fs.writeFileSync(filePath, buffer);
+      return `/uploads/${uniqueName}`;
+    } catch (err) {
+      console.error("Error processing base64 image:", err);
+      return normalized;
+    }
+  }
+  
+  return normalized;
+};
 
 const isValidMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
@@ -862,29 +898,29 @@ router.put("/auth/me", async (req, res) => {
       req.body?.businessDescription !== undefined
         ? String(req.body.businessDescription || "").trim()
         : user.businessDescription || "";
-    const imageInput = req.body?.image !== undefined ? normalizeMediaValue(req.body.image) : normalizeMediaValue(user.image);
+    const imageInput = req.body?.image !== undefined ? processImageValue(req.body.image) : normalizeMediaValue(user.image);
     const shopBannerImageInput =
       req.body?.shopBannerImage !== undefined
-        ? normalizeMediaValue(req.body.shopBannerImage)
+        ? processImageValue(req.body.shopBannerImage)
         : normalizeMediaValue(user.shopBannerImage);
     const cardImageInput =
       req.body?.cardImage !== undefined
-        ? normalizeMediaValue(req.body.cardImage)
+        ? processImageValue(req.body.cardImage)
         : normalizeMediaValue(user.cardImage);
     const myStoreImageInput =
       req.body?.myStoreImage !== undefined
-        ? normalizeMediaValue(req.body.myStoreImage)
+        ? processImageValue(req.body.myStoreImage)
         : normalizeMediaValue(user.myStoreImage);
     const paymentQrCodeInput =
       req.body?.paymentQrCode !== undefined
-        ? normalizeMediaValue(req.body.paymentQrCode)
+        ? processImageValue(req.body.paymentQrCode)
         : normalizeMediaValue(user.paymentQrCode);
     const myStoreBannerImageInput =
       req.body?.myStoreBannerImage !== undefined
-        ? normalizeMediaValue(req.body.myStoreBannerImage)
+        ? processImageValue(req.body.myStoreBannerImage)
         : normalizeMediaValue(user.myStoreBannerImage);
     const shopGalleryInput = Array.isArray(req.body?.shopGallery)
-      ? req.body.shopGallery
+      ? req.body.shopGallery.map((item) => processImageValue(item)).filter(Boolean)
       : Array.isArray(user.shopGallery)
         ? user.shopGallery
         : [];

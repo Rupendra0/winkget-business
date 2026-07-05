@@ -3,6 +3,7 @@ const cors = require("cors");
 const compression = require("compression");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+const path = require("path");
 const healthRoutes = require("./routes/health.routes");
 const devLogRoutes = require("./routes/devLogs.routes");
 const authRoutes = require("./routes/auth.routes");
@@ -42,6 +43,7 @@ app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "20mb" }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use((req, res, next) => {
   res.setTimeout(REQUEST_TIMEOUT_MS, () => {
     if (res.headersSent) {
