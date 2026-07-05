@@ -48,6 +48,16 @@ export type ProductDetailModel = {
   isCancellable?: boolean;
   isReturnable?: boolean;
   detailedDescriptionBlocks?: Array<{ image: string; headline: string; text: string }>;
+  descriptionPoints?: Array<{ heading?: string; content?: string }>;
+  variantData?: Array<{
+    size?: string;
+    color?: string;
+    mrp?: number;
+    sellingPrice?: number;
+    stock?: number;
+    image?: string;
+    customFields?: Record<string, string>;
+  }>;
   showDeliveryBadge?: boolean;
   showTopBrand?: boolean;
   showFreeDelivery?: boolean;
@@ -444,6 +454,16 @@ const toStoreProductsFromVendorProducts = (
             }))
             .filter((item) => item.heading || item.content)
         : undefined,
+      variantData: Array.isArray(product.variantData)
+        ? product.variantData.map((item) => ({
+            size: normalizeString(item.size) || undefined,
+            color: normalizeString(item.color) || undefined,
+            mrp: Number.isFinite(Number(item.mrp)) ? Number(item.mrp) : undefined,
+            sellingPrice: Number.isFinite(Number(item.sellingPrice)) ? Number(item.sellingPrice) : undefined,
+            stock: Number.isFinite(Number(item.stock)) ? Number(item.stock) : undefined,
+            image: normalizeString(item.image) || undefined,
+          }))
+        : undefined,
       showDeliveryBadge: product.showDeliveryBadge === true,
       showTopBrand: product.showTopBrand === true,
       showFreeDelivery: product.showFreeDelivery === true,
@@ -593,6 +613,24 @@ const toProductModel = (
             text: normalizeString(item?.text),
           }))
           .filter((item) => item.image || item.headline || item.text)
+      : undefined,
+    descriptionPoints: Array.isArray(product.descriptionPoints)
+      ? product.descriptionPoints
+          .map((item) => ({
+            heading: normalizeString(item?.heading) || undefined,
+            content: normalizeString(item?.content) || undefined,
+          }))
+          .filter((item) => item.heading || item.content)
+      : undefined,
+    variantData: Array.isArray(product.variantData)
+      ? product.variantData.map((item) => ({
+          size: normalizeString(item.size) || undefined,
+          color: normalizeString(item.color) || undefined,
+          mrp: Number.isFinite(Number(item.mrp)) ? Number(item.mrp) : undefined,
+          sellingPrice: Number.isFinite(Number(item.sellingPrice)) ? Number(item.sellingPrice) : undefined,
+          stock: Number.isFinite(Number(item.stock)) ? Number(item.stock) : undefined,
+          image: normalizeString(item.image) || undefined,
+        }))
       : undefined,
     showDeliveryBadge: product.showDeliveryBadge === true,
     showTopBrand: product.showTopBrand === true,

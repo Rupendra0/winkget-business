@@ -1116,8 +1116,8 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-4 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 lg:min-w-0 lg:grid-cols-[240px_minmax(0,1fr)]">
             <aside className="hidden h-fit rounded-lg bg-white px-4 py-4 lg:sticky lg:top-24 lg:block">
-              <div className="flex items-center justify-between">
-                <div className="text-[14px] font-bold text-[#1f2937]">Filters</div>
+              <div className="flex items-center justify-between border-b border-[#edf0f4] pb-3">
+                <div className="text-[14px] font-medium text-[#1f2937]">Filters</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1129,14 +1129,14 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
                     setSelectedCategoryBarItemId("");
                     });
                   }}
-                  className="text-[12px] font-semibold text-[#0b7cff]"
+                  className="text-[12px] font-medium text-[#0b7cff]"
                 >
                   Clear All
                 </button>
               </div>
 
               <label className="mt-4 block">
-                <span className="mb-2 block text-[13px] font-semibold text-[#374151]">Search Products</span>
+                <span className="mb-2 block text-[13px] font-medium text-[#374151]">Search Products</span>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[#0b7cff]">
                     <Filter size={13} aria-hidden="true" />
@@ -1150,7 +1150,7 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
               </label>
 
               <div className="mt-4">
-                <p className="mb-1.5 text-[13px] font-semibold text-[#374151]">Price Range</p>
+                <p className="mb-1.5 text-[13px] font-medium text-[#374151]">Price Range</p>
                 <input type="range" className="w-full accent-[#0b7cff]" />
                 <div className="mt-1 flex justify-between text-[12px] font-medium text-[#6b7280]">
                   <span>₹500</span>
@@ -1161,7 +1161,7 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
               <div className="mt-3 divide-y divide-[#edf0f4] border-t border-[#edf0f4]">
                 {data.filters.map((group) => (
                   <details key={group.label} className="group py-2.5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold text-[#374151]">
+                    <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-medium text-[#374151]">
                       {group.label}
                       <ChevronDown size={14} className="text-[#6b7280] transition group-open:rotate-180" />
                     </summary>

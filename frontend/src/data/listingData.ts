@@ -100,6 +100,15 @@ export type StoreProduct = {
   tags?: string[];
   descriptionPoints?: Array<{ heading?: string; content?: string }>;
   detailedDescriptionBlocks?: Array<{ image?: string; headline?: string; text?: string }>;
+  variantData?: Array<{
+    size?: string;
+    color?: string;
+    mrp?: number;
+    sellingPrice?: number;
+    stock?: number;
+    image?: string;
+    customFields?: Record<string, string>;
+  }>;
   showDeliveryBadge?: boolean;
   showTopBrand?: boolean;
   showFreeDelivery?: boolean;

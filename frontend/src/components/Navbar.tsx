@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X, Menu, Heart } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, LogIn, ChevronLeft, UserRound, LogOut, Package, Settings, ChevronDown, X, Menu, Heart, ChevronRight } from 'lucide-react';
 import { readSelectedCity, writeSelectedCity } from '@/lib/locationStore';
 import { buildAuthHref } from '@/lib/authRedirect';
 import { CART_UPDATED_EVENT, getCartCount, readWishlist } from '@/lib/shopStorage';
@@ -27,6 +27,45 @@ type CityOption = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
+
+const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
+  lucknow: { lat: 26.8467, lon: 80.9462 },
+  noida: { lat: 28.5355, lon: 77.3910 },
+  delhi: { lat: 28.7041, lon: 77.1025 },
+  "new delhi": { lat: 28.6139, lon: 77.2090 },
+  gurugram: { lat: 28.4595, lon: 77.0266 },
+  bengaluru: { lat: 12.9716, lon: 77.5946 },
+  bangalore: { lat: 12.9716, lon: 77.5946 },
+  mumbai: { lat: 19.0760, lon: 72.8777 },
+  pune: { lat: 18.5204, lon: 73.8567 },
+};
+
+const getFullLocationString = (city: string) => {
+  if (!city) return "Select Location";
+  const cityLower = city.toLowerCase();
+  if (cityLower === "lucknow" || cityLower === "bisalpur") {
+    return `${city}, Uttar Pradesh`;
+  }
+  if (cityLower === "noida") {
+    return `${city}, Uttar Pradesh`;
+  }
+  if (cityLower === "delhi" || cityLower === "new delhi") {
+    return `${city}, Delhi`;
+  }
+  if (cityLower === "gurugram" || cityLower === "gurgaon") {
+    return `${city}, Haryana`;
+  }
+  if (cityLower === "bengaluru" || cityLower === "bangalore") {
+    return `${city}, Karnataka`;
+  }
+  if (cityLower === "mumbai") {
+    return `${city}, Maharashtra`;
+  }
+  if (cityLower === "pune") {
+    return `${city}, Maharashtra`;
+  }
+  return city;
+};
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -54,6 +93,96 @@ export default function Navbar() {
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const blurTimeoutRef = useRef<number | null>(null);
+
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // 1. Try reverse geocoding via OpenStreetMap Nominatim
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const address = data.address || {};
+            const cityName = address.city || address.town || address.village || address.suburb || address.state_district || "";
+            if (cityName) {
+              const matchedCity = cityOptions.find(
+                (c) =>
+                  c.name.toLowerCase().includes(cityName.toLowerCase()) ||
+                  cityName.toLowerCase().includes(c.name.toLowerCase())
+              );
+              if (matchedCity) {
+                handleCityChange(matchedCity.name);
+                setCityMenuOpen(false);
+                return;
+              }
+            }
+          }
+
+          // 2. Offline fallback using closest coordinates mapping
+          let closestCity = "";
+          let minDistance = Infinity;
+          cityOptions.forEach((city) => {
+            const cityLower = city.name.toLowerCase();
+            const coords = CITY_COORDINATES[cityLower];
+            if (coords) {
+              const distance = Math.pow(latitude - coords.lat, 2) + Math.pow(longitude - coords.lon, 2);
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestCity = city.name;
+              }
+            }
+          });
+
+          if (closestCity) {
+            handleCityChange(closestCity);
+          } else if (cityOptions.length > 0) {
+            handleCityChange(cityOptions[0].name);
+          }
+          setCityMenuOpen(false);
+        } catch (error) {
+          console.error("Error matching location:", error);
+          // Fallback to coordinates matching directly if API call failed
+          let closestCity = "";
+          let minDistance = Infinity;
+          cityOptions.forEach((city) => {
+            const cityLower = city.name.toLowerCase();
+            const coords = CITY_COORDINATES[cityLower];
+            if (coords) {
+              const distance = Math.pow(latitude - coords.lat, 2) + Math.pow(longitude - coords.lon, 2);
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestCity = city.name;
+              }
+            }
+          });
+
+          if (closestCity) {
+            handleCityChange(closestCity);
+          } else if (cityOptions.length > 0) {
+            handleCityChange(cityOptions[0].name);
+          }
+          setCityMenuOpen(false);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error("Error getting geolocation coords:", error);
+        alert("Unable to retrieve your location");
+        setIsLocating(false);
+      }
+    );
+  };
 
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
@@ -459,57 +588,77 @@ export default function Navbar() {
 
   const cityModal = cityMenuOpen && isMounted
     ? createPortal(
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/20 backdrop-blur-[1px] px-4 py-6">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4 py-6">
           <div
             ref={cityModalRef}
-            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl sm:p-6"
+            className="w-full max-w-[560px] rounded-[32px] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
+            {/* Title & Close */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Select Your City</h2>
+              <h2 className="text-2xl font-bold text-[#1e293b] tracking-tight">Select a location</h2>
               <button
                 type="button"
                 onClick={() => setCityMenuOpen(false)}
-                className="rounded-full p-1 text-slate-500 transition hover:text-slate-700"
-                aria-label="Close"
+                className="rounded-full bg-[#f1f3ff] px-6 py-2.5 text-[15px] font-semibold text-[#5a6cf6] transition hover:bg-[#e4e7ff] focus:outline-none"
               >
-                <X size={18} />
+                Close
               </button>
             </div>
 
-            <div className="relative mt-4">
+            {/* Search Input */}
+            <div className="relative mt-5">
+              <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={citySearchQuery}
                 onChange={(event) => setCitySearchQuery(event.target.value)}
-                placeholder="Search for city..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                placeholder="Search for your location"
+                className="w-full rounded-[18px] border border-slate-200 bg-white px-5 py-4 pl-12 text-[15px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#5a6cf6]"
               />
-              <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             </div>
 
-            <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-slate-100 divide-y divide-slate-100">
-              {filteredCityOptions.length > 0 ? (
-                filteredCityOptions.map((city) => {
-                  const active = city.name === selectedCity;
-                  return (
-                    <button
-                      key={city.id}
-                      type="button"
-                      onClick={() => {
-                        handleCityChange(city.name);
-                        setCityMenuOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm ${
-                        active ? "bg-sky-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>{city.name}</span>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-4 py-6 text-sm text-slate-500">No cities found.</div>
-              )}
+            {/* Use my current location button */}
+            <div className="mt-4 flex items-center">
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isLocating}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#7056ff] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(112,86,255,0.25)] hover:bg-[#5f44eb] transition disabled:opacity-70 focus:outline-none"
+              >
+                {isLocating ? "Locating..." : "Use my current location"}
+              </button>
+            </div>
+
+            {/* Cities List */}
+            <div className="mt-6 border-t border-slate-100 pt-5">
+              <p className="text-[13px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Popular Cities</p>
+              <div className="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1 no-scrollbar">
+                {filteredCityOptions.length > 0 ? (
+                  filteredCityOptions.map((city) => {
+                    const active = city.name === selectedCity;
+                    return (
+                      <button
+                        key={city.id}
+                        type="button"
+                        onClick={() => {
+                          handleCityChange(city.name);
+                          setCityMenuOpen(false);
+                        }}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-3 text-left text-[14px] font-medium transition ${
+                          active
+                            ? "bg-[#f1f3ff] text-[#5a6cf6] border border-[#dce0ff]"
+                            : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-transparent"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-[#5a6cf6]" : "bg-slate-400"}`} />
+                        <span>{city.name}</span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-2 py-4 text-center text-sm text-slate-500">No cities found.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>,
@@ -540,31 +689,22 @@ export default function Navbar() {
           >
           {/* Logo */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-3">
-            {showBack ? (
-              <button
-                type="button"
-                className="hidden h-8 w-8 items-center justify-center rounded-full bg-white text-orange-600 shadow-sm btn-hover md:flex sm:h-9 sm:w-9"
-                onClick={() => router.back()}
-                aria-label="Go back"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            ) : null}
-            <Link href="/" className="brand-wordmark flex min-w-0 flex-col items-start gap-0 leading-none md:flex-row md:items-baseline md:gap-2">
-              <span className="text-[10px] font-bold tracking-[0.2px] text-slate-900 md:text-2xl md:tracking-[0.4px] md:text-orange-600">Winkget</span>
-              <span className="text-lg font-bold tracking-[0.2px] text-orange-600 md:text-xl md:tracking-[0.3px] md:text-gray-800">Business</span>
+            <Link href="/" className="brand-wordmark flex min-w-0 flex-col items-start gap-0 leading-none">
+              <span className="text-[10px] font-bold tracking-[0.2px] text-slate-900">Winkget</span>
+              <span className="text-lg font-bold tracking-[0.2px] text-orange-600">Business</span>
             </Link>
             <button
               type="button"
               onClick={() => setCityMenuOpen((prev) => !prev)}
               disabled={loadingCities || cityOptions.length === 0}
-              className="inline-flex h-8 w-[116px] items-center justify-center gap-1 rounded border border-slate-200 bg-white px-2 text-slate-700 shadow-sm transition hover:shadow-md disabled:opacity-60 md:hidden"
+              className="inline-flex min-w-0 items-start gap-1 bg-transparent text-left outline-none focus:outline-none disabled:opacity-60 md:hidden max-w-[170px]"
               aria-label="Current location"
             >
-              <span className="min-w-0 truncate text-center text-[11px] font-bold text-blue-700">
-                {loadingCities ? "Location" : selectedCity || "Location"}
+              <MapPin size={15} className="text-blue-600 shrink-0" />
+              <span className="text-[11px] font-normal leading-tight text-slate-800 whitespace-normal break-words">
+                {loadingCities ? "Locating..." : getFullLocationString(selectedCity)}
               </span>
-              <ChevronDown size={13} strokeWidth={2.6} className="shrink-0 text-blue-700" />
+              <ChevronRight size={12} className="text-slate-400 shrink-0" />
             </button>
           </div>
 
@@ -576,16 +716,13 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setCityMenuOpen((prev) => !prev)}
                 disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-3 rounded-lg border border-slate-200/60 bg-white px-3 py-2 text-slate-700 shadow-none disabled:opacity-60"
+                className="inline-flex items-center gap-2 bg-transparent text-left outline-none focus:outline-none disabled:opacity-60"
               >
-                <MapPin size={18} className="text-orange-500" />
-                <div className="flex flex-col items-start leading-tight">
-                  <span className="text-[11px] font-semibold text-slate-500">Your Location</span>
-                  <span className="max-w-[140px] truncate text-sm font-semibold text-blue-600">
-                    {loadingCities ? "Loading city..." : selectedCity || "Select city"}
-                  </span>
-                </div>
-                <ChevronDown size={16} className={`text-slate-500 transition-transform ${cityMenuOpen ? "rotate-180" : ""}`} />
+                <MapPin size={18} className="text-blue-600 shrink-0" />
+                <span className="max-w-[220px] truncate text-[15px] font-normal text-slate-800">
+                  {loadingCities ? "Loading..." : getFullLocationString(selectedCity)}
+                </span>
+                <ChevronRight size={15} className="text-slate-400 shrink-0" />
               </button>
             </div>
 
@@ -747,6 +884,16 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden shrink-0 flex items-center gap-1.5">
+            <Link
+              href="/wishlist"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
+              aria-label="Wishlist"
+            >
+              <Heart size={17} strokeWidth={2.4} />
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-600 px-1 text-[8px] font-bold text-white">
+                {wishlistCount}
+              </span>
+            </Link>
             <Link
               href="/cart"
               className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
