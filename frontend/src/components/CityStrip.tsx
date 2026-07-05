@@ -162,7 +162,7 @@ export default function CityStrip() {
   }
 
   return (
-    <section className="px-3 pt-1 pb-3 md:pt-2 md:pb-4 lg:pt-2 lg:pb-6">
+    <section className="px-3 pt-1 pb-0 md:pt-2 md:pb-0 lg:pt-2 lg:pb-0">
       <div className="w-full rounded-xl bg-white px-0 py-0">
         <div className="mb-3 pl-1 md:pl-2.5">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Our Partners</h2>
@@ -173,7 +173,7 @@ export default function CityStrip() {
             <Link
               key={partner.id}
               href={partner.href}
-              className="group relative my-[1%] mr-[1%] inline-block w-[46%] p-4 pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
+              className="group relative my-1 mr-[1%] inline-block w-[46%] p-4 pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
             >
               <div className="relative w-full h-44 sm:h-48 md:h-52 lg:h-[14vw] overflow-hidden rounded-xl">
                 {partner.isNew ? (
@@ -184,10 +184,10 @@ export default function CityStrip() {
 
               <div className="pt-3 px-0.5 pb-0">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">
-                  <div className="min-w-0 text-sm font-semibold text-gray-900 line-clamp-1 truncate">{partner.name}</div>
+                  <div className="min-w-0 text-sm font-medium text-slate-700 line-clamp-1 truncate">{partner.name}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
                 </div>
-                <div className="mt-2 text-xs font-bold text-sky-700 line-clamp-1">{partner.category}</div>
+                <div className="mt-2 text-xs font-medium text-sky-700 line-clamp-1">{partner.category}</div>
                 <div className="mt-2.5 h-8 line-clamp-2 text-xs text-gray-500 leading-normal">{partner.address}</div>
               </div>
             </Link>

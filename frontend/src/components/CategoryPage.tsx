@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useTransition, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import Footer from "@/components/Footer";
@@ -287,6 +287,32 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
     });
   }, [filterOptions, listingsWithReviewStats, selectedCity, selectedSubcategory, selectedSublocality, filterVerified, filterTopRated]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const gridRef = useRef<HTMLDivElement>(null);
+  
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset page when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSubcategory, selectedSublocality, filterVerified, filterTopRated, selectedCity]);
+
+  const paginatedListings = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredListings, currentPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredListings.length / ITEMS_PER_PAGE);
+  }, [filteredListings]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    if (gridRef.current) {
+      gridRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <main className="w-full overflow-x-hidden px-0 py-0 bg-slate-50/50">
       {/* Header Section */}
@@ -300,8 +326,8 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
       </div>
 
       {/* Horizontal Toolbar */}
-      <div className="w-full max-w-full px-4 md:px-12 py-4 border-b border-slate-200 bg-white">
-        <div className="flex flex-row items-center gap-3 flex-nowrap overflow-x-auto no-scrollbar">
+      <div className="relative w-full max-w-full px-4 md:px-12 py-4 border-b border-slate-200 bg-white">
+        <div className="flex flex-row items-center gap-3 flex-nowrap overflow-x-auto no-scrollbar pr-24 md:pr-0">
           {/* Subcategory Pills */}
           <div className="flex flex-row items-center gap-2 shrink-0">
             {displayedFilterOptions.map((subcategory) => {
@@ -311,7 +337,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                   key={subcategory.id}
                   type="button"
                   onClick={() => handleSubcategoryChange(subcategory.id)}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg border transition-all ${
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
                     isActive
                       ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                       : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
@@ -328,7 +354,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           {/* Locality Dropdown */}
           <div className="relative shrink-0">
             <select
-              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer"
+              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer"
               value={optimisticSublocality}
               onChange={(event) => handleSublocalityChange(event.target.value)}
             >
@@ -350,7 +376,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           <button
             type="button"
             onClick={handleVerifiedToggle}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg border shrink-0 transition-all ${
               optimisticVerified
                 ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
@@ -363,7 +389,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           <button
             type="button"
             onClick={handleTopRatedToggle}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg border shrink-0 transition-all ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg border shrink-0 transition-all ${
               optimisticTopRated
                 ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
@@ -375,7 +401,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           {/* Budget Dropdown Placeholder */}
           <div className="relative shrink-0">
             <select
-              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-semibold text-slate-700 outline-none transition cursor-pointer"
+              className="appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-10 py-2 text-sm font-medium text-slate-700 outline-none transition cursor-pointer"
               disabled
             >
               <option>Budget</option>
@@ -387,20 +413,24 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             </div>
           </div>
 
-          {/* More Filters Button */}
-          <button
-            type="button"
-            onClick={() => setIsMoreFiltersOpen(true)}
-            className="px-4 py-2 text-sm font-semibold rounded-lg border bg-white text-slate-700 border-slate-300 hover:bg-slate-50 flex items-center gap-2 shrink-0"
-          >
-            <SlidersHorizontal size={14} />
-            More Filters
-          </button>
+          {/* Mobile Sticky Right Container for More Button */}
+          <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white via-white to-transparent md:hidden pointer-events-none z-10" />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 md:static md:translate-y-0 md:z-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsMoreFiltersOpen(true)}
+              className="px-3 md:px-4 py-2 text-sm font-medium rounded-lg border bg-white text-blue-600 border-slate-300 hover:text-blue-700 hover:bg-slate-50/50 flex items-center gap-2 shadow-sm md:shadow-none"
+            >
+              <SlidersHorizontal size={14} className="text-blue-600" />
+              <span className="md:hidden">More</span>
+              <span className="hidden md:inline">More Filters</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Card Grid Layout */}
-      <div className="relative w-full max-w-full px-4 md:px-12 py-8 min-h-[400px]" aria-busy={isFiltering}>
+      <div className="relative w-full max-w-full px-4 md:px-12 pt-3 pb-8 md:pt-6 md:pb-8 min-h-[400px]" aria-busy={isFiltering}>
         {isFiltering ? (
           <div className="absolute inset-0 z-10 flex items-start justify-center bg-white pt-20">
             <div className="text-center">
@@ -410,17 +440,77 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           </div>
         ) : null}
 
-        <div className={isFiltering ? "pointer-events-none transition-opacity" : "transition-opacity"}>
+        <div className={isFiltering ? "pointer-events-none transition-opacity" : "transition-opacity"} ref={gridRef}>
         {filteredListings.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredListings.map((listing) => (
-              <BusinessListingCard
-                key={listing.id}
-                listing={listing}
-                categoryKey={listing.subcategoryId || listing.subcategory || data.categoryId || data.slug}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {paginatedListings.map((listing) => (
+                <BusinessListingCard
+                  key={listing.id}
+                  listing={listing}
+                  categoryKey={listing.subcategoryId || listing.subcategory || data.categoryId || data.slug}
+                />
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-10">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Previous
+                </button>
+                
+                {Array.from({ length: totalPages }).map((_, index) => {
+                  const page = index + 1;
+                  // Show current page, first, last, and pages adjacent to current page
+                  const isFirstOrLast = page === 1 || page === totalPages;
+                  const isAdjacent = Math.abs(page - currentPage) <= 1;
+
+                  if (isFirstOrLast || isAdjacent) {
+                    const isActive = currentPage === page;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => handlePageChange(page)}
+                        className={`h-9 w-9 flex items-center justify-center text-sm font-medium rounded-lg border transition-all ${
+                          isActive
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                            : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  }
+
+                  // Render single ellipsis at the correct gaps
+                  if (page === 2 && currentPage > 3) {
+                    return <span key="ellipsis-start" className="px-2 text-slate-400 select-none">...</span>;
+                  }
+                  if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                    return <span key="ellipsis-end" className="px-2 text-slate-400 select-none">...</span>;
+                  }
+
+                  return null;
+                })}
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <p className="py-12 text-center text-sm text-slate-500">
             No vendors found matching the filter criteria.
@@ -445,10 +535,10 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
           {/* Modal Content */}
           <div className="relative w-full max-w-md bg-white rounded-2xl p-6 shadow-xl border border-slate-100 z-10 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span className="text-lg font-medium text-slate-900 flex items-center gap-2 block">
                 <SlidersHorizontal size={18} className="text-blue-600" />
                 More Filters
-              </h3>
+              </span>
               <button
                 type="button"
                 onClick={() => setIsMoreFiltersOpen(false)}
@@ -462,12 +552,12 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
             <div className="flex-1 overflow-y-auto py-4 space-y-6 pr-1 no-scrollbar">
               {/* Locality Section */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <span className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
                   Sublocality / Area
-                </label>
+                </span>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer shadow-sm"
+                    className="w-full appearance-none rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 cursor-pointer shadow-sm"
                     value={optimisticSublocality}
                     onChange={(event) => handleSublocalityChange(event.target.value)}
                   >
@@ -488,9 +578,9 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
 
               {/* Subcategories Section */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <span className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
                   Subcategory
-                </label>
+                </span>
                 <div className="grid grid-cols-2 gap-2">
                   {filterOptions.map((subcategory) => {
                     const isActive = optimisticSubcategory === subcategory.id;
@@ -498,7 +588,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
                       <button
                         key={subcategory.id}
                         type="button"
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                           isActive
                             ? "bg-blue-600 border-blue-600 text-white shadow-sm"
                             : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70"
@@ -517,7 +607,7 @@ export default function CategoryPage({ data }: { data: CategoryPageData }) {
               <button
                 type="button"
                 onClick={() => setIsMoreFiltersOpen(false)}
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-md transition"
+                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 shadow-md transition"
               >
                 Apply Filters
               </button>

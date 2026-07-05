@@ -255,7 +255,7 @@ export default function ExploreWellnessSections() {
   return (
     <>
       {exploreCards.length > 0 ? (
-        <section className="px-3 pt-1 pb-2 md:pt-2 md:pb-3 lg:pt-2 lg:pb-4">
+        <section className="px-3 pt-0 pb-2 md:pt-0 md:pb-3 lg:pt-0 lg:pb-4">
           <div className="w-full rounded-xl bg-white px-0 py-0">
             <div className="mb-3 pl-1 md:pl-2.5">
               <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{exploreHeading}</h2>
@@ -277,7 +277,7 @@ export default function ExploreWellnessSections() {
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                    <p className="line-clamp-1 text-sm font-normal text-white">{card.categoryName || "Category"}</p>
                   </div>
                 </Link>
               ))}
@@ -298,7 +298,7 @@ export default function ExploreWellnessSections() {
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.categoryName || "Category"}</p>
+                    <p className="line-clamp-1 text-sm font-normal text-white">{card.categoryName || "Category"}</p>
                   </div>
                 </Link>
               ))}
@@ -308,7 +308,7 @@ export default function ExploreWellnessSections() {
       ) : null}
 
       {wellnessCards.length > 0 ? (
-        <section className="px-3 pt-1 pb-2 md:pt-2 md:pb-3 lg:pt-2 lg:pb-4">
+        <section className="px-3 pt-0 pb-2 md:pt-0 md:pb-3 lg:pt-0 lg:pb-4">
           <div className="w-full rounded-xl bg-white px-0 py-0">
             <div className="mb-3 pl-1 md:pl-2.5">
               <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{wellnessHeading}</h2>
@@ -330,7 +330,7 @@ export default function ExploreWellnessSections() {
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                    <p className="line-clamp-1 text-sm font-normal text-white">{card.title || card.categoryName || "Category"}</p>
                   </div>
                 </Link>
               ))}
@@ -351,7 +351,7 @@ export default function ExploreWellnessSections() {
                     loading="lazy"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">{card.title || card.categoryName || "Category"}</p>
+                    <p className="line-clamp-1 text-sm font-normal text-white">{card.title || card.categoryName || "Category"}</p>
                   </div>
                 </Link>
               ))}

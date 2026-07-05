@@ -122,7 +122,7 @@ export default function CitiesSection() {
                   <span className="text-[11px] font-bold text-slate-700">4.5</span>
                 </div>
               </div>
-              <p className="mt-2 text-sm font-semibold text-slate-800 transition group-hover:text-blue-600">
+              <p className="mt-2 text-sm font-medium text-slate-700 transition group-hover:text-blue-600">
                 {city.name}
               </p>
             </div>

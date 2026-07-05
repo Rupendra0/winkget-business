@@ -1095,7 +1095,7 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
                           <IconComponent className="h-5 w-5 sm:h-7 sm:w-7" strokeWidth={1.8} />
                         )}
                       </span>
-                      <span className={`mt-1.5 block line-clamp-2 text-[11px] font-semibold leading-tight sm:mt-2 sm:text-[13px] ${isSelected ? "text-pink-700" : "text-slate-700"}`}>
+                      <span className={`mt-1.5 block line-clamp-2 text-[11px] font-medium leading-tight sm:mt-2 sm:text-[13px] ${isSelected ? "text-pink-700" : "text-slate-700"}`}>
                         {categoryItem.label}
                       </span>
                     </button>
@@ -1272,19 +1272,10 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
           </div>
           </div>
 
-          <section className="mt-8 relative overflow-hidden rounded-[26px] border border-[#d9e2f1] bg-gradient-to-b from-white to-[#f7faff] px-5 py-5 shadow-[0_4px_16px_rgba(15,23,42,0.04)] sm:px-6 sm:py-6">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -left-24 -top-20 h-64 w-64 rounded-full bg-[#5b7cff]/10 blur-3xl"
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-[#ffcc00]/10 blur-3xl"
-            />
-
+          <section className="mt-8 relative px-4 sm:px-6">
             <div className="relative">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="h-11 w-11 overflow-hidden rounded-full border border-[#e0e7ff] bg-white shadow-[0_4px_10px_rgba(15,23,42,0.06)] sm:h-12 sm:w-12">
+                <div className="h-11 w-11 overflow-hidden rounded-full sm:h-12 sm:w-12">
                   <img
                     src={data.logoImage}
                     alt={`${data.storeName} logo`}
@@ -1298,76 +1289,53 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 items-start gap-4 sm:gap-5 xl:grid-cols-[200px_200px_minmax(0,1fr)] xl:gap-6">
-                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Rating</p>
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
-                      <Star size={18} className="text-[#4a63ff]" aria-hidden="true" />
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1 text-[18px] leading-none text-[#ffcc00] sm:text-[20px]">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <span key={`about-rating-star-${index}`}>{index < Math.round(data.rating) ? "★" : "☆"}</span>
-                      ))}
+              <div className="mt-8 flex flex-col lg:flex-row gap-0 lg:gap-12 items-stretch">
+                {/* Facts Column */}
+                <div className="grid grid-cols-2 gap-x-12 gap-y-8 shrink-0 w-full lg:w-[400px] justify-between items-start pb-4 lg:pb-0">
+                  <div className="flex flex-col gap-2.5">
+                    <p className="text-[17px] font-medium leading-none text-[#6f84a3] sm:text-[18px]">Rating</p>
+                    <div>
+                      <div className="flex items-center gap-1 text-[18px] leading-none text-[#ffcc00] sm:text-[20px]">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <span key={`about-rating-star-${index}`}>{index < Math.round(data.rating) ? "★" : "☆"}</span>
+                        ))}
+                      </div>
+                      <p className="mt-2.5 text-[18px] font-semibold text-[#344054]">{ratingLabel(storeReviewStats.rating)}</p>
                     </div>
-                    <p className="mt-4 text-[18px] font-semibold text-[#344054]">{ratingLabel(storeReviewStats.rating)}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    <p className="text-[17px] font-medium leading-none text-[#6f84a3] sm:text-[18px]">Reviews</p>
+                    <p className="mt-1 text-[20px] font-semibold leading-none text-[#344054] sm:text-[22px]">
+                      {new Intl.NumberFormat("en-IN").format(Math.max(0, Number(storeReviewStats.reviews || 0)))}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    <p className="text-[17px] font-medium leading-none text-[#6f84a3] sm:text-[18px]">Joined</p>
+                    <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
+                      {joinedLabel}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    <p className="text-[17px] font-medium leading-none text-[#6f84a3] sm:text-[18px]">Location</p>
+                    <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
+                      {locationLabel}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Reviews</p>
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
-                      <MessageCircle size={18} className="text-[#4a63ff]" aria-hidden="true" />
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[20px] font-semibold leading-none text-[#344054] sm:text-[22px]">
-                    {new Intl.NumberFormat("en-IN").format(Math.max(0, Number(storeReviewStats.reviews || 0)))}
-                  </p>
-                </div>
+                {/* Divider Lines */}
+                <div className="h-px w-full bg-slate-200/80 my-3 lg:hidden" />
+                <div className="hidden lg:block w-px bg-slate-200/80 my-2" />
 
-                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Joined</p>
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
-                      <CalendarDays size={18} className="text-[#4a63ff]" aria-hidden="true" />
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
-                    {joinedLabel}
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-5 min-h-[160px] sm:min-h-[180px] xl:min-h-[180px] rounded-[18px] bg-[#f6f8fc] px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[15px] font-medium leading-none text-[#6f84a3] sm:text-[16px]">Location</p>
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#5b7cff]/10 text-[#4a63ff]">
-                      <MapPin size={18} className="text-[#4a63ff]" aria-hidden="true" />
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[19px] font-medium leading-tight text-[#344054] sm:text-[20px]">
-                    {locationLabel}
-                  </p>
-                </div>
-
-                <div className="col-span-2 flex flex-col rounded-[18px] bg-[#f6f8fc] px-5 py-5 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-[#d7defa] bg-white shadow-[0_4px_10px_rgba(15,23,42,0.06)]">
-                      <img
-                        src={data.logoImage}
-                        alt={`${data.storeName} logo`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    <h3 className="text-[22px] font-semibold leading-none text-[#344054] sm:text-[24px]">Our Story</h3>
-                  </div>
+                {/* Our Story Column */}
+                <div className="flex-1 flex flex-col justify-start w-full pt-4 lg:pt-0">
+                  <h3 className="text-[17px] font-medium leading-none text-[#6f84a3] sm:text-[18px]">Our Story</h3>
 
                   <div
-                    className={`mt-4 whitespace-pre-wrap text-[15px] font-normal leading-8 text-[#7084a3] sm:text-[16px] lg:whitespace-normal ${
+                    className={`mt-4 whitespace-pre-wrap text-[15px] font-normal leading-8 text-[#344054] sm:text-[16px] lg:whitespace-normal ${
                       isAboutExpanded ? "" : "line-clamp-6 sm:line-clamp-8 lg:line-clamp-none"
                     }`}
                   >
@@ -1378,15 +1346,15 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
                     <button
                       type="button"
                       onClick={() => setIsAboutExpanded((v) => !v)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-blue-200 bg-blue-50 px-4 py-2 text-[14px] font-semibold text-blue-700 transition hover:bg-blue-100"
+                      className="inline-flex w-full items-center justify-center gap-2 bg-transparent border-0 px-4 py-2 text-[14px] font-semibold text-blue-700 transition hover:text-blue-800 focus:outline-none"
                       aria-expanded={isAboutExpanded}
                     >
-                      {isAboutExpanded ? "View Less" : "View More"}
                       <ChevronDown
                         size={16}
                         className={isAboutExpanded ? "rotate-180 transform transition-transform" : "transform transition-transform"}
                         aria-hidden="true"
                       />
+                      {isAboutExpanded ? "View Less" : "View More"}
                     </button>
                   </div>
 
@@ -1402,10 +1370,11 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
                     ) : (
                       <button
                         type="button"
-                        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] border border-[#5b7cff] px-6 text-[15px] font-medium text-[#4a63ff]"
+                        disabled
+                        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] border border-slate-200 px-6 text-[15px] font-medium text-slate-400 cursor-not-allowed"
                       >
-                        <PhoneCall size={16} className="text-[#4a63ff]" aria-hidden="true" />
-                        Contact Seller
+                        <PhoneCall size={16} className="text-slate-400" aria-hidden="true" />
+                        Phone Number Unlisted
                       </button>
                     )}
                   </div>

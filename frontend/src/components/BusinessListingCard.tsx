@@ -169,7 +169,8 @@ function BusinessListingCardComponent({
         <Link
           href={detailsHref}
           onClick={handleDetailsLinkClick}
-          className="text-lg md:text-[20px] font-bold text-slate-900 hover:text-blue-700 leading-snug line-clamp-1"
+          className="text-lg md:text-[20px] text-slate-700 hover:text-blue-700 leading-snug line-clamp-1"
+          style={{ fontWeight: 550 }}
         >
           {displayName}
         </Link>

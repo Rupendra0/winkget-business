@@ -232,7 +232,7 @@ export default function PartnersSection() {
     <section className="px-3 pt-1 pb-12 md:pt-2 md:pb-16 lg:pt-2 lg:pb-20">
       <div className="w-full">
         <div className="mb-6 pl-1 md:pl-2.5">
-          <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{heading}</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">{heading}</h2>
         </div>
 
         {/* Infinite marquee ticker container */}

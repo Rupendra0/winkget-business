@@ -408,20 +408,22 @@ export default function CategoryTabExplorer() {
   return (
     <section className="px-3 pt-6 pb-2 md:pt-8 md:pb-3 lg:pt-10 lg:pb-4">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 md:mb-8">
-        <div className="pl-1 md:pl-2.5">
+      <div className="flex flex-row items-end justify-between gap-4 mb-6 md:mb-8 pl-1 md:pl-2.5 pr-1">
+        <div className="min-w-0">
           <span className="text-[11px] font-bold uppercase tracking-[1.5px] text-blue-600">Explore</span>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">Browse Categories</h2>
-          <p className="text-slate-500 text-sm mt-1.5 max-w-2xl">
-            Explore categories and connect with the best businesses, providers, and services near you.
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 mt-1 truncate">Browse Categories</h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1.5 max-w-2xl truncate md:whitespace-normal">
+            <span className="md:hidden">Find top local businesses and services near you.</span>
+            <span className="hidden md:inline">Explore categories and connect with the best businesses, providers, and services near you.</span>
           </p>
         </div>
         <button
           type="button"
           onClick={() => setIsOpenAllModal(true)}
-          className="inline-flex items-center justify-center h-10 px-5 text-sm font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50/50 transition self-start md:self-auto shrink-0"
+          className="inline-flex items-center justify-center h-9 md:h-10 px-3 md:px-5 text-xs md:text-sm font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50/50 transition shrink-0"
         >
-          View All Categories
+          <span className="md:hidden">View All</span>
+          <span className="hidden md:inline">View All Categories</span>
         </button>
       </div>
 
@@ -455,12 +457,12 @@ export default function CategoryTabExplorer() {
                       )}
                     </div>
                     <div className="flex flex-col min-w-0 w-full">
-                      <span className={`truncate text-[10px] sm:text-xs md:text-base font-bold transition-colors block ${
-                        active ? "text-blue-600" : "text-slate-900"
+                      <span className={`truncate text-[10px] sm:text-xs md:text-base font-medium transition-colors block ${
+                        active ? "text-blue-600" : "text-slate-700"
                       }`}>
                         {cat.name}
                       </span>
-                      <span className="hidden md:block text-[11px] text-slate-500 font-semibold mt-1">
+                      <span className="hidden md:block text-[11px] text-slate-500 font-medium mt-1">
                         {count} Categories
                       </span>
                     </div>
@@ -509,10 +511,10 @@ export default function CategoryTabExplorer() {
                     {/* Bottom Details Panel: Padding top adjusted to accommodate overlapping badge */}
                     <div className="flex flex-col justify-between flex-1 p-2 pt-5 pb-2 sm:p-3 sm:pt-6 sm:pb-3 md:p-4 md:pt-8 md:pb-3">
                       <div className="min-w-0">
-                        <h3 className="font-bold text-xs sm:text-sm md:text-[18px] text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                        <span className="font-medium text-xs sm:text-sm md:text-[18px] text-slate-700 group-hover:text-blue-600 transition-colors truncate block">
                           {sub.name}
-                        </h3>
-                        <span className="text-[10px] sm:text-xs font-semibold block mt-0.5 md:mt-1" style={{ color: "#64748b" }}>
+                        </span>
+                        <span className="text-[10px] sm:text-xs font-medium block mt-0.5 md:mt-1" style={{ color: "#64748b" }}>
                           {listingCount} Listings
                         </span>
                       </div>
@@ -568,9 +570,8 @@ export default function CategoryTabExplorer() {
             </div>
 
             {/* Modal body list */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto pr-1">
               {filteredCategories.map((cat) => {
-                const count = subcategoryCountsMap[cat.id] || 0;
                 return (
                   <button
                     key={`modal-item-${cat.id}`}
@@ -584,16 +585,15 @@ export default function CategoryTabExplorer() {
                         : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 text-slate-700"
                     }`}
                   >
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">
+                    <div className="h-11 w-11 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
                       {cat.icon && cat.icon !== "none" ? (
-                        <img src={cat.icon} alt="" className="h-5 w-5 object-contain" />
+                        <img src={cat.icon} alt="" className="h-10 w-10 object-contain" />
                       ) : (
-                        <Layers size={14} className="text-slate-500" />
+                        <Layers size={24} className="text-slate-500" />
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <span className="block text-sm font-semibold truncate leading-tight">{cat.name}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">{count} Subcategories</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium truncate leading-tight text-slate-700">{cat.name}</span>
                     </div>
                   </button>
                 );
