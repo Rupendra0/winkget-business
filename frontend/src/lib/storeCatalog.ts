@@ -466,12 +466,12 @@ const toStoreProductsFromVendorProducts = (
             image: item.image ? resolveMediaUrl(normalizeString(item.image)) : undefined,
           }))
         : undefined,
-      showDeliveryBadge: product.showDeliveryBadge === true,
+      showDeliveryBadge: product.showDeliveryBadge !== false,
       showTopBrand: product.showTopBrand === true,
-      showFreeDelivery: product.showFreeDelivery === true,
-      showSecureTransaction: product.showSecureTransaction === true,
+      showFreeDelivery: product.showFreeDelivery !== false,
+      showSecureTransaction: product.showSecureTransaction !== false,
       showCashOnDelivery: product.showCashOnDelivery === true,
-      show7DaySupport: product.show7DaySupport === true,
+      show7DaySupport: product.show7DaySupport !== false,
       showAssured: product.showAssured === true,
       storePlacement,
     };
@@ -634,12 +634,12 @@ const toProductModel = (
           image: normalizeString(item.image) || undefined,
         }))
       : undefined,
-    showDeliveryBadge: product.showDeliveryBadge === true,
+    showDeliveryBadge: product.showDeliveryBadge !== false,
     showTopBrand: product.showTopBrand === true,
-    showFreeDelivery: product.showFreeDelivery === true,
-    showSecureTransaction: product.showSecureTransaction === true,
+    showFreeDelivery: product.showFreeDelivery !== false,
+    showSecureTransaction: product.showSecureTransaction !== false,
     showCashOnDelivery: product.showCashOnDelivery === true,
-    show7DaySupport: product.show7DaySupport === true,
+    show7DaySupport: product.show7DaySupport !== false,
     showAssured: product.showAssured === true,
   };
 };
