@@ -9,6 +9,16 @@ const DEFAULT_MAP_IMAGE =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=60";
 const MEDIA_URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const IMAGE_DATA_URL_REGEX = /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/;
+
+export const resolveMediaUrl = (url: string | undefined): string => {
+  const normalized = String(url || "").trim();
+  if (!normalized) return "";
+  if (normalized.startsWith("/uploads/")) {
+    const base = BACKEND_URL.replace(/\/$/, "");
+    return `${base}${normalized}`;
+  }
+  return normalized;
+};
 export const DEFAULT_TILE_IMAGES = [
   "https://images.unsplash.com/photo-1481833761820-0509d3217039?auto=format&fit=crop&w=400&q=60",
   "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=400&q=60",
@@ -513,7 +523,7 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
     isStoreOpen: typeof vendor.isStoreOpen === "boolean" ? vendor.isStoreOpen : vendor.isStoreOpen === null ? null : undefined,
     storeStatusSource: vendor.storeStatusSource,
     establishmentYear: vendor.establishmentYear,
-    imageUrl: vendor.cardImage || vendor.shopBannerImage || vendor.imageUrl || DEFAULT_VENDOR_IMAGE,
+    imageUrl: resolveMediaUrl(vendor.cardImage || vendor.shopBannerImage || vendor.imageUrl) || DEFAULT_VENDOR_IMAGE,
     ctaLabel: vendor.ctaLabel || "Inquiry",
     badges: Array.isArray(vendor.badges) ? vendor.badges : vendor.verified ? ["Verified"] : [],
     priceRange: vendor.priceRange,
@@ -621,7 +631,7 @@ export function toCategoryPageDataFromCatalog(input: {
     })
   );
 
-  const categoryBannerImageRaw = String(input.category.image || "").trim();
+  const categoryBannerImageRaw = resolveMediaUrl(input.category.image);
   const categoryBannerImage =
     MEDIA_URL_REGEX.test(categoryBannerImageRaw) || IMAGE_DATA_URL_REGEX.test(categoryBannerImageRaw)
       ? categoryBannerImageRaw
@@ -671,10 +681,12 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
       ? [{ day: "Mon - Sun", time: `${vendor.shopOpeningTime} - ${vendor.shopClosingTime}` }]
       : [];
 
-  const logoImage = String(vendor.imageUrl || "").trim();
-  const coverImage = String(vendor.shopBannerImage || "").trim();
+  const logoImage = resolveMediaUrl(vendor.imageUrl);
+  const coverImage = resolveMediaUrl(vendor.shopBannerImage);
+  const rawGallery = Array.isArray(vendor.shopGallery) ? vendor.shopGallery : [];
+  const resolvedGallery = rawGallery.map((img) => resolveMediaUrl(img));
   const filteredGallery = uniqueStrings(
-    (Array.isArray(vendor.shopGallery) ? vendor.shopGallery : []).filter(
+    resolvedGallery.filter(
       (url) => {
         const normalized = String(url || "").trim();
         if (!normalized || normalized === logoImage || normalized === coverImage) {
@@ -694,7 +706,7 @@ export function toListingProfileFromVendor(vendor: CatalogVendorDetail): Listing
     category: categoryLabel,
     coverImage,
     logoImage,
-    paymentQrCode: vendor.paymentQrCode || "",
+    paymentQrCode: resolveMediaUrl(vendor.paymentQrCode) || "",
     heroTitle: (vendor as any).heroTitle || displayName,
     heroSubtitle: (vendor as any).heroSubtitle || (vendor as any).tagline || (categoryLabel ? `${categoryLabel} - Trusted by Thousands` : "Trusted by Thousands"),
     rating: Number(vendor.rating || 0),

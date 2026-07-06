@@ -13,6 +13,7 @@ import {
   fetchVendorPublicProfileById,
   fetchVendorStoreProducts,
   toListingProfileFromVendor,
+  resolveMediaUrl,
   type CatalogSubcategory,
   type CatalogVendorProduct,
 } from "@/lib/catalogClient";
@@ -377,11 +378,12 @@ const toStoreProductsFromVendorProducts = (
     const priceValue = parsePriceValue(product.price, 0);
     const oldPriceValue = parsePriceValue(product.oldPrice, 0);
 
-    const image =
+    const image = resolveMediaUrl(
       normalizeString(product.image) ||
       normalizeString(product.heroImage) ||
       (Array.isArray(product.gallery) ? normalizeString(product.gallery[0]) : "") ||
-      fallbackImage;
+      fallbackImage
+    );
 
     const subcategoryName = normalizeString(product.subcategoryName);
     const categoryLabel = normalizeString(product.categoryLabel || product.categorySlug || profile.category || "Products");
@@ -402,7 +404,7 @@ const toStoreProductsFromVendorProducts = (
       shortDescription: normalizeString(product.shortDescription) || undefined,
       description: normalizeString(product.description) || undefined,
       detailedDescription: normalizeString(product.detailedDescription) || undefined,
-      gallery: Array.isArray(product.gallery) ? uniqueStrings(product.gallery.map((value) => normalizeString(value))) : [],
+      gallery: Array.isArray(product.gallery) ? uniqueStrings(product.gallery.map((value) => resolveMediaUrl(normalizeString(value)))) : [],
       oldPriceValue,
       inventory: Number.isFinite(Number(product.inventory)) ? Number(product.inventory) : undefined,
       moq: Number.isFinite(Number(product.moq)) ? Number(product.moq) : undefined,
@@ -440,7 +442,7 @@ const toStoreProductsFromVendorProducts = (
       detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks)
         ? product.detailedDescriptionBlocks
             .map((item) => ({
-              image: normalizeString(item?.image) || undefined,
+              image: item?.image ? resolveMediaUrl(normalizeString(item.image)) : undefined,
               headline: normalizeString(item?.headline) || undefined,
               text: normalizeString(item?.text) || undefined,
             }))
@@ -461,7 +463,7 @@ const toStoreProductsFromVendorProducts = (
             mrp: Number.isFinite(Number(item.mrp)) ? Number(item.mrp) : undefined,
             sellingPrice: Number.isFinite(Number(item.sellingPrice)) ? Number(item.sellingPrice) : undefined,
             stock: Number.isFinite(Number(item.stock)) ? Number(item.stock) : undefined,
-            image: normalizeString(item.image) || undefined,
+            image: item.image ? resolveMediaUrl(normalizeString(item.image)) : undefined,
           }))
         : undefined,
       showDeliveryBadge: product.showDeliveryBadge === true,

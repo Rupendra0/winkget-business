@@ -44,6 +44,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: "20mb" }));
 app.use(morgan("dev"));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
 app.use((req, res, next) => {
   res.setTimeout(REQUEST_TIMEOUT_MS, () => {
     if (res.headersSent) {
