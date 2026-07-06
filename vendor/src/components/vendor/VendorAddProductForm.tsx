@@ -1576,7 +1576,12 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
 
                           {(variant.variantMainImage || variant.variantExistingMainImage) && (
                             <div className="mt-3 flex flex-wrap gap-2">
-                              {variant.variantExistingMainImage ? (
+                              {variant.variantMainImage ? (
+                                <VariantImageItem
+                                  file={variant.variantMainImage}
+                                  onRemove={() => onVariantChange(variant.id, "variantMainImage", null)}
+                                />
+                              ) : variant.variantExistingMainImage ? (
                                 <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
                                   <img src={variant.variantExistingMainImage} alt="Variant main existing" className="h-full w-full object-contain" />
                                   <button
@@ -1588,11 +1593,6 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
                                     &times;
                                   </button>
                                 </div>
-                              ) : variant.variantMainImage ? (
-                                <VariantImageItem
-                                  file={variant.variantMainImage}
-                                  onRemove={() => onVariantChange(variant.id, "variantMainImage", null)}
-                                />
                               ) : null}
                             </div>
                           )}
