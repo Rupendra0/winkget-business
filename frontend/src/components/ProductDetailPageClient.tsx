@@ -1182,8 +1182,20 @@ export default function ProductDetailPageClient({
                   </span>
                 )}
               </div>
-              <div className="flex flex-col text-xs text-slate-500 font-medium pt-0.5">
-                <span>Free delivery • 1-yr warranty</span>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 font-medium pt-1">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Free delivery
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  1-yr warranty
+                </span>
               </div>
             </div>
   
@@ -1244,21 +1256,6 @@ export default function ProductDetailPageClient({
   
             {/* Trust Badges & Vendor Profile */}
             <div className="mt-auto space-y-4 w-full">
-              {badges.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 py-4 border-t border-b border-[#E5E7EB] w-full">
-                  {badges.map((badge, idx) => (
-                    <div key={idx} className="flex items-center gap-2.5 px-3 py-2 bg-[#F9FAFB] hover:bg-emerald-50/60 border border-[#E5E7EB] hover:border-emerald-100 rounded-[12px] transition-all duration-200 hover:scale-[1.03] group cursor-default">
-                      <div className="p-1 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-200">
-                        {badge.icon}
-                      </div>
-                      <div className="text-[10px] text-slate-500 font-bold leading-tight group-hover:text-slate-800 transition-colors duration-200">
-                        {badge.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-  
               {/* Seller details */}
               {(product.sellerName || storeProduct.vendorName) && (
                 <div className="pt-4 flex items-center justify-between border-t border-[#E5E7EB] w-full text-left">
@@ -1276,6 +1273,22 @@ export default function ProductDetailPageClient({
                   >
                     View store
                   </Link>
+                </div>
+              )}
+
+              {/* Trust Badges */}
+              {badges.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 py-4 border-t border-[#E5E7EB] w-full">
+                  {badges.map((badge, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 px-3 py-2 bg-[#F9FAFB] hover:bg-emerald-50/60 border border-[#E5E7EB] hover:border-emerald-100 rounded-[12px] transition-all duration-200 hover:scale-[1.03] group cursor-default">
+                      <div className="p-1 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-200">
+                        {badge.icon}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-bold leading-tight group-hover:text-slate-800 transition-colors duration-200">
+                        {badge.label}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

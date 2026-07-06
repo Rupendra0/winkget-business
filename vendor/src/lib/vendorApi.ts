@@ -262,6 +262,7 @@ export type VendorProductVariant = {
   sellingPrice: number;
   stock: number;
   image: string;
+  customFields?: Record<string, string>;
 };
 
 export type VendorProductDescriptionBlock = {
@@ -962,6 +963,7 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
         sellingPrice: Number.isFinite(Number(variant?.sellingPrice)) ? Number(variant?.sellingPrice) : 0,
         stock: Number.isFinite(Number(variant?.stock)) ? Number(variant?.stock) : 0,
         image: String(variant?.image || "").trim(),
+        customFields: variant?.customFields || {},
       }))
     : [];
 
