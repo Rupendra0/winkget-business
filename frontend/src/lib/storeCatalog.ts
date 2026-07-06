@@ -861,8 +861,8 @@ export async function resolveStoreDataById(id: string): Promise<StorePageData | 
     const baseProfile = toListingProfileFromVendor(liveVendor);
     const profile = {
       ...baseProfile,
-      logoImage: normalizeString(liveVendor.myStoreImage) || baseProfile.logoImage,
-      coverImage: normalizeString(liveVendor.myStoreBannerImage) || baseProfile.coverImage,
+      logoImage: resolveMediaUrl(normalizeString(liveVendor.myStoreImage) || baseProfile.logoImage),
+      coverImage: resolveMediaUrl(normalizeString(liveVendor.myStoreBannerImage) || baseProfile.coverImage),
     };
     return toStoreDataFromProfile(profile, resolvedId, liveProducts, {
       includeMockFallbackProducts: false,

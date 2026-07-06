@@ -50,38 +50,21 @@ const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g
 const toExactRegex = (value) => new RegExp(`^${escapeRegex(value)}$`, "i");
 const normalizeMediaValue = (value) => String(value || "").trim();
 
-const UPLOADS_DIR = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+const { uploadImage } = require("../lib/mediaStorage");
 
-const processImageValue = (value) => {
-  const normalized = normalizeMediaValue(value);
-  if (!normalized) return "";
-
-  if (normalized.startsWith("data:image/")) {
-    try {
-      const matches = normalized.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
-      if (!matches || matches.length < 3) {
-        return normalized;
-      }
-      
-      const ext = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, "base64");
-      
-      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + "." + ext;
-      const filePath = path.join(UPLOADS_DIR, uniqueName);
-      
-      fs.writeFileSync(filePath, buffer);
-      return `/uploads/${uniqueName}`;
-    } catch (err) {
-      console.error("Error processing base64 image:", err);
-      return normalized;
-    }
+const resolveUserProfileImages = async (payload) => {
+  if (payload.imageInput) payload.imageInput = await uploadImage(payload.imageInput);
+  if (payload.shopBannerImageInput) payload.shopBannerImageInput = await uploadImage(payload.shopBannerImageInput);
+  if (payload.cardImageInput) payload.cardImageInput = await uploadImage(payload.cardImageInput);
+  if (payload.myStoreImageInput) payload.myStoreImageInput = await uploadImage(payload.myStoreImageInput);
+  if (payload.myStoreBannerImageInput) payload.myStoreBannerImageInput = await uploadImage(payload.myStoreBannerImageInput);
+  if (payload.paymentQrCodeInput) payload.paymentQrCodeInput = await uploadImage(payload.paymentQrCodeInput);
+  
+  if (Array.isArray(payload.shopGalleryInput)) {
+    payload.shopGalleryInput = await Promise.all(payload.shopGalleryInput.map((img) => uploadImage(img)));
   }
   
-  return normalized;
+  return payload;
 };
 
 const isValidMediaValue = (value) => {
@@ -898,29 +881,29 @@ router.put("/auth/me", async (req, res) => {
       req.body?.businessDescription !== undefined
         ? String(req.body.businessDescription || "").trim()
         : user.businessDescription || "";
-    const imageInput = req.body?.image !== undefined ? processImageValue(req.body.image) : normalizeMediaValue(user.image);
+    const imageInput = req.body?.image !== undefined ? normalizeMediaValue(req.body.image) : normalizeMediaValue(user.image);
     const shopBannerImageInput =
       req.body?.shopBannerImage !== undefined
-        ? processImageValue(req.body.shopBannerImage)
+        ? normalizeMediaValue(req.body.shopBannerImage)
         : normalizeMediaValue(user.shopBannerImage);
     const cardImageInput =
       req.body?.cardImage !== undefined
-        ? processImageValue(req.body.cardImage)
+        ? normalizeMediaValue(req.body.cardImage)
         : normalizeMediaValue(user.cardImage);
     const myStoreImageInput =
       req.body?.myStoreImage !== undefined
-        ? processImageValue(req.body.myStoreImage)
+        ? normalizeMediaValue(req.body.myStoreImage)
         : normalizeMediaValue(user.myStoreImage);
     const paymentQrCodeInput =
       req.body?.paymentQrCode !== undefined
-        ? processImageValue(req.body.paymentQrCode)
+        ? normalizeMediaValue(req.body.paymentQrCode)
         : normalizeMediaValue(user.paymentQrCode);
     const myStoreBannerImageInput =
       req.body?.myStoreBannerImage !== undefined
-        ? processImageValue(req.body.myStoreBannerImage)
+        ? normalizeMediaValue(req.body.myStoreBannerImage)
         : normalizeMediaValue(user.myStoreBannerImage);
     const shopGalleryInput = Array.isArray(req.body?.shopGallery)
-      ? req.body.shopGallery.map((item) => processImageValue(item)).filter(Boolean)
+      ? req.body.shopGallery.map((item) => normalizeMediaValue(item)).filter(Boolean)
       : Array.isArray(user.shopGallery)
         ? user.shopGallery
         : [];
@@ -1264,13 +1247,24 @@ router.put("/auth/me", async (req, res) => {
       user.businessAddress = businessAddressInput || undefined;
       user.website = websiteInput || undefined;
       user.businessDescription = businessDescriptionInput || undefined;
-      user.image = imageInput || undefined;
-      user.shopBannerImage = shopBannerImageInput || undefined;
-      user.cardImage = cardImageInput || undefined;
-      user.myStoreImage = myStoreImageInput || undefined;
-      user.myStoreBannerImage = myStoreBannerImageInput || undefined;
-      user.paymentQrCode = paymentQrCodeInput || undefined;
-      user.shopGallery = shopGallery;
+
+      const resolvedImages = await resolveUserProfileImages({
+        imageInput,
+        shopBannerImageInput,
+        cardImageInput,
+        myStoreImageInput,
+        myStoreBannerImageInput,
+        paymentQrCodeInput,
+        shopGalleryInput: shopGallery,
+      });
+
+      user.image = resolvedImages.imageInput || undefined;
+      user.shopBannerImage = resolvedImages.shopBannerImageInput || undefined;
+      user.cardImage = resolvedImages.cardImageInput || undefined;
+      user.myStoreImage = resolvedImages.myStoreImageInput || undefined;
+      user.myStoreBannerImage = resolvedImages.myStoreBannerImageInput || undefined;
+      user.paymentQrCode = resolvedImages.paymentQrCodeInput || undefined;
+      user.shopGallery = resolvedImages.shopGalleryInput || [];
       user.instagramUrl = instagramUrlInput || undefined;
       user.facebookUrl = facebookUrlInput || undefined;
       user.youtubeUrl = youtubeUrlInput || undefined;

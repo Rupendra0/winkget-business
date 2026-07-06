@@ -69,39 +69,7 @@ const slugify = (value) =>
 
 const normalizeMediaValue = (value) => normalizeString(value);
 
-const UPLOADS_DIR = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const processImageValue = (value) => {
-  const normalized = normalizeMediaValue(value);
-  if (!normalized) return "";
-
-  if (normalized.startsWith("data:image/")) {
-    try {
-      const matches = normalized.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
-      if (!matches || matches.length < 3) {
-        return normalized;
-      }
-      
-      const ext = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, "base64");
-      
-      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + "." + ext;
-      const filePath = path.join(UPLOADS_DIR, uniqueName);
-      
-      fs.writeFileSync(filePath, buffer);
-      return `/uploads/${uniqueName}`;
-    } catch (err) {
-      console.error("Error processing base64 image:", err);
-      return normalized;
-    }
-  }
-  
-  return normalized;
-};
+const { uploadImage } = require("../lib/mediaStorage");
 
 const isValidMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
@@ -160,7 +128,7 @@ const toVariantArray = (input) => {
     .map((item) => {
       const size = normalizeString(item?.size);
       const color = normalizeString(item?.color);
-      const image = processImageValue(normalizeMediaValue(item?.image));
+      const image = normalizeMediaValue(item?.image);
 
       if (image && !isValidMediaValue(image)) {
         return null;
@@ -195,7 +163,7 @@ const toDescriptionBlockArray = (input) => {
 
   return input
     .map((item) => {
-      const image = processImageValue(normalizeMediaValue(item?.image));
+      const image = normalizeMediaValue(item?.image);
       const headline = normalizeString(item?.headline);
       const text = normalizeString(item?.text);
 
@@ -458,14 +426,14 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     return { error: "Product name is required" };
   }
 
-  const image = processImageValue(normalizeMediaValue(body?.image ?? existingProduct?.image));
-  const heroImage = processImageValue(normalizeMediaValue(body?.heroImage ?? existingProduct?.heroImage));
-  const subcategoryImage = processImageValue(normalizeMediaValue(body?.subcategoryImage ?? existingProduct?.subcategoryImage));
+  const image = normalizeMediaValue(body?.image ?? existingProduct?.image);
+  const heroImage = normalizeMediaValue(body?.heroImage ?? existingProduct?.heroImage);
+  const subcategoryImage = normalizeMediaValue(body?.subcategoryImage ?? existingProduct?.subcategoryImage);
   const gallery = Array.isArray(body?.gallery)
     ? Array.from(
         new Set(
           body.gallery
-            .map((item) => processImageValue(normalizeMediaValue(item)))
+            .map((item) => normalizeMediaValue(item))
             .filter(Boolean)
         )
       )
@@ -561,6 +529,42 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
   return { payload };
 };
 
+const resolvePayloadImages = async (payload) => {
+  if (payload.image) payload.image = await uploadImage(payload.image);
+  if (payload.heroImage) payload.heroImage = await uploadImage(payload.heroImage);
+  if (payload.subcategoryImage) payload.subcategoryImage = await uploadImage(payload.subcategoryImage);
+  
+  if (Array.isArray(payload.gallery)) {
+    payload.gallery = await Promise.all(payload.gallery.map((img) => uploadImage(img)));
+  }
+  
+  if (Array.isArray(payload.variantData)) {
+    payload.variantData = await Promise.all(
+      payload.variantData.map(async (v) => {
+        const varObj = v.toObject ? v.toObject() : v;
+        return {
+          ...varObj,
+          image: v.image ? await uploadImage(v.image) : undefined,
+        };
+      })
+    );
+  }
+  
+  if (Array.isArray(payload.detailedDescriptionBlocks)) {
+    payload.detailedDescriptionBlocks = await Promise.all(
+      payload.detailedDescriptionBlocks.map(async (b) => {
+        const blockObj = b.toObject ? b.toObject() : b;
+        return {
+          ...blockObj,
+          image: b.image ? await uploadImage(b.image) : undefined,
+        };
+      })
+    );
+  }
+  
+  return payload;
+};
+
 const ensureUniqueSlug = async (vendorId, requestedSlug, excludeProductId) => {
   const baseSlug = slugify(requestedSlug || "product") || "product";
   let candidate = baseSlug;
@@ -592,6 +596,9 @@ router.post("/vendor/products", requireVendor, async (req, res) => {
     if (error) {
       return res.status(400).json({ ok: false, message: error });
     }
+
+    // Resolve base64 images asynchronously before saving to MongoDB
+    await resolvePayloadImages(payload);
 
     const productSlugInput = slugify(req.body?.slug || payload.productName);
     const slug = await ensureUniqueSlug(req.vendorUser._id, productSlugInput);
@@ -689,6 +696,9 @@ router.patch("/vendor/products/:id", requireVendor, async (req, res) => {
     if (error) {
       return res.status(400).json({ ok: false, message: error });
     }
+
+    // Resolve base64 images asynchronously before saving to MongoDB
+    await resolvePayloadImages(payload);
 
     const nextSlugInput = slugify(req.body?.slug || payload.productName || existing.slug);
     const nextSlug = await ensureUniqueSlug(req.vendorUser._id, nextSlugInput, existing._id);
