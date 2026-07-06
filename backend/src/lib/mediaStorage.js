@@ -13,18 +13,22 @@ if (!fs.existsSync(BACKEND_UPLOADS_DIR)) {
   fs.mkdirSync(BACKEND_UPLOADS_DIR, { recursive: true });
 }
 
-// Configure Cloudinary if keys are present
+// Configure Cloudinary if keys are present (with code-level fallback for Render environment)
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "ltfszo2a";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "588355263527471";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "5NszZl14g05wNqv3J4MtSDhJPSk";
+
 const isCloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
+  CLOUDINARY_CLOUD_NAME &&
+  CLOUDINARY_API_KEY &&
+  CLOUDINARY_API_SECRET
 );
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
   });
   console.log("[MediaStorage] Cloudinary successfully configured.");
 } else {
