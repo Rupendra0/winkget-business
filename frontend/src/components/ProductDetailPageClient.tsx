@@ -751,10 +751,10 @@ export default function ProductDetailPageClient({
                     {/* Variant Colors */}
                     {hasVariants && variantColors.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-slate-500">
-                          Color: <span className="text-slate-800 font-semibold">{selectedColor}</span>
+                        <div className="text-sm font-bold text-slate-800">
+                          Selected Color: <span className="font-semibold text-slate-500">{selectedColor}</span>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2.5 items-center">
                           {variantColors.map((colorName) => {
                             const isSelected = selectedColor === colorName;
                             const colorsMap: Record<string, string> = {
@@ -780,6 +780,28 @@ export default function ProductDetailPageClient({
                               String(v.color || "").trim() === colorName && 
                               (!selectedSize || String(v.size || "").trim() === selectedSize)
                             );
+                            
+                            const variantForColor = product.variantData?.find(v => 
+                              String(v.color || "").trim() === colorName && v.image
+                            );
+                            const imageUrl = variantForColor?.image;
+
+                            if (imageUrl) {
+                              return (
+                                <button
+                                  key={colorName}
+                                  type="button"
+                                  onClick={() => handleColorSelect(colorName)}
+                                  className={`w-14 h-14 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-0.5 bg-slate-50 ${
+                                    isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
+                                  } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
+                                  title={colorName}
+                                >
+                                  <img src={imageUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                                </button>
+                              );
+                            }
+
                             return (
                               <button
                                 key={colorName}
@@ -800,29 +822,61 @@ export default function ProductDetailPageClient({
                     {/* Variant Sizes */}
                     {hasVariants && variantSizes.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-slate-500">
-                          Size
+                        <div className="text-sm font-bold text-slate-800">
+                          Variant: <span className="font-semibold text-slate-500">{selectedSize}</span>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-3">
                           {variantSizes.map((sizeName) => {
                             const isSelected = selectedSize === sizeName;
+                            const matchingVariant = product.variantData?.find(v => 
+                              String(v.size || "").trim() === sizeName && 
+                              (!selectedColor || String(v.color || "").trim() === selectedColor)
+                            ) || product.variantData?.find(v => 
+                              String(v.size || "").trim() === sizeName
+                            );
                             const isMatch = product.variantData?.some(v => 
                               String(v.size || "").trim() === sizeName && 
                               (!selectedColor || String(v.color || "").trim() === selectedColor)
                             );
                             if (!isMatch) return null;
+
+                            const mrpValue = Number(matchingVariant?.mrp || 0);
+                            const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
+                            const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
+                            const stockValue = matchingVariant?.stock;
+
                             return (
                               <button
                                 key={sizeName}
                                 type="button"
                                 onClick={() => handleSizeSelect(sizeName)}
-                                className={`px-4 py-2 border transition rounded-xl text-sm font-medium ${
+                                className={`p-3 border-[1.5px] rounded-2xl bg-white min-w-[125px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
                                   isSelected
-                                    ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] shadow-sm"
-                                    : "bg-white border-[#E5E7EB] text-slate-800 hover:border-slate-300"
+                                    ? "border-slate-900 bg-slate-50/50"
+                                    : "border-slate-200 hover:border-slate-400"
                                 }`}
                               >
-                                {sizeName}
+                                <div>
+                                  <div className="font-bold text-slate-800 text-sm">
+                                    {sizeName}
+                                  </div>
+                                  {mrpValue > sellingPriceValue && (
+                                    <div className="text-[10px] sm:text-xs flex items-center gap-1 mt-1">
+                                      <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                      <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-2">
+                                  <div className="font-bold text-slate-800 text-sm">
+                                    ₹{sellingPriceValue.toLocaleString("en-IN")}
+                                  </div>
+                                  {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
+                                    <div className="text-[#EA580C] text-[10px] font-bold mt-0.5">
+                                      {stockValue} left
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -864,30 +918,63 @@ export default function ProductDetailPageClient({
                       if (options.length === 0) return null;
                       return (
                         <div key={fieldName} className="space-y-2">
-                          <div className="text-sm font-medium text-slate-500">
-                            {fieldName}
+                          <div className="text-sm font-bold text-slate-800">
+                            {fieldName}: <span className="font-semibold text-slate-500">{selectedCustomOptions[fieldName]}</span>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-3">
                             {options.map((opt) => {
                               const isSelected = selectedCustomOptions[fieldName] === opt;
+                              const matchingVariant = product.variantData?.find(v => 
+                                String(v.customFields?.[fieldName] || "").trim() === opt &&
+                                (!selectedColor || String(v.color || "").trim() === selectedColor) &&
+                                (!selectedSize || String(v.size || "").trim() === selectedSize)
+                              ) || product.variantData?.find(v => 
+                                String(v.customFields?.[fieldName] || "").trim() === opt
+                              );
                               const isMatch = product.variantData?.some(v => 
                                 (!variantColors.length || String(v.color || "").trim() === selectedColor) &&
                                 (!variantSizes.length || String(v.size || "").trim() === selectedSize) &&
                                 String(v.customFields?.[fieldName] || "").trim() === opt
                               );
                               if (!isMatch) return null;
+
+                              const mrpValue = Number(matchingVariant?.mrp || 0);
+                              const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
+                              const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
+                              const stockValue = matchingVariant?.stock;
+
                               return (
                                 <button
                                   key={opt}
                                   type="button"
                                   onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
-                                  className={`px-4 py-2 border transition rounded-xl text-sm font-medium ${
+                                  className={`p-3 border-[1.5px] rounded-2xl bg-white min-w-[125px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
                                     isSelected
-                                      ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] shadow-sm"
-                                      : "bg-white border-[#E5E7EB] text-slate-800 hover:border-slate-300"
+                                      ? "border-slate-900 bg-slate-50/50"
+                                      : "border-slate-200 hover:border-slate-400"
                                   }`}
                                 >
-                                  {opt}
+                                  <div>
+                                    <div className="font-bold text-slate-800 text-sm">
+                                      {opt}
+                                    </div>
+                                    {mrpValue > sellingPriceValue && (
+                                      <div className="text-[10px] sm:text-xs flex items-center gap-1 mt-1">
+                                        <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                        <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-2">
+                                    <div className="font-bold text-slate-800 text-sm">
+                                      ₹{sellingPriceValue.toLocaleString("en-IN")}
+                                    </div>
+                                    {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
+                                      <div className="text-[#EA580C] text-[10px] font-bold mt-0.5">
+                                        {stockValue} left
+                                      </div>
+                                    )}
+                                  </div>
                                 </button>
                               );
                             })}
@@ -1586,10 +1673,10 @@ export default function ProductDetailPageClient({
             {/* Colors */}
             {((hasVariants && variantColors.length > 0) || (colorSwatches.length > 0)) && (
               <div className="space-y-2">
-                <div className="text-xs font-bold text-[#4B5563]">
-                  Color: <span className="text-[#111827]">{selectedColor}</span>
+                <div className="text-xs font-bold text-slate-800">
+                  Selected Color: <span className="font-semibold text-slate-500">{selectedColor}</span>
                 </div>
-                <div className="flex flex-wrap gap-3.5">
+                <div className="flex flex-wrap gap-2.5 items-center">
                   {hasVariants && variantColors.length > 0 ? (
                     variantColors.map((colorName) => {
                       const isSelected = selectedColor === colorName;
@@ -1616,6 +1703,28 @@ export default function ProductDetailPageClient({
                         String(v.color || "").trim() === colorName && 
                         (!selectedSize || String(v.size || "").trim() === selectedSize)
                       );
+                      
+                      const variantForColor = product.variantData?.find(v => 
+                        String(v.color || "").trim() === colorName && v.image
+                      );
+                      const imageUrl = variantForColor?.image;
+
+                      if (imageUrl) {
+                        return (
+                          <button
+                            key={colorName}
+                            type="button"
+                            onClick={() => handleColorSelect(colorName)}
+                            className={`w-12 h-12 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-0.5 bg-slate-50 ${
+                              isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
+                            } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
+                            title={colorName}
+                          >
+                            <img src={imageUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                          </button>
+                        );
+                      }
+
                       return (
                         <button
                           key={colorName}
@@ -1653,29 +1762,66 @@ export default function ProductDetailPageClient({
             {/* Sizes */}
             {((hasVariants && variantSizes.length > 0) || (storageOptions.length > 0)) && (
               <div className="space-y-2">
-                <div className="text-xs font-bold text-[#4B5563]">
-                  {hasVariants && variantSizes.length > 0 ? "Size" : (storageAttr ? storageAttr[0] : "Storage")}
+                <div className="text-xs font-bold text-slate-800">
+                  {hasVariants && variantSizes.length > 0 ? (
+                    <>Variant: <span className="font-semibold text-slate-500">{selectedSize}</span></>
+                  ) : (
+                    <>{storageAttr ? storageAttr[0] : "Storage"}: <span className="font-semibold text-slate-500">{selectedStorage}</span></>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {hasVariants && variantSizes.length > 0 ? (
                     variantSizes.map((sizeName) => {
                       const isSelected = selectedSize === sizeName;
+                      const matchingVariant = product.variantData?.find(v => 
+                        String(v.size || "").trim() === sizeName && 
+                        (!selectedColor || String(v.color || "").trim() === selectedColor)
+                      ) || product.variantData?.find(v => 
+                        String(v.size || "").trim() === sizeName
+                      );
                       const isMatch = product.variantData?.some(v => 
                         String(v.size || "").trim() === sizeName && 
                         (!selectedColor || String(v.color || "").trim() === selectedColor)
                       );
+                      if (!isMatch) return null;
+
+                      const mrpValue = Number(matchingVariant?.mrp || 0);
+                      const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
+                      const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
+                      const stockValue = matchingVariant?.stock;
+
                       return (
                         <button
                           key={sizeName}
                           type="button"
                           onClick={() => handleSizeSelect(sizeName)}
-                          className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
                             isSelected
-                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB]"
-                              : "bg-[#FFFFFF] border-slate-200 text-[#111827]"
-                          } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
+                              ? "border-slate-900 bg-slate-50/50"
+                              : "border-slate-200"
+                          }`}
                         >
-                          {sizeName}
+                          <div>
+                            <div className="font-bold text-slate-800 text-xs">
+                              {sizeName}
+                            </div>
+                            {mrpValue > sellingPriceValue && (
+                              <div className="text-[9px] flex items-center gap-1 mt-0.5">
+                                <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-1.5">
+                            <div className="font-bold text-slate-800 text-xs">
+                              ₹{sellingPriceValue.toLocaleString("en-IN")}
+                            </div>
+                            {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
+                              <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
+                                {stockValue} left
+                              </div>
+                            )}
+                          </div>
                         </button>
                       );
                     })
@@ -1687,13 +1833,22 @@ export default function ProductDetailPageClient({
                           key={opt}
                           type="button"
                           onClick={() => setSelectedStorage(opt)}
-                          className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
                             isSelected
-                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB]"
-                              : "bg-[#FFFFFF] border-slate-200 text-[#111827]"
+                              ? "border-slate-900 bg-slate-50/50"
+                              : "border-slate-200"
                           }`}
                         >
-                          {opt}
+                          <div>
+                            <div className="font-bold text-slate-800 text-xs">
+                              {opt}
+                            </div>
+                          </div>
+                          <div className="mt-1.5">
+                            <div className="font-bold text-slate-800 text-xs">
+                              ₹{(product.price || 0).toLocaleString("en-IN")}
+                            </div>
+                          </div>
                         </button>
                       );
                     })
@@ -1708,30 +1863,63 @@ export default function ProductDetailPageClient({
               if (options.length === 0) return null;
               return (
                 <div key={fieldName} className="space-y-2">
-                  <div className="text-xs font-bold text-[#4B5563]">
-                    {fieldName}
+                  <div className="text-xs font-bold text-slate-800">
+                    {fieldName}: <span className="font-semibold text-slate-500">{selectedCustomOptions[fieldName]}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {options.map((opt) => {
                       const isSelected = selectedCustomOptions[fieldName] === opt;
+                      const matchingVariant = product.variantData?.find(v => 
+                        String(v.customFields?.[fieldName] || "").trim() === opt &&
+                        (!selectedColor || String(v.color || "").trim() === selectedColor) &&
+                        (!selectedSize || String(v.size || "").trim() === selectedSize)
+                      ) || product.variantData?.find(v => 
+                        String(v.customFields?.[fieldName] || "").trim() === opt
+                      );
                       const isMatch = product.variantData?.some(v => 
                         (!variantColors.length || String(v.color || "").trim() === selectedColor) &&
                         (!variantSizes.length || String(v.size || "").trim() === selectedSize) &&
                         String(v.customFields?.[fieldName] || "").trim() === opt
                       );
                       if (!isMatch) return null;
+
+                      const mrpValue = Number(matchingVariant?.mrp || 0);
+                      const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
+                      const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
+                      const stockValue = matchingVariant?.stock;
+
                       return (
                         <button
                           key={opt}
                           type="button"
                           onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
-                          className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
                             isSelected
-                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB]"
-                              : "bg-[#FFFFFF] border-slate-200 text-[#111827]"
+                              ? "border-slate-900 bg-slate-50/50"
+                              : "border-slate-200"
                           }`}
                         >
-                          {opt}
+                          <div>
+                            <div className="font-bold text-slate-800 text-xs">
+                              {opt}
+                            </div>
+                            {mrpValue > sellingPriceValue && (
+                              <div className="text-[9px] flex items-center gap-1 mt-0.5">
+                                <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-1.5">
+                            <div className="font-bold text-slate-800 text-xs">
+                              ₹{sellingPriceValue.toLocaleString("en-IN")}
+                            </div>
+                            {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
+                              <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
+                                {stockValue} left
+                              </div>
+                            )}
+                          </div>
                         </button>
                       );
                     })}

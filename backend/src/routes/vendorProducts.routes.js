@@ -142,6 +142,7 @@ const toVariantArray = (input) => {
         sellingPrice: toNonNegativeNumber(item?.sellingPrice, 0),
         stock: toNonNegativeNumber(item?.stock, 0),
         image,
+        customFields: item?.customFields || {},
       };
 
       const hasValue =
@@ -347,6 +348,7 @@ const PUBLIC_PRODUCT_STORE_FIELDS = [
   "keyAttributes",
   "specifications",
   "tags",
+  "variantData",
   "descriptionPoints",
   "detailedDescriptionBlocks",
   "status",
@@ -397,6 +399,7 @@ const toProductStoreSummary = (product) => ({
   keyAttributes: Array.isArray(product.keyAttributes) ? product.keyAttributes : [],
   specifications: Array.isArray(product.specifications) ? product.specifications : [],
   tags: Array.isArray(product.tags) ? product.tags : [],
+  variantData: Array.isArray(product.variantData) ? product.variantData : [],
   descriptionPoints: Array.isArray(product.descriptionPoints) ? product.descriptionPoints : [],
   detailedDescriptionBlocks: Array.isArray(product.detailedDescriptionBlocks) ? product.detailedDescriptionBlocks : [],
   status: product.status,

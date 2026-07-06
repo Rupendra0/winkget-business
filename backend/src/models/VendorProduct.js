@@ -22,6 +22,7 @@ const variantSchema = new Schema(
     sellingPrice: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },
     image: { type: String, trim: true },
+    customFields: { type: Schema.Types.Mixed, default: {} },
   },
   {
     _id: false,
