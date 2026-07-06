@@ -226,6 +226,49 @@ export default function ProductDetailPageClient({
     );
   }, [product.variantData, hasVariants, selectedColor, selectedSize, selectedCustomOptions, variantColors, variantSizes, product.oldPrice, product.price, product.image]);
 
+  const resolvedPrices = useMemo(() => {
+    let basePrice = activeVariant ? (Number(activeVariant.sellingPrice) || product.price) : product.price;
+    let baseMrp = activeVariant ? (Number(activeVariant.mrp) || product.oldPrice || product.price) : (product.oldPrice || product.price);
+
+    const priceOptions: number[] = [basePrice];
+    const mrpOptions: number[] = [baseMrp];
+
+    const variantList = product.variantData;
+    if (hasVariants && Array.isArray(variantList)) {
+      if (selectedColor && selectedColor !== "Base Variant") {
+        const colorVariants = variantList.filter(v => String(v.color || "").trim() === selectedColor);
+        if (colorVariants.length > 0) {
+          priceOptions.push(Math.max(...colorVariants.map(v => Number(v.sellingPrice || 0))));
+          mrpOptions.push(Math.max(...colorVariants.map(v => Number(v.mrp || 0))));
+        }
+      }
+      if (selectedSize) {
+        const sizeVariants = variantList.filter(v => String(v.size || "").trim() === selectedSize);
+        if (sizeVariants.length > 0) {
+          priceOptions.push(Math.max(...sizeVariants.map(v => Number(v.sellingPrice || 0))));
+          mrpOptions.push(Math.max(...sizeVariants.map(v => Number(v.mrp || 0))));
+        }
+      }
+      Object.entries(selectedCustomOptions).forEach(([fieldName, val]) => {
+        if (val) {
+          const customVariants = variantList.filter(v => String(v.customFields?.[fieldName] || "").trim() === val);
+          if (customVariants.length > 0) {
+            priceOptions.push(Math.max(...customVariants.map(v => Number(v.sellingPrice || 0))));
+            mrpOptions.push(Math.max(...customVariants.map(v => Number(v.mrp || 0))));
+          }
+        }
+      });
+    }
+
+    const finalPrice = Math.max(...priceOptions);
+    const finalMrp = Math.max(...mrpOptions, finalPrice);
+
+    return {
+      price: finalPrice,
+      mrp: finalMrp,
+    };
+  }, [product, activeVariant, hasVariants, selectedColor, selectedSize, selectedCustomOptions]);
+
   const gallery = useMemo(() => {
     if (activeVariant && activeVariant.color !== "Base Variant") {
       const vImages = getVariantImages(activeVariant);
@@ -246,8 +289,8 @@ export default function ProductDetailPageClient({
       const customLabels = Object.values(selectedCustomOptions).filter(Boolean);
       const variantLabel = [selectedSize, selectedColor, ...customLabels].filter(Boolean).join(", ");
       const displayName = variantLabel ? `${product.name} (${variantLabel})` : product.name;
-      const vPrice = Number(activeVariant.sellingPrice) || product.price;
-      const vOldPrice = Number(activeVariant.mrp) || product.oldPrice;
+      const vPrice = resolvedPrices.price;
+      const vOldPrice = resolvedPrices.mrp;
 
       const formattedVPrice = new Intl.NumberFormat("en-IN", {
         style: "currency",
@@ -283,7 +326,7 @@ export default function ProductDetailPageClient({
       vendorId: String(product.vendorId || product.sourceId || "vendor-1001").trim() || "vendor-1001",
       vendorName: String(product.sellerName || product.vendorName || "Winkget Marketplace").trim() || "Winkget Marketplace",
     };
-  }, [product, productHref, activeVariant, selectedSize, selectedColor, selectedCustomOptions]);
+  }, [product, productHref, activeVariant, selectedSize, selectedColor, selectedCustomOptions, resolvedPrices]);
 
   const wishlisted = useSyncExternalStore(
     (onStoreChange) => {
@@ -317,25 +360,19 @@ export default function ProductDetailPageClient({
   }, [storeProduct.id]);
 
   const currentPrice = useMemo(() => {
-    if (activeVariant && Number(activeVariant.sellingPrice) > 0) {
-      return Number(activeVariant.sellingPrice);
-    }
-    return product.price;
-  }, [product.price, activeVariant]);
+    return resolvedPrices.price;
+  }, [resolvedPrices]);
 
   const currentOldPrice = useMemo(() => {
-    if (activeVariant && Number(activeVariant.mrp) > 0) {
-      return Number(activeVariant.mrp);
-    }
-    return product.oldPrice;
-  }, [product.oldPrice, activeVariant]);
+    return resolvedPrices.mrp;
+  }, [resolvedPrices]);
 
   const currentDiscount = useMemo(() => {
-    if (activeVariant && Number(activeVariant.mrp) > 0 && Number(activeVariant.sellingPrice) > 0) {
-      return Math.round(((Number(activeVariant.mrp) - Number(activeVariant.sellingPrice)) / Number(activeVariant.mrp)) * 100);
+    if (resolvedPrices.mrp > resolvedPrices.price) {
+      return Math.round(((resolvedPrices.mrp - resolvedPrices.price) / resolvedPrices.mrp) * 100);
     }
     return product.discount;
-  }, [product.discount, activeVariant]);
+  }, [product.discount, resolvedPrices]);
 
   const currentInStock = useMemo(() => {
     if (activeVariant) {
