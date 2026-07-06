@@ -71,6 +71,7 @@ const isValidMediaValue = (value) => {
   const normalized = normalizeMediaValue(value);
   if (!normalized) return true;
   if (normalized.length > MAX_MEDIA_VALUE_LENGTH) return false;
+  if (normalized.startsWith("/uploads/")) return true;
   return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
 };
 
