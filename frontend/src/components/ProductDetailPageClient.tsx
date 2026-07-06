@@ -724,15 +724,16 @@ export default function ProductDetailPageClient({
         </nav>
 
         {/* Main Grid Layout */}
-        <div className="flex flex-col lg:flex-row justify-between gap-[24px] items-start w-full relative">
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[74.8%_24.2%] justify-between gap-[24px] items-start w-full relative">
           
           {/* Left Column: Gallery, Specs, and Tabs */}
-          <div className="w-full lg:w-[74.8%] flex flex-col gap-12">
+          <div className="w-full flex flex-col gap-12">
             
             {/* Gallery + Details row */}
-            <div className="flex flex-col lg:flex-row justify-between gap-[24px] items-start w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-[51.5%_46%] justify-between gap-[24px] items-start w-full">
               {/* Gallery Panel */}
-              <div className="w-full lg:w-[51.5%] flex flex-col items-start gap-[17.5px] shrink-0">
+              <div className="w-full flex flex-col items-start gap-[17.5px]">
                 {/* Main Image Box */}
                 <div className="h-[320px] w-full flex items-center justify-center relative bg-white border border-slate-100 rounded-2xl">
                   {discountText && (
@@ -768,7 +769,7 @@ export default function ProductDetailPageClient({
               </div>
 
               {/* Product Info Specs Panel */}
-              <div className="w-full lg:w-[47.0%] flex flex-col gap-6 p-2 shrink-0">
+              <div className="w-full flex flex-col gap-6 p-2">
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <h1 className="text-[25px] font-bold leading-[34.375px] text-[#2E3A54]">{product.name}</h1>
@@ -1197,7 +1198,7 @@ export default function ProductDetailPageClient({
           </div>
 
           {/* Right Column: Sticky Pricing & Checkout (Desktop) */}
-          <div className="w-full lg:w-[24.2%] flex flex-col gap-6 p-[40px_26px] rounded-[20px] border border-[#E5E7EB] bg-[#F9FBFF] sticky top-[100px] z-10 shrink-0">
+          <div className="w-full flex flex-col gap-6 p-[40px_26px] rounded-[20px] border border-[#E5E7EB] bg-[#F9FBFF] sticky top-[100px] z-10">
             <div className="space-y-1 w-full text-left">
               <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1">
                 <span className="text-[30px] font-bold text-slate-900 leading-[40px]">
