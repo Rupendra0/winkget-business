@@ -99,16 +99,16 @@ export default function ProductDetailPageClient({
 
   const variantColors = useMemo(() => {
     if (!hasVariants || !product.variantData) return [];
-    return Array.from(new Set(product.variantData.map((v) => String(v.color || "").trim()).filter(Boolean)));
+    const colors = Array.from(new Set(product.variantData.map((v) => String(v.color || "").trim()).filter(Boolean)));
+    if (colors.length > 0) {
+      colors.unshift("Base Variant");
+    }
+    return colors;
   }, [product.variantData, hasVariants]);
 
   const variantSizes = useMemo(() => {
     if (!hasVariants || !product.variantData) return [];
-    const sizes = Array.from(new Set(product.variantData.map((v) => String(v.size || "").trim()).filter(Boolean)));
-    if (sizes.length > 0) {
-      sizes.unshift("Base Model");
-    }
-    return sizes;
+    return Array.from(new Set(product.variantData.map((v) => String(v.size || "").trim()).filter(Boolean)));
   }, [product.variantData, hasVariants]);
 
   const [selectedColor, setSelectedColor] = useState("");
@@ -163,10 +163,14 @@ export default function ProductDetailPageClient({
   }, [customFieldsKeys, customFieldsOptions]);
 
   const handleColorSelect = (colorName: string) => {
+    setSelectedColor(colorName);
+    if (colorName === "Base Variant") {
+      setSelectedSize("");
+      return;
+    }
     const match = product.variantData?.find(
       (v) => String(v.color || "").trim() === colorName && String(v.size || "").trim() === selectedSize
     );
-    setSelectedColor(colorName);
     if (!match && product.variantData) {
       const firstVariantForColor = product.variantData.find((v) => String(v.color || "").trim() === colorName);
       if (firstVariantForColor) {
@@ -176,8 +180,16 @@ export default function ProductDetailPageClient({
   };
 
   const handleSizeSelect = (sizeName: string) => {
+    const activeColor = selectedColor === "Base Variant"
+      ? (variantColors.find((c) => c !== "Base Variant") || "")
+      : selectedColor;
+    
+    if (selectedColor === "Base Variant") {
+      setSelectedColor(activeColor);
+    }
+
     const match = product.variantData?.find(
-      (v) => String(v.size || "").trim() === sizeName && String(v.color || "").trim() === selectedColor
+      (v) => String(v.size || "").trim() === sizeName && String(v.color || "").trim() === activeColor
     );
     setSelectedSize(sizeName);
     if (!match && product.variantData) {
@@ -190,10 +202,10 @@ export default function ProductDetailPageClient({
 
   const activeVariant = useMemo(() => {
     if (!hasVariants || !product.variantData) return null;
-    if (selectedSize === "Base Model") {
+    if (selectedColor === "Base Variant") {
       return {
-        size: "Base Model",
-        color: "",
+        size: "",
+        color: "Base Variant",
         mrp: product.oldPrice || product.price,
         sellingPrice: product.price,
         stock: 99,
@@ -214,7 +226,7 @@ export default function ProductDetailPageClient({
   }, [product.variantData, hasVariants, selectedColor, selectedSize, selectedCustomOptions, variantColors, variantSizes, product.oldPrice, product.price, product.image]);
 
   const gallery = useMemo(() => {
-    if (activeVariant && activeVariant.size !== "Base Model") {
+    if (activeVariant && activeVariant.color !== "Base Variant") {
       const vImages = getVariantImages(activeVariant);
       if (vImages.length > 0) {
         return vImages;
@@ -526,14 +538,12 @@ export default function ProductDetailPageClient({
 
   useEffect(() => {
     if (hasVariants) {
-      if (variantColors.length > 0 && !selectedColor) {
-        setSelectedColor(variantColors[0]);
-      }
-      if (variantSizes.length > 0 && !selectedSize) {
-        setSelectedSize(variantSizes[0]);
+      if (!selectedColor) {
+        setSelectedColor("Base Variant");
+        setSelectedSize("");
       }
     }
-  }, [hasVariants, variantColors, variantSizes, selectedColor, selectedSize]);
+  }, [hasVariants, selectedColor]);
 
   useEffect(() => {
     if (!hasVariants && colorSwatches.length > 0) {
@@ -548,7 +558,7 @@ export default function ProductDetailPageClient({
   }, [storageOptions, hasVariants]);
 
   useEffect(() => {
-    if (activeVariant && activeVariant.size !== "Base Model") {
+    if (activeVariant && activeVariant.color !== "Base Variant") {
       const vImages = getVariantImages(activeVariant);
       if (vImages.length > 0) {
         setActiveImage(vImages[0]);
@@ -813,7 +823,8 @@ export default function ProductDetailPageClient({
                               orange: "#f97316"
                             };
                             const hex = colorsMap[colorName.toLowerCase()] || "#cccccc";
-                            const isMatch = product.variantData?.some(v => 
+                            const isBaseOption = colorName === "Base Variant";
+                            const isMatch = isBaseOption || !!product.variantData?.some(v => 
                               String(v.color || "").trim() === colorName && 
                               (!selectedSize || String(v.size || "").trim() === selectedSize)
                             );
@@ -821,9 +832,10 @@ export default function ProductDetailPageClient({
                             const variantForColor = product.variantData?.find(v => 
                               String(v.color || "").trim() === colorName && v.image
                             );
-                            const imageUrl = variantForColor?.image;
+                            const imageUrl = isBaseOption ? product.image : variantForColor?.image;
 
-                            if (imageUrl) {
+                            if (isBaseOption || imageUrl) {
+                              const displayImgUrl = isBaseOption ? (product.image || "/placeholder.jpg") : imageUrl;
                               return (
                                 <button
                                   key={colorName}
@@ -834,7 +846,7 @@ export default function ProductDetailPageClient({
                                   } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
                                   title={colorName}
                                 >
-                                  <img src={imageUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                                  <img src={displayImgUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
                                 </button>
                               );
                             }
@@ -864,21 +876,14 @@ export default function ProductDetailPageClient({
                         </div>
                         <div className="flex flex-wrap gap-3">
                           {variantSizes.map((sizeName) => {
-                            const isBaseOption = sizeName === "Base Model";
                             const isSelected = selectedSize === sizeName;
-                            const matchingVariant = isBaseOption
-                              ? ({
-                                  mrp: product.oldPrice,
-                                  sellingPrice: product.price,
-                                  stock: 99,
-                                } as any)
-                              : (product.variantData?.find(v => 
-                                  String(v.size || "").trim() === sizeName && 
-                                  (!selectedColor || String(v.color || "").trim() === selectedColor)
-                                ) || product.variantData?.find(v => 
-                                  String(v.size || "").trim() === sizeName
-                                ));
-                            const isMatch = isBaseOption || !!product.variantData?.some(v => 
+                            const matchingVariant = product.variantData?.find(v => 
+                              String(v.size || "").trim() === sizeName && 
+                              (!selectedColor || String(v.color || "").trim() === selectedColor)
+                            ) || product.variantData?.find(v => 
+                              String(v.size || "").trim() === sizeName
+                            );
+                            const isMatch = product.variantData?.some(v => 
                               String(v.size || "").trim() === sizeName && 
                               (!selectedColor || String(v.color || "").trim() === selectedColor)
                             );
@@ -928,33 +933,7 @@ export default function ProductDetailPageClient({
                       </div>
                     )}
       
-                    {/* Storage / RAM Options */}
-                    {storageOptions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium text-slate-500">
-                          {storageAttr ? storageAttr[0] : "Storage"}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {storageOptions.map((opt) => {
-                            const isSelected = selectedStorage === opt;
-                            return (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => setSelectedStorage(opt)}
-                                className={`px-4 py-2 border transition rounded-xl text-sm font-medium ${
-                                  isSelected
-                                    ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] shadow-sm"
-                                    : "bg-white border-[#E5E7EB] text-slate-800 hover:border-slate-300"
-                                }`}
-                              >
-                                {opt}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+
       
                     {/* Custom Variant Fields dropdowns */}
                     {customFieldsKeys.map((fieldName) => {
@@ -1744,7 +1723,8 @@ export default function ProductDetailPageClient({
                         orange: "#f97316"
                       };
                       const hex = colorsMap[colorName.toLowerCase()] || "#cccccc";
-                      const isMatch = product.variantData?.some(v => 
+                      const isBaseOption = colorName === "Base Variant";
+                      const isMatch = isBaseOption || !!product.variantData?.some(v => 
                         String(v.color || "").trim() === colorName && 
                         (!selectedSize || String(v.size || "").trim() === selectedSize)
                       );
@@ -1752,9 +1732,10 @@ export default function ProductDetailPageClient({
                       const variantForColor = product.variantData?.find(v => 
                         String(v.color || "").trim() === colorName && v.image
                       );
-                      const imageUrl = variantForColor?.image;
+                      const imageUrl = isBaseOption ? product.image : variantForColor?.image;
 
-                      if (imageUrl) {
+                      if (isBaseOption || imageUrl) {
+                        const displayImgUrl = isBaseOption ? (product.image || "/placeholder.jpg") : imageUrl;
                         return (
                           <button
                             key={colorName}
@@ -1765,7 +1746,7 @@ export default function ProductDetailPageClient({
                             } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
                             title={colorName}
                           >
-                            <img src={imageUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                            <img src={displayImgUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
                           </button>
                         );
                       }
@@ -1805,106 +1786,66 @@ export default function ProductDetailPageClient({
             )}
 
             {/* Sizes */}
-            {((hasVariants && variantSizes.length > 0) || (storageOptions.length > 0)) && (
+            {hasVariants && variantSizes.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-800">
-                  {hasVariants && variantSizes.length > 0 ? (
-                    <>Variant: <span className="font-semibold text-slate-500">{selectedSize}</span></>
-                  ) : (
-                    <>{storageAttr ? storageAttr[0] : "Storage"}: <span className="font-semibold text-slate-500">{selectedStorage}</span></>
-                  )}
+                  Variant: <span className="font-semibold text-slate-500">{selectedSize}</span>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
-                  {hasVariants && variantSizes.length > 0 ? (
-                    variantSizes.map((sizeName) => {
-                      const isBaseOption = sizeName === "Base Model";
-                      const isSelected = selectedSize === sizeName;
-                      const matchingVariant = isBaseOption
-                        ? ({
-                            mrp: product.oldPrice,
-                            sellingPrice: product.price,
-                            stock: 99,
-                          } as any)
-                        : (product.variantData?.find(v => 
-                            String(v.size || "").trim() === sizeName && 
-                            (!selectedColor || String(v.color || "").trim() === selectedColor)
-                          ) || product.variantData?.find(v => 
-                            String(v.size || "").trim() === sizeName
-                          ));
-                      const isMatch = isBaseOption || !!product.variantData?.some(v => 
-                        String(v.size || "").trim() === sizeName && 
-                        (!selectedColor || String(v.color || "").trim() === selectedColor)
-                      );
-                      if (!isMatch) return null;
+                  {variantSizes.map((sizeName) => {
+                    const isSelected = selectedSize === sizeName;
+                    const matchingVariant = product.variantData?.find(v => 
+                      String(v.size || "").trim() === sizeName && 
+                      (!selectedColor || String(v.color || "").trim() === selectedColor)
+                    ) || product.variantData?.find(v => 
+                      String(v.size || "").trim() === sizeName
+                    );
+                    const isMatch = product.variantData?.some(v => 
+                      String(v.size || "").trim() === sizeName && 
+                      (!selectedColor || String(v.color || "").trim() === selectedColor)
+                    );
+                    if (!isMatch) return null;
 
-                      const mrpValue = Number(matchingVariant?.mrp || 0);
-                      const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
-                      const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
-                      const stockValue = matchingVariant?.stock;
+                    const mrpValue = Number(matchingVariant?.mrp || 0);
+                    const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
+                    const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
+                    const stockValue = matchingVariant?.stock;
 
-                      return (
-                        <button
-                          key={sizeName}
-                          type="button"
-                          onClick={() => handleSizeSelect(sizeName)}
-                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
-                            isSelected
-                              ? "border-slate-900 bg-slate-50/50"
-                              : "border-slate-200"
-                          }`}
-                        >
-                          <div>
-                            <div className="font-bold text-slate-800 text-xs">
-                              {sizeName}
-                            </div>
-                            {mrpValue > sellingPriceValue && (
-                              <div className="text-[9px] flex items-center gap-1 mt-0.5">
-                                <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
-                                <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
-                              </div>
-                            )}
+                    return (
+                      <button
+                        key={sizeName}
+                        type="button"
+                        onClick={() => handleSizeSelect(sizeName)}
+                        className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
+                          isSelected
+                            ? "border-slate-900 bg-slate-50/50"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-slate-800 text-xs">
+                            {sizeName}
                           </div>
-                          <div className="mt-1.5">
-                            <div className="font-bold text-slate-800 text-xs">
-                              ₹{sellingPriceValue.toLocaleString("en-IN")}
+                          {mrpValue > sellingPriceValue && (
+                            <div className="text-[9px] flex items-center gap-1 mt-0.5">
+                              <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                              <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
                             </div>
-                            {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
-                              <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
-                                {stockValue} left
-                              </div>
-                            )}
+                          )}
+                        </div>
+                        <div className="mt-1.5">
+                          <div className="font-bold text-slate-800 text-xs">
+                            ₹{sellingPriceValue.toLocaleString("en-IN")}
                           </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    storageOptions.map((opt) => {
-                      const isSelected = selectedStorage === opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setSelectedStorage(opt)}
-                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
-                            isSelected
-                              ? "border-slate-900 bg-slate-50/50"
-                              : "border-slate-200"
-                          }`}
-                        >
-                          <div>
-                            <div className="font-bold text-slate-800 text-xs">
-                              {opt}
+                          {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
+                            <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
+                              {stockValue} left
                             </div>
-                          </div>
-                          <div className="mt-1.5">
-                            <div className="font-bold text-slate-800 text-xs">
-                              ₹{(product.price || 0).toLocaleString("en-IN")}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
