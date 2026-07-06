@@ -76,6 +76,18 @@ const isValidMediaValue = (value) => {
   if (!normalized) return true;
   if (normalized.length > MAX_MEDIA_VALUE_LENGTH) return false;
   if (normalized.startsWith("/uploads/")) return true;
+  
+  if (normalized.startsWith("[") && normalized.endsWith("]")) {
+    try {
+      const arr = JSON.parse(normalized);
+      if (Array.isArray(arr)) {
+        return arr.every((item) => isValidMediaValue(item));
+      }
+    } catch {
+      // Fallback
+    }
+  }
+  
   return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
 };
 
