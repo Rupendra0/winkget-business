@@ -36,6 +36,8 @@ type VariantDraft = {
   variantMrp: string;
   variantSellingPrice: string;
   variantStock: string;
+  variantMainImage: File | null;
+  variantExistingMainImage: string;
   variantImages: File[];
   variantExistingImages: string[];
   customFields?: Record<string, string>;
@@ -147,6 +149,8 @@ const createVariant = (): VariantDraft => ({
   variantMrp: "",
   variantSellingPrice: "",
   variantStock: "",
+  variantMainImage: null,
+  variantExistingMainImage: "",
   variantImages: [],
   variantExistingImages: [],
   customFields: {},
@@ -274,6 +278,9 @@ const createInitialVariants = (initialProduct?: VendorProductRecord | null): Var
       existing = Array.from(new Set([...existing, ...gallery.map(String).filter(Boolean)]));
     }
 
+    const mainImage = existing[0] || "";
+    const galleryImages = existing.slice(1);
+
     return {
       id: `variant-existing-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       variantSize: String(variant.size || "").trim(),
@@ -281,8 +288,10 @@ const createInitialVariants = (initialProduct?: VendorProductRecord | null): Var
       variantMrp: Number.isFinite(Number(variant.mrp)) ? String(variant.mrp || "") : "",
       variantSellingPrice: Number.isFinite(Number(variant.sellingPrice)) ? String(variant.sellingPrice || "") : "",
       variantStock: Number.isFinite(Number(variant.stock)) ? String(variant.stock || "") : "",
+      variantMainImage: null,
+      variantExistingMainImage: mainImage,
       variantImages: [],
-      variantExistingImages: existing,
+      variantExistingImages: galleryImages,
       customFields: (variant as any).customFields || {},
     };
   });
@@ -1007,9 +1016,13 @@ export default function VendorAddProductForm({
 
       const serializedVariantsRaw = await Promise.all(
         variants.map(async (variant) => {
+          const mainImgUrl = variant.variantMainImage instanceof File
+            ? await readFileAsDataUrl(variant.variantMainImage)
+            : String(variant.variantExistingMainImage || "").trim();
+            
           const newUrls = await Promise.all((variant.variantImages || []).map((file) => readFileAsDataUrl(file)));
           const existingUrls = Array.isArray(variant.variantExistingImages) ? variant.variantExistingImages : [];
-          const combined = [...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean);
+          const combined = [mainImgUrl, ...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean);
           
           let serializedImage = "";
           if (combined.length === 1) {
@@ -1522,20 +1535,79 @@ export default function VendorAddProductForm({
                                   )
                                 );
                               }}
-                              className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
                             />
                           </label>
                         ))}
 
+                        {/* Variant Main Image */}
                         <div className="block text-sm text-slate-700 md:col-span-3">
-                          <span className="block text-sm font-semibold text-slate-700">Upload Variant Images</span>
+                          <span className="block text-sm font-semibold text-slate-700">Upload Variant Main Image</span>
                           <div className="mt-1.5 flex items-center gap-3">
                             <button
                               type="button"
                               onClick={(event) => (event.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
                               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-[#fffaf3] transition-colors"
                             >
-                              Choose files
+                              Choose Main Image
+                            </button>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) {
+                                  onVariantChange(variant.id, "variantMainImage", file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onVariantChange(variant.id, "variantMainImage", null);
+                                onVariantChange(variant.id, "variantExistingMainImage", "");
+                              }}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                            >
+                              Clear Main Image
+                            </button>
+                          </div>
+
+                          {(variant.variantMainImage || variant.variantExistingMainImage) && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {variant.variantExistingMainImage ? (
+                                <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
+                                  <img src={variant.variantExistingMainImage} alt="Variant main existing" className="h-full w-full object-contain" />
+                                  <button
+                                    type="button"
+                                    onClick={() => onVariantChange(variant.id, "variantExistingMainImage", "")}
+                                    className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm hover:bg-rose-600 transition-colors"
+                                    title="Remove main image"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
+                              ) : variant.variantMainImage ? (
+                                <VariantImageItem
+                                  file={variant.variantMainImage}
+                                  onRemove={() => onVariantChange(variant.id, "variantMainImage", null)}
+                                />
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Variant Gallery Images */}
+                        <div className="block text-sm text-slate-700 md:col-span-3 mt-4">
+                          <span className="block text-sm font-semibold text-slate-700">Upload Variant Gallery Images</span>
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={(event) => (event.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
+                              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-[#fffaf3] transition-colors"
+                            >
+                              Choose Gallery Files
                             </button>
                             <input
                               type="file"
@@ -1557,18 +1629,16 @@ export default function VendorAddProductForm({
                               }}
                               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                             >
-                              Clear images
+                              Clear Gallery
                             </button>
                           </div>
 
-                          {/* Previews */}
                           {((variant.variantExistingImages && variant.variantExistingImages.length > 0) || 
                             (variant.variantImages && variant.variantImages.length > 0)) && (
                             <div className="mt-3 flex flex-wrap gap-2">
-                              {/* Existing Previews */}
                               {(variant.variantExistingImages || []).map((url, idx) => (
-                                <div key={`exist-${idx}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
-                                  <img src={url} alt="Variant existing" className="h-full w-full object-contain" />
+                                <div key={`exist-gall-${idx}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e6dbcc] bg-white p-1 shadow-sm">
+                                  <img src={url} alt="Variant gallery existing" className="h-full w-full object-contain" />
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1576,17 +1646,15 @@ export default function VendorAddProductForm({
                                       onVariantChange(variant.id, "variantExistingImages", updated);
                                     }}
                                     className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm hover:bg-rose-600 transition-colors"
-                                    title="Remove image"
+                                    title="Remove gallery image"
                                   >
                                     &times;
                                   </button>
                                 </div>
                               ))}
-                              
-                              {/* New Previews using helper component */}
                               {(variant.variantImages || []).map((file, idx) => (
                                 <VariantImageItem
-                                  key={`new-${idx}`}
+                                  key={`new-gall-${idx}`}
                                   file={file}
                                   onRemove={() => {
                                     const updated = variant.variantImages.filter((_, i) => i !== idx);
