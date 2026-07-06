@@ -937,6 +937,29 @@ export default function ProductDetailPageClient({
                             const stockValue = matchingVariant?.stock;
                             const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
+                            // Check if image exists for this size
+                            const variantForSize = product.variantData?.find(v => 
+                              String(v.size || "").trim() === sizeName && v.image
+                            );
+                            const vImages = variantForSize ? getVariantImages(variantForSize) : [];
+                            const imageUrl = vImages[0];
+
+                            if (imageUrl) {
+                              return (
+                                <button
+                                  key={sizeName}
+                                  type="button"
+                                  onClick={() => handleSizeSelect(sizeName)}
+                                  className={`w-14 h-14 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
+                                    isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
+                                  }`}
+                                  title={sizeName}
+                                >
+                                  <img src={imageUrl} alt={sizeName} className="w-full h-full object-contain rounded-xl" />
+                                </button>
+                              );
+                            }
+
                             return (
                               <button
                                 key={sizeName}
@@ -1012,6 +1035,29 @@ export default function ProductDetailPageClient({
                               const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                               const stockValue = matchingVariant?.stock;
                               const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
+
+                              // Check if image exists for this custom option
+                              const variantForOpt = product.variantData?.find(v => 
+                                String(v.customFields?.[fieldName] || "").trim() === opt && v.image
+                              );
+                              const vImages = variantForOpt ? getVariantImages(variantForOpt) : [];
+                              const imageUrl = vImages[0];
+
+                              if (imageUrl) {
+                                return (
+                                  <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
+                                    className={`w-14 h-14 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
+                                      isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
+                                    }`}
+                                    title={opt}
+                                  >
+                                    <img src={imageUrl} alt={opt} className="w-full h-full object-contain rounded-xl" />
+                                  </button>
+                                );
+                              }
 
                               return (
                                 <button
@@ -1887,6 +1933,29 @@ export default function ProductDetailPageClient({
                     const stockValue = matchingVariant?.stock;
                     const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
+                    // Check if image exists for this size (Mobile)
+                    const variantForSize = product.variantData?.find(v => 
+                      String(v.size || "").trim() === sizeName && v.image
+                    );
+                    const vImages = variantForSize ? getVariantImages(variantForSize) : [];
+                    const imageUrl = vImages[0];
+
+                    if (imageUrl) {
+                      return (
+                        <button
+                          key={sizeName}
+                          type="button"
+                          onClick={() => handleSizeSelect(sizeName)}
+                          className={`w-12 h-12 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
+                            isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB]"
+                          }`}
+                          title={sizeName}
+                        >
+                          <img src={imageUrl} alt={sizeName} className="w-full h-full object-contain rounded-xl" />
+                        </button>
+                      );
+                    }
+
                     return (
                       <button
                         key={sizeName}
@@ -1960,6 +2029,29 @@ export default function ProductDetailPageClient({
                       const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                       const stockValue = matchingVariant?.stock;
                       const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
+
+                      // Check if image exists for this custom option (Mobile)
+                      const variantForOpt = product.variantData?.find(v => 
+                        String(v.customFields?.[fieldName] || "").trim() === opt && v.image
+                      );
+                      const vImages = variantForOpt ? getVariantImages(variantForOpt) : [];
+                      const imageUrl = vImages[0];
+
+                      if (imageUrl) {
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
+                            className={`w-12 h-12 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
+                              isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB]"
+                            }`}
+                            title={opt}
+                          >
+                            <img src={imageUrl} alt={opt} className="w-full h-full object-contain rounded-xl" />
+                          </button>
+                        );
+                      }
 
                       return (
                         <button
