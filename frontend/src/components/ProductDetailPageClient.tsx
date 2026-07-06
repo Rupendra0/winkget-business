@@ -60,24 +60,29 @@ const normalizePairs = (items: Array<[string, string]> | undefined) =>
     .map((item) => [String(item?.[0] || "").trim(), String(item?.[1] || "").trim()] as [string, string])
     .filter(([label, value]) => label && value);
 
+const getVariantImages = (v: any): string[] => {
+  if (!v || !v.image) return [];
+  const imgStr = String(v.image).trim();
+  if (imgStr.startsWith("[") && imgStr.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(imgStr);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+      }
+    } catch {
+      // Fallback
+    }
+  }
+  return [imgStr];
+};
+
 export default function ProductDetailPageClient({
   product,
   relatedProducts = [],
 }: ProductDetailPageClientProps) {
   const router = useRouter();
 
-  const gallery = useMemo(() => {
-    const variantImages = (product.variantData || [])
-      .map((v) => v.image)
-      .filter(Boolean) as string[];
-
-    const baseImages = [product.image, ...(product.gallery || [])].filter(Boolean) as string[];
-    const allImages = Array.from(new Set([...variantImages, ...baseImages]));
-    
-    return allImages.length > 0 ? allImages : [""];
-  }, [product.gallery, product.image, product.variantData]);
-
-  const [activeImage, setActiveImage] = useState(gallery[0] || "");
+  const [activeImage, setActiveImage] = useState(product.image || "");
   const [cartQuantity, setCartQuantity] = useState(0);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -99,7 +104,11 @@ export default function ProductDetailPageClient({
 
   const variantSizes = useMemo(() => {
     if (!hasVariants || !product.variantData) return [];
-    return Array.from(new Set(product.variantData.map((v) => String(v.size || "").trim()).filter(Boolean)));
+    const sizes = Array.from(new Set(product.variantData.map((v) => String(v.size || "").trim()).filter(Boolean)));
+    if (sizes.length > 0) {
+      sizes.unshift("Base Model");
+    }
+    return sizes;
   }, [product.variantData, hasVariants]);
 
   const [selectedColor, setSelectedColor] = useState("");
@@ -179,9 +188,19 @@ export default function ProductDetailPageClient({
     }
   };
 
-  // Match the active variant based on selected color & size & custom fields
   const activeVariant = useMemo(() => {
     if (!hasVariants || !product.variantData) return null;
+    if (selectedSize === "Base Model") {
+      return {
+        size: "Base Model",
+        color: "",
+        mrp: product.oldPrice || product.price,
+        sellingPrice: product.price,
+        stock: 99,
+        image: product.image,
+        customFields: {},
+      } as any;
+    }
     return (
       product.variantData.find((v) => {
         const matchColor = !variantColors.length || String(v.color || "").trim() === selectedColor;
@@ -192,7 +211,18 @@ export default function ProductDetailPageClient({
         return matchColor && matchSize && matchCustoms;
       }) || product.variantData[0]
     );
-  }, [product.variantData, hasVariants, selectedColor, selectedSize, selectedCustomOptions, variantColors, variantSizes]);
+  }, [product.variantData, hasVariants, selectedColor, selectedSize, selectedCustomOptions, variantColors, variantSizes, product.oldPrice, product.price, product.image]);
+
+  const gallery = useMemo(() => {
+    if (activeVariant && activeVariant.size !== "Base Model") {
+      const vImages = getVariantImages(activeVariant);
+      if (vImages.length > 0) {
+        return vImages;
+      }
+    }
+    const baseImages = [product.image, ...(product.gallery || [])].filter(Boolean) as string[];
+    return baseImages.length > 0 ? baseImages : [""];
+  }, [product.gallery, product.image, activeVariant]);
 
   const productHref = `/product/${encodeURIComponent(buildProductSlug(product))}`;
 
@@ -518,10 +548,17 @@ export default function ProductDetailPageClient({
   }, [storageOptions, hasVariants]);
 
   useEffect(() => {
-    if (activeVariant && activeVariant.image) {
-      setActiveImage(activeVariant.image);
+    if (activeVariant && activeVariant.size !== "Base Model") {
+      const vImages = getVariantImages(activeVariant);
+      if (vImages.length > 0) {
+        setActiveImage(vImages[0]);
+        return;
+      }
     }
-  }, [activeVariant]);
+    if (product.image) {
+      setActiveImage(product.image);
+    }
+  }, [activeVariant, product.image]);
 
   // Sync auth state
   useEffect(() => {
@@ -1086,9 +1123,14 @@ export default function ProductDetailPageClient({
                         {product.highlights && product.highlights.length > 0 && (
                           <div className="space-y-3 pt-4">
                             <h4 className="text-[17.5px] font-bold text-[#2E3A54] leading-[25px]">Key Highlights</h4>
-                            <ul className="list-disc pl-5 space-y-2 text-[17.5px] text-slate-500 leading-[28.437px]">
+                            <ul className="space-y-3 text-[17.5px] text-slate-500 leading-[28.437px]">
                               {product.highlights.map((highlight, i) => (
-                                 <li key={i}>{highlight}</li>
+                                 <li key={i} className="flex items-start gap-2.5">
+                                   <svg className="w-5.5 h-5.5 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                   </svg>
+                                   <span>{highlight}</span>
+                                 </li>
                               ))}
                             </ul>
                           </div>
@@ -2066,9 +2108,14 @@ export default function ProductDetailPageClient({
                         <h4 className="text-[17.5px] font-bold text-[#2E3A54] leading-[25px] mb-2">
                           Key Highlights
                         </h4>
-                        <ul className="list-disc pl-4 space-y-1 text-[17.5px] text-slate-500 leading-[28.4px]">
+                        <ul className="space-y-2 text-[17.5px] text-slate-500 leading-[28.4px]">
                           {product.highlights.map((highlight, i) => (
-                            <li key={i}>{highlight}</li>
+                            <li key={i} className="flex items-start gap-2">
+                              <svg className="w-5.5 h-5.5 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>{highlight}</span>
+                            </li>
                           ))}
                         </ul>
                       </div>

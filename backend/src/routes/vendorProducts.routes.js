@@ -546,9 +546,23 @@ const resolvePayloadImages = async (payload) => {
     payload.variantData = await Promise.all(
       payload.variantData.map(async (v) => {
         const varObj = v.toObject ? v.toObject() : v;
+        let resolvedImage = v.image;
+        if (v.image && v.image.trim().startsWith("[") && v.image.trim().endsWith("]")) {
+          try {
+            const arr = JSON.parse(v.image);
+            if (Array.isArray(arr)) {
+              const uploadedArr = await Promise.all(arr.map((img) => uploadImage(img)));
+              resolvedImage = JSON.stringify(uploadedArr);
+            }
+          } catch {
+            resolvedImage = await uploadImage(v.image);
+          }
+        } else if (v.image) {
+          resolvedImage = await uploadImage(v.image);
+        }
         return {
           ...varObj,
-          image: v.image ? await uploadImage(v.image) : undefined,
+          image: resolvedImage,
         };
       })
     );
