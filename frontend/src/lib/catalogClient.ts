@@ -14,7 +14,13 @@ export const resolveMediaUrl = (url: string | undefined): string => {
   const normalized = String(url || "").trim();
   if (!normalized) return "";
   if (normalized.startsWith("/uploads/")) {
-    const base = BACKEND_URL.replace(/\/$/, "");
+    let base = BACKEND_URL.trim();
+    if (!base || base === "/" || base.startsWith("http://localhost")) {
+      if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+        base = "https://winkget-business-8n4s.onrender.com";
+      }
+    }
+    base = base.replace(/\/$/, "");
     return `${base}${normalized}`;
   }
   return normalized;
