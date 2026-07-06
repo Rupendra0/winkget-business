@@ -723,6 +723,28 @@ router.patch("/vendor/products/:id", requireVendor, async (req, res) => {
 
     existing.slug = nextSlug;
     Object.assign(existing, payload);
+    
+    if (payload.variantData) {
+      existing.variantData = payload.variantData;
+      existing.markModified("variantData");
+    }
+    if (payload.detailedDescriptionBlocks) {
+      existing.detailedDescriptionBlocks = payload.detailedDescriptionBlocks;
+      existing.markModified("detailedDescriptionBlocks");
+    }
+    if (payload.keyAttributes) {
+      existing.keyAttributes = payload.keyAttributes;
+      existing.markModified("keyAttributes");
+    }
+    if (payload.specifications) {
+      existing.specifications = payload.specifications;
+      existing.markModified("specifications");
+    }
+    if (payload.descriptionPoints) {
+      existing.descriptionPoints = payload.descriptionPoints;
+      existing.markModified("descriptionPoints");
+    }
+
     await existing.save();
 
     scheduleProductIndex(String(existing._id));

@@ -1047,7 +1047,14 @@ export default function VendorAddProductForm({
       const serializedVariants = compactMode
         ? []
         : serializedVariantsRaw.filter(
-            (variant) => variant.size || variant.color || variant.mrp > 0 || variant.sellingPrice > 0 || variant.stock > 0 || variant.image
+            (variant) =>
+              variant.size ||
+              variant.color ||
+              variant.mrp > 0 ||
+              variant.sellingPrice > 0 ||
+              variant.stock > 0 ||
+              variant.image ||
+              Object.values(variant.customFields || {}).some((v) => String(v || "").trim())
           );
 
       const serializedDescriptionBlocks = await Promise.all(
