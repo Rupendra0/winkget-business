@@ -835,7 +835,8 @@ export default function ProductDetailPageClient({
                             const variantForColor = product.variantData?.find(v => 
                               String(v.color || "").trim() === colorName && v.image
                             );
-                            const imageUrl = isBaseOption ? product.image : variantForColor?.image;
+                            const vImages = variantForColor ? getVariantImages(variantForColor) : [];
+                            const imageUrl = isBaseOption ? product.image : vImages[0];
 
                             if (isBaseOption || imageUrl) {
                               const displayImgUrl = isBaseOption ? (product.image || "/placeholder.jpg") : imageUrl;
@@ -1735,7 +1736,8 @@ export default function ProductDetailPageClient({
                       const variantForColor = product.variantData?.find(v => 
                         String(v.color || "").trim() === colorName && v.image
                       );
-                      const imageUrl = isBaseOption ? product.image : variantForColor?.image;
+                      const vImages = variantForColor ? getVariantImages(variantForColor) : [];
+                      const imageUrl = isBaseOption ? product.image : vImages[0];
 
                       if (isBaseOption || imageUrl) {
                         const displayImgUrl = isBaseOption ? (product.image || "/placeholder.jpg") : imageUrl;
