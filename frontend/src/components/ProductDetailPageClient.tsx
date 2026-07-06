@@ -845,12 +845,12 @@ export default function ProductDetailPageClient({
                                   key={colorName}
                                   type="button"
                                   onClick={() => handleColorSelect(colorName)}
-                                  className={`w-14 h-14 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-0.5 bg-slate-50 ${
+                                  className={`w-14 h-14 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
                                     isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
                                   } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
                                   title={colorName}
                                 >
-                                  <img src={displayImgUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                                  <img src={displayImgUrl} alt={colorName} className="w-full h-full object-contain rounded-xl" />
                                 </button>
                               );
                             }
@@ -1746,12 +1746,12 @@ export default function ProductDetailPageClient({
                             key={colorName}
                             type="button"
                             onClick={() => handleColorSelect(colorName)}
-                            className={`w-12 h-12 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-0.5 bg-slate-50 ${
+                            className={`w-12 h-12 rounded-2xl border-2 transition overflow-hidden flex items-center justify-center p-1.5 bg-white ${
                               isSelected ? "border-slate-900 scale-105" : "border-[#E5E7EB] hover:border-slate-400"
                             } ${!isMatch && !isSelected ? "opacity-40" : ""}`}
                             title={colorName}
                           >
-                            <img src={displayImgUrl} alt={colorName} className="w-full h-full object-cover rounded-xl" />
+                            <img src={displayImgUrl} alt={colorName} className="w-full h-full object-contain rounded-xl" />
                           </button>
                         );
                       }
