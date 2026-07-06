@@ -898,36 +898,40 @@ export default function ProductDetailPageClient({
                             const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
                             const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                             const stockValue = matchingVariant?.stock;
+                            const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
                             return (
                               <button
                                 key={sizeName}
                                 type="button"
                                 onClick={() => handleSizeSelect(sizeName)}
-                                className={`p-3 border-[1.5px] rounded-2xl bg-white min-w-[125px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
+                                className={`p-[14px_16px] border rounded-[14px] bg-[#F9FAFB] min-w-[130px] text-left flex flex-col transition cursor-pointer shadow-none ${
                                   isSelected
-                                    ? "border-slate-900 bg-slate-50/50"
-                                    : "border-slate-200 hover:border-slate-400"
+                                    ? "border-slate-800 bg-[#FFFFFF]"
+                                    : "border-slate-200 hover:border-slate-300"
                                 }`}
                               >
-                                <div>
-                                  <div className="font-bold text-slate-800 text-sm">
-                                    {sizeName}
-                                  </div>
-                                  {mrpValue > sellingPriceValue && (
-                                    <div className="text-[10px] sm:text-xs flex items-center gap-1 mt-1">
-                                      <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
-                                      <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
-                                    </div>
-                                  )}
+                                <div className="font-bold text-slate-800 text-[14.5px] leading-tight">
+                                  {sizeName}
                                 </div>
-                                <div className="mt-2">
-                                  <div className="font-bold text-slate-800 text-sm">
-                                    ₹{sellingPriceValue.toLocaleString("en-IN")}
-                                  </div>
-                                  {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
-                                    <div className="text-[#EA580C] text-[10px] font-bold mt-0.5">
-                                      {stockValue} left
+                                <div className="border-b border-slate-200/80 my-2 w-full" />
+                                
+                                <div>
+                                  {!isInStock ? (
+                                    <span className="text-[#EA580C] text-[12.5px] font-medium">
+                                      Out of stock
+                                    </span>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      {mrpValue > sellingPriceValue && (
+                                        <div className="text-[11.5px] flex items-center gap-1">
+                                          <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                          <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                        </div>
+                                      )}
+                                      <div className="font-bold text-slate-900 text-[14.5px] leading-tight">
+                                        ₹{sellingPriceValue.toLocaleString("en-IN")}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -970,36 +974,40 @@ export default function ProductDetailPageClient({
                               const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
                               const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                               const stockValue = matchingVariant?.stock;
+                              const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
                               return (
                                 <button
                                   key={opt}
                                   type="button"
                                   onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
-                                  className={`p-3 border-[1.5px] rounded-2xl bg-white min-w-[125px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
+                                  className={`p-[14px_16px] border rounded-[14px] bg-[#F9FAFB] min-w-[130px] text-left flex flex-col transition cursor-pointer shadow-none ${
                                     isSelected
-                                      ? "border-slate-900 bg-slate-50/50"
-                                      : "border-slate-200 hover:border-slate-400"
+                                      ? "border-slate-800 bg-[#FFFFFF]"
+                                      : "border-slate-200 hover:border-slate-300"
                                   }`}
                                 >
-                                  <div>
-                                    <div className="font-bold text-slate-800 text-sm">
-                                      {opt}
-                                    </div>
-                                    {mrpValue > sellingPriceValue && (
-                                      <div className="text-[10px] sm:text-xs flex items-center gap-1 mt-1">
-                                        <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
-                                        <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
-                                      </div>
-                                    )}
+                                  <div className="font-bold text-slate-800 text-[14.5px] leading-tight">
+                                    {opt}
                                   </div>
-                                  <div className="mt-2">
-                                    <div className="font-bold text-slate-800 text-sm">
-                                      ₹{sellingPriceValue.toLocaleString("en-IN")}
-                                    </div>
-                                    {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
-                                      <div className="text-[#EA580C] text-[10px] font-bold mt-0.5">
-                                        {stockValue} left
+                                  <div className="border-b border-slate-200/80 my-2 w-full" />
+                                  
+                                  <div>
+                                    {!isInStock ? (
+                                      <span className="text-[#EA580C] text-[12.5px] font-medium">
+                                        Out of stock
+                                      </span>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {mrpValue > sellingPriceValue && (
+                                          <div className="text-[11.5px] flex items-center gap-1">
+                                            <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                            <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                          </div>
+                                        )}
+                                        <div className="font-bold text-slate-900 text-[14.5px] leading-tight">
+                                          ₹{sellingPriceValue.toLocaleString("en-IN")}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -1816,36 +1824,40 @@ export default function ProductDetailPageClient({
                     const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
                     const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                     const stockValue = matchingVariant?.stock;
+                    const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
                     return (
                       <button
                         key={sizeName}
                         type="button"
                         onClick={() => handleSizeSelect(sizeName)}
-                        className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
+                        className={`p-[10px_12px] border rounded-[12px] bg-[#F9FAFB] min-w-[110px] text-left flex flex-col transition cursor-pointer shadow-none ${
                           isSelected
-                            ? "border-slate-900 bg-slate-50/50"
+                            ? "border-slate-800 bg-[#FFFFFF]"
                             : "border-slate-200"
                         }`}
                       >
-                        <div>
-                          <div className="font-bold text-slate-800 text-xs">
-                            {sizeName}
-                          </div>
-                          {mrpValue > sellingPriceValue && (
-                            <div className="text-[9px] flex items-center gap-1 mt-0.5">
-                              <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
-                              <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
-                            </div>
-                          )}
+                        <div className="font-bold text-slate-800 text-xs leading-tight">
+                          {sizeName}
                         </div>
-                        <div className="mt-1.5">
-                          <div className="font-bold text-slate-800 text-xs">
-                            ₹{sellingPriceValue.toLocaleString("en-IN")}
-                          </div>
-                          {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
-                            <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
-                              {stockValue} left
+                        <div className="border-b border-slate-200/80 my-1.5 w-full" />
+                        
+                        <div>
+                          {!isInStock ? (
+                            <span className="text-[#EA580C] text-[11px] font-medium">
+                              Out of stock
+                            </span>
+                          ) : (
+                            <div className="space-y-0.5">
+                              {mrpValue > sellingPriceValue && (
+                                <div className="text-[9.5px] flex items-center gap-1">
+                                  <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                  <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                </div>
+                              )}
+                              <div className="font-bold text-slate-900 text-xs leading-tight">
+                                ₹{sellingPriceValue.toLocaleString("en-IN")}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1886,36 +1898,40 @@ export default function ProductDetailPageClient({
                       const sellingPriceValue = Number(matchingVariant?.sellingPrice || 0);
                       const discountPercent = mrpValue > sellingPriceValue ? Math.round(((mrpValue - sellingPriceValue) / mrpValue) * 100) : 0;
                       const stockValue = matchingVariant?.stock;
+                      const isInStock = typeof stockValue === "number" ? stockValue > 0 : true;
 
                       return (
                         <button
                           key={opt}
                           type="button"
                           onClick={() => setSelectedCustomOptions(prev => ({ ...prev, [fieldName]: opt }))}
-                          className={`p-2.5 border-[1.5px] rounded-xl bg-white min-w-[110px] text-left flex flex-col justify-between transition cursor-pointer shadow-sm ${
+                          className={`p-[10px_12px] border rounded-[12px] bg-[#F9FAFB] min-w-[110px] text-left flex flex-col transition cursor-pointer shadow-none ${
                             isSelected
-                              ? "border-slate-900 bg-slate-50/50"
+                              ? "border-slate-800 bg-[#FFFFFF]"
                               : "border-slate-200"
                           }`}
                         >
-                          <div>
-                            <div className="font-bold text-slate-800 text-xs">
-                              {opt}
-                            </div>
-                            {mrpValue > sellingPriceValue && (
-                              <div className="text-[9px] flex items-center gap-1 mt-0.5">
-                                <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
-                                <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
-                              </div>
-                            )}
+                          <div className="font-bold text-slate-800 text-xs leading-tight">
+                            {opt}
                           </div>
-                          <div className="mt-1.5">
-                            <div className="font-bold text-slate-800 text-xs">
-                              ₹{sellingPriceValue.toLocaleString("en-IN")}
-                            </div>
-                            {typeof stockValue === "number" && stockValue > 0 && stockValue <= 5 && (
-                              <div className="text-[#EA580C] text-[9px] font-bold mt-0.5">
-                                {stockValue} left
+                          <div className="border-b border-slate-200/80 my-1.5 w-full" />
+                          
+                          <div>
+                            {!isInStock ? (
+                              <span className="text-[#EA580C] text-[11px] font-medium">
+                                Out of stock
+                              </span>
+                            ) : (
+                              <div className="space-y-0.5">
+                                {mrpValue > sellingPriceValue && (
+                                  <div className="text-[9.5px] flex items-center gap-1">
+                                    <span className="text-[#16A34A] font-bold">↓{discountPercent}%</span>
+                                    <span className="line-through text-slate-400">₹{mrpValue.toLocaleString("en-IN")}</span>
+                                  </div>
+                                )}
+                                <div className="font-bold text-slate-900 text-xs leading-tight">
+                                  ₹{sellingPriceValue.toLocaleString("en-IN")}
+                                </div>
                               </div>
                             )}
                           </div>
