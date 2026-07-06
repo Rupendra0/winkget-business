@@ -1842,6 +1842,24 @@ export default function ProductDetailPageClient({
               </div>
             )}
 
+            {/* Mobile Trust Badges (Horizontal circles below colors) */}
+            {badges.length > 0 && (
+              <div className="py-4 border-y border-slate-100 w-full my-2">
+                <div className="grid grid-cols-4 gap-1 w-full justify-items-center">
+                  {badges.slice(0, 4).map((badge, idx) => (
+                    <div key={idx} className="flex flex-col items-center text-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#2563EB] border border-[#E5E7EB]">
+                        {badge.icon}
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-semibold leading-tight max-w-[80px] break-words">
+                        {badge.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Sizes */}
             {hasVariants && variantSizes.length > 0 && (
               <div className="space-y-2">
@@ -1988,21 +2006,7 @@ export default function ProductDetailPageClient({
           </div>
         )}
 
-        {/* Card 3: Trust Badges (Horizontal scroll on mobile) */}
-        {badges.length > 0 && (
-          <div className="bg-white p-4 rounded-none shadow-none text-left">
-            <div className="flex gap-4 overflow-x-auto py-2 no-scrollbar">
-              {badges.map((badge, idx) => (
-                <div key={idx} className="flex flex-col items-center text-center gap-1.5 min-w-[76px] shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-[#FAFBFC] flex items-center justify-center text-[#2563EB] border border-[#E5E7EB] shadow-sm">
-                    {badge.icon}
-                  </div>
-                  <span className="text-[10px] text-[#4B5563] font-semibold leading-tight">{badge.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Card 4: Key Attributes & Stock status */}
         {gridAttributes.length > 0 && (
