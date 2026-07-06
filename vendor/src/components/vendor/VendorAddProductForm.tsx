@@ -1022,7 +1022,9 @@ export default function VendorAddProductForm({
             
           const newUrls = await Promise.all((variant.variantImages || []).map((file) => readFileAsDataUrl(file)));
           const existingUrls = Array.isArray(variant.variantExistingImages) ? variant.variantExistingImages : [];
-          const combined = [mainImgUrl, ...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean);
+          const combined = Array.from(
+            new Set([mainImgUrl, ...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean))
+          );
           
           let serializedImage = "";
           if (combined.length === 1) {

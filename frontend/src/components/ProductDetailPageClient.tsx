@@ -67,7 +67,8 @@ const getVariantImages = (v: any): string[] => {
     try {
       const parsed = JSON.parse(imgStr);
       if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+        const cleaned = parsed.map((item) => String(item || "").trim()).filter(Boolean);
+        return Array.from(new Set(cleaned));
       }
     } catch {
       // Fallback
@@ -232,7 +233,9 @@ export default function ProductDetailPageClient({
         return vImages;
       }
     }
-    const baseImages = [product.image, ...(product.gallery || [])].filter(Boolean) as string[];
+    const baseImages = Array.from(
+      new Set([product.image, ...(product.gallery || [])].filter(Boolean).map((img) => String(img || "").trim()))
+    );
     return baseImages.length > 0 ? baseImages : [""];
   }, [product.gallery, product.image, activeVariant]);
 
