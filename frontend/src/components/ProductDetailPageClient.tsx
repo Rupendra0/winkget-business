@@ -1316,16 +1316,19 @@ export default function ProductDetailPageClient({
             </div>
   
             {/* Trust Badges & Vendor Profile */}
-            <div className="mt-auto space-y-4 w-full">
+            <div className="mt-4 space-y-4 w-full">
+              {/* Divider above badges */}
+              {badges.length > 0 && <div className="border-t border-[#E5E7EB]/80 w-full" />}
+              
               {/* Trust Badges */}
               {badges.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 py-4 border-t border-[#E5E7EB] w-full">
+                <div className="grid grid-cols-2 gap-3 w-full">
                   {badges.map((badge, idx) => (
-                    <div key={idx} className="flex items-center gap-2.5 px-3 py-2 bg-[#F9FAFB] hover:bg-emerald-50/60 border border-[#E5E7EB] hover:border-emerald-100 rounded-[12px] transition-all duration-200 hover:scale-[1.03] group cursor-default">
-                      <div className="p-1 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-200">
+                    <div key={idx} className="flex items-center gap-2 px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-[12px] transition-colors cursor-default text-left">
+                      <div className="shrink-0">
                         {badge.icon}
                       </div>
-                      <div className="text-[10px] text-slate-500 font-bold leading-tight group-hover:text-slate-800 transition-colors duration-200">
+                      <div className="text-[11px] text-slate-700 font-semibold leading-tight">
                         {badge.label}
                       </div>
                     </div>
@@ -1333,20 +1336,23 @@ export default function ProductDetailPageClient({
                 </div>
               )}
 
+              {/* Divider below badges / above seller */}
+              {(product.sellerName || storeProduct.vendorName) && <div className="border-t border-[#E5E7EB]/80 w-full" />}
+
               {/* Seller details */}
               {(product.sellerName || storeProduct.vendorName) && (
-                <div className="pt-4 flex items-center justify-between border-t border-[#E5E7EB] w-full text-left">
+                <div className="flex items-center justify-between w-full text-left">
                   <div>
                     <div className="text-[14.5px] font-semibold text-slate-800">
                       {product.sellerName || storeProduct.vendorName}
                     </div>
-                    <div className="text-[12px] font-semibold text-slate-400">
+                    <div className="text-[12.5px] font-semibold text-slate-400">
                       Verified
                     </div>
                   </div>
                   <Link 
                     href={`/search?query=${encodeURIComponent(product.sellerName || storeProduct.vendorName)}`}
-                    className="text-[#0071E3] hover:underline font-semibold text-[14px]"
+                    className="text-[#0071E3] hover:underline font-semibold text-[14.5px]"
                   >
                     View store
                   </Link>
