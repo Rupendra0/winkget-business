@@ -1456,7 +1456,7 @@ export default function ProductDetailPageClient({
                         {item.sellerName || "Winkget Store"}
                       </span>
                       <div className="flex items-baseline gap-1.5 mt-2 h-[22px]">
-                        <span className="text-[16.8px] font-bold text-[#2563EB]">
+                        <span className="text-[16.8px] font-bold text-blue-600">
                           ₹{formattedPriceVal}
                         </span>
                         {oldPrice > price && (
@@ -1514,7 +1514,7 @@ export default function ProductDetailPageClient({
                         {item.sellerName || "Winkget Store"}
                       </span>
                       <div className="flex items-baseline gap-1.5 mt-2 h-[22px]">
-                        <span className="text-[16.8px] font-bold text-[#2563EB]">
+                        <span className="text-[16.8px] font-bold text-blue-600">
                           ₹{formattedPriceVal}
                         </span>
                         {oldPrice > price && (
@@ -2344,7 +2344,7 @@ export default function ProductDetailPageClient({
                         {item.name}
                       </h4>
                       <div className="flex items-baseline gap-1 mt-1 h-[22px]">
-                        <span className="text-[16.8px] font-bold text-[#2563EB]">
+                        <span className="text-[16.8px] font-bold text-blue-600">
                           ₹{formattedPriceVal}
                         </span>
                         {oldPrice > price && (
@@ -2392,7 +2392,7 @@ export default function ProductDetailPageClient({
                         {item.sellerName || "Winkget Store"}
                       </span>
                       <div className="flex items-baseline gap-1 mt-1 h-[22px]">
-                        <span className="text-[16.8px] font-bold text-[#2563EB]">
+                        <span className="text-[16.8px] font-bold text-blue-600">
                           ₹{formattedPriceVal}
                         </span>
                         {oldPrice > price && (

@@ -690,8 +690,8 @@ export default function Navbar() {
           {/* Logo */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-3">
             <Link href="/" className="brand-wordmark flex min-w-0 flex-col items-start gap-0 leading-none">
-              <span className="text-[10px] font-bold tracking-[0.2px] text-slate-900">Winkget</span>
-              <span className="text-lg font-bold tracking-[0.2px] text-orange-600">Business</span>
+              <span className="text-xs font-bold tracking-[0.2px] text-slate-900 leading-none">Winkget</span>
+              <span className="text-xl font-bold tracking-[0.2px] text-orange-600 leading-none mt-0.5">Business</span>
             </Link>
             <button
               type="button"
@@ -727,7 +727,7 @@ export default function Navbar() {
             </div>
 
             {/* Search Bar */}
-            <div className="flex-1 relative" ref={desktopSuggestRef}>
+            <div className="flex-1 max-w-[450px] relative" ref={desktopSuggestRef}>
               <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200/60 bg-white px-[15px] shadow-none">
                 {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
                 <input

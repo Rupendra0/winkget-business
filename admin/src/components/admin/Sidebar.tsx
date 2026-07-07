@@ -137,12 +137,27 @@ export default function Sidebar({ sections, pathname, activeItemId, collapsed, o
 
   const resolvedOpenSections = useMemo(() => {
     const defaults: Record<string, boolean> = {};
+    let activeItemSectionId = "";
+
+    if (activeItemId) {
+      const foundSection = sections.find((section) =>
+        section.items.some((item) => item.id === activeItemId)
+      );
+      if (foundSection) {
+        activeItemSectionId = foundSection.id;
+      }
+    }
+
     sections.forEach((section) => {
-      defaults[section.id] = pathname.startsWith(section.route);
+      if (activeItemSectionId) {
+        defaults[section.id] = section.id === activeItemSectionId;
+      } else {
+        defaults[section.id] = pathname.startsWith(section.route);
+      }
     });
 
     return { ...defaults, ...openSections };
-  }, [openSections, pathname, sections]);
+  }, [openSections, pathname, sections, activeItemId]);
 
   return (
     <aside

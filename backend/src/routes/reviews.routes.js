@@ -1,7 +1,10 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const Review = require("../models/Review");
 const User = require("../models/User");
+const ProductReview = require("../models/ProductReview");
+const VendorProduct = require("../models/VendorProduct");
 const { resolveTokenFromRequest, hasScopedAuthCookie } = require("../lib/authCookies");
 
 const router = express.Router();
@@ -56,7 +59,7 @@ const toMongooseValidationMessage = (error, fallback) => {
 
 const toReviewPayload = (review) => ({
   id: String(review._id),
-  businessId: review.businessKey,
+  businessId: review.businessKey || (review.productId ? `product:${review.productId}` : ""),
   reviewerId: review.reviewer ? String(review.reviewer._id || review.reviewer) : "",
   author: review.authorName,
   rating: Number(review.rating || 0),
@@ -69,6 +72,38 @@ const toReviewPayload = (review) => ({
 });
 
 const getBusinessSummary = async (businessId) => {
+  if (String(businessId || "").startsWith("product:")) {
+    const rawProductId = businessId.replace(/^product:/, "");
+    if (!OBJECT_ID_REGEX.test(rawProductId)) {
+      return { rating: 0, reviews: 0 };
+    }
+    const productId = new mongoose.Types.ObjectId(rawProductId);
+    const rows = await ProductReview.aggregate([
+      {
+        $match: {
+          productId,
+          isVisible: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          reviews: { $sum: 1 },
+          rating: { $avg: "$rating" },
+        },
+      },
+    ]);
+
+    if (!rows[0]) {
+      return { rating: 0, reviews: 0 };
+    }
+
+    return {
+      rating: roundRating(rows[0].rating),
+      reviews: Number(rows[0].reviews || 0),
+    };
+  }
+
   const rows = await Review.aggregate([
     {
       $match: {
@@ -138,28 +173,55 @@ router.get("/reviews", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid business id" });
     }
 
-    const [reviews, summary, viewer] = await Promise.all([
-      Review.find({
+    const isProduct = businessId.startsWith("product:");
+    const rawProductId = isProduct ? businessId.replace(/^product:/, "") : "";
+
+    let reviewsPromise;
+    if (isProduct) {
+      reviewsPromise = ProductReview.find({
+        productId: new mongoose.Types.ObjectId(rawProductId),
+        isVisible: true,
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select("_id productId reviewer authorName rating comment editCount editedAt createdAt updatedAt")
+        .lean();
+    } else {
+      reviewsPromise = Review.find({
         businessKey: businessId,
         isVisible: true,
       })
         .sort({ createdAt: -1 })
         .limit(limit)
         .select("_id businessKey reviewer authorName rating comment editCount editedAt createdAt updatedAt")
-        .lean(),
+        .lean();
+    }
+
+    const [reviews, summary, viewer] = await Promise.all([
+      reviewsPromise,
       getBusinessSummary(businessId),
       resolveAuthenticatedUser(req),
     ]);
 
     let viewerHasReviewed = false;
     if (viewer?._id) {
-      viewerHasReviewed = Boolean(
-        await Review.exists({
-          businessKey: businessId,
-          reviewer: viewer._id,
-          isVisible: true,
-        })
-      );
+      if (isProduct) {
+        viewerHasReviewed = Boolean(
+          await ProductReview.exists({
+            productId: new mongoose.Types.ObjectId(rawProductId),
+            reviewer: viewer._id,
+            isVisible: true,
+          })
+        );
+      } else {
+        viewerHasReviewed = Boolean(
+          await Review.exists({
+            businessKey: businessId,
+            reviewer: viewer._id,
+            isVisible: true,
+          })
+        );
+      }
     }
 
     return res.status(200).json({
@@ -197,34 +259,65 @@ router.post("/reviews", requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Review must be 1200 characters or fewer" });
     }
 
-    let vendorId;
-    if (OBJECT_ID_REGEX.test(businessId)) {
-      const vendor = await User.findOne({
-        _id: businessId,
-        role: "vendor",
-        vendorStatus: "approved",
-      })
-        .select("_id")
-        .lean();
+    const isProduct = businessId.startsWith("product:");
+    const rawProductId = isProduct ? businessId.replace(/^product:/, "") : "";
 
-      if (!vendor) {
-        return res.status(404).json({ ok: false, message: "Business not found" });
+    let review;
+    if (isProduct) {
+      const exists = await ProductReview.exists({
+        productId: new mongoose.Types.ObjectId(rawProductId),
+        reviewer: authUser._id,
+      });
+
+      if (exists) {
+        return res.status(409).json({ ok: false, message: "You have already reviewed this product" });
       }
 
-      vendorId = vendor._id;
+      review = await ProductReview.create({
+        productId: new mongoose.Types.ObjectId(rawProductId),
+        reviewer: authUser._id,
+        authorName,
+        rating,
+        comment,
+        isVisible: true,
+      });
+    } else {
+      let vendorId;
+      if (OBJECT_ID_REGEX.test(businessId)) {
+        const vendor = await User.findOne({
+          _id: businessId,
+          role: "vendor",
+          vendorStatus: "approved",
+        })
+          .select("_id")
+          .lean();
+
+        if (!vendor) {
+          return res.status(404).json({ ok: false, message: "Business not found" });
+        }
+
+        vendorId = vendor._id;
+      }
+
+      review = await Review.create({
+        businessKey: businessId,
+        vendor: vendorId,
+        reviewer: authUser._id,
+        authorName,
+        rating,
+        comment,
+        isVisible: true,
+      });
     }
 
-    const review = await Review.create({
-      businessKey: businessId,
-      vendor: vendorId,
-      reviewer: authUser._id,
-      authorName,
-      rating,
-      comment,
-      isVisible: true,
-    });
-
     const summary = await getBusinessSummary(businessId);
+
+    if (isProduct) {
+      await VendorProduct.updateOne(
+        { _id: new mongoose.Types.ObjectId(rawProductId) },
+        { rating: summary.rating, reviews: summary.reviews }
+      );
+    }
 
     return res.status(201).json({
       ok: true,
@@ -271,7 +364,16 @@ router.put("/reviews/:reviewId", requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Review must be 1200 characters or fewer" });
     }
 
-    const review = await Review.findById(reviewId);
+    let review = await Review.findById(reviewId);
+    let isProduct = false;
+
+    if (!review) {
+      review = await ProductReview.findById(reviewId);
+      if (review) {
+        isProduct = true;
+      }
+    }
+
     if (!review || !review.isVisible) {
       return res.status(404).json({ ok: false, message: "Review not found" });
     }
@@ -287,7 +389,8 @@ router.put("/reviews/:reviewId", requireAuth, async (req, res) => {
 
     const currentComment = String(review.comment || "").trim();
     if (Number(review.rating) === rating && currentComment === comment) {
-      const summary = await getBusinessSummary(review.businessKey);
+      const summaryKey = isProduct ? `product:${review.productId}` : review.businessKey;
+      const summary = await getBusinessSummary(summaryKey);
       return res.status(200).json({
         ok: true,
         message: "No changes detected in your review",
@@ -302,15 +405,30 @@ router.put("/reviews/:reviewId", requireAuth, async (req, res) => {
     review.editedAt = new Date();
     await review.save();
 
-    const updatedReview = await Review.findById(reviewId)
-      .select("_id businessKey reviewer authorName rating comment editCount editedAt createdAt updatedAt")
-      .lean();
+    let updatedReview;
+    if (isProduct) {
+      updatedReview = await ProductReview.findById(reviewId)
+        .select("_id productId reviewer authorName rating comment editCount editedAt createdAt updatedAt")
+        .lean();
+    } else {
+      updatedReview = await Review.findById(reviewId)
+        .select("_id businessKey reviewer authorName rating comment editCount editedAt createdAt updatedAt")
+        .lean();
+    }
 
     if (!updatedReview) {
       return res.status(404).json({ ok: false, message: "Review not found after update" });
     }
 
-    const summary = await getBusinessSummary(review.businessKey);
+    const summaryKey = isProduct ? `product:${review.productId}` : review.businessKey;
+    const summary = await getBusinessSummary(summaryKey);
+
+    if (isProduct) {
+      await VendorProduct.updateOne(
+        { _id: review.productId },
+        { rating: summary.rating, reviews: summary.reviews }
+      );
+    }
 
     return res.status(200).json({
       ok: true,
@@ -338,7 +456,16 @@ router.delete("/reviews/:reviewId", requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Invalid review id" });
     }
 
-    const review = await Review.findById(reviewId).select("_id reviewer businessKey isVisible").lean();
+    let review = await Review.findById(reviewId).select("_id reviewer businessKey isVisible").lean();
+    let isProduct = false;
+
+    if (!review) {
+      review = await ProductReview.findById(reviewId).select("_id reviewer productId isVisible").lean();
+      if (review) {
+        isProduct = true;
+      }
+    }
+
     if (!review || !review.isVisible) {
       return res.status(404).json({ ok: false, message: "Review not found" });
     }
@@ -347,14 +474,28 @@ router.delete("/reviews/:reviewId", requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, message: "You can only delete your own review" });
     }
 
-    await Review.deleteOne({ _id: reviewId });
-    const summary = await getBusinessSummary(review.businessKey);
+    const summaryKey = isProduct ? `product:${review.productId}` : review.businessKey;
+
+    if (isProduct) {
+      await ProductReview.deleteOne({ _id: reviewId });
+    } else {
+      await Review.deleteOne({ _id: reviewId });
+    }
+
+    const summary = await getBusinessSummary(summaryKey);
+
+    if (isProduct) {
+      await VendorProduct.updateOne(
+        { _id: review.productId },
+        { rating: summary.rating, reviews: summary.reviews }
+      );
+    }
 
     return res.status(200).json({
       ok: true,
       message: "Review deleted successfully",
       deletedReviewId: reviewId,
-      businessId: review.businessKey,
+      businessId: summaryKey,
       summary,
     });
   } catch (error) {

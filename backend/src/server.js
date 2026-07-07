@@ -12,6 +12,8 @@ const City = require("./models/City");
 const FailureLog = require("./models/FailureLog");
 const VendorProduct = require("./models/VendorProduct");
 const Order = require("./models/Order");
+const ProductReview = require("./models/ProductReview");
+const { runAutoMigration } = require("./lib/migration");
 const { ensureSearchIndex, reindexSearchDocuments } = require("./lib/search/indexer");
 
 const PORT = Number(process.env.PORT || 5000);
@@ -30,6 +32,7 @@ process.on("uncaughtException", (error) => {
 async function startServer() {
   try {
     await connectDatabase();
+    await runAutoMigration();
 
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
     const syncModelIndexes = async (modelName, modelObj) => {
@@ -53,6 +56,7 @@ async function startServer() {
       await syncModelIndexes("City", City);
       await syncModelIndexes("FailureLog", FailureLog);
       await syncModelIndexes("VendorProduct", VendorProduct);
+      await syncModelIndexes("ProductReview", ProductReview);
       await syncModelIndexes("Order", Order);
     } else {
       console.log("Database index synchronization skipped (production mode). Set SYNC_INDEXES_ON_START=true to override.");
