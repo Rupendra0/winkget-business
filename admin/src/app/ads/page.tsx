@@ -176,6 +176,12 @@ const isValidSponsorLink = (value: string) => {
 	return SPONSOR_LINK_REGEX.test(normalized);
 };
 
+const FlameSvg = () => (
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+		<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+	</svg>
+);
+
 const fileToDataUrl = (file: File): Promise<string> =>
 	new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -256,6 +262,9 @@ function AdsPageContent() {
 	const [trendingItems, setTrendingItems] = useState<AdminTrendingItem[]>(
 		Array.from({ length: 8 }, () => ({ type: "category", itemId: "" }))
 	);
+	const [trendingIcon, setTrendingIcon] = useState<string>("");
+	const [trendingIconUploading, setTrendingIconUploading] = useState(false);
+	const [trendingIconError, setTrendingIconError] = useState<string | null>(null);
 	const [allCategories, setAllCategories] = useState<{ id: string; name: string }[]>([]);
 	const [allSubcategories, setAllSubcategories] = useState<{ id: string; name: string; categoryName: string }[]>([]);
 	const [trendingSaving, setTrendingSaving] = useState(false);
@@ -431,8 +440,8 @@ function AdsPageContent() {
 				console.log("Trending View load: Start loading...");
 				
 				console.log("Trending View load: Fetching home trending config...");
-				const savedTrending = await fetchHomeTrending();
-				console.log("Trending View load: savedTrending fetched successfully =", savedTrending);
+				const savedTrendingResponse = await fetchHomeTrending();
+				console.log("Trending View load: savedTrendingResponse fetched successfully =", savedTrendingResponse);
 
 				console.log("Trending View load: Fetching categories list...");
 				const categoriesList = await fetchCategories({ includeInactive: true });
@@ -462,11 +471,12 @@ function AdsPageContent() {
 					}))
 				);
 
-				const initialItems = [...savedTrending];
+				const initialItems = [...savedTrendingResponse.trendingItems];
 				while (initialItems.length < 8) {
 					initialItems.push({ type: "category", itemId: "" });
 				}
 				setTrendingItems(initialItems.slice(0, 8));
+				setTrendingIcon(savedTrendingResponse.icon || "");
 			} catch (loadError) {
 				console.error("Trending View load: Error =", loadError);
 				if (!active) return;
@@ -576,13 +586,57 @@ function AdsPageContent() {
 				return;
 			}
 
-			const updated = await updateHomeTrending({ trendingItems });
-			setTrendingItems(updated);
+			const result = await updateHomeTrending({ trendingItems, icon: trendingIcon });
+			setTrendingItems(result.trendingItems);
+			setTrendingIcon(result.icon);
 			setMessage("Trending categories updated successfully!");
 		} catch (saveError) {
 			setErrorText(toErrorMessage(saveError, "Failed to save trending categories"));
 		} finally {
 			setTrendingSaving(false);
+		}
+	};
+
+	const handleTrendingIconUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (!file) return;
+
+		setTrendingIconUploading(true);
+		setTrendingIconError(null);
+		setErrorText(null);
+		setMessage(null);
+
+		try {
+			const dataUrl = await fileToDataUrl(file);
+			const result = await updateHomeTrending({ trendingItems, icon: dataUrl });
+			setTrendingItems(result.trendingItems);
+			setTrendingIcon(result.icon);
+			setMessage("Trending Category Tab icon uploaded successfully!");
+		} catch (uploadError) {
+			setTrendingIconError(toErrorMessage(uploadError, "Upload failed"));
+		} finally {
+			setTrendingIconUploading(false);
+		}
+	};
+
+	const handleTrendingIconDelete = async () => {
+		const confirmed = window.confirm("Delete the Trending Category Tab icon?");
+		if (!confirmed) return;
+
+		setTrendingIconUploading(true);
+		setTrendingIconError(null);
+		setErrorText(null);
+		setMessage(null);
+
+		try {
+			const result = await updateHomeTrending({ trendingItems, icon: "" });
+			setTrendingItems(result.trendingItems);
+			setTrendingIcon(result.icon);
+			setMessage("Trending Category Tab icon deleted.");
+		} catch (deleteError) {
+			setTrendingIconError(toErrorMessage(deleteError, "Delete failed"));
+		} finally {
+			setTrendingIconUploading(false);
 		}
 	};
 
@@ -1127,6 +1181,7 @@ function AdsPageContent() {
 		wellnessDeletingCardId !== null ||
 		sponsorUploadingCardId !== null ||
 		sponsorDeletingCardId !== null ||
+		trendingIconUploading ||
 		(isHomePlacementsView ? saving : isPartnersPromotionsView ? promoSaving : isTrendingCategoriesView ? trendingSaving : exploreSaving);
 
 	const showSaveButton = isHomePlacementsView || isPartnersPromotionsView || isExploreCardsView || isTrendingCategoriesView;
@@ -1760,6 +1815,56 @@ function AdsPageContent() {
 								{message ? (
 									<p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{message}</p>
 								) : null}
+
+								<div className="border-b border-slate-200 pb-6">
+									<h4 className="text-sm font-semibold text-slate-900 mb-2">Trending Category Tab Custom Icon</h4>
+									<p className="text-xs text-slate-500 mb-4">Upload an icon to customize the "Trending" tab on the storefront. If no icon is uploaded, a default flame icon will be shown.</p>
+									
+									<div className="flex items-center gap-4">
+										{trendingIcon ? (
+											<div className="h-14 w-14 overflow-hidden rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center">
+												<img src={trendingIcon} alt="Trending tab icon preview" className="block h-full w-full object-cover" loading="lazy" />
+											</div>
+										) : (
+											<div className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+												<FlameSvg />
+											</div>
+										)}
+										
+										<div className="flex flex-col gap-2">
+											<div className="flex items-center gap-2">
+												<label className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+													Upload Icon
+													<input
+														type="file"
+														accept="image/*"
+														className="hidden"
+														disabled={loading || trendingIconUploading}
+														onChange={(event) => void handleTrendingIconUpload(event)}
+													/>
+												</label>
+												
+												{trendingIcon && (
+													<button
+														type="button"
+														onClick={() => void handleTrendingIconDelete()}
+														disabled={loading || trendingIconUploading}
+														className="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+													>
+														Delete
+													</button>
+												)}
+											</div>
+											
+											{trendingIconUploading && (
+												<p className="text-xs text-cyan-700">Uploading and saving icon...</p>
+											)}
+											{trendingIconError && (
+												<p className="text-xs text-rose-700">{trendingIconError}</p>
+											)}
+										</div>
+									</div>
+								</div>
 
 								<div className="flex items-center justify-between">
 									<div>

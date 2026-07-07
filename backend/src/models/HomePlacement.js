@@ -43,6 +43,7 @@ const homePlacementSchema = new Schema(
     sponsorHeading: { type: String, trim: true },
     sponsorCards: [homePromoCardSchema],
     trendingItems: [homeTrendingItemSchema],
+    icon: { type: String, trim: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {

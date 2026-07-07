@@ -194,6 +194,7 @@ export default function CategoryTabExplorer() {
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [subcategories, setSubcategories] = useState<CatalogSubcategory[]>([]);
   const [trendingItems, setTrendingItems] = useState<any[]>([]);
+  const [trendingIcon, setTrendingIcon] = useState<string>("");
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -240,8 +241,11 @@ export default function CategoryTabExplorer() {
         // Load trending items
         const trendRes = await fetch(`${BACKEND_URL}/api/home-trending`, { cache: "no-store" });
         const trendPayload = await trendRes.json();
-        if (active && trendRes.ok && trendPayload.ok && Array.isArray(trendPayload.items)) {
-          setTrendingItems(trendPayload.items);
+        if (active && trendRes.ok && trendPayload.ok) {
+          if (Array.isArray(trendPayload.items)) {
+            setTrendingItems(trendPayload.items);
+          }
+          setTrendingIcon(trendPayload.icon || "");
         }
 
         setCategories(sortedCats);
@@ -468,19 +472,23 @@ export default function CategoryTabExplorer() {
                 onClick={() => setActiveCategoryId("trending")}
                 className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-2 md:px-5 border-b border-slate-200 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
                   activeCategoryId === "trending"
-                    ? "bg-[#FEF2F2] text-[#EF4444] border-l-[#EF4444]"
+                    ? "bg-[#EFF6FF] text-blue-600 border-l-blue-600"
                     : "bg-white text-slate-800 border-l-transparent hover:bg-slate-50/30"
                 }`}
               >
                 <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3.5 min-w-0 w-full text-center md:text-left">
                   <div className={`h-9 w-9 sm:h-11 sm:w-11 md:h-[52px] md:w-[52px] rounded-full flex items-center justify-center shrink-0 transition-all ${
-                    activeCategoryId === "trending" ? "bg-white text-[#EF4444]" : "bg-white text-slate-500"
+                    activeCategoryId === "trending" ? "bg-white text-blue-600" : "bg-white text-slate-500"
                   }`}>
-                    <Flame className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 fill-current" />
+                    {trendingIcon ? (
+                      <img src={trendingIcon} alt="" className="h-7 w-7 sm:h-9 sm:w-9 md:h-[46px] md:w-[46px] object-contain" />
+                    ) : (
+                      <Flame className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 fill-current" />
+                    )}
                   </div>
                   <div className="flex flex-col min-w-0 w-full">
-                    <span className={`truncate text-[10px] sm:text-xs md:text-base font-bold transition-colors block ${
-                      activeCategoryId === "trending" ? "text-[#EF4444]" : "text-slate-700"
+                    <span className={`truncate text-[10px] sm:text-xs md:text-base font-medium transition-colors block ${
+                      activeCategoryId === "trending" ? "text-blue-600" : "text-slate-700"
                     }`}>
                       Trending
                     </span>

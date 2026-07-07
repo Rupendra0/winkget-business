@@ -2130,9 +2130,11 @@ router.get("/admin/ads/home-trending", requireAdmin, async (_req, res) => {
   try {
     const placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
     const trendingItems = placement?.trendingItems || [];
+    const icon = placement?.icon || "";
     return res.status(200).json({
       ok: true,
       trendingItems,
+      icon,
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load trending categories", error: error.message });
@@ -2142,6 +2144,7 @@ router.get("/admin/ads/home-trending", requireAdmin, async (_req, res) => {
 router.put("/admin/ads/home-trending", requireAdmin, async (req, res) => {
   try {
     const itemsInput = req.body?.trendingItems || [];
+    const iconInput = req.body?.icon !== undefined ? String(req.body.icon).trim() : undefined;
     if (!Array.isArray(itemsInput)) {
       return res.status(400).json({ ok: false, message: "trendingItems must be an array" });
     }
@@ -2159,14 +2162,19 @@ router.put("/admin/ads/home-trending", requireAdmin, async (req, res) => {
       });
     }
 
+    const updateObj = {
+      key: HOME_TRENDING_KEY,
+      trendingItems: formattedItems,
+      updatedBy: req.adminUser._id,
+    };
+    if (iconInput !== undefined) {
+      updateObj.icon = iconInput;
+    }
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_TRENDING_KEY },
       {
-        $set: {
-          key: HOME_TRENDING_KEY,
-          trendingItems: formattedItems,
-          updatedBy: req.adminUser._id,
-        },
+        $set: updateObj,
       },
       {
         upsert: true,
@@ -2179,6 +2187,7 @@ router.put("/admin/ads/home-trending", requireAdmin, async (req, res) => {
       ok: true,
       message: "Trending categories updated successfully",
       trendingItems: placement.trendingItems || [],
+      icon: placement.icon || "",
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to update trending categories", error: error.message });

@@ -35,6 +35,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       makeItem("manage-category", "Manage Category", "/categories"),
       makeItem("manage-subcategory", "Manage Subcategory", "/categories"),
       makeItem("manage-secondary-subcategory", "Manage Secondary Subcategory", "/categories"),
+      makeItem("trending-categories", "Trending Categories", "/ads"),
     ],
   },
   {
@@ -45,7 +46,6 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       makeItem("home-placements", "Header Banners", "/ads"),
       makeItem("partners-promotions", "Category Link Cards", "/ads"),
       makeItem("product-promotions", "Explore", "/ads"),
-      makeItem("trending-categories", "Trending Categories", "/ads"),
       makeItem("user-dashboard-placements", "User Dashboard Banners", "/ads"),
       makeItem("partners-dashboard-placements", "Partner Dashboard Banners", "/ads"),
     ],

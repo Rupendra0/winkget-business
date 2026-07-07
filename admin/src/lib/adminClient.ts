@@ -780,21 +780,29 @@ export async function deleteCityLocality(cityId: string, localityId: string): Pr
 export type HomeTrendingResponse = {
   ok: boolean;
   trendingItems: AdminTrendingItem[];
+  icon?: string;
 };
 
-export async function fetchHomeTrending(): Promise<AdminTrendingItem[]> {
+export async function fetchHomeTrending(): Promise<{ trendingItems: AdminTrendingItem[]; icon: string }> {
   const payload = await requestJson<HomeTrendingResponse>("/api/admin/ads/home-trending");
-  return payload.trendingItems || [];
+  return {
+    trendingItems: payload.trendingItems || [],
+    icon: payload.icon || "",
+  };
 }
 
 export async function updateHomeTrending(input: {
   trendingItems: AdminTrendingItem[];
-}): Promise<AdminTrendingItem[]> {
+  icon?: string;
+}): Promise<{ trendingItems: AdminTrendingItem[]; icon: string }> {
   const payload = await requestJson<HomeTrendingResponse>("/api/admin/ads/home-trending", {
     method: "PUT",
     body: JSON.stringify(input),
   });
-  return payload.trendingItems;
+  return {
+    trendingItems: payload.trendingItems || [],
+    icon: payload.icon || "",
+  };
 }
 
 export { BACKEND_URL, toErrorMessage };
