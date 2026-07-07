@@ -1318,13 +1318,13 @@ export default function ProductDetailPageClient({
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="w-full hover:opacity-95 transition flex h-[60px] justify-center items-center rounded-[17.5px] bg-[#0071E3] text-white text-center font-medium text-[15px] whitespace-nowrap"
+                  className="w-full hover:bg-blue-700 transition flex h-[60px] justify-center items-center rounded-[17.5px] bg-blue-600 text-white text-center font-medium text-[15px] whitespace-nowrap"
                 >
                   Add to Cart
                 </button>
               ) : (
                 <div
-                  className="w-full flex h-[60px] justify-between items-center rounded-[17.5px] bg-[#0071E3] text-white px-6 font-medium text-[15px] select-none"
+                  className="w-full flex h-[60px] justify-between items-center rounded-[17.5px] bg-blue-600 text-white px-6 font-medium text-[15px] select-none"
                 >
                   <button
                     type="button"
@@ -1404,7 +1404,7 @@ export default function ProductDetailPageClient({
                   </div>
                   <Link 
                     href={`/search?query=${encodeURIComponent(product.sellerName || storeProduct.vendorName)}`}
-                    className="text-[#0071E3] hover:underline font-semibold text-[14.5px]"
+                    className="text-blue-600 hover:text-blue-700 hover:underline font-semibold text-[14.5px]"
                   >
                     View store
                   </Link>
@@ -2641,7 +2641,7 @@ export default function ProductDetailPageClient({
                 justifyContent: "space-between",
                 alignItems: "center",
                 borderRadius: "14.431px",
-                background: "#0071E3",
+                background: "#4f46e5",
                 color: "#FFF",
                 fontFamily: "Inter, system-ui, sans-serif",
               }}
