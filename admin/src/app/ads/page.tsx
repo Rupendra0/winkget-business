@@ -423,13 +423,14 @@ function AdsPageContent() {
 
 			try {
 				console.log("Trending View load: Start loading...");
-				const [explorerData, savedTrending] = await Promise.all([
-					fetchCategoryExplorer(),
-					fetchHomeTrending(),
-				]);
+				
+				console.log("Trending View load: Fetching home trending config...");
+				const savedTrending = await fetchHomeTrending();
+				console.log("Trending View load: savedTrending fetched successfully =", savedTrending);
 
-				console.log("Trending View load: explorerData =", explorerData);
-				console.log("Trending View load: savedTrending =", savedTrending);
+				console.log("Trending View load: Fetching category explorer data...");
+				const explorerData = await fetchCategoryExplorer();
+				console.log("Trending View load: explorerData fetched successfully =", explorerData);
 
 				if (!active) {
 					console.log("Trending View load: Component unmounted, ignoring results.");
