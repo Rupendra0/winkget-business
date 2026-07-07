@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, ArrowRight, Layers, Tag } from "lucide-react";
+import { ChevronRight, ArrowRight, Layers, Tag, Flame } from "lucide-react";
 import { readSelectedCity, subscribeLocationCity } from "@/lib/locationStore";
 
 type CatalogSubcategory = {
@@ -193,6 +193,7 @@ const MOCK_SUBCATEGORIES_MAP: Record<string, string[]> = {
 export default function CategoryTabExplorer() {
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [subcategories, setSubcategories] = useState<CatalogSubcategory[]>([]);
+  const [trendingItems, setTrendingItems] = useState<any[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -234,6 +235,13 @@ export default function CategoryTabExplorer() {
 
         if (!active || !subRes.ok || !subPayload.ok || !Array.isArray(subPayload.subcategories)) {
           return;
+        }
+
+        // Load trending items
+        const trendRes = await fetch(`${BACKEND_URL}/api/home-trending`, { cache: "no-store" });
+        const trendPayload = await trendRes.json();
+        if (active && trendRes.ok && trendPayload.ok && Array.isArray(trendPayload.items)) {
+          setTrendingItems(trendPayload.items);
         }
 
         setCategories(sortedCats);
@@ -298,12 +306,14 @@ export default function CategoryTabExplorer() {
       });
   }, [categories, subcategoryCountsMap]);
 
-  // Set first displayed category as active automatically
+  // Set first displayed category as active automatically (or Trending tab if items exist)
   useEffect(() => {
-    if (displayedCategories.length > 0 && !activeCategoryId) {
+    if (trendingItems.length > 0 && !activeCategoryId) {
+      setActiveCategoryId("trending");
+    } else if (displayedCategories.length > 0 && !activeCategoryId) {
       setActiveCategoryId(displayedCategories[0].id);
     }
-  }, [displayedCategories, activeCategoryId]);
+  }, [displayedCategories, activeCategoryId, trendingItems]);
 
   const activeCategory = useMemo(() => {
     return displayedCategories.find((cat) => cat.id === activeCategoryId);
@@ -312,6 +322,9 @@ export default function CategoryTabExplorer() {
   // Filtered subcategories for the active tab (exactly 8 items)
   const activeSubcategories = useMemo(() => {
     if (!activeCategoryId) return [];
+    if (activeCategoryId === "trending") {
+      return trendingItems;
+    }
     
     // Find all database subcategories for active category
     const categorySubs = subcategories.filter((sub) => {
@@ -368,7 +381,24 @@ export default function CategoryTabExplorer() {
     }
 
     return padded;
-  }, [subcategories, activeCategoryId, categories]);
+  }, [subcategories, activeCategoryId, categories, trendingItems]);
+
+  const getTrendingItemHref = (item: any) => {
+    const city = String(selectedCity || "").trim();
+    const basePath = item.type === "category" 
+      ? `/category/${item.slug}` 
+      : `/category/${item.category?.slug || ""}`;
+      
+    const params = new URLSearchParams();
+    if (item.type === "subcategory") {
+      params.set("subcategoryId", item.id);
+    }
+    if (city) {
+      params.set("city", city);
+    }
+    const query = params.toString();
+    return query ? `${basePath}?${query}` : basePath;
+  };
 
   const buildCategoryHref = (catSlug: string, subId?: string) => {
     const city = String(selectedCity || "").trim();
@@ -432,6 +462,36 @@ export default function CategoryTabExplorer() {
         <div className="w-[28%] min-w-[85px] sm:min-w-[150px] md:w-[22%] md:min-w-[220px] md:max-w-[300px]">
           {/* Category Tab list sidebar: Responsive height & styling */}
           <div className="flex flex-col bg-white rounded-[12px] border border-slate-200 h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px] overflow-y-auto overflow-x-hidden no-scrollbar">
+            {trendingItems.length > 0 && (
+              <button
+                key="trending-tab"
+                onClick={() => setActiveCategoryId("trending")}
+                className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-2 md:px-5 border-b border-slate-200 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
+                  activeCategoryId === "trending"
+                    ? "bg-[#FEF2F2] text-[#EF4444] border-l-[#EF4444]"
+                    : "bg-white text-slate-800 border-l-transparent hover:bg-slate-50/30"
+                }`}
+              >
+                <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3.5 min-w-0 w-full text-center md:text-left">
+                  <div className={`h-9 w-9 sm:h-11 sm:w-11 md:h-[52px] md:w-[52px] rounded-full flex items-center justify-center shrink-0 transition-all ${
+                    activeCategoryId === "trending" ? "bg-white text-[#EF4444]" : "bg-white text-slate-500"
+                  }`}>
+                    <Flame className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 fill-current" />
+                  </div>
+                  <div className="flex flex-col min-w-0 w-full">
+                    <span className={`truncate text-[10px] sm:text-xs md:text-base font-bold transition-colors block ${
+                      activeCategoryId === "trending" ? "text-[#EF4444]" : "text-slate-700"
+                    }`}>
+                      Trending
+                    </span>
+                    <span className="hidden md:block text-[11px] text-slate-500 font-medium mt-1">
+                      8 Categories
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )}
+
             {displayedCategories.map((cat) => {
               const active = cat.id === activeCategoryId;
               const count = Math.max(subcategoryCountsMap[cat.id] || 0, 8);
@@ -478,13 +538,16 @@ export default function CategoryTabExplorer() {
           {activeSubcategories.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-[27px] h-full grid-rows-2">
               {activeSubcategories.map((sub, index) => {
-                const coverImage = sub.coverImage || getCategoryCoverImage(activeCategory?.slug || "", sub.name);
+                const coverImage = sub.coverImage || getCategoryCoverImage(sub.slug || activeCategory?.slug || "", sub.name);
                 const listingCount = getListingCount(sub.name);
+                const href = activeCategoryId === "trending"
+                  ? getTrendingItemHref(sub)
+                  : buildCategoryHref(activeCategory?.slug || "", sub.id);
 
                 return (
                   <Link
                     key={sub.id}
-                    href={buildCategoryHref(activeCategory?.slug || "", sub.id)}
+                    href={href}
                     className={`group flex-col relative overflow-hidden rounded-[12px] border border-slate-200 bg-white hover:-translate-y-1 transition-all duration-300 h-full ${
                       index >= 4 ? "hidden md:flex" : "flex"
                     }`}

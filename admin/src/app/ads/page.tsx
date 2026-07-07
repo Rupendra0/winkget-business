@@ -17,6 +17,10 @@ import {
 	updateHomePromoSectionConfig,
 	updateHomeSponsorSectionConfig,
 	updateHomeWellnessSectionConfig,
+	fetchHomeTrending,
+	updateHomeTrending,
+	fetchCategoryExplorer,
+	type AdminTrendingItem,
 } from "@/lib/adminApi";
 import { toErrorMessage } from "@/lib/adminClient";
 
@@ -241,6 +245,14 @@ function AdsPageContent() {
 	const isHomePlacementsView = viewId === "home-placements";
 	const isPartnersPromotionsView = viewId === "partners-promotions";
 	const isExploreCardsView = viewId === "product-promotions";
+	const isTrendingCategoriesView = viewId === "trending-categories";
+
+	const [trendingItems, setTrendingItems] = useState<AdminTrendingItem[]>(
+		Array.from({ length: 8 }, () => ({ type: "category", itemId: "" }))
+	);
+	const [allCategories, setAllCategories] = useState<{ id: string; name: string }[]>([]);
+	const [allSubcategories, setAllSubcategories] = useState<{ id: string; name: string; categoryName: string }[]>([]);
+	const [trendingSaving, setTrendingSaving] = useState(false);
 
 	const [form, setForm] = useState<HomePlacementsForm>(EMPTY_FORM);
 	const [promoForm, setPromoForm] = useState<PromoSectionForm>(
@@ -257,7 +269,7 @@ function AdsPageContent() {
 	);
 	const [promoCategories, setPromoCategories] = useState<PromoCategoryOption[]>([]);
 
-	const [loading, setLoading] = useState(isHomePlacementsView || isPartnersPromotionsView || isExploreCardsView);
+	const [loading, setLoading] = useState(isHomePlacementsView || isPartnersPromotionsView || isExploreCardsView || isTrendingCategoriesView);
 	const [saving, setSaving] = useState(false);
 	const [promoSaving, setPromoSaving] = useState(false);
 	const [exploreSaving, setExploreSaving] = useState(false);
@@ -400,6 +412,59 @@ function AdsPageContent() {
 		};
 	}, [isExploreCardsView]);
 
+	useEffect(() => {
+		if (!isTrendingCategoriesView) return;
+
+		let active = true;
+
+		const load = async () => {
+			setLoading(true);
+			setErrorText(null);
+
+			try {
+				const [explorerData, savedTrending] = await Promise.all([
+					fetchCategoryExplorer(),
+					fetchHomeTrending(),
+				]);
+
+				if (!active) return;
+
+				setAllCategories(
+					explorerData.categories.map((c) => ({
+						id: c.id,
+						name: c.name,
+					}))
+				);
+				
+				setAllSubcategories(
+					explorerData.subcategories.map((s) => ({
+						id: s.id,
+						name: s.name,
+						categoryName: s.category?.name || "",
+					}))
+				);
+
+				const initialItems = [...savedTrending];
+				while (initialItems.length < 8) {
+					initialItems.push({ type: "category", itemId: "" });
+				}
+				setTrendingItems(initialItems.slice(0, 8));
+			} catch (loadError) {
+				if (!active) return;
+				setErrorText(toErrorMessage(loadError, "Failed to load trending categories configuration"));
+			} finally {
+				if (!active) return;
+				setLoading(false);
+			}
+		};
+
+		void load();
+
+		return () => {
+			active = false;
+		};
+	}, [isTrendingCategoriesView]);
+
 	const hasInvalidInput = useMemo(
 		() => BANNER_SPECS.some((item) => !isValidMedia(form[item.key])),
 		[form]
@@ -475,6 +540,31 @@ function AdsPageContent() {
 		setSponsorUploadErrors((prev) => ({ ...prev, [cardId]: undefined }));
 		setMessage(null);
 		setErrorText(null);
+	};
+
+	const handleSaveTrending = async () => {
+		if (!isTrendingCategoriesView) return;
+
+		setErrorText(null);
+		setMessage(null);
+		setTrendingSaving(true);
+
+		try {
+			const emptySlots = trendingItems.some(item => !item.itemId);
+			if (emptySlots) {
+				setErrorText("Please select a category or subcategory for all 8 slots.");
+				setTrendingSaving(false);
+				return;
+			}
+
+			const updated = await updateHomeTrending({ trendingItems });
+			setTrendingItems(updated);
+			setMessage("Trending categories updated successfully!");
+		} catch (saveError) {
+			setErrorText(toErrorMessage(saveError, "Failed to save trending categories"));
+		} finally {
+			setTrendingSaving(false);
+		}
 	};
 
 	const handleSave = async () => {
@@ -1018,9 +1108,9 @@ function AdsPageContent() {
 		wellnessDeletingCardId !== null ||
 		sponsorUploadingCardId !== null ||
 		sponsorDeletingCardId !== null ||
-		(isHomePlacementsView ? saving : isPartnersPromotionsView ? promoSaving : exploreSaving);
+		(isHomePlacementsView ? saving : isPartnersPromotionsView ? promoSaving : isTrendingCategoriesView ? trendingSaving : exploreSaving);
 
-	const showSaveButton = isHomePlacementsView || isPartnersPromotionsView || isExploreCardsView;
+	const showSaveButton = isHomePlacementsView || isPartnersPromotionsView || isExploreCardsView || isTrendingCategoriesView;
 
 	return (
 		<AdminShell title="Homepage Layout" subtitle="Manage homepage banners and category-linked cards.">
@@ -1031,7 +1121,9 @@ function AdsPageContent() {
 						? "Configure the dynamic promotional card section displayed below homepage categories."
 						: isExploreCardsView
 							? "Configure Explore tiles, Health & Wellness tall cards, and Brand Sponsor cards shown below recent vendors."
-							: "Upload and preview homepage banner images in the same 40/30/30 layout used on the website."
+							: isTrendingCategoriesView
+								? "Configure exactly 8 categories or subcategories to be shown in the Trending tab on the home page Category Grid."
+								: "Upload and preview homepage banner images in the same 40/30/30 layout used on the website."
 				}
 				actions={
 					showSaveButton ? (
@@ -1048,6 +1140,11 @@ function AdsPageContent() {
 									return;
 								}
 
+								if (isTrendingCategoriesView) {
+									void handleSaveTrending();
+									return;
+								}
+
 								void handleSaveExploreSections();
 							}}
 							disabled={saveDisabled}
@@ -1061,14 +1158,18 @@ function AdsPageContent() {
 									? promoSaving
 										? "Saving..."
 										: "Save Category Link Cards"
-									: exploreSaving
-										? "Saving..."
-										: "Save Explore + Wellness + Sponsors"}
+									: isTrendingCategoriesView
+										? trendingSaving
+											? "Saving..."
+											: "Save Trending Categories"
+										: exploreSaving
+											? "Saving..."
+											: "Save Explore + Wellness + Sponsors"}
 						</button>
 					) : undefined
 				}
 			>
-				{!isHomePlacementsView && !isPartnersPromotionsView && !isExploreCardsView ? (
+				{!isHomePlacementsView && !isPartnersPromotionsView && !isExploreCardsView && !isTrendingCategoriesView ? (
 					<section className="rounded-xl border border-(--border) bg-(--surface-muted) p-4">
 						<p className="text-sm text-(--text-soft)">
 							{activeItem?.label || "This placement"} module is ready for API integration.
@@ -1627,6 +1728,87 @@ function AdsPageContent() {
 											);
 										})}
 									</div>
+								</div>
+							</section>
+						) : null}
+
+						{isTrendingCategoriesView ? (
+							<section className="rounded-xl border border-(--border) bg-(--surface) p-6 space-y-6">
+								<div className="flex items-center justify-between">
+									<div>
+										<h3 className="text-base font-semibold text-(--text-strong)">Trending Categories Slots</h3>
+										<p className="text-xs text-slate-500 mt-1">Configure exactly 8 categories or subcategories to be shown in the Trending tab on the home page Category Grid.</p>
+									</div>
+								</div>
+								
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+									{trendingItems.map((slot, index) => {
+										return (
+											<div key={index} className="border border-slate-200 rounded-xl p-4 bg-[#F9FAFB] space-y-3">
+												<div className="flex items-center justify-between">
+													<span className="text-sm font-semibold text-slate-800">Slot {index + 1}</span>
+												</div>
+												<div className="grid grid-cols-3 gap-3">
+													<div className="col-span-1">
+														<label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Type</label>
+														<select
+															value={slot.type}
+															onChange={(e) => {
+																const next = [...trendingItems];
+																next[index] = {
+																	type: e.target.value as "category" | "subcategory",
+																	itemId: "",
+																};
+																setTrendingItems(next);
+															}}
+															className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-500 outline-none"
+														>
+															<option value="category">Category</option>
+															<option value="subcategory">Subcategory</option>
+														</select>
+													</div>
+													<div className="col-span-2">
+														<label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Select Item</label>
+														{slot.type === "category" ? (
+															<select
+																value={slot.itemId}
+																onChange={(e) => {
+																	const next = [...trendingItems];
+																	next[index].itemId = e.target.value;
+																	setTrendingItems(next);
+																}}
+																className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-500 outline-none"
+															>
+																<option value="">-- Choose Category --</option>
+																{allCategories.map((cat) => (
+																	<option key={cat.id} value={cat.id}>
+																		{cat.name}
+																	</option>
+																))}
+															</select>
+														) : (
+															<select
+																value={slot.itemId}
+																onChange={(e) => {
+																	const next = [...trendingItems];
+																	next[index].itemId = e.target.value;
+																	setTrendingItems(next);
+																}}
+																className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold focus:border-blue-500 outline-none"
+															>
+																<option value="">-- Choose Subcategory --</option>
+																{allSubcategories.map((sub) => (
+																	<option key={sub.id} value={sub.id}>
+																		{sub.name} ({sub.categoryName})
+																	</option>
+																))}
+															</select>
+														)}
+													</div>
+												</div>
+											</div>
+										);
+									})}
 								</div>
 							</section>
 						) : null}

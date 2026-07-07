@@ -25,6 +25,9 @@ import {
   type AdminCategory,
   type AdminSubcategory,
   type AdminDirectoryUser,
+  fetchHomeTrending,
+  updateHomeTrending,
+  type AdminTrendingItem,
 } from "@/lib/adminClient";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -520,4 +523,5 @@ export function createSecondaryNode(parentSubcategoryId: string, label: string):
   };
 }
 
-export type { AdminCategory, AdminSubcategory, AdminDirectoryUser };
+export { fetchHomeTrending, updateHomeTrending };
+export type { AdminCategory, AdminSubcategory, AdminDirectoryUser, AdminTrendingItem };

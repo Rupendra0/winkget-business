@@ -57,6 +57,7 @@ const HOME_PROMO_SECTION_KEY = "home-promo-cards";
 const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
 const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
 const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
+const HOME_TRENDING_KEY = "home-trending";
 const HOME_PROMO_CARD_COUNT = 5;
 const HOME_EXPLORE_CARD_COUNT = 5;
 const HOME_WELLNESS_CARD_COUNT = 5;
@@ -2122,6 +2123,65 @@ router.put("/admin/ads/home-placements", requireAdmin, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to update home placements", error: error.message });
+  }
+});
+
+router.get("/admin/ads/home-trending", requireAdmin, async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
+    const trendingItems = placement?.trendingItems || [];
+    return res.status(200).json({
+      ok: true,
+      trendingItems,
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load trending categories", error: error.message });
+  }
+});
+
+router.put("/admin/ads/home-trending", requireAdmin, async (req, res) => {
+  try {
+    const itemsInput = req.body?.trendingItems || [];
+    if (!Array.isArray(itemsInput)) {
+      return res.status(400).json({ ok: false, message: "trendingItems must be an array" });
+    }
+    const formattedItems = [];
+    for (const item of itemsInput) {
+      if (!item.type || !["category", "subcategory"].includes(item.type)) {
+        return res.status(400).json({ ok: false, message: "Each item must have a valid type (category or subcategory)" });
+      }
+      if (!item.itemId) {
+        return res.status(400).json({ ok: false, message: "Each item must have a valid itemId" });
+      }
+      formattedItems.push({
+        type: item.type,
+        itemId: item.itemId,
+      });
+    }
+
+    const placement = await HomePlacement.findOneAndUpdate(
+      { key: HOME_TRENDING_KEY },
+      {
+        $set: {
+          key: HOME_TRENDING_KEY,
+          trendingItems: formattedItems,
+          updatedBy: req.adminUser._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    ).lean();
+
+    return res.status(200).json({
+      ok: true,
+      message: "Trending categories updated successfully",
+      trendingItems: placement.trendingItems || [],
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to update trending categories", error: error.message });
   }
 });
 

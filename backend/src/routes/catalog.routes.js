@@ -18,6 +18,7 @@ const HOME_PROMO_SECTION_KEY = "home-promo-cards";
 const HOME_EXPLORE_SECTION_KEY = "home-explore-cards";
 const HOME_WELLNESS_SECTION_KEY = "home-wellness-cards";
 const HOME_SPONSOR_SECTION_KEY = "home-sponsor-cards";
+const HOME_TRENDING_KEY = "home-trending";
 const HOME_PROMO_CARD_COUNT = 5;
 const HOME_EXPLORE_CARD_COUNT = 5;
 const HOME_WELLNESS_CARD_COUNT = 5;
@@ -486,6 +487,66 @@ router.get("/home-placements", withPublicGetCache(async (_req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load home placements", error: error.message });
+  }
+}));
+
+router.get("/home-trending", withPublicGetCache(async (_req, res) => {
+  try {
+    const placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
+    const trendingItems = placement?.trendingItems || [];
+    
+    const catIds = trendingItems.filter(item => item.type === "category").map(item => item.itemId);
+    const subIds = trendingItems.filter(item => item.type === "subcategory").map(item => item.itemId);
+    
+    const [categories, subcategories] = await Promise.all([
+      Category.find({ _id: { $in: catIds }, isActive: { $ne: false } }).lean(),
+      Subcategory.find({ _id: { $in: subIds }, isActive: { $ne: false } }).populate("category").lean(),
+    ]);
+
+    const categoryMap = new Map(categories.map(c => [String(c._id), c]));
+    const subcategoryMap = new Map(subcategories.map(s => [String(s._id), s]));
+
+    const populatedItems = [];
+    for (const item of trendingItems) {
+      const idStr = String(item.itemId);
+      if (item.type === "category") {
+        const cat = categoryMap.get(idStr);
+        if (cat) {
+          populatedItems.push({
+            id: String(cat._id),
+            type: "category",
+            name: cat.name,
+            slug: cat.slug,
+            icon: cat.icon || "",
+            coverImage: cat.image || "",
+          });
+        }
+      } else if (item.type === "subcategory") {
+        const sub = subcategoryMap.get(idStr);
+        if (sub) {
+          populatedItems.push({
+            id: String(sub._id),
+            type: "subcategory",
+            name: sub.name,
+            slug: sub.slug,
+            icon: sub.icon || "",
+            coverImage: sub.coverImage || "",
+            category: sub.category ? {
+              id: String(sub.category._id),
+              name: sub.category.name,
+              slug: sub.category.slug,
+            } : null,
+          });
+        }
+      }
+    }
+
+    return res.status(200).json({
+      ok: true,
+      items: populatedItems,
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to load trending items", error: error.message });
   }
 }));
 

@@ -172,6 +172,11 @@ export type AdminHomePlacements = {
   updatedAt?: string;
 };
 
+export type AdminTrendingItem = {
+  type: "category" | "subcategory";
+  itemId: string;
+};
+
 export type AdminHomePromoCard = {
   cardId: string;
   order: number;
@@ -770,6 +775,26 @@ export async function deleteCityLocality(cityId: string, localityId: string): Pr
   });
 
   return payload.city;
+}
+
+export type HomeTrendingResponse = {
+  ok: boolean;
+  trendingItems: AdminTrendingItem[];
+};
+
+export async function fetchHomeTrending(): Promise<AdminTrendingItem[]> {
+  const payload = await requestJson<HomeTrendingResponse>("/api/admin/ads/home-trending");
+  return payload.trendingItems || [];
+}
+
+export async function updateHomeTrending(input: {
+  trendingItems: AdminTrendingItem[];
+}): Promise<AdminTrendingItem[]> {
+  const payload = await requestJson<HomeTrendingResponse>("/api/admin/ads/home-trending", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return payload.trendingItems;
 }
 
 export { BACKEND_URL, toErrorMessage };

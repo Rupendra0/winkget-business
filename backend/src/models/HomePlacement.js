@@ -16,6 +16,16 @@ const homePromoCardSchema = new Schema(
   }
 );
 
+const homeTrendingItemSchema = new Schema(
+  {
+    type: { type: String, enum: ["category", "subcategory"], required: true },
+    itemId: { type: Schema.Types.ObjectId, required: true },
+  },
+  {
+    _id: false,
+  }
+);
+
 const homePlacementSchema = new Schema(
   {
     key: { type: String, required: true, trim: true, lowercase: true, unique: true },
@@ -32,6 +42,7 @@ const homePlacementSchema = new Schema(
     wellnessCards: [homePromoCardSchema],
     sponsorHeading: { type: String, trim: true },
     sponsorCards: [homePromoCardSchema],
+    trendingItems: [homeTrendingItemSchema],
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
