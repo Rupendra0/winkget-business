@@ -22,7 +22,13 @@ import {
 	fetchCategoryExplorer,
 	type AdminTrendingItem,
 } from "@/lib/adminApi";
-import { toErrorMessage } from "@/lib/adminClient";
+import {
+	fetchCategories,
+	fetchSubcategories,
+	toErrorMessage,
+	type AdminCategory,
+	type AdminSubcategory,
+} from "@/lib/adminClient";
 
 type BannerKey = "leftImage" | "middleImage" | "rightImage";
 
@@ -428,9 +434,13 @@ function AdsPageContent() {
 				const savedTrending = await fetchHomeTrending();
 				console.log("Trending View load: savedTrending fetched successfully =", savedTrending);
 
-				console.log("Trending View load: Fetching category explorer data...");
-				const explorerData = await fetchCategoryExplorer();
-				console.log("Trending View load: explorerData fetched successfully =", explorerData);
+				console.log("Trending View load: Fetching categories list...");
+				const categoriesList = await fetchCategories({ includeInactive: true });
+				console.log("Trending View load: categories fetched successfully =", categoriesList.length);
+
+				console.log("Trending View load: Fetching subcategories list...");
+				const subcategoriesList = await fetchSubcategories({ includeInactive: true });
+				console.log("Trending View load: subcategories fetched successfully =", subcategoriesList.length);
 
 				if (!active) {
 					console.log("Trending View load: Component unmounted, ignoring results.");
@@ -438,14 +448,14 @@ function AdsPageContent() {
 				}
 
 				setAllCategories(
-					explorerData.categories.map((c) => ({
+					categoriesList.map((c: AdminCategory) => ({
 						id: c.id,
 						name: c.name,
 					}))
 				);
 				
 				setAllSubcategories(
-					explorerData.subcategories.map((s) => ({
+					subcategoriesList.map((s: AdminSubcategory) => ({
 						id: s.id,
 						name: s.name,
 						categoryName: s.category?.name || "",
