@@ -437,9 +437,11 @@ function AdsPageContent() {
 			setErrorText(null);
 
 			try {
-				const savedTrendingResponse = await fetchHomeTrending();
-				const categoriesList = await fetchCategories({ includeInactive: true });
-				const subcategoriesList = await fetchSubcategories({ includeInactive: true });
+				const [savedTrendingResponse, categoriesList, subcategoriesList] = await Promise.all([
+					fetchHomeTrending(),
+					fetchCategories({ includeInactive: true }),
+					fetchSubcategories({ includeInactive: true }),
+				]);
 
 				if (!active) return;
 
