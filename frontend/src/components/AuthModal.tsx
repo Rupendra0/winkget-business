@@ -170,7 +170,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <section className="w-full max-w-xl rounded-3xl bg-white border border-white shadow-2xl p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+      <section className="w-full max-w-xl rounded-3xl bg-white border border-white shadow-2xl p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
         
         {/* Close Button */}
         <button
