@@ -437,24 +437,11 @@ function AdsPageContent() {
 			setErrorText(null);
 
 			try {
-				console.log("Trending View load: Start loading...");
-				
-				console.log("Trending View load: Fetching home trending config...");
 				const savedTrendingResponse = await fetchHomeTrending();
-				console.log("Trending View load: savedTrendingResponse fetched successfully =", savedTrendingResponse);
-
-				console.log("Trending View load: Fetching categories list...");
 				const categoriesList = await fetchCategories({ includeInactive: true });
-				console.log("Trending View load: categories fetched successfully =", categoriesList.length);
-
-				console.log("Trending View load: Fetching subcategories list...");
 				const subcategoriesList = await fetchSubcategories({ includeInactive: true });
-				console.log("Trending View load: subcategories fetched successfully =", subcategoriesList.length);
 
-				if (!active) {
-					console.log("Trending View load: Component unmounted, ignoring results.");
-					return;
-				}
+				if (!active) return;
 
 				setAllCategories(
 					categoriesList.map((c: AdminCategory) => ({
@@ -478,7 +465,6 @@ function AdsPageContent() {
 				setTrendingItems(initialItems.slice(0, 8));
 				setTrendingIcon(savedTrendingResponse.icon || "");
 			} catch (loadError) {
-				console.error("Trending View load: Error =", loadError);
 				if (!active) return;
 				setErrorText(toErrorMessage(loadError, "Failed to load trending categories configuration"));
 			} finally {
@@ -1243,7 +1229,12 @@ function AdsPageContent() {
 					) : undefined
 				}
 			>
-				{!isHomePlacementsView && !isPartnersPromotionsView && !isExploreCardsView && !isTrendingCategoriesView ? (
+				{loading ? (
+					<div className="flex flex-col items-center justify-center p-12 border border-(--border) bg-(--surface) rounded-xl space-y-4 shadow-sm">
+						<div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+						<p className="text-sm font-medium text-slate-500">Loading placement configuration...</p>
+					</div>
+				) : !isHomePlacementsView && !isPartnersPromotionsView && !isExploreCardsView && !isTrendingCategoriesView ? (
 					<section className="rounded-xl border border-(--border) bg-(--surface-muted) p-4">
 						<p className="text-sm text-(--text-soft)">
 							{activeItem?.label || "This placement"} module is ready for API integration.
