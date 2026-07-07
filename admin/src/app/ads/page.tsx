@@ -422,12 +422,19 @@ function AdsPageContent() {
 			setErrorText(null);
 
 			try {
+				console.log("Trending View load: Start loading...");
 				const [explorerData, savedTrending] = await Promise.all([
 					fetchCategoryExplorer(),
 					fetchHomeTrending(),
 				]);
 
-				if (!active) return;
+				console.log("Trending View load: explorerData =", explorerData);
+				console.log("Trending View load: savedTrending =", savedTrending);
+
+				if (!active) {
+					console.log("Trending View load: Component unmounted, ignoring results.");
+					return;
+				}
 
 				setAllCategories(
 					explorerData.categories.map((c) => ({
@@ -450,6 +457,7 @@ function AdsPageContent() {
 				}
 				setTrendingItems(initialItems.slice(0, 8));
 			} catch (loadError) {
+				console.error("Trending View load: Error =", loadError);
 				if (!active) return;
 				setErrorText(toErrorMessage(loadError, "Failed to load trending categories configuration"));
 			} finally {
@@ -1734,9 +1742,22 @@ function AdsPageContent() {
 
 						{isTrendingCategoriesView ? (
 							<section className="rounded-xl border border-(--border) bg-(--surface) p-6 space-y-6">
+								{errorText ? (
+									<p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{errorText}</p>
+								) : null}
+
+								{message ? (
+									<p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{message}</p>
+								) : null}
+
 								<div className="flex items-center justify-between">
 									<div>
-										<h3 className="text-base font-semibold text-(--text-strong)">Trending Categories Slots</h3>
+										<h3 className="text-base font-semibold text-(--text-strong)">
+											Trending Categories Slots
+											<span className="ml-2 text-xs font-normal text-slate-400">
+												({allCategories.length} categories, {allSubcategories.length} subcategories loaded)
+											</span>
+										</h3>
 										<p className="text-xs text-slate-500 mt-1">Configure exactly 8 categories or subcategories to be shown in the Trending tab on the home page Category Grid.</p>
 									</div>
 								</div>
