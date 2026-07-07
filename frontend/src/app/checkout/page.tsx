@@ -20,6 +20,7 @@ import {
 import { buildProductSlug } from "@/data/productSlug";
 import { AUTH_BACKEND_URL, fetchCurrentUser, type AuthUser } from "@/lib/authClient";
 import { buildAuthHref } from "@/lib/authRedirect";
+import AuthModal from "@/components/AuthModal";
 import {
   computeCheckoutTotals,
   readAddresses,
@@ -99,6 +100,7 @@ export default function CheckoutPage() {
   const mode = (searchParams.get("mode") === "buy-now" ? "buy-now" : "cart") as CheckoutMode;
   const currentPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -402,12 +404,13 @@ export default function CheckoutPage() {
                     <div className="mt-3 bg-blue-50 p-3">
                       <p className="text-sm font-semibold text-blue-900">Login required to place order</p>
                       <p className="mt-1 text-xs text-blue-800">Please login or signup before continuing to payment.</p>
-                      <Link
-                        href={buildAuthHref(currentPath)}
+                      <button
+                        type="button"
+                        onClick={() => setIsAuthModalOpen(true)}
                         className="mt-3 inline-flex items-center rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                       >
                         Login / Signup
-                      </Link>
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -824,12 +827,13 @@ export default function CheckoutPage() {
             </div>
             
             {!user ? (
-              <Link
-                href={buildAuthHref(currentPath)}
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
                 className="inline-flex items-center justify-center rounded bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700 active:scale-95 leading-none"
               >
                 Login
-              </Link>
+              </button>
             ) : (
               <button
                 type="button"
@@ -843,6 +847,11 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </main>
   );
 }

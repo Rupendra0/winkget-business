@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type { ListingProfile, StorePageData, StoreProduct } from "@/data/listingData";
 import { buildProductSlug } from "@/data/productSlug";
+import AuthModal from "@/components/AuthModal";
 import Footer from "@/components/Footer";
 import RestaurantMarketplacePage from "@/components/RestaurantMarketplacePage";
 import { fetchCurrentUser, type AuthUser } from "@/lib/authClient";
@@ -256,6 +257,7 @@ export default function ProductListingPage({
     reviews: Math.max(0, Number(profile.reviews || 0)),
   });
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [viewerHasReviewed, setViewerHasReviewed] = useState(false);
   const [reviewAuthor, setReviewAuthor] = useState("");
@@ -2101,12 +2103,13 @@ export default function ProductListingPage({
                           Share your experience
                         </p>
                       </div>
-                      <Link
-                        href="/auth"
+                      <button
+                        type="button"
+                        onClick={() => setIsAuthModalOpen(true)}
                         className="inline-flex h-9 px-6 items-center justify-center rounded-full border border-[#2563eb] bg-white text-xs font-semibold text-blue-600 hover:bg-blue-50/50 transition duration-150"
                       >
                         Login
-                      </Link>
+                      </button>
                     </div>
                   ) : hasAlreadyReviewed ? (
                     <div className="space-y-3 w-full text-center">
@@ -2316,6 +2319,11 @@ export default function ProductListingPage({
           </div>
         ) : null}
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
       <div id="listing-footer" className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
         <Footer />

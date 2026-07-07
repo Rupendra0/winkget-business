@@ -23,6 +23,7 @@ import {
   toggleWishlist,
 } from "@/lib/shopStorage";
 import ReviewModal from "@/components/ReviewModal";
+import AuthModal from "@/components/AuthModal";
 
 type ProductVariant = {
   size?: string;
@@ -90,6 +91,7 @@ export default function ProductDetailPageClient({
   const [productReviews, setProductReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [matchedOrder, setMatchedOrder] = useState<any>(null);
   const [hasDeliveredOrder, setHasDeliveredOrder] = useState(false);
 
@@ -690,6 +692,10 @@ export default function ProductDetailPageClient({
   }, [currentUser, product.id]);
 
   const handleWriteReviewClick = () => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     if (hasDeliveredOrder && matchedOrder) {
       setIsReviewModalOpen(true);
     }
@@ -2667,6 +2673,11 @@ export default function ProductDetailPageClient({
           }}
         />
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 }

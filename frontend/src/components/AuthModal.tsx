@@ -1,0 +1,373 @@
+"use client";
+
+import React, { useState } from "react";
+import { Apple, Chrome, Lock, Mail, Store, User, Phone, X } from "lucide-react";
+import { setStoredAuthToken } from "@/lib/authClient";
+
+type AuthMode = "signin" | "signup";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const VENDOR_REGISTRATION_URL = `${(process.env.NEXT_PUBLIC_VENDOR_WEBSITE_URL || "http://localhost:3002").replace(/\/$/, "")}/register`;
+const PHONE_REGEX = /^[0-9]{10}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+
+const RequiredMark = () => <span className="text-red-500">*</span>;
+
+type AuthModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+};
+
+export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+  const [mode, setMode] = useState<AuthMode>("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const logFailure = async (message: string, metadata?: Record<string, unknown>) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/dev-logs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "frontend-auth-modal",
+          type: "failure",
+          role: "customer",
+          message,
+          metadata,
+        }),
+      });
+    } catch {
+      // Ignore logging errors on UI.
+    }
+  };
+
+  const handlePrimaryAuth = async () => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    if (!password.trim()) {
+      const message = "Password is required.";
+      setError(message);
+      await logFailure(message, { mode });
+      setLoading(false);
+      return;
+    }
+
+    if (mode === "signin" && !identifier.trim()) {
+      const message = "Identifier is required for login.";
+      setError(message);
+      await logFailure(message, { mode });
+      setLoading(false);
+      return;
+    }
+
+    if (mode === "signup") {
+      if (!name.trim()) {
+        const message = "Name is required for signup.";
+        setError(message);
+        await logFailure(message, { mode });
+        setLoading(false);
+        return;
+      }
+
+      if (!email.trim() && !phone.trim()) {
+        const message = "Enter email or phone for signup.";
+        setError(message);
+        await logFailure(message, { mode });
+        setLoading(false);
+        return;
+      }
+
+      if (email.trim() && !EMAIL_REGEX.test(email.trim().toLowerCase())) {
+        const message = "Email format is invalid.";
+        setError(message);
+        await logFailure(message, { mode, email });
+        setLoading(false);
+        return;
+      }
+
+      const normalizedPhone = normalizePhone(phone);
+      if (phone.trim() && !PHONE_REGEX.test(normalizedPhone)) {
+        const message = "Phone number must be exactly 10 digits.";
+        setError(message);
+        await logFailure(message, { mode, phone });
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (mode === "signup" && password !== confirmPassword) {
+      const message = "Password and confirm password must match.";
+      setError(message);
+      await logFailure(message, { mode });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const endpoint = mode === "signin" ? "/api/auth/login" : "/api/auth/signup";
+      const body =
+        mode === "signin"
+          ? { identifier: identifier.trim(), password }
+          : {
+              name: name.trim(),
+              email: email.trim().toLowerCase(),
+              phone: normalizePhone(phone),
+              password,
+            };
+
+      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        const message = payload.message || "Authentication failed";
+        setError(message);
+        await logFailure(message, { mode });
+        return;
+      }
+
+      setStoredAuthToken(payload.token);
+      setSuccess(mode === "signin" ? "Login successful." : "Account created successfully.");
+      window.dispatchEvent(new Event("auth:changed"));
+      if (onSuccess) {
+        onSuccess();
+      }
+      onClose();
+    } catch (authError) {
+      const message = authError instanceof Error ? authError.message : "Authentication failed";
+      setError(message);
+      await logFailure(message, { mode });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProviderSignIn = async (provider: "google" | "apple") => {
+    const message = `${provider} sign-in will be enabled from separated backend OAuth flow.`;
+    setError(message);
+    setSuccess(null);
+    await logFailure(message, { provider, mode });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <section className="w-full max-w-xl rounded-3xl bg-white border border-white shadow-2xl p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+
+        <div className="mb-5 text-center">
+          <div className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold tracking-wide text-blue-800">
+            Winkget Business Auth
+          </div>
+          <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 leading-tight font-outfit">
+            Login or create your account
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Anyone can login/signup as a user customer from this form.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-2xl bg-slate-100 p-1">
+          <button
+            type="button"
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+              mode === "signin" ? "bg-white text-slate-900 shadow" : "text-slate-600"
+            }`}
+            onClick={() => setMode("signin")}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+              mode === "signup" ? "bg-white text-slate-900 shadow" : "text-slate-600"
+            }`}
+            onClick={() => setMode("signup")}
+          >
+            Signup
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {mode === "signup" ? (
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Full name <RequiredMark />
+              </span>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+                <User size={16} className="text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+            </label>
+          ) : null}
+
+          {mode === "signin" ? (
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Email or phone number <RequiredMark />
+              </span>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+                <Mail size={16} className="text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Enter email or phone number"
+                  className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                />
+              </div>
+            </label>
+          ) : (
+            <>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+                  <Mail size={16} className="text-slate-500" />
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Phone number</span>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+                  <Phone size={16} className="text-slate-500" />
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit phone number"
+                    className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                    value={phone}
+                    onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                    inputMode="numeric"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                  />
+                </div>
+              </label>
+              <p className="text-xs text-slate-500">At least one of email or phone is required for signup.</p>
+            </>
+          )}
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              Password <RequiredMark />
+            </span>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+              <Lock size={16} className="text-slate-500" />
+              <input
+                type="password"
+                placeholder="Enter password"
+                className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+          </label>
+
+          {mode === "signup" ? (
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                Confirm Password <RequiredMark />
+              </span>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus-within:border-blue-600">
+                <Lock size={16} className="text-slate-500" />
+                <input
+                  type="password"
+                  placeholder="Confirm password"
+                  className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+              </div>
+            </label>
+          ) : null}
+
+          {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div> : null}
+          {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{success}</div> : null}
+
+          <button
+            type="button"
+            className="w-full rounded-xl bg-blue-600 text-white py-3 text-sm font-semibold hover:bg-blue-700 transition"
+            onClick={handlePrimaryAuth}
+            disabled={loading}
+          >
+            {loading ? "Please wait..." : mode === "signin" ? "Login" : "Create account"}
+          </button>
+
+          <button
+            type="button"
+            className="w-full rounded-xl border border-orange-200 bg-orange-50 text-orange-800 py-3 text-sm font-semibold hover:bg-orange-100 transition flex items-center justify-center gap-2"
+            onClick={() => window.location.assign(VENDOR_REGISTRATION_URL)}
+          >
+            <Store size={16} /> Register as Vendor / Shopkeeper
+          </button>
+        </div>
+
+        <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
+          <div className="h-px flex-1 bg-slate-200" />
+          OR CONTINUE WITH
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            onClick={() => handleProviderSignIn("google")}
+            disabled={loading}
+          >
+            <Chrome size={18} className="text-rose-500" />
+            Sign in with Google
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            onClick={() => handleProviderSignIn("apple")}
+            disabled={loading}
+          >
+            <Apple size={18} />
+            Sign in with Apple
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
