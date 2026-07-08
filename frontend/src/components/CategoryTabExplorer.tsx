@@ -623,7 +623,7 @@ export default function CategoryTabExplorer() {
               <button
                 type="button"
                 onClick={() => setIsOpenAllModal(false)}
-                className="h-8 w-8 rounded-full border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-550 hover:text-slate-705 transition font-bold"
+                className="h-8 w-8 rounded-full border-[0.5px] border-slate-200 hover:bg-slate-50/50 flex items-center justify-center text-slate-550 hover:text-slate-705 transition font-bold"
               >
                 &times;
               </button>
@@ -636,7 +636,7 @@ export default function CategoryTabExplorer() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search categories..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-300 focus:bg-white transition"
+                className="w-full rounded-xl border-[0.5px] border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-300 transition"
               />
             </div>
 
@@ -650,13 +650,13 @@ export default function CategoryTabExplorer() {
                       setActiveCategoryId(cat.id);
                       setIsOpenAllModal(false);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-xl border-[0.5px] text-left transition-all ${
                       cat.id === activeCategoryId
-                        ? "border-blue-500 bg-blue-50/30 text-blue-600 shadow-sm"
-                        : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 text-slate-700"
+                        ? "border-blue-500 bg-transparent text-blue-600"
+                        : "border-slate-200 bg-transparent hover:border-slate-350 text-slate-700"
                     }`}
                   >
-                    <div className="h-11 w-11 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
+                    <div className="h-11 w-11 rounded-lg bg-transparent flex items-center justify-center shrink-0">
                       {cat.icon && cat.icon !== "none" ? (
                         <img src={cat.icon} alt="" className="h-10 w-10 object-contain" />
                       ) : (
