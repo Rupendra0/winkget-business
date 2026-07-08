@@ -684,7 +684,7 @@ export default function Navbar() {
             className={`mx-0.5 flex items-center justify-between transition-[max-height,opacity,padding] duration-200 ease-out md:mx-0 ${
               isMobileSearchOnly
                 ? "max-h-0 overflow-hidden py-0 opacity-0 md:max-h-16 md:overflow-visible md:py-2 md:opacity-100"
-                : "max-h-20 pt-1 pb-1 opacity-100 md:max-h-16 md:py-2"
+                : "max-h-24 pt-2.5 pb-2.5 opacity-100 md:max-h-16 md:py-2"
             }`}
           >
           {/* Logo */}
@@ -693,19 +693,6 @@ export default function Navbar() {
               <span className="text-xs font-bold tracking-[0.2px] text-slate-900 leading-none">Winkget</span>
               <span className="text-xl font-bold tracking-[0.2px] text-orange-600 leading-none mt-0.5">Business</span>
             </Link>
-            <button
-              type="button"
-              onClick={() => setCityMenuOpen((prev) => !prev)}
-              disabled={loadingCities || cityOptions.length === 0}
-              className="inline-flex min-w-0 items-start gap-1 bg-transparent text-left outline-none focus:outline-none disabled:opacity-60 md:hidden max-w-[170px]"
-              aria-label="Current location"
-            >
-              <MapPin size={15} className="text-blue-600 shrink-0" />
-              <span className="text-[11px] font-normal leading-tight text-slate-800 whitespace-normal break-words">
-                {loadingCities ? "Locating..." : getFullLocationString(selectedCity)}
-              </span>
-              <ChevronRight size={12} className="text-slate-400 shrink-0" />
-            </button>
           </div>
 
           {/* Center - Location and Search */}
@@ -882,42 +869,66 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu */}
-          <div className="md:hidden shrink-0 flex items-center gap-1.5">
+          <div className="md:hidden shrink-0 flex items-center gap-2">
             <Link
               href="/wishlist"
-              className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Wishlist"
             >
-              <Heart size={17} strokeWidth={2.4} />
+              <Heart size={19} strokeWidth={2.4} />
               <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-600 px-1 text-[8px] font-bold text-white">
                 {wishlistCount}
               </span>
             </Link>
             <Link
               href="/cart"
-              className="relative inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label="Cart"
             >
-              <ShoppingCart size={18} strokeWidth={2.4} />
+              <ShoppingCart size={20} strokeWidth={2.4} />
               <span className="absolute -right-1 -top-1 inline-flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-blue-600 px-1 text-[8px] font-bold text-white">
                 {cartCount}
               </span>
             </Link>
             <Link
               href={user ? "/profile" : buildAuthHref(currentPath)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
+              className="inline-flex h-9 w-9 items-center justify-center rounded border border-orange-100 bg-white text-orange-600 hover:bg-orange-50 btn-hover shadow-sm"
               aria-label={user ? "Profile" : "Login"}
             >
-              <Menu size={19} strokeWidth={2.4} />
+              <Menu size={20} strokeWidth={2.4} />
             </Link>
           </div>
         </div>
 
-        <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-1 pt-1" : "pb-1"}`}>
+        {/* Mobile Location Selector Row */}
+        <div
+          className={`mx-0.5 md:hidden transition-all duration-200 overflow-hidden ${
+            isMobileSearchOnly
+              ? "max-h-0 opacity-0 pb-0 pt-0"
+              : "max-h-14 opacity-100 pb-2.5 pt-1"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setCityMenuOpen((prev) => !prev)}
+            disabled={loadingCities || cityOptions.length === 0}
+            className="flex w-full items-center justify-between bg-transparent text-left outline-none focus:outline-none disabled:opacity-60"
+            aria-label="Current location"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin size={17} className="text-blue-600 shrink-0" />
+              <span className="text-[14px] font-medium leading-tight text-slate-800 truncate">
+                {loadingCities ? "Locating..." : getFullLocationString(selectedCity)}
+              </span>
+            </div>
+            <ChevronRight size={14} className="text-slate-400 shrink-0" />
+          </button>
+        </div>
+
+        <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3.5"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
-              {!searchQuery.trim() ? <Search size={18} className="text-orange-500" /> : null}
+            <div className="flex h-12 items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
+              {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
               <input
                 type="text"
                 placeholder="Search businesses and services"
@@ -930,16 +941,16 @@ export default function Navbar() {
                     handleSearchSubmit(searchQuery);
                   }
                 }}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
+                className="flex-1 bg-transparent outline-none text-[14.5px] text-gray-700 placeholder-gray-500"
               />
               {searchQuery.trim() ? (
                 <button
                   type="button"
                   onClick={() => handleSearchSubmit(searchQuery)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
                   aria-label="Search"
                 >
-                  <Search size={16} strokeWidth={2.4} />
+                  <Search size={18} strokeWidth={2.4} />
                 </button>
               ) : null}
             </div>

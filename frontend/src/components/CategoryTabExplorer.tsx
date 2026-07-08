@@ -461,22 +461,22 @@ export default function CategoryTabExplorer() {
         </button>
       </div>
 
-      <div className="flex flex-row gap-3 md:gap-[27px] items-stretch">
-        {/* Left Category List (Sidebar on Desktop w=297px, Sidebar-column on Mobile) */}
-        <div className="w-[28%] min-w-[85px] sm:min-w-[150px] md:w-[22%] md:min-w-[220px] md:max-w-[300px]">
+      <div className="flex flex-row gap-2 md:gap-[16px] items-stretch">
+        {/* Left Category List (Sidebar on Desktop, Sidebar-column on Mobile) */}
+        <div className="w-[20%] min-w-[72px] sm:min-w-[120px] md:w-[18%] md:min-w-[180px] md:max-w-[250px]">
           {/* Category Tab list sidebar: Responsive height & styling */}
           <div className="flex flex-col bg-white rounded-[12px] border border-slate-200 h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px] overflow-y-auto overflow-x-hidden no-scrollbar">
             {trendingItems.length > 0 && (
               <button
                 key="trending-tab"
                 onClick={() => setActiveCategoryId("trending")}
-                className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-2 md:px-5 border-b border-slate-200 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
+                className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-1.5 md:px-3.5 border-b border-slate-200 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
                   activeCategoryId === "trending"
                     ? "bg-[#EFF6FF] text-blue-600 border-l-blue-600"
                     : "bg-white text-slate-800 border-l-transparent hover:bg-slate-50/30"
                 }`}
               >
-                <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3.5 min-w-0 w-full text-center md:text-left">
+                <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2.5 min-w-0 w-full text-center md:text-left">
                   <div className={`h-9 w-9 sm:h-11 sm:w-11 md:h-[52px] md:w-[52px] rounded-full flex items-center justify-center shrink-0 transition-all ${
                     activeCategoryId === "trending" ? "bg-white text-blue-600" : "bg-white text-slate-500"
                   }`}>
@@ -508,13 +508,13 @@ export default function CategoryTabExplorer() {
                 <button
                   key={`desktop-tab-${cat.id}`}
                   onClick={() => setActiveCategoryId(cat.id)}
-                  className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-2 md:px-5 border-b border-slate-200 last:border-b-0 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
+                  className={`flex items-center w-full py-2.5 md:py-[13px] lg:py-[14px] px-1.5 md:px-3.5 border-b border-slate-200 last:border-b-0 border-l-2 md:border-l-4 transition-all text-left outline-none focus:outline-none focus-visible:outline-none select-none ${
                     active
                       ? "bg-[#EFF6FF] text-blue-600 border-l-blue-600"
                       : "bg-white text-slate-800 border-l-transparent hover:bg-slate-50/30"
                   }`}
                 >
-                  <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3.5 min-w-0 w-full text-center md:text-left">
+                  <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2.5 min-w-0 w-full text-center md:text-left">
                     <div className={`h-9 w-9 sm:h-11 sm:w-11 md:h-[52px] md:w-[52px] rounded-full flex items-center justify-center shrink-0 transition-all ${
                       active ? "bg-white text-blue-600" : "bg-white text-slate-500"
                     }`}>
@@ -544,7 +544,7 @@ export default function CategoryTabExplorer() {
         {/* Right Subcategories Grid: Height matched to Sidebar */}
         <div className="flex-1 w-full h-[380px] sm:h-[500px] md:h-[580px] min-h-[380px] sm:min-h-[500px] md:min-h-[580px] max-h-[380px] sm:max-h-[500px] md:max-h-[580px]">
           {activeSubcategories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-[27px] h-full grid-rows-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-[16px] h-full grid-rows-2">
               {activeSubcategories.map((sub, index) => {
                 const coverImage = sub.coverImage || getCategoryCoverImage(sub.slug || activeCategory?.slug || "", sub.name);
                 const listingCount = getListingCount(sub.name);

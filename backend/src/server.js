@@ -13,7 +13,6 @@ const FailureLog = require("./models/FailureLog");
 const VendorProduct = require("./models/VendorProduct");
 const Order = require("./models/Order");
 const ProductReview = require("./models/ProductReview");
-const { runAutoMigration } = require("./lib/migration");
 const { ensureSearchIndex, reindexSearchDocuments } = require("./lib/search/indexer");
 
 const PORT = Number(process.env.PORT || 5000);
@@ -32,7 +31,6 @@ process.on("uncaughtException", (error) => {
 async function startServer() {
   try {
     await connectDatabase();
-    await runAutoMigration();
 
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
     const syncModelIndexes = async (modelName, modelObj) => {
