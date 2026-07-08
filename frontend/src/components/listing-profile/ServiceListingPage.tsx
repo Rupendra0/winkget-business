@@ -941,13 +941,25 @@ export default function ServiceListingPage({
           <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase mb-1.5 block">
             Address
           </span>
-          <div className="space-y-0.5 text-[15px] font-semibold text-slate-700 leading-relaxed break-words">
-            {profile.address && <p>{profile.address}</p>}
-            {profile.city && <p>{profile.city}</p>}
-            {profile.state && <p>{profile.state}</p>}
-            {profile.postalCode && <p>{profile.postalCode}</p>}
+          <div className="text-[15px] font-semibold text-slate-700 leading-relaxed break-words">
+            {/* Mobile View: single line */}
+            <p className="block sm:hidden">
+              {[profile.address, profile.city, profile.state, profile.postalCode]
+                .filter(Boolean)
+                .join(", ")}
+              {!profile.address && !profile.city && !profile.state && !profile.postalCode && "Address unavailable"}
+            </p>
+            
+            {/* Desktop View: multi-line */}
+            <div className="hidden sm:block space-y-0.5">
+              {profile.address && <p>{profile.address}</p>}
+              {profile.city && <p>{profile.city}</p>}
+              {profile.state && <p>{profile.state}</p>}
+              {profile.postalCode && <p>{profile.postalCode}</p>}
+            </div>
+            
             {!profile.address && !profile.city && !profile.state && !profile.postalCode && (
-              <p className="text-slate-400 font-medium">Address unavailable</p>
+              <p className="hidden sm:block text-slate-400 font-medium">Address unavailable</p>
             )}
           </div>
         </div>
@@ -1876,6 +1888,18 @@ export default function ServiceListingPage({
                         No services available yet.
                       </p>
                     )}
+
+                    {/* Mobile-only Enquiry Button */}
+                    <div className="block sm:hidden pt-4">
+                      <button
+                        type="button"
+                        onClick={openInquiryModal}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
+                      >
+                        <Send size={16} />
+                        Enquire Now
+                      </button>
+                    </div>
                   </section>
                 ) : (
                   <section id="listing-services-horizontal" className="space-y-3.5">
@@ -1913,6 +1937,18 @@ export default function ServiceListingPage({
                         No services available yet.
                       </p>
                     )}
+
+                    {/* Mobile-only Enquiry Button */}
+                    <div className="block sm:hidden pt-4">
+                      <button
+                        type="button"
+                        onClick={openInquiryModal}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
+                      >
+                        <Send size={16} />
+                        Enquire Now
+                      </button>
+                    </div>
                   </section>
                 )}
 
@@ -1967,35 +2003,47 @@ export default function ServiceListingPage({
                 {(() => {
                   const defaultServices = ["Estates", "Property", "Homes", "Flats", "Buildings"];
                   const displayServices = serviceItems.length > 0 ? serviceItems : defaultServices;
-                  const servicesLimit = isMobile ? 5 : 10;
+                  const servicesLimit = isMobile ? 6 : 10;
                   const visibleServices = showAllServices ? displayServices : displayServices.slice(0, servicesLimit);
                   const hasMoreServices = displayServices.length > servicesLimit;
                   return (
                     <section id="listing-services" className="space-y-3">
                       <h2 className="text-xl font-bold text-slate-900 font-heading">Services</h2>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-[15px]">
+                      <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-1 text-[15px]">
                         {visibleServices.map((service) => (
                           <div key={service} className="flex items-center justify-between py-2.5 border-b border-slate-100">
                             <span className="text-slate-700 font-semibold">{service}</span>
-                            <span className="rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-3 py-0.5 text-xs font-semibold text-[#16a34a]">
+                            <span className="hidden sm:inline-block rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-3 py-0.5 text-xs font-semibold text-[#16a34a]">
                               Available
                             </span>
                           </div>
                         ))}
                       </div>
 
-                      {hasMoreServices && !showAllServices && (
+                      {hasMoreServices && (
                         <div className="pt-4 flex justify-center">
                           <button
                             type="button"
-                            onClick={() => setShowAllServices(true)}
+                            onClick={() => setShowAllServices(!showAllServices)}
                             className="w-full md:w-fit border border-slate-200 bg-white py-2.5 px-6 text-[14px] font-bold text-slate-700 rounded-full hover:bg-slate-50 cursor-pointer flex items-center justify-center transition duration-155"
                           >
-                            View More Services
+                            {showAllServices ? "View Less" : "View More Services"}
                           </button>
                         </div>
                       )}
+
+                      {/* Mobile-only Enquiry Button */}
+                      <div className="block sm:hidden pt-4">
+                        <button
+                          type="button"
+                          onClick={openInquiryModal}
+                          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
+                        >
+                          <Send size={16} />
+                          Enquire Now
+                        </button>
+                      </div>
                     </section>
                   );
                 })()}
@@ -2309,7 +2357,9 @@ export default function ServiceListingPage({
             <div className="order-1 lg:order-2 space-y-6 min-w-0 w-full lg:sticky lg:top-24">
               <div className="space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 font-heading">Ratings</h2>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 sm:p-6 text-center space-y-4">
+                
+                <div className="flex flex-row lg:flex-col gap-3 sm:gap-4">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 sm:p-6 text-center space-y-4 flex-1 min-w-0">
                   <div>
                     <p className="text-5xl font-extrabold text-slate-950 font-heading leading-none">
                       {roundedRating > 0 ? roundedRating.toFixed(1) : "5.0"}
@@ -2353,7 +2403,7 @@ export default function ServiceListingPage({
                 </div>
 
                 {/* Review Form Box */}
-                <div className="rounded-2xl bg-slate-50/50 p-3 sm:p-6 flex flex-col items-center border border-slate-100">
+                <div className="rounded-2xl bg-slate-50/50 p-3 sm:p-6 flex flex-col items-center border border-slate-100 flex-1 min-w-0">
                   {authLoading ? (
                     <p className="text-[15px] font-medium text-slate-500">Checking login status...</p>
                   ) : !currentUser ? (
@@ -2456,17 +2506,12 @@ export default function ServiceListingPage({
                     </form>
                   )}
                 </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Mobile-only Enquiry Form */}
-          <div className="block lg:hidden mt-6 w-full mx-auto px-2 sm:px-12 md:px-16">
-            <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-8">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 font-heading">Enquiry Form</h3>
-              {renderInquiryForm()}
-            </div>
-          </div>
+
 
         </section>
 
@@ -2476,7 +2521,7 @@ export default function ServiceListingPage({
             onClick={closePhotosModal}
           >
             <section
-              className="w-full max-w-5xl rounded-2xl bg-white p-4"
+              className="w-[92vw] sm:w-[85vw] md:w-[75vw] lg:w-[60vw] max-w-4xl h-[62vh] sm:h-[75vh] flex flex-col justify-between rounded-2xl bg-white p-4"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -2493,17 +2538,17 @@ export default function ServiceListingPage({
               </div>
 
               {selectedPhotoUrl ? (
-                <div className="space-y-3">
-                  <div className="flex max-h-[78vh] items-center justify-center overflow-hidden rounded-[12px] bg-[#f3f4f6]">
+                <div className="flex-1 min-h-0 flex flex-col justify-between">
+                  <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden rounded-[12px] bg-[#f3f4f6]">
                     <img
                       src={selectedPhotoUrl}
                       alt={`${profile.name} photo preview`}
-                      className="max-h-[78vh] w-full object-contain"
+                      className="max-h-full max-w-full object-contain"
                       loading="lazy"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 pt-3 shrink-0">
                     <button
                       type="button"
                       onClick={showPreviousPhoto}
@@ -2528,7 +2573,7 @@ export default function ServiceListingPage({
                   </div>
                 </div>
               ) : (
-                <div className="max-h-[70vh] overflow-y-auto pr-1">
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-6">
                     {photoItems.map((photo, index) => (
                       <button
