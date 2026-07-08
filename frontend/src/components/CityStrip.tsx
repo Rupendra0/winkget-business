@@ -141,10 +141,10 @@ export default function CityStrip() {
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`city-partner-skeleton-${index}`}
-                className="my-[1%] mr-[1%] inline-block w-[46%] p-4 pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
+                className="my-[1%] mr-[1%] inline-block w-[46%] p-1.5 pb-3 sm:p-4 sm:pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal sm:w-[31%] lg:w-[18.4%]"
               >
                 <div className="h-44 w-full bg-slate-200/70 sm:h-48 md:h-52 lg:h-[14vw] rounded-xl" />
-                <div className="space-y-2 pt-3 px-0.5 pb-0">
+                <div className="space-y-2 pt-2 sm:pt-3 px-1 sm:px-0.5 pb-0">
                   <div className="h-4 w-2/3 rounded bg-slate-200/70" />
                   <div className="h-3 w-1/2 rounded bg-slate-200/70" />
                   <div className="h-3 w-3/4 rounded bg-slate-200/70" />
@@ -173,7 +173,7 @@ export default function CityStrip() {
             <Link
               key={partner.id}
               href={partner.href}
-              className="group relative my-1 mr-[1%] inline-block w-[46%] p-4 pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
+              className="group relative my-1 mr-[1%] inline-block w-[46%] p-1.5 pb-3 sm:p-4 sm:pb-7 overflow-hidden rounded-2xl border border-slate-200 bg-white align-top whitespace-normal transition-all duration-200 hover:-translate-y-0.5 sm:w-[31%] lg:w-[18.4%]"
             >
               <div className="relative w-full h-44 sm:h-48 md:h-52 lg:h-[14vw] overflow-hidden rounded-xl">
                 {partner.isNew ? (
@@ -182,7 +182,7 @@ export default function CityStrip() {
                 <img src={partner.imageUrl} alt={partner.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
               </div>
 
-              <div className="pt-3 px-0.5 pb-0">
+              <div className="pt-2 sm:pt-3 px-1 sm:px-0.5 pb-0">
                 <div className="block md:flex md:items-start md:justify-between md:gap-2">
                   <div className="min-w-0 text-sm font-medium text-slate-700 line-clamp-1 truncate">{partner.name}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-600 md:mt-0 md:shrink-0">{toInlineRatingWithReviews(partner.rating, partner.reviews)}</div>
