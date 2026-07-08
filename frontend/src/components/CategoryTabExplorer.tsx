@@ -608,40 +608,37 @@ export default function CategoryTabExplorer() {
 
       {/* Modal - View All Categories */}
       {isOpenAllModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-            onClick={() => setIsOpenAllModal(false)}
-          />
-          <div className="relative w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">All Categories</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Browse all business categories in Winkget</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpenAllModal(false)}
-                className="h-8 w-8 rounded-full border-[0.5px] border-slate-200 hover:bg-slate-50/50 flex items-center justify-center text-slate-550 hover:text-slate-705 transition font-bold"
-              >
-                &times;
-              </button>
+        <div className="fixed inset-0 z-50 bg-white pt-4 px-6 pb-4 sm:pt-6 sm:px-10 sm:pb-8 md:pt-6 md:px-12 lg:pt-6 lg:px-16 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 shrink-0">
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">All Categories</h3>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Browse all business categories in Winkget</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsOpenAllModal(false)}
+              className="h-10 w-10 rounded-full border-[0.5px] border-slate-200 hover:bg-slate-50/50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition text-2xl font-normal leading-none"
+              aria-label="Close modal"
+            >
+              &times;
+            </button>
+          </div>
 
-            {/* Modal search */}
-            <div className="mb-5">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search categories..."
-                className="w-full rounded-xl border-[0.5px] border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-300 transition"
-              />
-            </div>
+          {/* Modal search */}
+          <div className="mb-4 max-w-xl shrink-0">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search categories..."
+              className="w-full rounded-xl border-[0.5px] border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 transition"
+            />
+          </div>
 
-            {/* Modal body list */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto pr-1">
+          {/* Modal body list */}
+          <div className="flex-1 overflow-y-auto pr-1 pb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
               {filteredCategories.map((cat) => {
                 return (
                   <button
@@ -650,9 +647,9 @@ export default function CategoryTabExplorer() {
                       setActiveCategoryId(cat.id);
                       setIsOpenAllModal(false);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-[0.5px] text-left transition-all ${
+                    className={`flex items-center gap-3.5 p-3 sm:p-4 rounded-xl border-[0.5px] text-left transition-all ${
                       cat.id === activeCategoryId
-                        ? "border-blue-500 bg-transparent text-blue-600"
+                        ? "border-blue-500 bg-transparent text-blue-600 font-semibold"
                         : "border-slate-200 bg-transparent hover:border-slate-350 text-slate-700"
                     }`}
                   >
@@ -660,11 +657,11 @@ export default function CategoryTabExplorer() {
                       {cat.icon && cat.icon !== "none" ? (
                         <img src={cat.icon} alt="" className="h-10 w-10 object-contain" />
                       ) : (
-                        <Layers size={24} className="text-slate-500" />
+                        <Layers size={22} className="text-slate-500" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium truncate leading-tight text-slate-700">{cat.name}</span>
+                      <span className="block text-sm font-semibold truncate leading-tight text-slate-700">{cat.name}</span>
                     </div>
                   </button>
                 );
