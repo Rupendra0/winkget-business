@@ -688,82 +688,80 @@ export default function Navbar() {
             }`}
           >
           {/* Logo */}
-          <div className="min-w-0 flex items-center gap-2 sm:gap-3">
+          <div className="min-w-0 flex items-center gap-2 sm:gap-3 shrink-0 pl-2 sm:pl-4">
             <Link href="/" className="brand-wordmark flex min-w-0 flex-col items-start gap-0 leading-none">
-              <span className="text-xs font-bold tracking-[0.2px] text-slate-900 leading-none">Winkget</span>
-              <span className="text-xl font-bold tracking-[0.2px] text-orange-600 leading-none mt-0.5">Business</span>
+              <span className="text-[13px] sm:text-[15px] font-bold tracking-[0.2px] text-slate-900 leading-none">Winkget</span>
+              <span className="text-[22px] sm:text-[26px] font-bold tracking-[0.2px] text-orange-600 leading-none mt-0.5">Business</span>
             </Link>
           </div>
 
-          {/* Center - Location and Search */}
-          <div className="hidden md:flex flex-1 px-5 items-center gap-5">
-            {/* Location Selector */}
-            <div className="relative -ml-1">
-              <button
-                type="button"
-                onClick={() => setCityMenuOpen((prev) => !prev)}
-                disabled={loadingCities || cityOptions.length === 0}
-                className="inline-flex items-center gap-2 bg-transparent text-left outline-none focus:outline-none disabled:opacity-60"
-              >
-                <MapPin size={18} className="text-blue-600 shrink-0" />
-                <span className="max-w-[220px] truncate text-[15px] font-normal text-slate-800">
-                  {loadingCities ? "Loading..." : getFullLocationString(selectedCity)}
-                </span>
-                <ChevronRight size={15} className="text-slate-400 shrink-0" />
-              </button>
-            </div>
+          {/* Location Selector (Desktop) */}
+          <div className="hidden md:block relative ml-8 shrink-0">
+            <button
+              type="button"
+              onClick={() => setCityMenuOpen((prev) => !prev)}
+              disabled={loadingCities || cityOptions.length === 0}
+              className="inline-flex items-center gap-2 bg-transparent text-left outline-none focus:outline-none disabled:opacity-60"
+            >
+              <MapPin size={18} className="text-blue-600 shrink-0" />
+              <span className="max-w-[200px] truncate text-[15px] font-normal text-slate-800">
+                {loadingCities ? "Loading..." : getFullLocationString(selectedCity)}
+              </span>
+              <ChevronRight size={15} className="text-slate-400 shrink-0" />
+            </button>
+          </div>
 
-            {/* Search Bar */}
-            <div className="flex-1 max-w-[450px] relative" ref={desktopSuggestRef}>
-              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200/60 bg-white px-[15px] shadow-none">
-                {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
-                <input
-                  type="text"
-                  placeholder="Search across 10 Lakh+ Business"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  onFocus={handleSearchFocus}
-                  onBlur={handleSearchBlur}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      handleSearchSubmit(searchQuery);
-                    }
-                  }}
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
-                />
-                {searchQuery.trim() ? (
-                  <button
-                    type="button"
-                    onClick={() => handleSearchSubmit(searchQuery)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
-                    aria-label="Search"
-                  >
-                    <Search size={16} strokeWidth={2.4} />
-                  </button>
-                ) : null}
-              </div>
-
-              {shouldShowSuggestions ? (
-                <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
-                  <div className="max-h-72 overflow-y-auto py-2">
-                    {isSuggestLoading && suggestions.length === 0 ? (
-                      <div className="px-4 py-2 text-xs text-slate-500">Searching...</div>
-                    ) : null}
-                    {suggestions.map((item) => renderSuggestionRow(item, "desktop"))}
-                    {!isSuggestLoading && suggestions.length === 0 ? (
-                      <div className="px-4 py-2 text-xs text-slate-500">No suggestions found.</div>
-                    ) : null}
-                  </div>
-                </div>
+          {/* Search Bar (stretches to fill empty space) */}
+          <div className="hidden md:block flex-1 max-w-[600px] mx-4 lg:mx-6 relative" ref={desktopSuggestRef}>
+            <div className="flex h-11 items-center gap-2 rounded-lg border border-slate-200/60 bg-white px-[15px] shadow-none">
+              {!searchQuery.trim() ? <Search size={18} className="text-orange-500" /> : null}
+              <input
+                type="text"
+                placeholder="Search across 10 Lakh+ Business"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleSearchSubmit(searchQuery);
+                  }
+                }}
+                className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500"
+              />
+              {searchQuery.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => handleSearchSubmit(searchQuery)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-none"
+                  aria-label="Search"
+                >
+                  <Search size={16} strokeWidth={2.4} />
+                </button>
               ) : null}
             </div>
+
+            {shouldShowSuggestions ? (
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
+                <div className="max-h-72 overflow-y-auto py-2">
+                  {isSuggestLoading && suggestions.length === 0 ? (
+                    <div className="px-4 py-2 text-xs text-slate-500">Searching...</div>
+                  ) : null}
+                  {suggestions.map((item) => renderSuggestionRow(item, "desktop"))}
+                  {!isSuggestLoading && suggestions.length === 0 ? (
+                    <div className="px-4 py-2 text-xs text-slate-500">No suggestions found.</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Right Navigation */}
-          <div className="hidden md:flex items-center gap-[10px] px-[10px]">
+          <div className="hidden md:flex items-center gap-2 lg:gap-2.5 shrink-0">
+            {/* Sell on Winkget Button */}
             <a
               href={VENDOR_REGISTRATION_URL}
-              className="inline-flex h-11 items-center rounded-lg px-3 text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 shadow-none"
+              className="inline-flex h-10 items-center rounded-lg px-2.5 text-xs lg:text-sm font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 shadow-none shrink-0"
             >
               Sell on Winkget
             </a>
@@ -771,42 +769,42 @@ export default function Navbar() {
             {/* Wishlist Button */}
             <Link
               href="/wishlist"
-              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 border-0 shadow-none"
+              className="relative inline-flex h-10 items-center gap-1 rounded-lg bg-white px-2 text-gray-800 hover:bg-orange-50 border-0 shadow-none shrink-0"
               aria-label="Wishlist"
             >
-              <Heart size={18} className="text-gray-700" />
-              <span className="text-sm mr-2">Wishlist</span>
-              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+              <Heart size={17} className="text-gray-700" />
+              <span className="text-xs lg:text-sm mr-1">Wishlist</span>
+              <span className="absolute right-0.5 top-0.5 inline-flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[9px] font-bold text-white">
                 {wishlistCount}
               </span>
             </Link>
 
-            {/* Cart Button (Moved next to Wishlist) */}
+            {/* Cart Button */}
             <Link
               href="/cart"
-              className="relative inline-flex h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-gray-800 hover:bg-orange-50 border-0 shadow-none"
+              className="relative inline-flex h-10 items-center gap-1 rounded-lg bg-white px-2 text-gray-800 hover:bg-orange-50 border-0 shadow-none shrink-0"
               aria-label="Cart"
             >
-              <ShoppingCart size={18} className="text-gray-700" />
-              <span className="text-sm mr-2">Cart</span>
-              <span className="absolute right-1 top-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+              <ShoppingCart size={17} className="text-gray-700" />
+              <span className="text-xs lg:text-sm mr-1">Cart</span>
+              <span className="absolute right-0.5 top-0.5 inline-flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[9px] font-bold text-white">
                 {cartCount}
               </span>
             </Link>
 
             {/* Login Button / Status */}
             {authLoading ? (
-              <div className="h-11 w-28 rounded-lg border border-orange-100 bg-white/70 animate-pulse" />
+              <div className="h-10 w-24 rounded-lg border border-orange-100 bg-white/70 animate-pulse shrink-0" />
             ) : user ? (
-              <div className="relative" ref={menuRef}>
+              <div className="relative shrink-0" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-white font-medium hover:bg-blue-700 border-0 shadow-none"
+                  className="flex h-10 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 border-0 shadow-none"
                 >
-                  <UserRound size={18} className="text-white" />
-                  <span className="text-sm h-7 max-w-[130px] truncate">{displayName}</span>
-                  <ChevronDown size={14} className="text-white/80" />
+                  <UserRound size={17} className="text-white" />
+                  <span className="text-xs lg:text-sm h-6 max-w-[100px] truncate">{displayName}</span>
+                  <ChevronDown size={13} className="text-white/80" />
                 </button>
 
                 {menuOpen ? (
@@ -861,10 +859,10 @@ export default function Navbar() {
             ) : (
               <Link
                 href={buildAuthHref(currentPath)}
-                className="flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-white font-medium hover:bg-blue-700 border-0 shadow-none"
+                className="flex h-10 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-white font-medium hover:bg-blue-700 border-0 shadow-none shrink-0"
               >
-                <UserRound size={18} className="text-white" />
-                <span className="text-sm">Login</span>
+                <UserRound size={17} className="text-white" />
+                <span className="text-xs lg:text-sm">Login</span>
               </Link>
             )}
           </div>
@@ -927,7 +925,7 @@ export default function Navbar() {
 
         <div className={`mx-0.5 md:hidden transition-all duration-200 ${isMobileSearchOnly ? "pb-2 pt-2" : "pb-3.5"}`}>
           <div className="relative" ref={mobileSuggestRef}>
-            <div className="flex h-12 items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-4 shadow-sm">
+            <div className="flex h-12 items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-4 shadow-none">
               {!searchQuery.trim() ? <Search size={20} className="text-orange-500" /> : null}
               <input
                 type="text"
@@ -947,7 +945,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => handleSearchSubmit(searchQuery)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500 text-white shadow-none"
                   aria-label="Search"
                 >
                   <Search size={18} strokeWidth={2.4} />
