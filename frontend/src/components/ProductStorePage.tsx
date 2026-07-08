@@ -763,22 +763,22 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
             </div>
 
             {productCartQuantity > 0 ? (
-              <div className="mt-2 grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)] sm:h-10">
+              <div className="mt-2 grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.18)] sm:h-10">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#166534] sm:text-lg"
                   aria-label={`Decrease quantity for ${product.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-0.5 text-[10px] font-extrabold text-white sm:px-1 sm:text-[12px]">
+                <div className="grid min-w-0 place-items-center bg-[#15803d] px-0.5 text-[10px] font-extrabold text-white sm:px-1 sm:text-[12px]">
                   {productCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a] sm:text-lg"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#166534] sm:text-lg"
                   aria-label={`Increase quantity for ${product.name}`}
                 >
                   +
@@ -908,22 +908,22 @@ export default function ProductStorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-auto pt-3">
             {productCartQuantity > 0 ? (
-              <div className="grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.18)]">
+              <div className="grid h-9 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.18)]">
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#166534]"
                   aria-label={`Decrease quantity for ${product.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-0.5 text-[10px] font-extrabold text-white">
+                <div className="grid min-w-0 place-items-center bg-[#15803d] px-0.5 text-[10px] font-extrabold text-white">
                   {productCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateProductCartQuantity(product.id, productCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-sm font-bold leading-none transition hover:bg-[#166534]"
                   aria-label={`Increase quantity for ${product.name}`}
                 >
                   +

@@ -637,7 +637,7 @@ export default function CategoryTabExplorer() {
           </div>
 
           {/* Modal body list */}
-          <div className="flex-1 overflow-y-auto pr-1 pb-6">
+          <div className="flex-1 overflow-y-auto pr-1 pb-6 no-scrollbar">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
               {filteredCategories.map((cat) => {
                 return (

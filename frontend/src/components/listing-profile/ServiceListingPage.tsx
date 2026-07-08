@@ -2014,9 +2014,6 @@ export default function ServiceListingPage({
                         {visibleServices.map((service) => (
                           <div key={service} className="flex items-center justify-between py-2.5 border-b border-slate-100">
                             <span className="text-slate-700 font-semibold">{service}</span>
-                            <span className="hidden sm:inline-block rounded-full bg-[#f0fdf4] border border-[#bbf7d0] px-3 py-0.5 text-xs font-semibold text-[#16a34a]">
-                              Available
-                            </span>
                           </div>
                         ))}
                       </div>

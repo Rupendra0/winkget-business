@@ -305,22 +305,22 @@ export default function ServiceStorePage({ data }: { data: StorePageData }) {
 
           <div className="mt-auto pt-4">
             {serviceCartQuantity > 0 ? (
-              <div className="grid h-10 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg bg-[#2f9e44] text-white">
+              <div className="grid h-10 w-full min-w-0 grid-cols-3 overflow-hidden rounded-lg bg-[#15803d] text-white">
                 <button
                   type="button"
                   onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity - 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#166534]"
                   aria-label={`Decrease quantity for ${service.name}`}
                 >
                   -
                 </button>
-                <div className="grid min-w-0 place-items-center bg-[#2f9e44] px-1 text-sm font-extrabold text-white">
+                <div className="grid min-w-0 place-items-center bg-[#15803d] px-1 text-sm font-extrabold text-white">
                   {serviceCartQuantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => updateServiceCartQuantity(service.id, serviceCartQuantity + 1)}
-                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#27873a]"
+                  className="grid min-w-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#166534]"
                   aria-label={`Increase quantity for ${service.name}`}
                 >
                   +

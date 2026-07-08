@@ -727,22 +727,22 @@ export default function RestaurantMarketplacePage({
                       <p className="mt-2 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
 
                       {productCartQuantity > 0 ? (
-                        <div className="mt-auto inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_8px_18px_rgba(47,158,68,0.22)]">
+                        <div className="mt-auto inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.22)]">
                           <button
                             type="button"
                             onClick={() => updateCartQuantity(product.id, productCartQuantity - 1)}
-                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#27873a]"
+                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#166534]"
                             aria-label={`Decrease quantity for ${product.name}`}
                           >
                             -
                           </button>
-                          <div className="grid min-w-0 flex-1 place-items-center bg-[#2f9e44] text-sm font-extrabold text-white">
+                          <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-sm font-extrabold text-white">
                             {productCartQuantity}
                           </div>
                           <button
                             type="button"
                             onClick={() => updateCartQuantity(product.id, productCartQuantity + 1)}
-                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#27873a]"
+                            className="grid w-10 shrink-0 place-items-center text-xl font-bold leading-none transition hover:bg-[#166534]"
                             aria-label={`Increase quantity for ${product.name}`}
                           >
                             +
@@ -752,7 +752,7 @@ export default function RestaurantMarketplacePage({
                         <button
                           type="button"
                           onClick={() => handleAddToCartWithFeedback(product)}
-                          className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#2f9e44] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(47,158,68,0.28)] hover:bg-[#27873a]"
+                          className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#15803d] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(21,128,61,0.28)] hover:bg-[#166534]"
                         >
                           <ShoppingCart size={14} />
                           Add to Cart
@@ -909,22 +909,22 @@ export default function RestaurantMarketplacePage({
                 </div>
 
                 {quickViewCartQuantity > 0 ? (
-                  <div className="mt-5 inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#2f9e44] bg-[#2f9e44] text-white shadow-[0_10px_22px_rgba(47,158,68,0.3)]">
+                  <div className="mt-5 inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#15803d] bg-[#15803d] text-white shadow-[0_10px_22px_rgba(21,128,61,0.3)]">
                     <button
                       type="button"
                       onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#27873a]"
+                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
                       aria-label={`Decrease quantity for ${quickViewProduct.name}`}
                     >
                       -
                     </button>
-                    <div className="grid min-w-0 flex-1 place-items-center bg-[#2f9e44] text-base font-extrabold text-white">
+                    <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-base font-extrabold text-white">
                       {quickViewCartQuantity}
                     </div>
                     <button
                       type="button"
                       onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#27873a]"
+                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
                       aria-label={`Increase quantity for ${quickViewProduct.name}`}
                     >
                       +
@@ -934,7 +934,7 @@ export default function RestaurantMarketplacePage({
                   <button
                     type="button"
                     onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
-                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#2f9e44] text-base font-semibold text-white shadow-[0_10px_22px_rgba(47,158,68,0.35)] hover:bg-[#27873a]"
+                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#15803d] text-base font-semibold text-white shadow-[0_10px_22px_rgba(21,128,61,0.35)] hover:bg-[#166534]"
                   >
                     <ShoppingCart size={16} />
                     {`Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
