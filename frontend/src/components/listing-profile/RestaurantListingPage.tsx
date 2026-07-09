@@ -147,27 +147,6 @@ export default function RestaurantListingPage({
         .filter(Boolean)
     ).slice(0, 12);
 
-    const explicitFeaturedIds = Array.isArray(storeData?.featured?.productIds)
-      ? storeData.featured.productIds.filter(Boolean)
-      : [];
-    const featuredProductIds =
-      explicitFeaturedIds.length > 0
-        ? explicitFeaturedIds
-        : sourceProducts.slice(0, 6).map((product) => product.id);
-
-    const featuredSet = new Set(featuredProductIds);
-    const explicitTrendingIds = Array.isArray(storeData?.trending?.productIds)
-      ? storeData.trending.productIds.filter(Boolean)
-      : [];
-
-    const trendingProductIds =
-      explicitTrendingIds.length > 0
-        ? explicitTrendingIds
-        : sourceProducts
-            .filter((product) => !featuredSet.has(product.id))
-            .slice(0, 6)
-            .map((product) => product.id);
-
     const cuisineFallback = uniqueStrings([
       ...(Array.isArray(profile.tags) ? profile.tags : []),
       ...(Array.isArray(profile.services) ? profile.services : []),
@@ -224,14 +203,14 @@ export default function RestaurantListingPage({
       filters: Array.isArray(storeData?.filters) ? storeData.filters : [],
       products: sourceProducts,
       featured: {
-        title: String(storeData?.featured?.title || "Featured Dishes").trim(),
-        subtitle: String(storeData?.featured?.subtitle || "Chef specials and bestsellers").trim(),
-        productIds: featuredProductIds,
+        title: "Featured Dishes",
+        subtitle: "Chef specials and bestsellers",
+        productIds: [],
       },
       trending: {
-        title: String(storeData?.trending?.title || "Trending Now").trim(),
-        subtitle: String(storeData?.trending?.subtitle || "Most ordered this week").trim(),
-        productIds: trendingProductIds,
+        title: "Trending Now",
+        subtitle: "Most ordered this week",
+        productIds: [],
       },
       aboutTitle: String(storeData?.aboutTitle || "About Restaurant").trim(),
       aboutBody:
@@ -240,6 +219,7 @@ export default function RestaurantListingPage({
             storeData?.aboutBody ||
             "Explore a curated menu with quick delivery and trusted quality."
         ).trim(),
+      gallery: Array.isArray(profile.gallery) ? profile.gallery : [],
     };
   }, [coverImage, fullAddress, isRestaurantProfile, logoImage, profile, storeData]);
 

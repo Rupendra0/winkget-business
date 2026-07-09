@@ -166,6 +166,7 @@ export type StorePageData = {
   trending: StoreSection;
   aboutTitle: string;
   aboutBody: string;
+  gallery?: string[];
 };
 
 export const listingProfiles: Record<string, ListingProfile> = {

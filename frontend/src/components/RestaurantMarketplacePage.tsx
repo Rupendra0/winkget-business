@@ -37,7 +37,7 @@ type RestaurantMarketplacePageProps = {
   };
 };
 
-type SortMode = "featured" | "price-low" | "price-high" | "rating-high";
+type SortMode = "recommended" | "price-low" | "price-high" | "rating-high";
 
 const normalizeDigits = (value: string | undefined) => String(value || "").replace(/\D/g, "");
 
@@ -134,7 +134,7 @@ export default function RestaurantMarketplacePage({
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeChip, setActiveChip] = useState("All");
-  const [sortMode, setSortMode] = useState<SortMode>("featured");
+  const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
@@ -147,6 +147,11 @@ export default function RestaurantMarketplacePage({
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
 
   const photoItems = useMemo(() => {
+    const uploadedPhotos = Array.isArray(data.gallery) ? data.gallery.filter(Boolean) : [];
+    if (uploadedPhotos.length > 0) {
+      return uploadedPhotos;
+    }
+
     return [
       ...data.products.map((p) => p.imageUrl),
       "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
@@ -162,7 +167,7 @@ export default function RestaurantMarketplacePage({
       "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80",
       "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80",
     ];
-  }, [data.products]);
+  }, [data.gallery, data.products]);
 
   const selectedPhotoIndex = useMemo(() => {
     if (!selectedPhotoUrl) return -1;
@@ -585,7 +590,7 @@ export default function RestaurantMarketplacePage({
         </div>
       </div>
 
-      <div className="relative z-20 mx-auto mt-0 w-full max-w-full space-y-5 px-2 pb-[calc(86px+env(safe-area-inset-bottom))] sm:px-12 md:px-16 lg:px-20 pt-5">
+      <div className="relative z-20 mx-auto mt-0 w-full max-w-[1600px] space-y-5 px-4 sm:px-6 md:px-8 lg:px-10 pb-[calc(86px+env(safe-area-inset-bottom))] pt-5">
         <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start">
           {/* Left Column */}
           <div className="space-y-5 md:space-y-6">
@@ -672,8 +677,8 @@ export default function RestaurantMarketplacePage({
 
         <section className="rounded-[18px] bg-white p-4 md:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="inline-flex items-center gap-2 text-xl font-semibold text-[#1f2937] md:text-2xl">
-              <LayoutGrid size={20} className="text-[#ffbe0b]" />
+            <h3 className="inline-flex items-center gap-2 text-lg font-bold text-[#1f2937]">
+              <LayoutGrid size={18} className="text-[#ffbe0b]" />
               Browse Categories
             </h3>
             <p className="hidden text-xs text-slate-500 sm:block">Swipe to explore</p>
@@ -708,7 +713,7 @@ export default function RestaurantMarketplacePage({
         <section id="full-menu" className="rounded-[18px] bg-white p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-[#1f2937] md:text-2xl">Full Menu</h3>
+              <h3 className="text-lg font-bold text-[#1f2937]">Full Menu</h3>
               <p className="mt-1 text-xs font-medium text-slate-500">{menuItems.length} items</p>
             </div>
 
@@ -719,7 +724,7 @@ export default function RestaurantMarketplacePage({
                 onChange={(event) => setSortMode(event.target.value as SortMode)}
                 className="h-9 rounded-xl border border-[#dce2ea] bg-white px-3 text-sm text-slate-700 outline-none"
               >
-                <option value="featured">Featured</option>
+                <option value="recommended">Recommended</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
                 <option value="rating-high">Top Rated</option>
@@ -743,12 +748,12 @@ export default function RestaurantMarketplacePage({
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full min-h-[300px] flex-col overflow-hidden rounded-[16px] bg-white"
+                    className="flex h-full min-h-[350px] flex-col overflow-hidden rounded-[16px] bg-white border border-slate-100/60 shadow-sm"
                   >
                     <button
                       type="button"
                       onClick={() => openQuickView(product)}
-                      className="relative block h-40 w-full bg-[#f7f8fa] text-left"
+                      className="relative block h-48 w-full bg-[#f7f8fa] text-left"
                       aria-label={`Open ${product.name} details`}
                     >
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
@@ -759,7 +764,7 @@ export default function RestaurantMarketplacePage({
                       ) : null}
                     </button>
 
-                    <div className="flex flex-1 flex-col p-3">
+                    <div className="flex flex-1 flex-col p-4">
                       <button
                         type="button"
                         onClick={() => openQuickView(product)}
@@ -768,8 +773,8 @@ export default function RestaurantMarketplacePage({
                         {product.name}
                       </button>
 
-                      <div className="mt-2 flex items-end gap-2">
-                        <p className="text-xl font-bold leading-none text-[#fb6a3d] md:text-2xl">₹{Math.round(priceValue).toLocaleString("en-IN")}</p>
+                      <div className="mt-3.5 flex items-end gap-2">
+                        <p className="text-base font-bold leading-none text-[#fb6a3d] md:text-lg">₹{Math.round(priceValue).toLocaleString("en-IN")}</p>
                         {hasDiscount ? (
                           <>
                             <p className="text-xs text-slate-400 line-through">₹{Math.round(oldPriceValue).toLocaleString("en-IN")}</p>
@@ -778,19 +783,14 @@ export default function RestaurantMarketplacePage({
                         ) : null}
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className="truncate rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                          {product.categoryLabel || product.category || "Food"}
-                        </span>
-                        {Number(product.rating || 0) > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {formatRating(Number(product.rating || 0))}
-                          </span>
-                        ) : null}
-                      </div>
+                      {Number(product.rating || 0) > 0 ? (
+                        <div className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+                          <Star size={12} className="fill-amber-400 text-amber-400" />
+                          {formatRating(Number(product.rating || 0))}
+                        </div>
+                      ) : null}
 
-                      <p className="mt-2 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
+                      <p className="mt-3 mb-3.5 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
 
                       {productCartQuantity > 0 ? (
                         <div className="mt-auto mt-3 inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.22)]">
@@ -830,66 +830,6 @@ export default function RestaurantMarketplacePage({
             </div>
           )}
         </section>
-
-        <section className="rounded-[20px] bg-[#f4f6f8] p-4 md:p-6">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-              <Info size={18} />
-            </span>
-            <h3 className="text-[32px] font-bold leading-tight text-[#1f2937] md:text-[38px]">Restaurant Information</h3>
-          </div>
-
-          <div className="mt-4 grid gap-5 xl:grid-cols-[1.85fr_1fr]">
-            <article>
-              <h4 className="text-2xl font-semibold text-[#1f2937]">About Us</h4>
-              <p className="mt-3 text-[16px] leading-8 text-slate-600 md:text-[17px]">{aboutDescription}</p>
-              <a
-                href={contactHref}
-                className="mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#fb6a3d] px-6 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(251,106,61,0.3)]"
-              >
-                <PhoneCall size={16} />
-                Contact Restaurant
-              </a>
-            </article>
-
-            <aside className="rounded-2xl bg-[#edf1f5] p-5">
-              <h4 className="text-xl font-semibold text-[#1f2937]">Quick Info</h4>
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
-                <div className="space-y-1">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                    <Star size={14} className="fill-amber-400 text-amber-400" />
-                    Customer Rating
-                  </p>
-                  <p className="text-[18px] font-bold text-[#1f2937] md:text-[20px]">{formatRating(storeReviewStats.rating)} / 5</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                    <MessageCircle size={14} className="text-sky-500" />
-                    Total Reviews
-                  </p>
-                  <p className="text-[18px] font-bold text-[#1f2937] md:text-[20px]">{quickInfoReviews}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                    <Clock3 size={14} className="text-emerald-500" />
-                    Delivery Time
-                  </p>
-                  <p className="text-[18px] font-bold text-[#1f2937] md:text-[20px]">{data.deliveryTimeLabel || "20-45 min"}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                    <MapPin size={14} className="text-rose-500" />
-                    Location
-                  </p>
-                  <p className="text-[18px] font-bold leading-tight text-[#1f2937] md:text-[20px]">{quickInfoLocation}</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
           </div>
 
           {/* Right Column: Floating Gallery Card */}
@@ -926,6 +866,71 @@ export default function RestaurantMarketplacePage({
             </div>
           </div>
         </div>
+
+        {/* Restaurant Information Section (Full Width) */}
+        <section className="rounded-[20px] bg-slate-50 border border-slate-100/70 p-4 md:p-6">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-150 text-sky-600">
+              <Info size={15} />
+            </span>
+            <h3 className="text-lg font-bold text-[#1f2937] font-heading">Restaurant Information</h3>
+          </div>
+
+          <div className="mt-4 grid gap-5 xl:grid-cols-[1.85fr_1fr]">
+            <article className="flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">About Us</h4>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 sm:text-[15px]">{aboutDescription}</p>
+              </div>
+              <div>
+                <a
+                  href={contactHref}
+                  className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#fb6a3d] px-4 text-xs font-semibold text-white hover:opacity-92 transition cursor-pointer"
+                >
+                  <PhoneCall size={14} />
+                  Contact Restaurant
+                </a>
+              </div>
+            </article>
+
+            <aside className="rounded-[14px] bg-white border border-slate-100 p-4">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Info</h4>
+              <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div className="space-y-0.5">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    Customer Rating
+                  </p>
+                  <p className="text-[15px] font-bold text-[#1f2937]">{formatRating(storeReviewStats.rating)} / 5</p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                    <MessageCircle size={13} className="text-sky-500" />
+                    Total Reviews
+                  </p>
+                  <p className="text-[15px] font-bold text-[#1f2937]">{quickInfoReviews}</p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                    <Clock3 size={13} className="text-emerald-500" />
+                    Delivery Time
+                  </p>
+                  <p className="text-[15px] font-bold text-[#1f2937]">{data.deliveryTimeLabel || "20-45 min"}</p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                    <MapPin size={13} className="text-rose-500" />
+                    Location
+                  </p>
+                  <p className="text-[15px] font-bold leading-tight text-[#1f2937]">{quickInfoLocation}</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
       </div>
 
       {quickViewProduct ? (
