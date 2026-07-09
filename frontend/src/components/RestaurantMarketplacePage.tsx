@@ -864,37 +864,11 @@ export default function RestaurantMarketplacePage({
             <h3 className="text-lg font-bold text-[#1f2937] font-heading">Restaurant Information</h3>
           </div>
 
-          <div className="mt-4 grid gap-5 xl:grid-cols-[1.85fr_1fr]">
-            <article className="flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">About Us</h4>
-                <p className={`mt-2 text-sm leading-relaxed text-slate-500 sm:text-[15px] ${
-                  isAboutExpanded ? "" : "line-clamp-4"
-                }`}>{aboutDescription}</p>
-                {aboutDescription.length > 180 ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsAboutExpanded((prev) => !prev)}
-                    className="mt-1.5 text-xs font-bold text-[#fb6a3d] hover:text-[#e0562b] transition outline-none cursor-pointer"
-                  >
-                    {isAboutExpanded ? "View Less" : "View More"}
-                  </button>
-                ) : null}
-              </div>
-              <div>
-                <a
-                  href={contactHref}
-                  className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#fb6a3d] px-4 text-xs font-semibold text-white hover:opacity-92 transition cursor-pointer"
-                >
-                  <PhoneCall size={14} />
-                  Contact Restaurant
-                </a>
-              </div>
-            </article>
-
+          <div className="mt-4 flex flex-col gap-5">
+            {/* Quick Info Block (Top, 2x2 Grid) */}
             <aside className="rounded-[14px] bg-white border border-slate-100 p-4">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Info</h4>
-              <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-0.5">
                   <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
                     <Star size={13} className="fill-amber-400 text-amber-400" />
@@ -928,6 +902,34 @@ export default function RestaurantMarketplacePage({
                 </div>
               </div>
             </aside>
+
+            {/* About Us Block (Bottom) */}
+            <article className="rounded-[14px] bg-white border border-slate-100 p-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">About Us</h4>
+                <p className={`mt-2 text-sm leading-relaxed text-slate-500 sm:text-[15px] ${
+                  isAboutExpanded ? "" : "line-clamp-4"
+                }`}>{aboutDescription}</p>
+                {aboutDescription.length > 180 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAboutExpanded((prev) => !prev)}
+                    className="mt-1.5 text-xs font-bold text-[#fb6a3d] hover:text-[#e0562b] transition outline-none cursor-pointer"
+                  >
+                    {isAboutExpanded ? "View Less" : "View More"}
+                  </button>
+                ) : null}
+              </div>
+              <div className="mt-4">
+                <a
+                  href={contactHref}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#fb6a3d] px-4 text-xs font-semibold text-white hover:opacity-92 transition cursor-pointer"
+                >
+                  <PhoneCall size={14} />
+                  Contact Restaurant
+                </a>
+              </div>
+            </article>
           </div>
         </section>
       </div>
