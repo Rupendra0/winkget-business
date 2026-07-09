@@ -39,15 +39,6 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
     <main className="min-h-screen w-full flex flex-col md:flex-row bg-white relative pb-20 md:pb-0">
       {/* Left Section: Information Content */}
       <div className="flex-1 p-6 sm:p-10 lg:p-16 flex flex-col justify-center">
-        {/* Mobile-only Top Banner Image */}
-        <div className="block md:hidden pb-6 flex justify-center shrink-0">
-          <img 
-            src="/onboarding_intro_banner.png" 
-            alt="Become a Winkget Merchant Partner" 
-            className="max-h-[220px] w-auto object-contain"
-          />
-        </div>
-
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 border border-orange-200 px-3 py-1 text-xs font-semibold text-orange-800">
             <Sparkles size={13} className="text-orange-600 animate-pulse" /> Become a Winkget Partner
@@ -62,38 +53,47 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
             Create a digital storefront on Winkget in minutes. List your products, menus, or services to start receiving online orders, managing local deliveries, and scaling your business locally.
           </p>
 
+          {/* Mobile-only Banner Image (Below Heading & Subheading) */}
+          <div className="block md:hidden py-4 flex justify-center shrink-0">
+            <img 
+              src="/onboarding_intro_banner.png" 
+              alt="Become a Winkget Merchant Partner" 
+              className="max-h-[220px] w-auto object-contain"
+            />
+          </div>
+
           {/* Key Benefits (2x2 Grid) */}
-          <div className="grid gap-6 sm:grid-cols-2 pt-2 max-w-4xl">
-            <article className="p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
-              <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center mb-3">
-                <Coins size={20} />
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 pt-2 max-w-4xl">
+            <article className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center mb-3">
+                <Coins size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Zero Onboarding Cost</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">Join for free and list your catalogs without any setup fees or hidden deposits.</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Zero Onboarding Cost</h3>
+              <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 leading-relaxed">Join for free and list your catalogs without any setup fees or hidden deposits.</p>
             </article>
 
-            <article className="p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
-              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-                <TrendingUp size={20} />
+            <article className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+                <TrendingUp size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Local Customer Reach</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">Gain immediate visibility and get discovered by thousands of customers in your city.</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Local Customer Reach</h3>
+              <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 leading-relaxed">Gain immediate visibility and get discovered by thousands of customers in your city.</p>
             </article>
 
-            <article className="p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-                <Store size={20} />
+            <article className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-slate-50/40">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                <Store size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Powerful Seller Tools</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">Manage inventories, update pricing in real time, and track sales performance with ease.</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Powerful Seller Tools</h3>
+              <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 leading-relaxed">Manage inventories, update pricing in real time, and track sales performance with ease.</p>
             </article>
 
-            <article className="p-5 rounded-2xl border border-slate-100 bg-[#fbfaff]">
-              <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
-                <Lock size={20} />
+            <article className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-[#fbfaff]">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
+                <Lock size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Secure Direct Payouts</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">Transactions are processed securely and settlements are credited directly to your bank account.</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Secure Direct Payouts</h3>
+              <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 leading-relaxed">Transactions are processed securely and settlements are credited directly to your bank account.</p>
             </article>
           </div>
 
