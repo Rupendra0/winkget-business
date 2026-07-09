@@ -665,7 +665,7 @@ export default function RestaurantMarketplacePage({
             <p className="hidden text-xs text-slate-500 sm:block">Swipe to explore</p>
           </div>
 
-          <div className="flex gap-5 overflow-x-auto pb-2 pt-1 no-scrollbar">
+          <div className="flex gap-5 overflow-x-auto py-3 px-1 no-scrollbar">
             {categoryBubbles.map((category) => {
               const isActive = activeCategory === category.label;
 
@@ -674,19 +674,19 @@ export default function RestaurantMarketplacePage({
                   key={category.label}
                   type="button"
                   onClick={() => setActiveCategory(isActive ? "All" : category.label)}
-                  className="group shrink-0 outline-none"
+                  className="group shrink-0 outline-none p-1"
                 >
                   <div
                     className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full bg-[#f8fafc] border-2 transition-all duration-300 ${
                       isActive 
-                        ? "border-[#ffbe0b] scale-105 ring-4 ring-[#ffbe0b]/20 shadow-md" 
+                        ? "border-[#fb6a3d] scale-105 ring-4 ring-[#fb6a3d]/20 shadow-md" 
                         : "border-transparent group-hover:scale-105 group-hover:border-slate-200 group-hover:shadow-sm"
                     }`}
                   >
                     <img src={category.imageUrl} alt={category.label} className="h-full w-full object-cover" loading="lazy" />
                   </div>
                   <p className={`mt-2 max-w-[90px] truncate text-center text-xs transition-colors duration-200 ${
-                    isActive ? "font-bold text-[#ffbe0b]" : "font-medium text-slate-700 group-hover:text-slate-900"
+                    isActive ? "font-bold text-[#fb6a3d]" : "font-medium text-slate-700 group-hover:text-slate-900"
                   }`}>{category.label}</p>
                 </button>
               );
@@ -944,9 +944,9 @@ export default function RestaurantMarketplacePage({
             </button>
 
             {/* Image Column */}
-            <div className="flex flex-col md:w-1/2 bg-white shrink-0 h-full p-6 justify-center">
+            <div className="flex flex-col md:w-1/2 bg-white shrink-0 h-full pl-6 md:pl-8 pr-4 pt-6 md:pt-8 pb-4 justify-start">
               {/* Main Image Container */}
-              <div className="relative w-full aspect-[4/3] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
+              <div className="relative w-full h-48 md:h-[450px] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
                 <img
                   src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
                   alt={quickViewProduct.name}
@@ -987,12 +987,6 @@ export default function RestaurantMarketplacePage({
             <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-full overflow-hidden">
               {/* Header */}
               <div className="mb-4 shrink-0">
-                <div className="mb-2">
-                  <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wider">
-                    {quickViewCategory || "Food"}
-                  </span>
-                </div>
-
                 <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
                   {quickViewProduct.name}
                 </h2>
