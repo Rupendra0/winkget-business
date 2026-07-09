@@ -147,27 +147,8 @@ export default function RestaurantMarketplacePage({
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
 
   const photoItems = useMemo(() => {
-    const uploadedPhotos = Array.isArray(data.gallery) ? data.gallery.filter(Boolean) : [];
-    if (uploadedPhotos.length > 0) {
-      return uploadedPhotos;
-    }
-
-    return [
-      ...data.products.map((p) => p.imageUrl),
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1493770348161-369560ae357d?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1484723091739-30a097e8f929?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80",
-      "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80",
-    ];
-  }, [data.gallery, data.products]);
+    return Array.isArray(data.gallery) ? data.gallery.filter(Boolean) : [];
+  }, [data.gallery]);
 
   const selectedPhotoIndex = useMemo(() => {
     if (!selectedPhotoUrl) return -1;
@@ -591,7 +572,7 @@ export default function RestaurantMarketplacePage({
       </div>
 
       <div className="relative z-20 mx-auto mt-0 w-full max-w-[1600px] space-y-5 px-4 sm:px-6 md:px-8 lg:px-10 pb-[calc(86px+env(safe-area-inset-bottom))] pt-5">
-        <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start">
+        <div className={`grid grid-cols-1 ${photoItems.length > 0 ? "lg:grid-cols-[7.2fr_2.8fr]" : "lg:grid-cols-1"} gap-6 items-start`}>
           {/* Left Column */}
           <div className="space-y-5 md:space-y-6">
 
@@ -833,38 +814,40 @@ export default function RestaurantMarketplacePage({
           </div>
 
           {/* Right Column: Floating Gallery Card */}
-          <div className="space-y-6 lg:sticky lg:top-24">
-            <div className="rounded-[20px] border border-slate-100 bg-white p-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-[#1f2937] font-heading">Photo Gallery</h3>
-                <button
-                  type="button"
-                  onClick={openAllPhotosModal}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition cursor-pointer"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {photoItems.slice(0, 12).map((imageUrl, idx) => (
+          {photoItems.length > 0 ? (
+            <div className="space-y-6 lg:sticky lg:top-24">
+              <div className="rounded-[20px] border border-slate-100 bg-white p-5 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-[#1f2937] font-heading">Photo Gallery</h3>
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => openSinglePhotoModal(imageUrl)}
-                    className="group relative aspect-square overflow-hidden rounded-[12px] bg-slate-50 border border-slate-100 cursor-pointer text-left"
+                    onClick={openAllPhotosModal}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition cursor-pointer"
                   >
-                    <img
-                      src={imageUrl}
-                      alt="Gallery food item"
-                      className="h-full w-full object-cover transition-transform duration-350 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-350" />
+                    View All
                   </button>
-                ))}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {photoItems.slice(0, 12).map((imageUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => openSinglePhotoModal(imageUrl)}
+                      className="group relative aspect-square overflow-hidden rounded-[12px] bg-slate-50 border border-slate-100 cursor-pointer text-left"
+                    >
+                      <img
+                        src={imageUrl}
+                        alt="Gallery food item"
+                        className="h-full w-full object-cover transition-transform duration-350 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-350" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         {/* Restaurant Information Section (Full Width) */}
