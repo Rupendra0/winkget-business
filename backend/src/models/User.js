@@ -4,6 +4,7 @@ const userSchema = new Schema(
   {
     name: { type: String, trim: true },
     businessName: { type: String, trim: true },
+    slug: { type: String, trim: true, sparse: true, unique: true },
     email: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
     phone: { type: String, trim: true, unique: true, sparse: true },
     businessCategory: { type: Schema.Types.ObjectId, ref: "Category" },
@@ -85,5 +86,36 @@ userSchema.index({ role: 1, vendorStatus: 1, businessCategory: 1, businessSubcat
 userSchema.index({ role: 1, vendorStatus: 1, city: 1, sublocality: 1 });
 userSchema.index({ businessEmail: 1 }, { sparse: true });
 userSchema.index({ businessPhone: 1 }, { sparse: true });
+
+userSchema.pre("save", async function (next) {
+  if (this.role === "vendor") {
+    if (!this.slug || this.isModified("businessName") || this.isModified("name")) {
+      const base = String(this.businessName || this.name || "vendor")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      
+      let targetSlug = base;
+      let counter = 1;
+      
+      while (true) {
+        const existing = await this.constructor.findOne({
+          slug: targetSlug,
+          _id: { $ne: this._id }
+        }).select("_id").lean();
+        
+        if (!existing) {
+          break;
+        }
+        
+        targetSlug = `${base}${counter}`;
+        counter++;
+      }
+      
+      this.slug = targetSlug;
+    }
+  }
+  next();
+});
 
 module.exports = models.User || model("User", userSchema);

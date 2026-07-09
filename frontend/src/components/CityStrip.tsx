@@ -109,7 +109,7 @@ export default function CityStrip() {
             reviews: Number(vendor.reviews || 0),
             address: vendor.address || vendor.businessDescription || "Address not available",
             imageUrl,
-            href: `/listing/${vendor.id}`,
+            href: `/listing/${vendor.slug || vendor.id}`,
             isNew: index < 3,
           };
         });

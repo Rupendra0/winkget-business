@@ -258,6 +258,10 @@ const toVendorSummary = (vendor, reviewSummaryByVendorId) => {
 
   return {
     id: String(vendor._id),
+    slug: vendor.slug || String(vendor.businessName || vendor.name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, ""),
     createdAt: vendor.createdAt,
     name: vendor.name,
     businessName: vendor.businessName,
@@ -854,26 +858,49 @@ router.get("/vendors", withPublicGetCache(async (req, res) => {
   }
 }));
 
+const resolveVendorByIdOrSlug = async (idOrSlug, selectFields) => {
+  const queryVal = String(idOrSlug || "").trim();
+  if (!queryVal) return null;
+
+  if (OBJECT_ID_REGEX.test(queryVal)) {
+    const vendor = await User.findOne({ _id: queryVal, role: "vendor", vendorStatus: "approved" })
+      .select(selectFields)
+      .lean();
+    if (vendor) return vendor;
+  }
+
+  let vendor = await User.findOne({ slug: queryVal, role: "vendor", vendorStatus: "approved" })
+    .select(selectFields)
+    .lean();
+  if (vendor) return vendor;
+
+  const allVendors = await User.find({ role: "vendor", vendorStatus: "approved" })
+    .select(selectFields)
+    .lean();
+  
+  vendor = allVendors.find((v) => {
+    const s1 = String(v.slug || "").trim().toLowerCase();
+    if (s1 === queryVal.toLowerCase()) return true;
+
+    const s2 = String(v.businessName || v.name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    return s2 === queryVal.toLowerCase();
+  });
+
+  return vendor;
+};
+
 router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) => {
   try {
     const vendorId = String(req.params.id || "").trim();
-    if (!OBJECT_ID_REGEX.test(vendorId)) {
-      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
-    }
-
     const isStoreView = String(req.query.view || "").trim().toLowerCase() === "store";
-    const vendor = await User.findOne({
-      _id: vendorId,
-      role: "vendor",
-      vendorStatus: "approved",
-    })
-      .select(
-        isStoreView
-          ? "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
-          : "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
-      )
-      .lean();
+    const selectFields = isStoreView
+      ? "_id name slug businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
+      : "_id name slug businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt";
 
+    const vendor = await resolveVendorByIdOrSlug(vendorId, selectFields);
     if (!vendor) {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
     }
@@ -897,20 +924,9 @@ router.get("/vendors/:id/public-profile", withPublicGetCache(async (req, res) =>
 router.get("/vendors/:id", withPublicGetCache(async (req, res) => {
   try {
     const vendorId = String(req.params.id || "").trim();
-    if (!OBJECT_ID_REGEX.test(vendorId)) {
-      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
-    }
+    const selectFields = "_id name slug businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt";
 
-    const vendor = await User.findOne({
-      _id: vendorId,
-      role: "vendor",
-      vendorStatus: "approved",
-    })
-      .select(
-        "_id name businessName businessType city sublocality state postalCode businessAddress businessCategory businessSubcategory businessPhone businessEmail businessAlternatePhone website gstNumber serviceTags businessDescription image shopBannerImage cardImage myStoreImage myStoreBannerImage shopGallery marketingOptIn vendorStatus establishmentYear yearsInBusiness shopOpeningTime shopClosingTime storeStatusMode manualStoreStatus manualStoreStatusUpdatedAt paymentQrCode createdAt"
-      )
-      .lean();
-
+    const vendor = await resolveVendorByIdOrSlug(vendorId, selectFields);
     if (!vendor) {
       return res.status(404).json({ ok: false, message: "Vendor not found" });
     }

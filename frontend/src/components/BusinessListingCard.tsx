@@ -26,7 +26,7 @@ function BusinessListingCardComponent({
   const [liveStoreStatus, setLiveStoreStatus] = useState<VendorStoreStatusSocketPayload | null>(null);
   const hasPrefetchedRef = useRef(false);
 
-  const detailsHref = `/listing/${listing.id}`;
+  const detailsHref = `/listing/${listing.slug || listing.id}`;
   const displayName =
     String(listing.businessName || "").trim() ||
     String(listing.name || "").trim() ||

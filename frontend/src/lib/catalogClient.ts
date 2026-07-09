@@ -88,6 +88,7 @@ export type CatalogSubcategory = {
 
 export type CatalogVendorSummary = {
   id: string;
+  slug?: string;
   createdAt?: string;
   name?: string;
   businessName?: string;
@@ -506,6 +507,7 @@ const toListingFromVendor = (vendor: CatalogVendorSummary): CategoryListing => {
 
   return {
     id: vendor.id,
+    slug: vendor.slug,
     name: displayName,
     businessName: vendor.businessName,
     rating: Number(vendor.rating || 0),

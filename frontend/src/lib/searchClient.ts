@@ -9,6 +9,7 @@ export type SearchHit = {
   cities?: string[];
   sublocality?: string;
   vendorId?: string;
+  vendorSlug?: string;
   vendorName?: string;
   vendorImage?: string;
   vendorPhone?: string;

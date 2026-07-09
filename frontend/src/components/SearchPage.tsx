@@ -465,7 +465,7 @@ export default function SearchPage() {
 
                           <div className="mt-3 flex gap-2 sm:mt-4">
                             <Link
-                              href={`/listing/${hit.vendorId}`}
+                              href={`/listing/${hit.vendorSlug || hit.vendorId}`}
                               className="rounded-full bg-slate-900 px-4 py-1 text-[11px] font-semibold text-white sm:px-5 sm:py-1.5 sm:text-xs"
                             >
                               Visit
@@ -540,7 +540,7 @@ export default function SearchPage() {
                               View
                             </Link>
                             <Link
-                              href={`/listing/${hit.vendorId}`}
+                              href={`/listing/${hit.vendorSlug || hit.vendorId}`}
                               className="whitespace-nowrap rounded-full border border-slate-200 px-4 py-1 text-[11px] font-semibold text-slate-600 sm:px-5 sm:py-1.5 sm:text-xs"
                             >
                               Visit vendor

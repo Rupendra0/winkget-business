@@ -1,5 +1,6 @@
 export type CategoryListing = {
   id: string;
+  slug?: string;
   name: string;
   businessName?: string;
   rating: number;

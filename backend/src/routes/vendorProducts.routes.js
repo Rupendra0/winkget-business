@@ -817,8 +817,27 @@ router.delete("/vendor/products/:id", requireVendor, async (req, res) => {
 router.get("/vendors/:id/products", async (req, res) => {
   try {
     const vendorId = normalizeString(req.params.id);
+    let vendorObjId = vendorId;
     if (!OBJECT_ID_REGEX.test(vendorId)) {
-      return res.status(400).json({ ok: false, message: "Invalid vendor id" });
+      let vendor = await User.findOne({ slug: vendorId, role: "vendor", vendorStatus: "approved" }).select("_id").lean();
+      if (!vendor) {
+        const allVendors = await User.find({ role: "vendor", vendorStatus: "approved" }).select("_id slug businessName name").lean();
+        vendor = allVendors.find((v) => {
+          const s1 = String(v.slug || "").trim().toLowerCase();
+          if (s1 === vendorId.toLowerCase()) return true;
+
+          const s2 = String(v.businessName || v.name || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+          return s2 === vendorId.toLowerCase();
+        });
+      }
+
+      if (!vendor) {
+        return res.status(404).json({ ok: false, message: "Vendor not found" });
+      }
+      vendorObjId = String(vendor._id);
     }
 
     const statusInput = normalizeString(req.query.status || "live").toLowerCase();
@@ -831,7 +850,7 @@ router.get("/vendors/:id/products", async (req, res) => {
     const isStoreView = normalizeString(req.query.view).toLowerCase() === "store";
 
     const query = {
-      vendor: vendorId,
+      vendor: vendorObjId,
       isDeleted: { $ne: true },
     };
 
