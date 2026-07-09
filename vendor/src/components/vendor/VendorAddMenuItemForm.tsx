@@ -221,18 +221,36 @@ export default function VendorAddMenuItemForm({
     );
   };
 
-  const [mainImagePreview, setMainImagePreview] = useState<ImagePreview | null>(() => {
-    const url = String(initialProduct?.image || "").trim();
-    if (url) {
+  const mainImagePreview = useMemo<ImagePreview | null>(() => {
+    if (fieldValues.mainImage instanceof File) {
+      return {
+        id: "main-new",
+        name: fieldValues.mainImage.name,
+        url: URL.createObjectURL(fieldValues.mainImage),
+        source: "new",
+      };
+    }
+
+    const existingUrl = String(existingMainImageUrl || "").trim();
+    if (existingUrl) {
       return {
         id: "main-existing",
         name: "Current main image",
-        url,
+        url: existingUrl,
         source: "existing",
       };
     }
+
     return null;
-  });
+  }, [fieldValues.mainImage, existingMainImageUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (mainImagePreview?.source === "new") {
+        URL.revokeObjectURL(mainImagePreview.url);
+      }
+    };
+  }, [mainImagePreview]);
 
   const newGalleryPreviews = useMemo<ImagePreview[]>(
     () =>
@@ -346,13 +364,6 @@ export default function VendorAddMenuItemForm({
   const handleMainImageFiles = (files: FileList | null) => {
     const file = files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setMainImagePreview({
-        id: `main-${Date.now()}`,
-        name: file.name,
-        url,
-        source: "new",
-      });
       setFieldValues((current) => ({ ...current, mainImage: file }));
       setExistingMainImageUrl("");
       setFieldErrors((current) => ({ ...current, mainImage: "" }));
@@ -360,10 +371,6 @@ export default function VendorAddMenuItemForm({
   };
 
   const clearMainImage = () => {
-    if (mainImagePreview && mainImagePreview.source === "new" && mainImagePreview.url) {
-      URL.revokeObjectURL(mainImagePreview.url);
-    }
-    setMainImagePreview(null);
     setExistingMainImageUrl("");
     setFieldValues((current) => ({ ...current, mainImage: null }));
   };

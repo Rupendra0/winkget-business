@@ -503,7 +503,7 @@ export default function RestaurantMarketplacePage({
             }
             window.location.href = "/";
           }}
-          className="absolute left-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm"
+          className="absolute left-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700"
           aria-label="Go back"
         >
           <ArrowLeft size={18} />
@@ -515,7 +515,7 @@ export default function RestaurantMarketplacePage({
             onClick={() => {
               void handleShare();
             }}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700"
             aria-label="Share store"
           >
             <Share2 size={17} />
@@ -524,7 +524,7 @@ export default function RestaurantMarketplacePage({
           <button
             type="button"
             onClick={() => setIsWishlisted((previous) => !previous)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-slate-700"
             aria-label="Toggle wishlist"
           >
             <Heart size={17} className={isWishlisted ? "fill-rose-500 text-rose-500" : ""} />
@@ -537,7 +537,7 @@ export default function RestaurantMarketplacePage({
         <div className="mx-auto w-full max-w-full lg:max-w-[95%] xl:max-w-[1400px] px-3 sm:px-4 lg:px-8 py-5">
           <div className="flex min-w-0 items-start gap-3.5 md:items-start md:justify-between md:gap-6">
             <div className="flex min-w-0 items-start gap-3.5 md:gap-6">
-              <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[18px] bg-white md:-mt-[45px] md:h-[110px] md:w-[110px] md:rounded-[24px] border-2 border-white shadow-md">
+              <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[18px] bg-white md:-mt-[45px] md:h-[110px] md:w-[110px] md:rounded-[24px] border-2 border-white">
                 <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" loading="lazy" />
               </div>
 
@@ -586,7 +586,7 @@ export default function RestaurantMarketplacePage({
         <section className="flex overflow-x-auto no-scrollbar gap-2 pb-1.5 md:grid md:grid-cols-6 md:gap-3.5 w-full">
           <a
             href="#full-menu"
-            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#fb6a3d] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(251,106,61,0.28)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#fb6a3d] text-xs sm:text-sm font-semibold text-white transition hover:opacity-92 shrink-0 px-4 md:px-0"
           >
             <ShoppingCart size={15} />
             Browse Menu
@@ -595,7 +595,7 @@ export default function RestaurantMarketplacePage({
           {phoneDigits ? (
             <a
               href={`tel:${phoneDigits}`}
-              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-xs sm:text-sm font-semibold text-black shadow-[0_8px_16px_rgba(255,190,11,0.22)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
+              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-xs sm:text-sm font-semibold text-black transition hover:opacity-92 shrink-0 px-4 md:px-0"
             >
               <PhoneCall size={16} />
               Call
@@ -612,7 +612,7 @@ export default function RestaurantMarketplacePage({
               href={`https://wa.me/${whatsappDigits}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(27,156,90,0.24)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
+              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a] text-xs sm:text-sm font-semibold text-white transition hover:opacity-92 shrink-0 px-4 md:px-0"
             >
               <MessageCircle size={16} />
               WhatsApp
@@ -627,7 +627,7 @@ export default function RestaurantMarketplacePage({
           {/* Book Table */}
           <button
             type="button"
-            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#8b5cf6] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(139,92,246,0.22)] transition hover:bg-[#7c3aed] cursor-pointer shrink-0 px-4 md:px-0"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#8b5cf6] text-xs sm:text-sm font-semibold text-white transition hover:bg-[#7c3aed] cursor-pointer shrink-0 px-4 md:px-0"
           >
             <UtensilsCrossed size={16} />
             Book Table
@@ -638,7 +638,7 @@ export default function RestaurantMarketplacePage({
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address || "")}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#3b82f6] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(59,130,246,0.22)] transition hover:bg-[#2563eb] shrink-0 px-4 md:px-0"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#3b82f6] text-xs sm:text-sm font-semibold text-white transition hover:bg-[#2563eb] shrink-0 px-4 md:px-0"
           >
             <MapPin size={16} />
             Directions
@@ -647,7 +647,7 @@ export default function RestaurantMarketplacePage({
           {/* Reviews */}
           <a
             href="#reviews"
-            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#64748b] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(100,116,139,0.22)] transition hover:bg-[#475569] shrink-0 px-4 md:px-0"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#64748b] text-xs sm:text-sm font-semibold text-white transition hover:bg-[#475569] shrink-0 px-4 md:px-0"
           >
             <Star size={16} className="fill-white" />
             Reviews
@@ -679,8 +679,8 @@ export default function RestaurantMarketplacePage({
                   <div
                     className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full bg-[#f8fafc] border-2 transition-all duration-300 ${
                       isActive 
-                        ? "border-[#fb6a3d] scale-105 ring-4 ring-[#fb6a3d]/20 shadow-md" 
-                        : "border-transparent group-hover:scale-105 group-hover:border-slate-200 group-hover:shadow-sm"
+                        ? "border-[#fb6a3d] scale-105 ring-4 ring-[#fb6a3d]/20" 
+                        : "border-transparent group-hover:scale-105 group-hover:border-slate-200"
                     }`}
                   >
                     <img src={category.imageUrl} alt={category.label} className="h-full w-full object-cover" loading="lazy" />
@@ -733,7 +733,7 @@ export default function RestaurantMarketplacePage({
                 return (
                   <article
                     key={product.id}
-                    className="flex h-full min-h-[350px] flex-col overflow-hidden rounded-[16px] bg-white border border-slate-100/60 shadow-sm"
+                    className="flex h-full min-h-[350px] flex-col overflow-hidden rounded-[16px] bg-white border border-slate-100/60"
                   >
                     <button
                       type="button"
@@ -743,7 +743,7 @@ export default function RestaurantMarketplacePage({
                     >
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                       {product.badge ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm">
+                        <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold text-slate-700">
                           {product.badge}
                         </span>
                       ) : null}
@@ -778,7 +778,7 @@ export default function RestaurantMarketplacePage({
                       <p className="mt-3 mb-3.5 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
 
                       {productCartQuantity > 0 ? (
-                        <div className="mt-auto mt-3 inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.22)]">
+                        <div className="mt-auto mt-3 inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white">
                           <button
                             type="button"
                             onClick={() => updateCartQuantity(product.id, productCartQuantity - 1)}
@@ -820,7 +820,7 @@ export default function RestaurantMarketplacePage({
           {/* Right Column: Floating Gallery Card */}
           {photoItems.length > 0 ? (
             <div className="space-y-6 lg:sticky lg:top-24">
-              <div className="rounded-[20px] border border-slate-100 bg-white p-5 space-y-4 shadow-sm">
+              <div className="rounded-[20px] border border-slate-100 bg-white p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#1f2937] font-heading">Photo Gallery</h3>
                   <button
@@ -930,14 +930,14 @@ export default function RestaurantMarketplacePage({
           />
 
           <div 
-            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-hidden rounded-3xl bg-white shadow-2xl transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
+            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-hidden rounded-3xl bg-white transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
             onClick={(event) => event.stopPropagation()}
           >
             {/* Close Button */}
             <button
               type="button"
               onClick={closeQuickView}
-              className="absolute right-4 top-4 z-20 grid h-8 w-8 place-items-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition cursor-pointer shadow-sm border border-slate-100"
+              className="absolute right-4 top-4 z-20 grid h-8 w-8 place-items-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition cursor-pointer border border-slate-100"
               aria-label="Close"
             >
               <X size={18} />
@@ -946,7 +946,7 @@ export default function RestaurantMarketplacePage({
             {/* Image Column */}
             <div className="flex flex-col md:w-1/2 bg-white shrink-0 h-full pl-6 md:pl-8 pr-4 pt-6 md:pt-8 pb-4 justify-start">
               {/* Main Image Container */}
-              <div className="relative w-full h-48 md:h-[450px] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
+              <div className="relative w-full h-48 md:h-[450px] bg-white rounded-2xl border border-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
                 <img
                   src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
                   alt={quickViewProduct.name}
@@ -954,7 +954,7 @@ export default function RestaurantMarketplacePage({
                   loading="lazy"
                 />
                 {quickViewProduct.badge && (
-                  <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white shadow-md uppercase tracking-wider">
+                  <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider">
                     {quickViewProduct.badge}
                   </span>
                 )}
@@ -970,7 +970,7 @@ export default function RestaurantMarketplacePage({
                         key={`quick-view-thumb-${index}`}
                         type="button"
                         onClick={() => setQuickViewImage(image)}
-                        className={`h-14 w-14 overflow-hidden rounded-xl transition border shadow-sm shrink-0 ${
+                        className={`h-14 w-14 overflow-hidden rounded-xl transition border shrink-0 ${
                           isActive ? "border-amber-500 ring-2 ring-amber-500/20 bg-white" : "border-slate-200 hover:border-slate-300 bg-white"
                         }`}
                         aria-label={`Show image ${index + 1}`}
@@ -1078,6 +1078,15 @@ export default function RestaurantMarketplacePage({
                 </div>
 
                 <div className="w-44 shrink-0 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuickViewSaved((prev) => !prev)}
+                    className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-transparent text-xs font-semibold text-slate-600 hover:text-slate-800 transition"
+                  >
+                    <Heart size={13} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
+                    {quickViewSaved ? "Saved" : "Save"}
+                  </button>
+
                   {quickViewCartQuantity > 0 ? (
                     <div className="inline-flex h-10 w-full items-stretch overflow-hidden rounded-lg border border-[#15803d] bg-[#15803d] text-white">
                       <button
@@ -1108,15 +1117,6 @@ export default function RestaurantMarketplacePage({
                       Add to Cart
                     </button>
                   )}
-
-                  <button
-                    type="button"
-                    onClick={() => setQuickViewSaved((prev) => !prev)}
-                    className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
-                  >
-                    <Heart size={13} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
-                    {quickViewSaved ? "Saved" : "Save"}
-                  </button>
                 </div>
               </div>
             </div>

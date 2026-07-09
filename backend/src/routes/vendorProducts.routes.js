@@ -546,12 +546,24 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
 };
 
 const resolvePayloadImages = async (payload) => {
-  if (payload.image) payload.image = await uploadImage(payload.image);
-  if (payload.heroImage) payload.heroImage = await uploadImage(payload.heroImage);
-  if (payload.subcategoryImage) payload.subcategoryImage = await uploadImage(payload.subcategoryImage);
+  const uploadCache = new Map();
+  const cachedUpload = async (img) => {
+    if (!img) return "";
+    const trimmed = img.trim();
+    if (uploadCache.has(trimmed)) {
+      return uploadCache.get(trimmed);
+    }
+    const uploadedUrl = await uploadImage(img);
+    uploadCache.set(trimmed, uploadedUrl);
+    return uploadedUrl;
+  };
+
+  if (payload.image) payload.image = await cachedUpload(payload.image);
+  if (payload.heroImage) payload.heroImage = await cachedUpload(payload.heroImage);
+  if (payload.subcategoryImage) payload.subcategoryImage = await cachedUpload(payload.subcategoryImage);
   
   if (Array.isArray(payload.gallery)) {
-    payload.gallery = await Promise.all(payload.gallery.map((img) => uploadImage(img)));
+    payload.gallery = await Promise.all(payload.gallery.map((img) => cachedUpload(img)));
   }
   
   if (Array.isArray(payload.variantData)) {
@@ -563,14 +575,14 @@ const resolvePayloadImages = async (payload) => {
           try {
             const arr = JSON.parse(v.image);
             if (Array.isArray(arr)) {
-              const uploadedArr = await Promise.all(arr.map((img) => uploadImage(img)));
+              const uploadedArr = await Promise.all(arr.map((img) => cachedUpload(img)));
               resolvedImage = JSON.stringify(uploadedArr);
             }
           } catch {
-            resolvedImage = await uploadImage(v.image);
+            resolvedImage = await cachedUpload(v.image);
           }
         } else if (v.image) {
-          resolvedImage = await uploadImage(v.image);
+          resolvedImage = await cachedUpload(v.image);
         }
         return {
           ...varObj,
