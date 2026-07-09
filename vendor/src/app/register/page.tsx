@@ -595,6 +595,15 @@ export default function VendorRegisterPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("start") === "true") {
+        setShowIntro(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     const checkSession = async () => {

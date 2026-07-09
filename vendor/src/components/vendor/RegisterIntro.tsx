@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ArrowRight, 
@@ -18,19 +19,35 @@ type RegisterIntroProps = {
 
 export default function RegisterIntro({ onStart }: RegisterIntroProps) {
   const router = useRouter();
+  const [loadingAction, setLoadingAction] = useState<"login" | "register" | null>(null);
 
   const handleStart = () => {
     if (onStart) {
       onStart();
     } else {
-      router.push("/register");
+      setLoadingAction("register");
+      router.push("/register?start=true");
     }
   };
 
+  const handleLogin = () => {
+    setLoadingAction("login");
+    router.push("/login");
+  };
+
   return (
-    <main className="min-h-screen w-full flex flex-col md:flex-row bg-white relative">
+    <main className="min-h-screen w-full flex flex-col md:flex-row bg-white relative pb-20 md:pb-0">
       {/* Left Section: Information Content */}
       <div className="flex-1 p-6 sm:p-10 lg:p-16 flex flex-col justify-center">
+        {/* Mobile-only Top Banner Image */}
+        <div className="block md:hidden pb-6 flex justify-center shrink-0">
+          <img 
+            src="/onboarding_intro_banner.png" 
+            alt="Become a Winkget Merchant Partner" 
+            className="max-h-[220px] w-auto object-contain"
+          />
+        </div>
+
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 border border-orange-200 px-3 py-1 text-xs font-semibold text-orange-800">
             <Sparkles size={13} className="text-orange-600 animate-pulse" /> Become a Winkget Partner
@@ -116,8 +133,8 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
         </div>
       </div>
 
-      {/* Right Section: Banner & Actions (Sticky on Desktop) */}
-      <div className="w-full md:w-[420px] lg:w-[480px] bg-white border-l border-slate-100 p-8 flex flex-col justify-center shrink-0 md:sticky md:top-0 md:h-screen self-start">
+      {/* Right Section: Banner & Actions (Desktop Only) */}
+      <div className="hidden md:flex md:w-[420px] lg:w-[480px] bg-white border-l border-slate-100 p-8 flex-col justify-center shrink-0 md:sticky md:top-0 md:h-screen self-start">
         <div className="flex items-center justify-center py-6">
           <img 
             src="/onboarding_intro_banner.png" 
@@ -126,23 +143,61 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
           />
         </div>
         
-        {/* Actions Area */}
+        {/* Actions Area (Desktop Only) */}
         <div className="flex flex-col gap-3 py-6">
           <button
             type="button"
+            disabled={loadingAction !== null}
             onClick={handleStart}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#fb6a3d] px-8 text-sm font-bold text-white hover:bg-[#e0562b] shadow-lg shadow-orange-500/10 transition cursor-pointer"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#fb6a3d] px-8 text-sm font-bold text-white hover:bg-[#e0562b] shadow-lg shadow-orange-500/10 transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            Start Registration <ArrowRight size={16} />
+            {loadingAction === "register" ? (
+              <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <>Start Registration <ArrowRight size={16} /></>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => router.push("/login")}
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-8 text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            disabled={loadingAction !== null}
+            onClick={handleLogin}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-8 text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            Partner Login
+            {loadingAction === "login" ? (
+              <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" />
+            ) : (
+              "Partner Login"
+            )}
           </button>
         </div>
+      </div>
+
+      {/* Sticky Bottom Actions Bar (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex gap-3 z-30 shadow-[0_-8px_20px_rgba(0,0,0,0.05)] pb-safe">
+        <button
+          type="button"
+          disabled={loadingAction !== null}
+          onClick={handleLogin}
+          className="flex-1 inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {loadingAction === "login" ? (
+            <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" />
+          ) : (
+            "Partner Login"
+          )}
+        </button>
+        <button
+          type="button"
+          disabled={loadingAction !== null}
+          onClick={handleStart}
+          className="flex-1 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#fb6a3d] text-sm font-bold text-white hover:bg-[#e0562b] shadow-lg shadow-orange-500/10 transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {loadingAction === "register" ? (
+            <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <>Start Registration <ArrowRight size={14} /></>
+          )}
+        </button>
       </div>
     </main>
   );
