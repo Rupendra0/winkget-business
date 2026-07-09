@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState, type ComponentType } from "react";
+import RegisterIntro from "@/components/vendor/RegisterIntro";
 import {
   BarChart3,
   Bell,
@@ -5906,28 +5907,7 @@ export default function VendorDashboard() {
   }
 
   if (!vendor) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-4 py-10">
-        <section className="w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <Building2 className="mx-auto h-9 w-9 text-[var(--vendor-primary)]" aria-hidden="true" />
-          <h1 className="mt-4 font-display text-2xl font-semibold text-gray-900">Vendor session required</h1>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--vendor-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95"
-            >
-              Vendor Login
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              Register as Vendor
-            </Link>
-          </div>
-        </section>
-      </main>
-    );
+    return <RegisterIntro />;
   }
 
   return (
