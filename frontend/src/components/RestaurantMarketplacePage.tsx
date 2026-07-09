@@ -944,7 +944,7 @@ export default function RestaurantMarketplacePage({
           />
 
           <div 
-            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-hidden rounded-3xl bg-white transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
+            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-y-auto md:overflow-hidden rounded-3xl bg-white transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
             onClick={(event) => event.stopPropagation()}
           >
             {/* Close Button */}
@@ -958,7 +958,7 @@ export default function RestaurantMarketplacePage({
             </button>
 
             {/* Image Column */}
-            <div className="flex flex-col md:w-1/2 bg-white shrink-0 h-full pl-6 md:pl-8 pr-4 pt-6 md:pt-8 pb-4 justify-start">
+            <div className="flex flex-col w-full md:w-1/2 bg-white shrink-0 h-auto md:h-full pl-6 md:pl-8 pr-6 md:pr-4 pt-6 md:pt-8 pb-4 justify-start">
               {/* Main Image Container */}
               <div className="relative w-full h-48 md:h-[450px] bg-white rounded-2xl border border-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
                 <img
@@ -998,7 +998,7 @@ export default function RestaurantMarketplacePage({
             </div>
 
             {/* Details Column */}
-            <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-full overflow-hidden">
+            <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-auto md:h-full overflow-visible md:overflow-hidden">
               {/* Header */}
               <div className="mb-4 shrink-0">
                 <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
@@ -1011,7 +1011,7 @@ export default function RestaurantMarketplacePage({
               </div>
 
               {/* Scrollable Middle Content Area */}
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
+              <div className="flex-1 md:overflow-y-auto pr-2 space-y-6 md:no-scrollbar">
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="font-extrabold text-amber-600">{formatRating(quickViewRating)}</span>
                   <div className="flex items-center gap-0.5 text-amber-500">

@@ -874,7 +874,7 @@ export default function FoodStorePage({ data }: FoodStorePageProps) {
             aria-label="Close menu item quick view"
           />
 
-          <article className="relative z-10 w-full max-w-[980px] overflow-hidden rounded-[22px] bg-[#f8fafc]">
+          <article className="relative z-10 w-full md:max-w-[980px] max-h-[90vh] overflow-y-auto rounded-[22px] bg-[#f8fafc] shadow-2xl">
             <button
               type="button"
               onClick={closeQuickView}

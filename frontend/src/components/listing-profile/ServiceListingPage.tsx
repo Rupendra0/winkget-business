@@ -2806,7 +2806,7 @@ export default function ServiceListingPage({
               onClick={() => setSelectedService(null)}
             >
               <div 
-                className="relative w-full md:w-[80vw] md:max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl transition-all md:flex md:h-[620px] max-h-[90vh] cursor-default"
+                className="relative w-full md:w-[80vw] md:max-w-6xl overflow-y-auto md:overflow-hidden rounded-2xl bg-white shadow-2xl transition-all md:flex md:h-[620px] max-h-[90vh] cursor-default"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Close Button */}
@@ -2820,7 +2820,7 @@ export default function ServiceListingPage({
                 </button>
 
                 {/* Image Column */}
-                <div className="relative h-48 md:h-full md:w-1/2 bg-slate-100 shrink-0">
+                <div className="relative h-48 md:h-full w-full md:w-1/2 bg-slate-100 shrink-0">
                   {imageUrl ? (
                     <img
                       src={imageUrl}
@@ -2840,7 +2840,7 @@ export default function ServiceListingPage({
                 </div>
 
                 {/* Details Column */}
-                <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-full overflow-hidden">
+                <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-auto md:h-full overflow-visible md:overflow-hidden">
                   {/* Fixed Header */}
                   <div className="mb-4 shrink-0">
                     <div className="mb-2">
@@ -2859,7 +2859,7 @@ export default function ServiceListingPage({
                   </div>
 
                   {/* Scrollable Middle Content Area */}
-                  <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
+                  <div className="flex-1 md:overflow-y-auto pr-2 space-y-6 md:no-scrollbar">
                     <div className="flex items-center gap-1.5 text-xs">
                       <span className="font-extrabold text-amber-600">{ratingLabel(ratingValue)}</span>
                       <div className="flex items-center gap-0.5 text-amber-500">
