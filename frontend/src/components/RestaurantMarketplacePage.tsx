@@ -250,7 +250,7 @@ export default function RestaurantMarketplacePage({
       : [];
 
     if (adminCategoryBubbles.length > 0) {
-      return [{ id: "all", label: "All", imageUrl: fallbackImage }, ...adminCategoryBubbles];
+      return adminCategoryBubbles;
     }
 
     const fallbackBubbles = Array.from(mappedProductImages.entries()).map(([normalizedLabel, imageUrl]) => ({
@@ -262,7 +262,7 @@ export default function RestaurantMarketplacePage({
       imageUrl,
     }));
 
-    return [{ id: "all", label: "All", imageUrl: fallbackImage }, ...fallbackBubbles];
+    return fallbackBubbles;
   }, [data.bannerImage, data.categoryBarItems, data.logoImage, data.products]);
 
   const quickFilterChips = useMemo(() => {
@@ -665,7 +665,7 @@ export default function RestaurantMarketplacePage({
             <p className="hidden text-xs text-slate-500 sm:block">Swipe to explore</p>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-5 overflow-x-auto pb-2 pt-1 no-scrollbar">
             {categoryBubbles.map((category) => {
               const isActive = activeCategory === category.label;
 
@@ -673,17 +673,21 @@ export default function RestaurantMarketplacePage({
                 <button
                   key={category.label}
                   type="button"
-                  onClick={() => setActiveCategory(category.label)}
-                  className="group shrink-0"
+                  onClick={() => setActiveCategory(isActive ? "All" : category.label)}
+                  className="group shrink-0 outline-none"
                 >
                   <div
-                    className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full bg-[#f8fafc] transition ${
-                      isActive ? "bg-[#fff2ed]" : ""
+                    className={`grid h-[90px] w-[90px] place-items-center overflow-hidden rounded-full bg-[#f8fafc] border-2 transition-all duration-300 ${
+                      isActive 
+                        ? "border-[#ffbe0b] scale-105 ring-4 ring-[#ffbe0b]/20 shadow-md" 
+                        : "border-transparent group-hover:scale-105 group-hover:border-slate-200 group-hover:shadow-sm"
                     }`}
                   >
                     <img src={category.imageUrl} alt={category.label} className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                  <p className="mt-2 max-w-[90px] truncate text-center text-xs font-medium text-slate-700">{category.label}</p>
+                  <p className={`mt-2 max-w-[90px] truncate text-center text-xs transition-colors duration-200 ${
+                    isActive ? "font-bold text-[#ffbe0b]" : "font-medium text-slate-700 group-hover:text-slate-900"
+                  }`}>{category.label}</p>
                 </button>
               );
             })}
@@ -926,36 +930,39 @@ export default function RestaurantMarketplacePage({
           />
 
           <div 
-            className="relative w-full md:w-[80vw] md:max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl transition-all md:flex md:h-[580px] max-h-[90vh] cursor-default"
+            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-hidden rounded-3xl bg-white shadow-2xl transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
             onClick={(event) => event.stopPropagation()}
           >
             {/* Close Button */}
             <button
               type="button"
               onClick={closeQuickView}
-              className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition cursor-pointer"
+              className="absolute right-4 top-4 z-20 grid h-8 w-8 place-items-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition cursor-pointer shadow-sm border border-slate-100"
               aria-label="Close"
             >
               <X size={18} />
             </button>
 
-            {/* Image Column (Edge to Edge) */}
-            <div className="relative h-48 md:h-full md:w-1/2 bg-slate-50 shrink-0">
-              <img
-                src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
-                alt={quickViewProduct.name}
-                className="h-full w-full object-contain bg-slate-50"
-                loading="lazy"
-              />
-              {quickViewProduct.badge && (
-                <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white shadow-md uppercase tracking-wider">
-                  {quickViewProduct.badge}
-                </span>
-              )}
+            {/* Image Column */}
+            <div className="flex flex-col md:w-1/2 bg-white shrink-0 h-full p-6 justify-center">
+              {/* Main Image Container */}
+              <div className="relative w-full aspect-[4/3] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
+                <img
+                  src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
+                  alt={quickViewProduct.name}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                {quickViewProduct.badge && (
+                  <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white shadow-md uppercase tracking-wider">
+                    {quickViewProduct.badge}
+                  </span>
+                )}
+              </div>
 
-              {/* Gallery Thumbnails Overlay */}
-              {quickViewGallery.length > 1 && (
-                <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2 px-4">
+              {/* Gallery Thumbnails Below Image */}
+              {quickViewGallery.length > 1 ? (
+                <div className="mt-5 flex items-center justify-center gap-3 overflow-x-auto no-scrollbar shrink-0">
                   {quickViewGallery.slice(0, 5).map((image, index) => {
                     const isActive = quickViewImage === image;
                     return (
@@ -963,17 +970,17 @@ export default function RestaurantMarketplacePage({
                         key={`quick-view-thumb-${index}`}
                         type="button"
                         onClick={() => setQuickViewImage(image)}
-                        className={`h-11 w-11 overflow-hidden rounded-lg transition border border-white/40 shadow-sm ${
-                          isActive ? "opacity-100 ring-2 ring-blue-500" : "opacity-80"
+                        className={`h-14 w-14 overflow-hidden rounded-xl transition border shadow-sm shrink-0 ${
+                          isActive ? "border-amber-500 ring-2 ring-amber-500/20 bg-white" : "border-slate-200 hover:border-slate-300 bg-white"
                         }`}
                         aria-label={`Show image ${index + 1}`}
                       >
-                        <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-contain bg-slate-50" />
+                        <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-cover" />
                       </button>
                     );
                   })}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Details Column */}

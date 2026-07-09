@@ -41,6 +41,7 @@ type FieldValues = {
   discount: string;
   sellerName: string;
   mainImage: File | null;
+  images: File[];
 };
 
 type CategorySelection = {
@@ -56,6 +57,14 @@ type ImagePreview = {
 };
 
 const MAX_PRODUCT_NAME_WORDS = 10;
+
+const getFileKey = (file: File): string => {
+  return `${file.name}-${file.size}-${file.lastModified || 0}`;
+};
+
+const normalizeGalleryFiles = (existingFiles: File[], incomingFiles: File[]): File[] => {
+  return Array.from(new Map([...existingFiles, ...incomingFiles].map((file) => [getFileKey(file), file])).values()).slice(0, 10);
+};
 
 const createInitialDescriptionPoints = (initialProduct?: VendorProductRecord | null): DescriptionPoint[] => {
   if (initialProduct?.descriptionPoints && Array.isArray(initialProduct.descriptionPoints) && initialProduct.descriptionPoints.length > 0) {
@@ -81,6 +90,7 @@ const createDefaultFieldValues = (initialProduct?: VendorProductRecord | null): 
   discount: "",
   sellerName: String(initialProduct?.sellerName || "").trim(),
   mainImage: null,
+  images: [],
 });
 
 const resolveStandardCategorySelection = (
@@ -130,7 +140,13 @@ export default function VendorAddMenuItemForm({
   onClose,
 }: VendorAddMenuItemFormProps) {
   const mainImageInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const isEditMode = mode === "edit";
+
+  const [existingGalleryUrls, setExistingGalleryUrls] = useState<string[]>(() =>
+    Array.isArray(initialProduct?.gallery) ? initialProduct.gallery.map((item) => String(item || "").trim()).filter(Boolean) : []
+  );
+  const [galleryDragOver, setGalleryDragOver] = useState(false);
 
   const categoryOptions = useMemo<VendorCatalogSubcategory[]>(() => {
     const lockedCategorySlug = String(lockedCategory?.categorySlug || "").trim();
@@ -217,6 +233,115 @@ export default function VendorAddMenuItemForm({
     }
     return null;
   });
+
+  const newGalleryPreviews = useMemo<ImagePreview[]>(
+    () =>
+      fieldValues.images.map((file, index) => ({
+        id: `${file.name}-${file.lastModified || index}-${index}`,
+        name: file.name,
+        url: URL.createObjectURL(file),
+        source: "new",
+      })),
+    [fieldValues.images]
+  );
+
+  useEffect(() => {
+    return () => {
+      newGalleryPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [newGalleryPreviews]);
+
+  const existingGalleryPreviews = useMemo<ImagePreview[]>(() => {
+    const mainUrl = String(existingMainImageUrl || "").trim();
+    const seen = new Set<string>();
+    return existingGalleryUrls
+      .map((url) => String(url || "").trim())
+      .filter(Boolean)
+      .filter((url) => url !== mainUrl)
+      .filter((url) => {
+        if (seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      })
+      .map((url, index) => ({
+        id: `existing-gallery-${index}`,
+        name: `Existing ${index + 1}`,
+        url,
+        source: "existing",
+      }));
+  }, [existingGalleryUrls, existingMainImageUrl]);
+
+  const combinedGalleryPreviews = useMemo(
+    () => [...existingGalleryPreviews, ...newGalleryPreviews],
+    [existingGalleryPreviews, newGalleryPreviews]
+  );
+
+  const handleGalleryFiles = (files: FileList | null | undefined) => {
+    if (!files?.length) return;
+    setFieldValues((current) => ({
+      ...current,
+      images: normalizeGalleryFiles(current.images, Array.from(files)),
+    }));
+    setFieldErrors((current) => ({ ...current, images: "" }));
+  };
+
+  const removeGalleryImage = (imageId: string) => {
+    if (imageId.startsWith("existing-gallery-")) {
+      const image = existingGalleryPreviews.find((item) => item.id === imageId);
+      if (image) {
+        setExistingGalleryUrls((current) => current.filter((url) => String(url || "").trim() !== image.url));
+      }
+      return;
+    }
+
+    setFieldValues((current) => ({
+      ...current,
+      images: current.images.filter((file, index) => `${file.name}-${file.lastModified || index}-${index}` !== imageId),
+    }));
+  };
+
+  const setGalleryImageAsMain = (image: ImagePreview) => {
+    if (image.source === "existing") {
+      const previousMain = String(existingMainImageUrl || "").trim();
+      setExistingMainImageUrl(image.url);
+      setExistingGalleryUrls((current) => {
+        const withoutSelected = current.map((url) => String(url || "").trim()).filter((url) => url && url !== image.url);
+        return previousMain && previousMain !== image.url ? [previousMain, ...withoutSelected] : withoutSelected;
+      });
+      setFieldValues((current) => {
+        if (!(current.mainImage instanceof File)) return current;
+        return {
+          ...current,
+          mainImage: null,
+          images: normalizeGalleryFiles(current.images, [current.mainImage]),
+        };
+      });
+      return;
+    }
+
+    setFieldValues((current) => {
+      const imageIndex = current.images.findIndex((file, index) => `${file.name}-${file.lastModified || index}-${index}` === image.id);
+      if (imageIndex < 0) return current;
+
+      const selectedFile = current.images[imageIndex];
+      const remainingGallery = current.images.filter((_file, index) => index !== imageIndex);
+      const nextGallery = current.mainImage instanceof File
+        ? normalizeGalleryFiles(remainingGallery, [current.mainImage])
+        : remainingGallery;
+
+      return {
+        ...current,
+        mainImage: selectedFile,
+        images: nextGallery,
+      };
+    });
+    setExistingMainImageUrl("");
+  };
+
+  const clearGalleryImages = () => {
+    setExistingGalleryUrls([]);
+    setFieldValues((current) => ({ ...current, images: [] }));
+  };
 
   const handleMainImageFiles = (files: FileList | null) => {
     const file = files?.[0];
@@ -370,7 +495,10 @@ export default function VendorAddMenuItemForm({
         ? await readFileAsDataUrl(fieldValues.mainImage)
         : String(existingMainImageUrl || "").trim();
 
-      const orderedGallery = [mainImageDataUrl].filter(Boolean);
+      const newGalleryDataUrls = await Promise.all(fieldValues.images.map((file) => readFileAsDataUrl(file)));
+      const orderedGallery = Array.from(
+        new Set([mainImageDataUrl, ...existingGalleryUrls, ...newGalleryDataUrls].map((item) => String(item || "").trim()).filter(Boolean))
+      );
 
       const payload: VendorProductUpsertInput = {
         categorySlug: selectedCategorySlug,
@@ -639,6 +767,65 @@ export default function VendorAddMenuItemForm({
                     </div>
                   </div>
                   {fieldErrors.mainImage ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.mainImage}</p> : null}
+                </div>
+
+                {/* Gallery Images */}
+                <div className={`rounded-xl border border-dashed p-3 ${fieldErrors.images ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] bg-[#fffaf2]"}`}>
+                  <div
+                    className={`rounded-xl border-2 border-dashed p-3 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      setGalleryDragOver(true);
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDragLeave={() => setGalleryDragOver(false)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setGalleryDragOver(false);
+                      handleGalleryFiles(event.dataTransfer?.files);
+                    }}
+                  >
+                    <input ref={galleryInputRef} type="file" accept="image/*" multiple onChange={(event) => handleGalleryFiles(event.target.files)} className="sr-only" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-700">Gallery images</p>
+                        <p className="mt-1 text-xs text-slate-500">Drop multiple images or pick files. Click Set Main on any thumbnail.</p>
+                      </div>
+                      {combinedGalleryPreviews.length ? (
+                        <button type="button" onClick={clearGalleryImages} className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                          Clear gallery
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 justify-items-start gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                      {combinedGalleryPreviews.map((image) => (
+                        <div key={image.id} className="group w-full max-w-[160px] overflow-hidden rounded-xl border border-[#d9ccb7] bg-[#fffdf8] shadow-sm">
+                          <button type="button" onClick={() => setGalleryImageAsMain(image)} className="relative h-20 w-full overflow-hidden bg-white p-1" title="Set as main image">
+                            <img src={image.url} alt={image.name} className="h-full w-full object-contain" />
+                          </button>
+                          <div className="flex flex-wrap items-center gap-1 px-2 py-1.5">
+                            <button type="button" onClick={() => removeGalleryImage(image.id)} className="flex-1 rounded-md border border-rose-200 px-2 py-1 text-center text-[10px] font-semibold text-rose-600">
+                              Remove
+                            </button>
+                            <button type="button" onClick={() => setGalleryImageAsMain(image)} className="flex-1 whitespace-nowrap rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[10px] font-semibold text-blue-700">
+                              Set Main
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="flex h-24 w-full max-w-[160px] items-center justify-center rounded-xl border-2 border-dashed border-[#d9ccb7] bg-[#fffdf8] text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div className="flex flex-col items-center gap-2 text-slate-600">
+                          <div className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-xl text-slate-700">+</div>
+                          <span className="text-xs font-medium">Add Image</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                  {fieldErrors.images ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.images}</p> : null}
                 </div>
               </div>
             </section>
