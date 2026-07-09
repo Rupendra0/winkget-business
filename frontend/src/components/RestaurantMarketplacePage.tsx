@@ -145,6 +145,7 @@ export default function RestaurantMarketplacePage({
 
   const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
 
   const photoItems = useMemo(() => {
     return Array.isArray(data.gallery) ? data.gallery.filter(Boolean) : [];
@@ -867,7 +868,18 @@ export default function RestaurantMarketplacePage({
             <article className="flex flex-col justify-between">
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">About Us</h4>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500 sm:text-[15px]">{aboutDescription}</p>
+                <p className={`mt-2 text-sm leading-relaxed text-slate-500 sm:text-[15px] ${
+                  isAboutExpanded ? "" : "line-clamp-4"
+                }`}>{aboutDescription}</p>
+                {aboutDescription.length > 180 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAboutExpanded((prev) => !prev)}
+                    className="mt-1.5 text-xs font-bold text-[#fb6a3d] hover:text-[#e0562b] transition outline-none cursor-pointer"
+                  >
+                    {isAboutExpanded ? "View Less" : "View More"}
+                  </button>
+                ) : null}
               </div>
               <div>
                 <a
