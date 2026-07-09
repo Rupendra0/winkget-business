@@ -18,8 +18,6 @@ type VendorAddProductFormProps = {
     subcategoryLabel: string;
   } | null;
   sellerName: string;
-  compactMode?: boolean;
-  isServiceVendor?: boolean;
   mode?: "create" | "edit";
   initialProduct?: VendorProductRecord | null;
   saving: boolean;
@@ -444,8 +442,6 @@ export default function VendorAddProductForm({
   categories,
   lockedCategory,
   sellerName,
-  compactMode = false,
-  isServiceVendor = false,
   mode = "create",
   initialProduct,
   saving,
@@ -454,6 +450,8 @@ export default function VendorAddProductForm({
   onSubmitProduct,
   onClose,
 }: VendorAddProductFormProps) {
+  const compactMode = false;
+  const isServiceVendor = false;
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const mainImageInputRef = useRef<HTMLInputElement | null>(null);
   const highlightOptionsPopupRef = useRef<HTMLDivElement | null>(null);
@@ -1100,9 +1098,9 @@ export default function VendorAddProductForm({
         tags: compactMode ? undefined : parseTagList(fieldValues.tagsText),
         keyAttributes: compactMode ? undefined : keyAttributes,
         specifications: compactMode ? undefined : specificationPayload,
-        highlights: isServiceVendor
+        highlights: isServiceVendor || compactMode
           ? customHighlights.map((h) => String(h || "").trim()).filter(Boolean)
-          : (compactMode ? undefined : [...highlights, ...variantHighlights]),
+          : [...highlights, ...variantHighlights],
         variantData: compactMode ? undefined : serializedVariants,
         detailedDescriptionBlocks: compactMode ? undefined : filteredDescriptionBlocks,
         moq: Number.isFinite(Number(initialProduct?.moq)) && Number(initialProduct?.moq) > 0 ? Number(initialProduct?.moq) : 1,
@@ -1225,7 +1223,7 @@ export default function VendorAddProductForm({
                   {fieldErrors.subcategorySlug ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.subcategorySlug}</p> : null}
                 </label>
 
-                {isServiceVendor ? null : (
+                {isServiceVendor || compactMode ? null : (
                   <label className="block text-sm text-slate-700">
                     Origin Country<span className="ml-1 text-rose-500">*</span>
                     <select
@@ -1328,7 +1326,7 @@ export default function VendorAddProductForm({
                   />
                   {fieldErrors.sellingPrice ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.sellingPrice}</p> : null}
                 </label>
-                {isServiceVendor ? null : (
+                {isServiceVendor || compactMode ? null : (
                   <>
                     <label className="block text-sm text-slate-700">
                       Purchase Price
@@ -1354,7 +1352,7 @@ export default function VendorAddProductForm({
                     </label>
                   </>
                 )}
-                {isServiceVendor ? null : (
+                {isServiceVendor || compactMode ? null : (
                   <label className="block text-sm text-slate-700">
                     Store Placement
                     <select
@@ -1371,50 +1369,52 @@ export default function VendorAddProductForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">{isServiceVendor ? "Tags" : "Brand & Tags"}</h3>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                {isServiceVendor ? null : (
+            {compactMode ? null : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">{isServiceVendor ? "Tags" : "Brand & Tags"}</h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  {isServiceVendor ? null : (
+                    <label className="block text-sm text-slate-700">
+                      Brand
+                      <select
+                        value={fieldValues.brand}
+                        onChange={(event) => updateField("brand", event.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      >
+                        <option value="">Select Brand</option>
+                        {brandOptions.map((brand) => (
+                          <option key={brand} value={brand}>
+                            {brand}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <label className="block text-sm text-slate-700">
-                    Brand
-                    <select
-                      value={fieldValues.brand}
-                      onChange={(event) => updateField("brand", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    >
-                      <option value="">Select Brand</option>
-                      {brandOptions.map((brand) => (
-                        <option key={brand} value={brand}>
-                          {brand}
-                        </option>
-                      ))}
-                    </select>
+                    Sold By
+                    <input
+                      type="text"
+                      value={fieldValues.sellerName}
+                      onChange={(event) => updateField("sellerName", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Enter seller/store name"
+                    />
                   </label>
-                )}
-                <label className="block text-sm text-slate-700">
-                  Sold By
-                  <input
-                    type="text"
-                    value={fieldValues.sellerName}
-                    onChange={(event) => updateField("sellerName", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Enter seller/store name"
-                  />
-                </label>
-                <label className="block text-sm text-slate-700 md:col-span-2">
-                  Tags
-                  <input
-                    type="text"
-                    value={fieldValues.tagsText}
-                    onChange={(event) => updateField("tagsText", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                    placeholder="Comma separated tags"
-                  />
-                </label>
-              </div>
-            </section>
+                  <label className="block text-sm text-slate-700 md:col-span-2">
+                    Tags
+                    <input
+                      type="text"
+                      value={fieldValues.tagsText}
+                      onChange={(event) => updateField("tagsText", event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                      placeholder="Comma separated tags"
+                    />
+                  </label>
+                </div>
+              </section>
+            )}
 
-            {isServiceVendor ? null : (
+            {isServiceVendor || compactMode ? null : (
               <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-lg font-semibold text-slate-900">Variants</h3>
@@ -1742,7 +1742,7 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
                   {fieldErrors.mainImage ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.mainImage}</p> : null}
                 </div>
 
-                {isServiceVendor ? null : (
+                {isServiceVendor || compactMode ? null : (
                   <div
                     className={`rounded-xl border-2 border-dashed p-3 transition ${galleryDragOver ? "border-[#c7a97a] bg-[#fff4e1]" : "border-[#d9ccb7] bg-white/80"}`}
                     onDragEnter={(event) => {
@@ -1801,62 +1801,74 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
               </div>
             </section>
 
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <label className="block text-sm text-slate-700">
-                  Trust Badge
-                  <select
-                    value={fieldValues.badge}
-                    onChange={(event) => updateField("badge", event.target.value)}
-                    className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
-                  >
-                    <option value="">Select Trust Badge</option>
-                    <option value="New">New</option>
-                    <option value="Hot">Hot</option>
-                    <option value="Sale">Sale</option>
-                    <option value="Best Seller">Best Seller</option>
-                    <option value="Assured">Assured</option>
-                  </select>
-                </label>
-                {isServiceVendor ? null : (
-                  <>
-                    <div>
-                      <p className="text-sm text-slate-700">Highlight Options</p>
-                      <div ref={highlightOptionsPopupRef} className="relative mt-1">
-                        <button type="button" onClick={() => setIsHighlightOptionsOpen((previous) => !previous)} className="flex h-11 w-full items-center justify-between rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm font-medium text-slate-700">
-                          <span>{selectedExtraOptionsCount ? `${selectedExtraOptionsCount} option(s) selected` : "Select Highlight Options"}</span>
-                          <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
-                        </button>
-                        {isHighlightOptionsOpen ? (
-                          <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-[#d9ccb7] bg-white p-2.5 shadow-lg">
-                            <div className="grid max-h-56 gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2">
-                              {HIGHLIGHT_OPTIONS.map((field) => (
-                                <label key={field.key} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm text-slate-700">
-                                  <input
-                                    type="checkbox"
-                                    checked={highlightValues[field.key] === true}
-                                    onChange={(event) => setHighlightValues((current) => ({ ...current, [field.key]: event.target.checked }))}
-                                    className="h-4 w-4 accent-emerald-600"
-                                  />
-                                  <span className="break-words">{field.label}</span>
-                                </label>
-                              ))}
+            {compactMode ? (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">Discount</h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <label className="block text-sm text-slate-700">
+                    Discount (%)
+                    <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
+                  </label>
+                </div>
+              </section>
+            ) : (
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">Extra</h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <label className="block text-sm text-slate-700">
+                    Trust Badge
+                    <select
+                      value={fieldValues.badge}
+                      onChange={(event) => updateField("badge", event.target.value)}
+                      className="mt-1 h-11 w-full rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
+                    >
+                      <option value="">Select Trust Badge</option>
+                      <option value="New">New</option>
+                      <option value="Hot">Hot</option>
+                      <option value="Sale">Sale</option>
+                      <option value="Best Seller">Best Seller</option>
+                      <option value="Assured">Assured</option>
+                    </select>
+                  </label>
+                  {isServiceVendor ? null : (
+                    <>
+                      <div>
+                        <p className="text-sm text-slate-700">Highlight Options</p>
+                        <div ref={highlightOptionsPopupRef} className="relative mt-1">
+                          <button type="button" onClick={() => setIsHighlightOptionsOpen((previous) => !previous)} className="flex h-11 w-full items-center justify-between rounded-lg border border-[#d9ccb7] bg-white px-3 text-sm font-medium text-slate-700">
+                            <span>{selectedExtraOptionsCount ? `${selectedExtraOptionsCount} option(s) selected` : "Select Highlight Options"}</span>
+                            <span className={`text-base text-slate-500 transition ${isHighlightOptionsOpen ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+                          </button>
+                          {isHighlightOptionsOpen ? (
+                            <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-[#d9ccb7] bg-white p-2.5 shadow-lg">
+                              <div className="grid max-h-56 gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2">
+                                {HIGHLIGHT_OPTIONS.map((field) => (
+                                  <label key={field.key} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm text-slate-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={highlightValues[field.key] === true}
+                                      onChange={(event) => setHighlightValues((current) => ({ ...current, [field.key]: event.target.checked }))}
+                                      className="h-4 w-4 accent-emerald-600"
+                                    />
+                                    <span className="break-words">{field.label}</span>
+                                  </label>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                    <label className="block text-sm text-slate-700">
-                      Discount (%)
-                      <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
-                    </label>
-                  </>
-                )}
-              </div>
-            </section>
+                      <label className="block text-sm text-slate-700">
+                        Discount (%)
+                        <input type="number" min="0" max="100" step="0.01" value={fieldValues.discount} onChange={(event) => updateField("discount", event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#d9ccb7] px-3 text-sm outline-none transition focus:border-[#c7a97a]" />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
 
-            {isServiceVendor ? null : (
+            {isServiceVendor || compactMode ? null : (
               <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900 font-semibold">
@@ -1883,7 +1895,7 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
               </section>
             )}
 
-            {isServiceVendor && (
+            {(isServiceVendor || compactMode) && (
               <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900">
@@ -1923,7 +1935,7 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
               </section>
             )}
 
-            {isServiceVendor ? null : (
+            {isServiceVendor || compactMode ? null : (
               <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold text-slate-900">Long Description</h3>

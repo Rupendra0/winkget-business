@@ -200,6 +200,7 @@ export default function RestaurantListingPage({
       address: addressLabel || "Address unavailable",
       sublocality: sublocalityLabel || undefined,
       categories: categoriesFromProducts.length > 0 ? categoriesFromProducts : ["Food"],
+      categoryBarItems: Array.isArray(storeData?.categoryBarItems) ? storeData.categoryBarItems : [],
       filters: Array.isArray(storeData?.filters) ? storeData.filters : [],
       products: sourceProducts,
       featured: {

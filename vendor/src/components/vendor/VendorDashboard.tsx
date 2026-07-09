@@ -69,6 +69,8 @@ import {
   type VendorSession,
 } from "@/lib/vendorApi";
 import VendorAddProductForm from "@/components/vendor/VendorAddProductForm";
+import VendorAddServiceForm from "@/components/vendor/VendorAddServiceForm";
+import VendorAddMenuItemForm from "@/components/vendor/VendorAddMenuItemForm";
 
 type SidebarLabel =
   | "Overview"
@@ -4021,21 +4023,49 @@ function VendorProductsSection({
           </form>
           ) : (
             <div className="relative z-10 min-h-full w-full">
-              <VendorAddProductForm
-                key={editingProduct?.id ? `edit-${editingProduct.id}` : "create-product"}
-                mode={editingProduct ? "edit" : "create"}
-                initialProduct={editingProduct}
-                categories={categories}
-                lockedCategory={lockedCategory}
-                sellerName={sellerName}
-                compactMode={isRestaurantVendor}
-                isServiceVendor={isServiceVendor}
-                saving={saving}
-                actionMessage={actionMessage}
-                actionError={actionError}
-                onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
-                onClose={handleCloseProductForm}
-              />
+              {isServiceVendor ? (
+                <VendorAddServiceForm
+                  key={editingProduct?.id ? `edit-service-${editingProduct.id}` : "create-service"}
+                  mode={editingProduct ? "edit" : "create"}
+                  initialProduct={editingProduct}
+                  categories={categories}
+                  lockedCategory={lockedCategory}
+                  sellerName={sellerName}
+                  saving={saving}
+                  actionMessage={actionMessage}
+                  actionError={actionError}
+                  onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
+                  onClose={handleCloseProductForm}
+                />
+              ) : isRestaurantVendor ? (
+                <VendorAddMenuItemForm
+                  key={editingProduct?.id ? `edit-menu-${editingProduct.id}` : "create-menu"}
+                  mode={editingProduct ? "edit" : "create"}
+                  initialProduct={editingProduct}
+                  categories={categories}
+                  lockedCategory={lockedCategory}
+                  sellerName={sellerName}
+                  saving={saving}
+                  actionMessage={actionMessage}
+                  actionError={actionError}
+                  onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
+                  onClose={handleCloseProductForm}
+                />
+              ) : (
+                <VendorAddProductForm
+                  key={editingProduct?.id ? `edit-product-${editingProduct.id}` : "create-product"}
+                  mode={editingProduct ? "edit" : "create"}
+                  initialProduct={editingProduct}
+                  categories={categories}
+                  lockedCategory={lockedCategory}
+                  sellerName={sellerName}
+                  saving={saving}
+                  actionMessage={actionMessage}
+                  actionError={actionError}
+                  onSubmitProduct={(payload) => onQuickUpsert(payload, editingProduct?.id || null)}
+                  onClose={handleCloseProductForm}
+                />
+              )}
             </div>
           )}
         </section>

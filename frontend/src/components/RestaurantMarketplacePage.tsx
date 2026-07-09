@@ -925,148 +925,181 @@ export default function RestaurantMarketplacePage({
             aria-label="Close menu item quick view"
           />
 
-          <article className="relative z-10 w-full max-w-[980px] overflow-hidden rounded-[22px] bg-[#f8fafc]">
+          <div 
+            className="relative w-full md:w-[80vw] md:max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl transition-all md:flex md:h-[580px] max-h-[90vh] cursor-default"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {/* Close Button */}
             <button
               type="button"
               onClick={closeQuickView}
-              className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow"
+              className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition cursor-pointer"
               aria-label="Close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div className="grid md:grid-cols-[1.05fr_1fr]">
-              <div className="bg-[#f6f7f9]">
-                <div className="p-4 sm:p-5">
-                  <div className="overflow-hidden rounded-2xl bg-white">
-                    <img
-                      src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
-                      alt={quickViewProduct.name}
-                      className="h-[250px] w-full object-cover sm:h-[300px] md:h-[340px]"
-                    />
-                  </div>
+            {/* Image Column (Edge to Edge) */}
+            <div className="relative h-48 md:h-full md:w-1/2 bg-slate-50 shrink-0">
+              <img
+                src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
+                alt={quickViewProduct.name}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+              {quickViewProduct.badge && (
+                <span className="absolute left-4 top-4 z-10 rounded-full bg-[#10b981] px-3 py-1.5 text-xs font-bold text-white shadow-md uppercase tracking-wider">
+                  {quickViewProduct.badge}
+                </span>
+              )}
 
-                  {quickViewGallery.length > 1 ? (
-                    <div className="mt-3 flex items-center justify-center gap-2">
-                      {quickViewGallery.slice(0, 5).map((image, index) => {
-                        const isActive = quickViewImage === image;
-
-                        return (
-                          <button
-                            key={`quick-view-thumb-${index}`}
-                            type="button"
-                            onClick={() => setQuickViewImage(image)}
-                            className={`h-14 w-14 overflow-hidden rounded-xl transition ${
-                              isActive ? "opacity-100" : "opacity-80"
-                            }`}
-                            aria-label={`Show image ${index + 1}`}
-                          >
-                            <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-cover" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
+              {/* Gallery Thumbnails Overlay */}
+              {quickViewGallery.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2 px-4">
+                  {quickViewGallery.slice(0, 5).map((image, index) => {
+                    const isActive = quickViewImage === image;
+                    return (
+                      <button
+                        key={`quick-view-thumb-${index}`}
+                        type="button"
+                        onClick={() => setQuickViewImage(image)}
+                        className={`h-11 w-11 overflow-hidden rounded-lg transition border border-white/40 shadow-sm ${
+                          isActive ? "opacity-100 ring-2 ring-blue-500" : "opacity-80"
+                        }`}
+                        aria-label={`Show image ${index + 1}`}
+                      >
+                        <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-cover" />
+                      </button>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
+
+            {/* Details Column */}
+            <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-full overflow-hidden">
+              {/* Header */}
+              <div className="mb-4 shrink-0">
+                <div className="mb-2">
+                  <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wider">
+                    {quickViewCategory || "Food"}
+                  </span>
+                </div>
+
+                <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
+                  {quickViewProduct.name}
+                </h2>
+
+                <p className="text-sm font-semibold text-slate-500">
+                  {quickViewProduct.sellerName || data.storeName}
+                </p>
               </div>
 
-              <div className="p-4 sm:p-5 md:p-6">
-                <h3 className="pr-10 text-[24px] font-semibold leading-[1.15] text-[#1f2937] md:text-[30px]">{quickViewProduct.name}</h3>
-
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
-                  <Star size={14} className="fill-emerald-500 text-emerald-500" />
-                  {formatRating(quickViewRating)}
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-end gap-2">
-                  {quickViewHasDiscount ? (
-                    <p className="text-[18px] font-semibold leading-none text-slate-400 line-through md:text-[22px]">
-                      ₹{Math.round(quickViewOldPrice).toLocaleString("en-IN")}
-                    </p>
-                  ) : null}
-                  <p className="text-[34px] font-bold leading-none text-[#fb6a3d] md:text-[40px]">₹{Math.round(quickViewPrice).toLocaleString("en-IN")}</p>
-                  {quickViewHasDiscount ? (
-                    <span className="mb-1 inline-flex rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
-                      {quickViewDiscount}% OFF
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-[18px] font-semibold leading-tight text-[#1f2937] md:text-[22px]">Description</p>
-                  <p className="mt-2 text-[16px] leading-snug text-slate-600 md:text-[18px]">{quickViewDescription}</p>
-                </div>
-
-                {quickViewCartQuantity > 0 ? (
-                  <div className="mt-5 inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#15803d] bg-[#15803d] text-white shadow-[0_10px_22px_rgba(21,128,61,0.3)]">
-                    <button
-                      type="button"
-                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
-                      aria-label={`Decrease quantity for ${quickViewProduct.name}`}
-                    >
-                      -
-                    </button>
-                    <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-base font-extrabold text-white">
-                      {quickViewCartQuantity}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
-                      aria-label={`Increase quantity for ${quickViewProduct.name}`}
-                    >
-                      +
-                    </button>
+              {/* Scrollable Middle Content Area */}
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="font-extrabold text-amber-600">{formatRating(quickViewRating)}</span>
+                  <div className="flex items-center gap-0.5 text-amber-500">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star
+                        key={index}
+                        size={14}
+                        className={index < Math.round(quickViewRating) ? "fill-amber-500 text-amber-500" : "text-slate-300"}
+                      />
+                    ))}
                   </div>
-                ) : (
+                  <span className="text-slate-400">(0 ratings)</span>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Description</h4>
+                  <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
+                    {quickViewDescription || "No description available."}
+                  </p>
+                </div>
+
+                {/* Highlights */}
+                {Array.isArray(quickViewProduct?.highlights) && quickViewProduct.highlights.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Highlights</h4>
+                    <ul className="space-y-1.5 text-sm text-slate-600">
+                      {quickViewProduct.highlights.map((highlight, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                          <span className="font-semibold text-slate-600">{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Fixed Footer */}
+              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-400">Price</span>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl font-extrabold text-[#fb6a3d]">
+                      ₹{Math.round(quickViewPrice).toLocaleString("en-IN")}
+                    </span>
+                    {quickViewHasDiscount && (
+                      <>
+                        <span className="text-sm text-slate-400 line-through">
+                          ₹{Math.round(quickViewOldPrice).toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-sm font-bold text-emerald-600">
+                          {quickViewDiscount}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="w-44 shrink-0 flex flex-col gap-2">
+                  {quickViewCartQuantity > 0 ? (
+                    <div className="inline-flex h-10 w-full items-stretch overflow-hidden rounded-lg border border-[#15803d] bg-[#15803d] text-white">
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
+                        className="grid w-11 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#166534]"
+                      >
+                        -
+                      </button>
+                      <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-sm font-bold text-white">
+                        {quickViewCartQuantity}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
+                        className="grid w-11 shrink-0 place-items-center text-lg font-bold leading-none transition hover:bg-[#166534]"
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
+                      className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-[#15803d] text-sm font-bold text-white hover:bg-[#166534] transition cursor-pointer"
+                    >
+                      <ShoppingCart size={14} />
+                      Add to Cart
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
-                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#15803d] text-base font-semibold text-white shadow-[0_10px_22px_rgba(21,128,61,0.35)] hover:bg-[#166534]"
+                    onClick={() => setQuickViewSaved((prev) => !prev)}
+                    className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
                   >
-                    <ShoppingCart size={16} />
-                    {`Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
+                    <Heart size={13} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
+                    {quickViewSaved ? "Saved" : "Save"}
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setQuickViewSaved((previous) => !previous)}
-                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-slate-300 bg-white text-base font-semibold text-slate-600"
-                >
-                  <Heart size={16} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
-                  {quickViewSaved ? "Saved" : "Save"}
-                </button>
-
-                <div className="mt-4 pt-4 text-sm text-slate-600">
-                  <p>
-                    Category: <span className="font-semibold text-[#fb6a3d]">{quickViewCategory}</span>
-                  </p>
-
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="font-medium text-slate-500">Share:</span>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Instagram size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <MessageCircle size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Twitter size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Facebook size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Mail size={15} />
-                    </button>
-                  </div>
-
                 </div>
               </div>
             </div>
-          </article>
+          </div>
         </section>
       ) : null}
 
