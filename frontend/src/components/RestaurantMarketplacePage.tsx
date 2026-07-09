@@ -944,7 +944,7 @@ export default function RestaurantMarketplacePage({
               <img
                 src={quickViewImage || quickViewGallery[0] || quickViewProduct.imageUrl || data.logoImage || data.bannerImage}
                 alt={quickViewProduct.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain bg-slate-50"
                 loading="lazy"
               />
               {quickViewProduct.badge && (
@@ -968,7 +968,7 @@ export default function RestaurantMarketplacePage({
                         }`}
                         aria-label={`Show image ${index + 1}`}
                       >
-                        <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-cover" />
+                        <img src={image} alt={`${quickViewProduct.name} ${index + 1}`} className="h-full w-full object-contain bg-slate-50" />
                       </button>
                     );
                   })}
@@ -1013,7 +1013,6 @@ export default function RestaurantMarketplacePage({
 
                 {/* Description */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Description</h4>
                   <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
                     {quickViewDescription || "No description available."}
                   </p>
@@ -1022,7 +1021,7 @@ export default function RestaurantMarketplacePage({
                 {/* Highlights */}
                 {Array.isArray(quickViewProduct?.highlights) && quickViewProduct.highlights.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Highlights</h4>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">What's Special</h4>
                     <ul className="space-y-1.5 text-sm text-slate-600">
                       {quickViewProduct.highlights.map((highlight, index) => (
                         <li key={index} className="flex items-center gap-2">
@@ -1031,6 +1030,27 @@ export default function RestaurantMarketplacePage({
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Description Points (Heading & Content) */}
+                {Array.isArray(quickViewProduct?.descriptionPoints) && quickViewProduct.descriptionPoints.length > 0 && (
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    {quickViewProduct.descriptionPoints.map((point, index) => {
+                      const heading = String(point?.heading || "").trim();
+                      const content = String(point?.content || "").trim();
+                      if (!heading && !content) return null;
+                      return (
+                        <div key={index} className="space-y-1">
+                          {heading ? (
+                            <h5 className="text-[13px] font-bold text-slate-800 uppercase tracking-wider">{heading}</h5>
+                          ) : null}
+                          {content ? (
+                            <p className="text-sm leading-relaxed text-slate-500 whitespace-pre-line">{content}</p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
