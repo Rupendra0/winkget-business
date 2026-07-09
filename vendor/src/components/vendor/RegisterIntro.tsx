@@ -30,7 +30,7 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
   return (
     <main className="min-h-screen w-full flex flex-col md:flex-row bg-white">
       {/* Left Section: Information Content */}
-      <div className="flex-1 p-6 sm:p-10 lg:p-16 flex flex-col justify-between">
+      <div className="flex-1 p-6 sm:p-10 lg:p-16 flex flex-col justify-center">
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 border border-orange-200 px-3 py-1 text-xs font-semibold text-orange-800">
             <Sparkles size={13} className="text-orange-600 animate-pulse" /> Become a Winkget Partner
@@ -99,33 +99,34 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
             </ul>
           </div>
         </div>
+      </div>
 
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 border-t border-slate-100 pt-6">
+      {/* Right Section: Banner, Actions & Security Info */}
+      <div className="w-full md:w-[420px] lg:w-[480px] bg-white border-l border-slate-100 p-8 flex flex-col justify-between shrink-0">
+        <div className="flex-1 flex items-center justify-center py-6">
+          <img 
+            src="/onboarding_intro_banner.png" 
+            alt="Become a Winkget Merchant Partner" 
+            className="max-h-[300px] w-auto object-contain"
+          />
+        </div>
+        
+        {/* Actions Area */}
+        <div className="flex flex-col gap-3 py-6">
           <button
             type="button"
             onClick={handleStart}
-            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#fb6a3d] px-8 text-sm font-bold text-white hover:bg-[#e0562b] shadow-lg shadow-orange-500/10 transition cursor-pointer"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#fb6a3d] px-8 text-sm font-bold text-white hover:bg-[#e0562b] shadow-lg shadow-orange-500/10 transition cursor-pointer"
           >
             Start Registration <ArrowRight size={16} />
           </button>
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-xl border border-slate-200 bg-white px-8 text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-8 text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
           >
             Partner Login
           </button>
-        </div>
-      </div>
-
-      {/* Right Section: Banner & Security Info */}
-      <div className="w-full md:w-[420px] lg:w-[480px] bg-slate-50 border-l border-slate-100 p-8 flex flex-col justify-between shrink-0">
-        <div className="flex-1 flex items-center justify-center py-8">
-          <img 
-            src="/onboarding_intro_banner.png" 
-            alt="Become a Winkget Merchant Partner" 
-            className="max-h-[340px] w-auto object-contain"
-          />
         </div>
         
         {/* Security Box */}
