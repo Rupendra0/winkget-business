@@ -944,7 +944,7 @@ export default function RestaurantMarketplacePage({
           />
 
           <div 
-            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-y-auto md:overflow-hidden rounded-3xl bg-white transition-all md:flex md:h-[680px] max-h-[90vh] cursor-default"
+            className="relative w-full md:w-[90vw] md:max-w-6xl overflow-hidden rounded-3xl bg-white transition-all flex flex-col md:flex-row md:h-[680px] max-h-[90vh] cursor-default"
             onClick={(event) => event.stopPropagation()}
           >
             {/* Close Button */}
@@ -998,7 +998,7 @@ export default function RestaurantMarketplacePage({
             </div>
 
             {/* Details Column */}
-            <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 h-auto md:h-full overflow-visible md:overflow-hidden">
+            <div className="flex flex-col flex-1 p-6 md:p-8 min-w-0 min-h-0 overflow-hidden bg-white">
               {/* Header */}
               <div className="mb-4 shrink-0">
                 <h2 className="text-xl font-bold leading-7 text-slate-950 font-heading mb-2">
@@ -1011,7 +1011,7 @@ export default function RestaurantMarketplacePage({
               </div>
 
               {/* Scrollable Middle Content Area */}
-              <div className="flex-1 md:overflow-y-auto pr-2 space-y-6 md:no-scrollbar">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="font-extrabold text-amber-600">{formatRating(quickViewRating)}</span>
                   <div className="flex items-center gap-0.5 text-amber-500">

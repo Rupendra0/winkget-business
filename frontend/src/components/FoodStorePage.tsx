@@ -874,18 +874,18 @@ export default function FoodStorePage({ data }: FoodStorePageProps) {
             aria-label="Close menu item quick view"
           />
 
-          <article className="relative z-10 w-full md:max-w-[980px] max-h-[90vh] overflow-y-auto rounded-[22px] bg-[#f8fafc] shadow-2xl">
+          <article className="relative z-10 w-full md:max-w-[980px] max-h-[90vh] overflow-hidden rounded-[22px] bg-[#f8fafc] shadow-2xl flex flex-col md:h-[620px]">
             <button
               type="button"
               onClick={closeQuickView}
-              className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow"
+              className="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow cursor-pointer"
               aria-label="Close"
             >
               <X size={20} />
             </button>
 
-            <div className="grid md:grid-cols-[1.05fr_1fr]">
-              <div className="bg-[#f6f7f9]">
+            <div className="grid md:grid-cols-[1.05fr_1fr] flex-1 min-h-0 overflow-hidden bg-white">
+              <div className="bg-[#f6f7f9] overflow-hidden flex flex-col justify-start shrink-0">
                 <div className="p-4 sm:p-5">
                   <div className="overflow-hidden rounded-2xl bg-white">
                     <img
@@ -906,7 +906,7 @@ export default function FoodStorePage({ data }: FoodStorePageProps) {
                             type="button"
                             onClick={() => setQuickViewImage(image)}
                             className={`h-14 w-14 overflow-hidden rounded-xl transition ${
-                              isActive ? "opacity-100" : "opacity-80"
+                              isActive ? "opacity-100 ring-2 ring-amber-500/20" : "opacity-80"
                             }`}
                             aria-label={`Show image ${index + 1}`}
                           >
@@ -919,99 +919,106 @@ export default function FoodStorePage({ data }: FoodStorePageProps) {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 md:p-6">
-                <h3 className="pr-10 text-[24px] font-semibold leading-[1.15] text-[#1f2937] md:text-[30px]">{quickViewProduct.name}</h3>
-
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
-                  <Star size={14} className="fill-emerald-500 text-emerald-500" />
-                  {formatRating(quickViewRating)}
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-end gap-2">
-                  {quickViewHasDiscount ? (
-                    <p className="text-[18px] font-semibold leading-none text-slate-400 line-through md:text-[22px]">
-                      ₹{Math.round(quickViewOldPrice).toLocaleString("en-IN")}
-                    </p>
-                  ) : null}
-                  <p className="text-[34px] font-bold leading-none text-[#fb6a3d] md:text-[40px]">₹{Math.round(quickViewPrice).toLocaleString("en-IN")}</p>
-                  {quickViewHasDiscount ? (
-                    <span className="mb-1 inline-flex rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
-                      {quickViewDiscount}% OFF
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-[18px] font-semibold leading-tight text-[#1f2937] md:text-[22px]">Description</p>
-                  <p className="mt-2 text-[16px] leading-snug text-slate-600 md:text-[18px]">{quickViewDescription}</p>
-                </div>
-
-                {quickViewCartQuantity > 0 ? (
-                  <div className="mt-5 inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#15803d] bg-[#15803d] text-white shadow-[0_10px_22px_rgba(21,128,61,0.3)]">
-                    <button
-                      type="button"
-                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
-                      aria-label={`Decrease quantity for ${quickViewProduct.name}`}
-                    >
-                      -
-                    </button>
-                    <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-base font-extrabold text-white">
-                      {quickViewCartQuantity}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
-                      className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534]"
-                      aria-label={`Increase quantity for ${quickViewProduct.name}`}
-                    >
-                      +
-                    </button>
+              <div className="flex flex-col flex-1 p-4 sm:p-5 md:p-6 min-w-0 min-h-0 overflow-hidden bg-white">
+                {/* Header */}
+                <div className="mb-3 shrink-0">
+                  <h3 className="pr-10 text-[24px] font-semibold leading-[1.15] text-[#1f2937] md:text-[30px] font-heading">{quickViewProduct.name}</h3>
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    <Star size={14} className="fill-emerald-500 text-emerald-500" />
+                    {formatRating(quickViewRating)}
                   </div>
-                ) : (
+                </div>
+
+                {/* Scrollable Middle Content Area */}
+                <div className="flex-1 overflow-y-auto pr-2 space-y-4 no-scrollbar pb-4">
+                  <div>
+                    <p className="text-[18px] font-semibold leading-tight text-[#1f2937] md:text-[22px]">Description</p>
+                    <p className="mt-2 text-[16px] leading-snug text-slate-600 md:text-[18px]">{quickViewDescription}</p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 text-sm text-slate-600">
+                    <p>
+                      Category: <span className="font-semibold text-[#fb6a3d]">{quickViewCategory}</span>
+                    </p>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="font-medium text-slate-500">Share:</span>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 cursor-pointer">
+                        <Instagram size={15} />
+                      </button>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 cursor-pointer">
+                        <MessageCircle size={15} />
+                      </button>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 cursor-pointer">
+                        <Twitter size={15} />
+                      </button>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 cursor-pointer">
+                        <Facebook size={15} />
+                      </button>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 cursor-pointer">
+                        <Mail size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fixed Sticky Footer */}
+                <div className="mt-auto pt-4 border-t border-slate-100 shrink-0 bg-white">
+                  <div className="flex flex-wrap items-end gap-2 mb-3">
+                    {quickViewHasDiscount ? (
+                      <p className="text-[18px] font-semibold leading-none text-slate-400 line-through md:text-[22px]">
+                        ₹{Math.round(quickViewOldPrice).toLocaleString("en-IN")}
+                      </p>
+                    ) : null}
+                    <p className="text-[34px] font-bold leading-none text-[#fb6a3d] md:text-[40px]">₹{Math.round(quickViewPrice).toLocaleString("en-IN")}</p>
+                    {quickViewHasDiscount ? (
+                      <span className="mb-1 inline-flex rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                        {quickViewDiscount}% OFF
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {quickViewCartQuantity > 0 ? (
+                    <div className="inline-flex h-12 w-full items-stretch overflow-hidden rounded-[14px] border border-[#15803d] bg-[#15803d] text-white shadow-[0_10px_22px_rgba(21,128,61,0.3)]">
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity - 1)}
+                        className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534] cursor-pointer"
+                        aria-label={`Decrease quantity for ${quickViewProduct.name}`}
+                      >
+                        -
+                      </button>
+                      <div className="grid min-w-0 flex-1 place-items-center bg-[#15803d] text-base font-extrabold text-white">
+                        {quickViewCartQuantity}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(quickViewProduct.id, quickViewCartQuantity + 1)}
+                        className="grid w-12 shrink-0 place-items-center text-2xl font-bold leading-none transition hover:bg-[#166534] cursor-pointer"
+                        aria-label={`Increase quantity for ${quickViewProduct.name}`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
+                      className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#15803d] text-base font-semibold text-white shadow-[0_10px_22px_rgba(21,128,61,0.35)] hover:bg-[#166534] cursor-pointer"
+                    >
+                      <ShoppingCart size={16} />
+                      {`Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => handleAddToCartWithFeedback(quickViewProduct)}
-                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#15803d] text-base font-semibold text-white shadow-[0_10px_22px_rgba(21,128,61,0.35)] hover:bg-[#166534]"
+                    onClick={() => setQuickViewSaved((previous) => !previous)}
+                    className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-slate-300 bg-white text-base font-semibold text-slate-600 cursor-pointer"
                   >
-                    <ShoppingCart size={16} />
-                    {`Add to Cart • ₹${Math.round(quickViewPrice).toLocaleString("en-IN")}`}
+                    <Heart size={16} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
+                    {quickViewSaved ? "Saved" : "Save"}
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setQuickViewSaved((previous) => !previous)}
-                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-slate-300 bg-white text-base font-semibold text-slate-600"
-                >
-                  <Heart size={16} className={quickViewSaved ? "fill-rose-500 text-rose-500" : ""} />
-                  {quickViewSaved ? "Saved" : "Save"}
-                </button>
-
-                <div className="mt-4 pt-4 text-sm text-slate-600">
-                  <p>
-                    Category: <span className="font-semibold text-[#fb6a3d]">{quickViewCategory}</span>
-                  </p>
-
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="font-medium text-slate-500">Share:</span>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Instagram size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <MessageCircle size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Twitter size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Facebook size={15} />
-                    </button>
-                    <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500">
-                      <Mail size={15} />
-                    </button>
-                  </div>
-
                 </div>
               </div>
             </div>
