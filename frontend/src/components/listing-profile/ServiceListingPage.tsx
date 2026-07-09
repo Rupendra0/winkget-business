@@ -1529,7 +1529,7 @@ export default function ServiceListingPage({
         <section className="bg-slate-50 sm:bg-white pb-4 pt-0 sm:pb-5 sm:pt-0">
           {/* Banner Section */}
           <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-white">
-            <div className="relative h-36 sm:h-60 lg:h-[300px] w-full">
+            <div className="relative h-32 sm:h-48 lg:h-[240px] w-full">
               {coverImage ? (
                 <img
                   src={coverImage}
@@ -1550,7 +1550,7 @@ export default function ServiceListingPage({
               {/* Left Side: Logo & Vendor Info */}
               <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
                 {/* Logo Box */}
-                <div className="h-16 w-16 sm:h-[76px] sm:w-[76px] shrink-0 overflow-hidden rounded-2xl border-[3px] border-white bg-white flex items-center justify-center shadow-md">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white bg-white flex items-center justify-center shadow-md">
                   {logoImage ? (
                     <img
                       src={logoImage}
@@ -1559,7 +1559,7 @@ export default function ServiceListingPage({
                       loading="lazy"
                     />
                   ) : (
-                    <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-3xl font-extrabold">
+                    <div className="h-full w-full bg-[#1953c2] flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold">
                       {profile.name ? profile.name.charAt(0).toUpperCase() : 'E'}
                     </div>
                   )}

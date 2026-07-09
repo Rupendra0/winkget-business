@@ -143,6 +143,58 @@ export default function RestaurantMarketplacePage({
   const [quickViewSaved, setQuickViewSaved] = useState(false);
   const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
 
+  const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+
+  const photoItems = useMemo(() => {
+    return [
+      ...data.products.map((p) => p.imageUrl),
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1493770348161-369560ae357d?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1484723091739-30a097e8f929?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80",
+      "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80",
+    ];
+  }, [data.products]);
+
+  const selectedPhotoIndex = useMemo(() => {
+    if (!selectedPhotoUrl) return -1;
+    return photoItems.findIndex((photo) => photo === selectedPhotoUrl);
+  }, [photoItems, selectedPhotoUrl]);
+
+  const closePhotosModal = () => {
+    setIsPhotosModalOpen(false);
+    setSelectedPhotoUrl(null);
+  };
+
+  const openAllPhotosModal = () => {
+    setSelectedPhotoUrl(null);
+    setIsPhotosModalOpen(true);
+  };
+
+  const openSinglePhotoModal = (photoUrl: string) => {
+    if (!photoUrl) return;
+    setSelectedPhotoUrl(photoUrl);
+    setIsPhotosModalOpen(true);
+  };
+
+  const showPreviousPhoto = () => {
+    if (selectedPhotoIndex <= 0) return;
+    setSelectedPhotoUrl(photoItems[selectedPhotoIndex - 1] || null);
+  };
+
+  const showNextPhoto = () => {
+    if (selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1) return;
+    setSelectedPhotoUrl(photoItems[selectedPhotoIndex + 1] || null);
+  };
+
   useEffect(() => {
     return subscribeVendorStoreStatus(String(data.id || ""), (payload) => {
       setLiveStoreStatus(payload);
@@ -441,8 +493,8 @@ export default function RestaurantMarketplacePage({
   };
 
   return (
-    <main className="min-h-screen bg-[#f3f5f7]">
-      <section className="relative z-0 h-[225px] w-full overflow-hidden md:h-[330px]">
+    <main className="min-h-screen bg-white">
+      <section className="relative z-0 h-[180px] w-full overflow-hidden md:h-[250px]">
         {bannerImage ? (
           <img
             src={bannerImage}
@@ -494,34 +546,35 @@ export default function RestaurantMarketplacePage({
         </div>
       </section>
 
-      <div className="relative z-20 mx-auto mt-0 w-full max-w-[1120px] space-y-5 px-3 pb-[calc(86px+env(safe-area-inset-bottom))] sm:px-4 md:space-y-6 md:pb-14 lg:px-0">
-        <section className="w-full overflow-visible rounded-[20px] bg-[#eceff3] p-4 md:px-6 md:pb-6 md:pt-5">
+      {/* Details Card Section */}
+      <div className="w-full bg-white border-b border-slate-100 relative z-20">
+        <div className="mx-auto w-full max-w-full lg:max-w-[95%] xl:max-w-[1400px] px-3 sm:px-4 lg:px-8 py-5">
           <div className="flex min-w-0 items-start gap-3.5 md:items-start md:justify-between md:gap-6">
             <div className="flex min-w-0 items-start gap-3.5 md:gap-6">
-              <div className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-[24px] bg-white md:-mt-[86px] md:h-[160px] md:w-[160px] md:rounded-[34px]">
-              <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" loading="lazy" />
-            </div>
+              <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[18px] bg-white md:-mt-[45px] md:h-[110px] md:w-[110px] md:rounded-[24px] border-2 border-white shadow-md">
+                <img src={data.logoImage} alt={`${data.storeName} logo`} className="h-full w-full object-cover" loading="lazy" />
+              </div>
 
               <div className="min-w-0">
-                <h2 className="truncate text-[22px] font-semibold leading-[1.12] text-[#1f2937] md:text-[45px] md:leading-[1.02]">
+                <h2 className="truncate text-2xl font-semibold leading-tight text-[#1f2937] sm:text-[26px] sm:font-bold tracking-tight">
                   {data.storeName}
                 </h2>
-                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-500 md:mt-2 md:gap-2.5 md:text-[17px]">
-                  <MapPin size={16} className="shrink-0 text-[#95a3b7]" />
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm font-medium text-slate-500 md:mt-2 md:gap-2 md:text-[15px]">
+                  <MapPin size={14} className="shrink-0 text-slate-400" />
                   <span className="truncate">{data.address || "Address unavailable"}</span>
                 </p>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2.5 md:mt-4 md:gap-5">
+                <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3 md:gap-4">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold md:min-h-[44px] md:px-6 md:text-[15px] ${openBadge.className}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${openBadge.className}`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full md:h-2 md:w-2 ${openBadge.dotClass}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${openBadge.dotClass}`} />
                     {openBadge.label}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 md:gap-1.5 md:text-[18px]">
-                    <Star size={16} className="fill-amber-400 text-amber-400 md:h-[20px] md:w-[20px]" />
-                    {formatRating(storeReviewStats.rating)}
-                    <span className="font-medium text-slate-500">({formatReviewCount(storeReviewStats.reviews)})</span>
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 md:text-[15px]">
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-slate-800">{formatRating(storeReviewStats.rating)}</span>
+                    <span className="text-slate-400">({formatReviewCount(storeReviewStats.reviews)})</span>
                   </span>
                 </div>
               </div>
@@ -529,18 +582,25 @@ export default function RestaurantMarketplacePage({
 
             <div className="hidden md:block md:w-[120px]" />
           </div>
-        </section>
+        </div>
+      </div>
 
-        <section className="grid grid-cols-3 gap-3 md:gap-4">
+      <div className="relative z-20 mx-auto mt-0 w-full max-w-full space-y-5 px-2 pb-[calc(86px+env(safe-area-inset-bottom))] sm:px-12 md:px-16 lg:px-20 pt-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[7.2fr_2.8fr] gap-6 items-start">
+          {/* Left Column */}
+          <div className="space-y-5 md:space-y-6">
+
+        <section className="flex gap-1 pb-1 lg:pb-0 lg:grid lg:grid-cols-4 lg:gap-4 w-full">
           <InfoTile icon={<Clock3 size={20} className="text-[#fb6a3d]" />} title={data.deliveryTimeLabel || "20-45 min"} subtitle="Delivery" />
           <InfoTile icon={<IndianRupee size={20} className="text-[#fb6a3d]" />} title={priceForTwo.primary} subtitle={priceForTwo.secondary} />
           <InfoTile icon={<Truck size={20} className="text-[#10b981]" />} title={deliveryFee.primary} subtitle={deliveryFee.secondary} />
+          <InfoTile icon={<UtensilsCrossed size={20} className="text-[#ffbe0b]" />} title={data.cuisineLabel || "Veg & Non-Veg"} subtitle="Cuisine" />
         </section>
 
-        <section className="grid grid-cols-3 gap-2.5 md:gap-3.5">
+        <section className="flex overflow-x-auto no-scrollbar gap-2 pb-1.5 md:grid md:grid-cols-6 md:gap-3.5 w-full">
           <a
             href="#full-menu"
-            className="inline-flex h-[50px] items-center justify-center gap-1.5 rounded-[12px] bg-[#fb6a3d] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(251,106,61,0.28)]"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#fb6a3d] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(251,106,61,0.28)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
           >
             <ShoppingCart size={15} />
             Browse Menu
@@ -549,13 +609,13 @@ export default function RestaurantMarketplacePage({
           {phoneDigits ? (
             <a
               href={`tel:${phoneDigits}`}
-              className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-sm font-semibold text-black shadow-[0_8px_16px_rgba(255,190,11,0.22)]"
+              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b] text-xs sm:text-sm font-semibold text-black shadow-[0_8px_16px_rgba(255,190,11,0.22)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
             >
               <PhoneCall size={16} />
               Call
             </a>
           ) : (
-            <span className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b]/60 text-sm font-semibold text-slate-700">
+            <span className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#ffbe0b]/60 text-xs sm:text-sm font-semibold text-slate-700 shrink-0 px-4 md:px-0">
               <PhoneCall size={16} />
               Call
             </span>
@@ -566,17 +626,46 @@ export default function RestaurantMarketplacePage({
               href={`https://wa.me/${whatsappDigits}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(27,156,90,0.24)]"
+              className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(27,156,90,0.24)] transition hover:opacity-92 shrink-0 px-4 md:px-0"
             >
               <MessageCircle size={16} />
               WhatsApp
             </a>
           ) : (
-            <span className="inline-flex h-[50px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a]/60 text-sm font-semibold text-white">
+            <span className="inline-flex h-[46px] items-center justify-center gap-1 rounded-[12px] bg-[#1b9c5a]/60 text-xs sm:text-sm font-semibold text-white shrink-0 px-4 md:px-0">
               <MessageCircle size={16} />
               WhatsApp
             </span>
           )}
+
+          {/* Book Table */}
+          <button
+            type="button"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#8b5cf6] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(139,92,246,0.22)] transition hover:bg-[#7c3aed] cursor-pointer shrink-0 px-4 md:px-0"
+          >
+            <UtensilsCrossed size={16} />
+            Book Table
+          </button>
+
+          {/* Directions */}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address || "")}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#3b82f6] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(59,130,246,0.22)] transition hover:bg-[#2563eb] shrink-0 px-4 md:px-0"
+          >
+            <MapPin size={16} />
+            Directions
+          </a>
+
+          {/* Reviews */}
+          <a
+            href="#reviews"
+            className="inline-flex h-[46px] items-center justify-center gap-1.5 rounded-[12px] bg-[#64748b] text-xs sm:text-sm font-semibold text-white shadow-[0_8px_16px_rgba(100,116,139,0.22)] transition hover:bg-[#475569] shrink-0 px-4 md:px-0"
+          >
+            <Star size={16} className="fill-white" />
+            Reviews
+          </a>
         </section>
 
         {shareMessage ? <p className="text-xs font-medium text-slate-500">{shareMessage}</p> : null}
@@ -615,29 +704,6 @@ export default function RestaurantMarketplacePage({
           </div>
         </section>
 
-        <section className="rounded-[18px] bg-white p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <UtensilsCrossed size={16} className="text-[#fb6a3d]" />
-            Quick Filters
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {quickFilterChips.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => setActiveChip(chip)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeChip === chip
-                    ? "bg-[#fff2ed] text-[#d14f25]"
-                    : "bg-white text-slate-600"
-                }`}
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        </section>
 
         <section id="full-menu" className="rounded-[18px] bg-white p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -727,7 +793,7 @@ export default function RestaurantMarketplacePage({
                       <p className="mt-2 text-xs text-slate-500">{product.shippingLabel || data.deliveryFeeLabel || "Free delivery"}</p>
 
                       {productCartQuantity > 0 ? (
-                        <div className="mt-auto inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.22)]">
+                        <div className="mt-auto mt-3 inline-flex h-10 w-full items-stretch overflow-hidden rounded-xl border border-[#15803d] bg-[#15803d] text-white shadow-[0_8px_18px_rgba(21,128,61,0.22)]">
                           <button
                             type="button"
                             onClick={() => updateCartQuantity(product.id, productCartQuantity - 1)}
@@ -752,10 +818,9 @@ export default function RestaurantMarketplacePage({
                         <button
                           type="button"
                           onClick={() => handleAddToCartWithFeedback(product)}
-                          className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#15803d] text-sm font-semibold text-white shadow-[0_8px_16px_rgba(21,128,61,0.28)] hover:bg-[#166534]"
+                          className="mt-auto mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0fdf4] text-xs font-semibold text-[#15803d] transition hover:bg-[#15803d] hover:text-white cursor-pointer"
                         >
-                          <ShoppingCart size={14} />
-                          Add to Cart
+                          Add
                         </button>
                       )}
                     </div>
@@ -825,6 +890,42 @@ export default function RestaurantMarketplacePage({
             </aside>
           </div>
         </section>
+          </div>
+
+          {/* Right Column: Floating Gallery Card */}
+          <div className="space-y-6 lg:sticky lg:top-24">
+            <div className="rounded-[20px] border border-slate-100 bg-white p-5 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#1f2937] font-heading">Photo Gallery</h3>
+                <button
+                  type="button"
+                  onClick={openAllPhotosModal}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition cursor-pointer"
+                >
+                  View All
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {photoItems.slice(0, 12).map((imageUrl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => openSinglePhotoModal(imageUrl)}
+                    className="group relative aspect-square overflow-hidden rounded-[12px] bg-slate-50 border border-slate-100 cursor-pointer text-left"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt="Gallery food item"
+                      className="h-full w-full object-cover transition-transform duration-350 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-350" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {quickViewProduct ? (
@@ -981,6 +1082,86 @@ export default function RestaurantMarketplacePage({
         </section>
       ) : null}
 
+      {isPhotosModalOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-white"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <section className="w-full h-full flex flex-col justify-between bg-white p-4 sm:p-6 md:p-8">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-800">
+                {selectedPhotoUrl ? "Photo Preview" : "All Photos"}
+              </h3>
+              <button
+                type="button"
+                onClick={closePhotosModal}
+                className="rounded-[10px] bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            {selectedPhotoUrl ? (
+              <div className="flex-1 min-h-0 flex flex-col justify-between">
+                <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden rounded-[16px] bg-[#f8fafc] border border-slate-100">
+                  <img
+                    src={selectedPhotoUrl}
+                    alt={`${data.storeName} photo preview`}
+                    className="max-h-full max-w-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-4 shrink-0">
+                  <button
+                    type="button"
+                    onClick={showPreviousPhoto}
+                    disabled={selectedPhotoIndex <= 0}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-[#1b9c5a] px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 hover:opacity-92 transition cursor-pointer"
+                  >
+                    Previous
+                  </button>
+
+                  <p className="text-sm font-bold text-slate-500">
+                    {selectedPhotoIndex >= 0 ? `${selectedPhotoIndex + 1} / ${photoItems.length}` : `0 / ${photoItems.length}`}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={showNextPhoto}
+                    disabled={selectedPhotoIndex < 0 || selectedPhotoIndex >= photoItems.length - 1}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-[#1b9c5a] px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 hover:opacity-92 transition cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+                  {photoItems.map((photo, index) => (
+                    <button
+                      key={`${photo}-all-${index}`}
+                      type="button"
+                      onClick={() => openSinglePhotoModal(photo)}
+                      className="overflow-hidden rounded-[14px] bg-[#f3f4f6] aspect-square relative hover:scale-[1.02] transition duration-300 border border-slate-100 cursor-pointer"
+                      aria-label={`View photo ${index + 1}`}
+                    >
+                      <img
+                        src={photo}
+                        alt={`${data.storeName} gallery ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
+
       <Footer />
     </main>
   );
@@ -996,10 +1177,10 @@ function InfoTile({
   subtitle: string;
 }) {
   return (
-    <article className="rounded-[14px] bg-[#eef2f6] px-3 py-4 text-center md:px-4 md:py-5">
-      <div className="mx-auto mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff2e9]">{icon}</div>
-      <p className="text-xl font-semibold text-[#1f2a3d] md:text-2xl">{title}</p>
-      <p className="mt-1 text-xs font-medium text-slate-500 md:text-sm">{subtitle}</p>
+    <article className="rounded-[10px] sm:rounded-[14px] bg-white border border-slate-100 px-1 py-2 sm:px-2 sm:py-3 text-center md:px-4 md:py-5 min-w-0 flex-1 shrink-0">
+      <div className="mx-auto mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#fff2e9] shrink-0 sm:h-8 sm:w-8">{icon}</div>
+      <p className="text-[10px] font-bold text-[#1f2a3d] sm:text-xs md:text-base truncate">{title}</p>
+      <p className="mt-0.5 text-[9px] font-medium text-slate-500 sm:text-[10px] md:text-xs truncate">{subtitle}</p>
     </article>
   );
 }

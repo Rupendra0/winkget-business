@@ -12,7 +12,13 @@ export default function ListingProfilePage({
   profile: ListingProfile;
   storeData?: StorePageData | null;
 }) {
-  if (profile.businessType === "restaurant") {
+  const isRestaurant =
+    profile.businessType === "restaurant" ||
+    String(profile.category || "").trim().toLowerCase() === "restaurant" ||
+    String(profile.category || "").trim().toLowerCase() === "restaurants" ||
+    storeData?.isRestaurantMarketplace === true;
+
+  if (isRestaurant) {
     return <RestaurantListingPage profile={profile} storeData={storeData} />;
   }
 
