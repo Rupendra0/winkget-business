@@ -28,7 +28,7 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
   };
 
   return (
-    <main className="min-h-screen w-full flex flex-col md:flex-row bg-white">
+    <main className="min-h-screen w-full flex flex-col md:flex-row bg-white relative">
       {/* Left Section: Information Content */}
       <div className="flex-1 p-6 sm:p-10 lg:p-16 flex flex-col justify-center">
         <div className="space-y-6">
@@ -98,16 +98,31 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
               </li>
             </ul>
           </div>
+
+          {/* Security Box (Moved from Right Section) */}
+          <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-5 mt-8 max-w-4xl shrink-0">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                <ShieldCheck size={16} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-orange-950">100% Secure & Regulated</h4>
+                <p className="text-xs text-orange-850 leading-relaxed">
+                  Your business credentials, identification documents, and bank payout records are protected with bank-grade AES-256 encryption. We prioritize your privacy and transaction security at every step.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Right Section: Banner, Actions & Security Info */}
-      <div className="w-full md:w-[420px] lg:w-[480px] bg-white border-l border-slate-100 p-8 flex flex-col justify-between shrink-0">
-        <div className="flex-1 flex items-center justify-center py-6">
+      {/* Right Section: Banner & Actions (Sticky on Desktop) */}
+      <div className="w-full md:w-[420px] lg:w-[480px] bg-white border-l border-slate-100 p-8 flex flex-col justify-center shrink-0 md:sticky md:top-0 md:h-screen self-start">
+        <div className="flex items-center justify-center py-6">
           <img 
             src="/onboarding_intro_banner.png" 
             alt="Become a Winkget Merchant Partner" 
-            className="max-h-[300px] w-auto object-contain"
+            className="max-h-[340px] w-auto object-contain"
           />
         </div>
         
@@ -127,21 +142,6 @@ export default function RegisterIntro({ onStart }: RegisterIntroProps) {
           >
             Partner Login
           </button>
-        </div>
-        
-        {/* Security Box */}
-        <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-5 shrink-0">
-          <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-              <ShieldCheck size={16} />
-            </div>
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold text-orange-950">100% Secure & Regulated</h4>
-              <p className="text-xs text-orange-850 leading-relaxed">
-                Your business credentials, identification documents, and bank payout records are protected with bank-grade AES-256 encryption. We prioritize your privacy and transaction security at every step.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </main>

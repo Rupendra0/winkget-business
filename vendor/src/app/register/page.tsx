@@ -620,6 +620,7 @@ export default function VendorRegisterPage() {
   }, [router]);
 
   useEffect(() => {
+    if (showIntro) return;
     let active = true;
 
     const loadCategories = async () => {
@@ -686,9 +687,10 @@ export default function VendorRegisterPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [showIntro]);
 
   useEffect(() => {
+    if (showIntro) return;
     let active = true;
 
     const loadCities = async () => {
@@ -738,7 +740,7 @@ export default function VendorRegisterPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [showIntro]);
 
   useEffect(() => {
     let active = true;
@@ -1185,16 +1187,11 @@ export default function VendorRegisterPage() {
 
   if (checkingSession) {
     return (
-      <main className="min-h-[calc(100vh-80px)] px-4 py-8 sm:px-6 lg:px-8 flex items-center justify-center">
-        <section className="w-full max-w-4xl rounded-3xl border border-white/80 bg-white/85 p-6 shadow-2xl sm:p-8">
-          <div className="h-4 w-64 rounded bg-slate-200 animate-pulse" />
-          <div className="mt-4 h-8 w-80 rounded bg-slate-200 animate-pulse" />
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="h-20 rounded-xl bg-slate-200 animate-pulse" />
-            <div className="h-20 rounded-xl bg-slate-200 animate-pulse" />
-            <div className="h-20 rounded-xl bg-slate-200 animate-pulse" />
-          </div>
-        </section>
+      <main className="min-h-screen w-full flex flex-col items-center justify-center bg-white p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-4 border-orange-100 border-t-[#fb6a3d] animate-spin" />
+          <p className="text-sm font-semibold text-slate-500 animate-pulse">Initializing partner portal...</p>
+        </div>
       </main>
     );
   }
