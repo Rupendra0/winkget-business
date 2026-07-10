@@ -8,6 +8,7 @@ import type {
   VendorProductRecord,
   VendorProductUpsertInput,
 } from "@/lib/vendorApi";
+import { checkBarcodeExists } from "@/lib/vendorApi";
 import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 
 type VendorAddProductFormProps = {
@@ -478,91 +479,86 @@ export default function VendorAddProductForm({
     setCheckingBarcode(true);
     setSubmitNotice("");
     try {
-      const response = await fetch(`/api/vendor/products/check-barcode?barcode=${encodeURIComponent(code)}`);
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload.ok && payload.exists && payload.product) {
-          const prod = payload.product;
-          
-          // Check if this barcode matches a variant of the matched product instead of parent
-          const matchedVariant = (prod.variantData || []).find((v: any) => v.barcode === code);
-          if (matchedVariant) {
-            // Swap: Promote variant to parent, and demote parent defaults to a variant draft
-            setFieldValues(current => ({
-              ...current,
-              productName: prod.productName || current.productName,
-              shortDescription: prod.shortDescription || current.shortDescription,
-              mrp: matchedVariant.mrp ? String(matchedVariant.mrp) : "",
-              sellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : "",
-              stock: matchedVariant.stock ? String(matchedVariant.stock) : "",
-              badge: prod.badge || current.badge,
-              brand: prod.brand || current.brand,
-              tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
-            }));
+      const payload = await checkBarcodeExists(code);
+      if (payload.exists && payload.product) {
+        const prod = payload.product;
+        
+        // Check if this barcode matches a variant of the matched product instead of parent
+        const matchedVariant = (prod.variantData || []).find((v: any) => v.barcode === code);
+        if (matchedVariant) {
+          // Swap: Promote variant to parent, and demote parent defaults to a variant draft
+          setFieldValues(current => ({
+            ...current,
+            productName: prod.productName || current.productName,
+            shortDescription: prod.shortDescription || current.shortDescription,
+            mrp: matchedVariant.mrp ? String(matchedVariant.mrp) : "",
+            sellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : "",
+            stock: matchedVariant.stock ? String(matchedVariant.stock) : "",
+            badge: prod.badge || current.badge,
+            brand: prod.brand || current.brand,
+            tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
+          }));
 
-            if (prod.categorySlug) {
-              handleCategoryChange(prod.categorySlug);
-              if (prod.subcategorySlug) {
-                setSubcategorySlug(prod.subcategorySlug);
-              }
+          if (prod.categorySlug) {
+            handleCategoryChange(prod.categorySlug);
+            if (prod.subcategorySlug) {
+              setSubcategorySlug(prod.subcategorySlug);
             }
-
-            let varMainImg = matchedVariant.image || "";
-            let varGallery = matchedVariant.gallery || [];
-            setExistingMainImageUrl(varMainImg);
-            setExistingGalleryUrls(varGallery.filter((g: string) => g !== varMainImg));
-
-            const parentVariant: VariantDraft = {
-              id: `variant-exchanged-${Date.now()}`,
-              variantSize: "Parent Default",
-              variantColor: "Original",
-              variantMrp: prod.oldPrice ? String(prod.oldPrice) : "",
-              variantSellingPrice: prod.price ? String(prod.price) : "",
-              variantStock: prod.inventory ? String(prod.inventory) : "",
-              variantBarcode: prod.barcode || "",
-              isVariantMapped: !!prod.barcode,
-              variantMainImage: null,
-              variantExistingMainImage: prod.image || "",
-              variantExistingImages: (prod.gallery || []).filter((g: string) => g !== prod.image),
-              variantImages: [],
-            };
-
-            setVariants([parentVariant]);
-            setIsBarcodeLocked(true);
-            setSubmitNotice("Variant barcode detected! Promoted variant to main product and mapped parent details.");
-          } else {
-            // Normal parent barcode matched
-            setFieldValues(current => ({
-              ...current,
-              productName: prod.productName || current.productName,
-              shortDescription: prod.shortDescription || current.shortDescription,
-              mrp: prod.oldPrice ? String(prod.oldPrice) : "",
-              sellingPrice: prod.price ? String(prod.price) : "",
-              stock: prod.inventory ? String(prod.inventory) : "",
-              badge: prod.badge || current.badge,
-              brand: prod.brand || current.brand,
-              tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
-            }));
-
-            if (prod.categorySlug) {
-              handleCategoryChange(prod.categorySlug);
-              if (prod.subcategorySlug) {
-                setSubcategorySlug(prod.subcategorySlug);
-              }
-            }
-
-            if (prod.image) {
-              setExistingMainImageUrl(prod.image);
-            }
-            if (Array.isArray(prod.gallery)) {
-              setExistingGalleryUrls(prod.gallery.filter((g: string) => g !== prod.image));
-            }
-
-            setIsBarcodeLocked(true);
-            setSubmitNotice("Barcode matched! Product details pre-loaded from catalog.");
           }
+
+          let varMainImg = matchedVariant.image || "";
+          let varGallery = matchedVariant.gallery || [];
+          setExistingMainImageUrl(varMainImg);
+          setExistingGalleryUrls(varGallery.filter((g: string) => g !== varMainImg));
+
+          const parentVariant: VariantDraft = {
+            id: `variant-exchanged-${Date.now()}`,
+            variantSize: "Parent Default",
+            variantColor: "Original",
+            variantMrp: prod.oldPrice ? String(prod.oldPrice) : "",
+            variantSellingPrice: prod.price ? String(prod.price) : "",
+            variantStock: prod.inventory ? String(prod.inventory) : "",
+            variantBarcode: prod.barcode || "",
+            isVariantMapped: !!prod.barcode,
+            variantMainImage: null,
+            variantExistingMainImage: prod.image || "",
+            variantExistingImages: (prod.gallery || []).filter((g: string) => g !== prod.image),
+            variantImages: [],
+          };
+
+          setVariants([parentVariant]);
+          setIsBarcodeLocked(true);
+          setSubmitNotice("Variant barcode detected! Promoted variant to main product and mapped parent details.");
         } else {
-          setSubmitNotice("Barcode not found. You can enter product details manually.");
+          // Normal parent barcode matched
+          setFieldValues(current => ({
+            ...current,
+            productName: prod.productName || current.productName,
+            shortDescription: prod.shortDescription || current.shortDescription,
+            mrp: prod.oldPrice ? String(prod.oldPrice) : "",
+            sellingPrice: prod.price ? String(prod.price) : "",
+            stock: prod.inventory ? String(prod.inventory) : "",
+            badge: prod.badge || current.badge,
+            brand: prod.brand || current.brand,
+            tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
+          }));
+
+          if (prod.categorySlug) {
+            handleCategoryChange(prod.categorySlug);
+            if (prod.subcategorySlug) {
+              setSubcategorySlug(prod.subcategorySlug);
+            }
+          }
+
+          if (prod.image) {
+            setExistingMainImageUrl(prod.image);
+          }
+          if (Array.isArray(prod.gallery)) {
+            setExistingGalleryUrls(prod.gallery.filter((g: string) => g !== prod.image));
+          }
+
+          setIsBarcodeLocked(true);
+          setSubmitNotice("Barcode matched! Product details pre-loaded from catalog.");
         }
       } else {
         setSubmitNotice("Barcode not found. You can enter product details manually.");
@@ -587,24 +583,54 @@ export default function VendorAddProductForm({
     });
 
     try {
-      const response = await fetch(`/api/vendor/products/check-barcode?barcode=${encodeURIComponent(code)}`);
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload.ok && payload.exists && payload.product) {
-          const matchedProduct = payload.product;
+      const payload = await checkBarcodeExists(code);
+      if (payload.exists && payload.product) {
+        const matchedProduct = payload.product;
 
-          // 1. Check if variant barcode is parent's barcode
-          if (matchedProduct.barcode === code || matchedProduct.id === initialProduct?.id) {
-            const mainImg = matchedProduct.image || "";
-            const galleryImgs = matchedProduct.gallery || [];
+        // 1. Check if variant barcode is parent's barcode
+        if (matchedProduct.barcode === code || matchedProduct.id === initialProduct?.id) {
+          const mainImg = matchedProduct.image || "";
+          const galleryImgs = matchedProduct.gallery || [];
+
+          setVariants(current => current.map(v => {
+            if (v.id === variantId) {
+              return {
+                ...v,
+                variantMrp: matchedProduct.oldPrice ? String(matchedProduct.oldPrice) : v.variantMrp,
+                variantSellingPrice: matchedProduct.price ? String(matchedProduct.price) : v.variantSellingPrice,
+                variantStock: matchedProduct.inventory ? String(matchedProduct.inventory) : v.variantStock,
+                variantImages: [],
+                variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
+                variantMainImage: null,
+                variantExistingMainImage: mainImg,
+                isVariantMapped: true,
+              };
+            }
+            return v;
+          }));
+
+          setVariantBarcodeMessages(prev => ({
+            ...prev,
+            [variantId]: { type: 'success', text: 'Parent barcode matched! Mapped default product details onto this variant.' }
+          }));
+        } else {
+          // 2. Otherwise search inside variants list
+          const matchedVariant = (matchedProduct.variantData || []).find((v: any) => v.barcode === code);
+          if (matchedVariant) {
+            let sizeVal = matchedVariant.size || "";
+            let colorVal = matchedVariant.color || "";
+            let mainImg = matchedVariant.image || "";
+            let galleryImgs = matchedVariant.gallery || [];
 
             setVariants(current => current.map(v => {
               if (v.id === variantId) {
                 return {
                   ...v,
-                  variantMrp: matchedProduct.oldPrice ? String(matchedProduct.oldPrice) : v.variantMrp,
-                  variantSellingPrice: matchedProduct.price ? String(matchedProduct.price) : v.variantSellingPrice,
-                  variantStock: matchedProduct.inventory ? String(matchedProduct.inventory) : v.variantStock,
+                  variantSize: sizeVal || v.variantSize,
+                  variantColor: colorVal || v.variantColor,
+                  variantMrp: matchedVariant.mrp ? String(matchedVariant.mrp) : v.variantMrp,
+                  variantSellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : v.variantSellingPrice,
+                  variantStock: matchedVariant.stock ? String(matchedVariant.stock) : v.variantStock,
                   variantImages: [],
                   variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
                   variantMainImage: null,
@@ -617,52 +643,14 @@ export default function VendorAddProductForm({
 
             setVariantBarcodeMessages(prev => ({
               ...prev,
-              [variantId]: { type: 'success', text: 'Parent barcode matched! Mapped default product details onto this variant.' }
+              [variantId]: { type: 'success', text: 'Variant matched! Mapped details onto this variant.' }
             }));
           } else {
-            // 2. Otherwise search inside variants list
-            const matchedVariant = (matchedProduct.variantData || []).find((v: any) => v.barcode === code);
-            if (matchedVariant) {
-              let sizeVal = matchedVariant.size || "";
-              let colorVal = matchedVariant.color || "";
-              let mainImg = matchedVariant.image || "";
-              let galleryImgs = matchedVariant.gallery || [];
-
-              setVariants(current => current.map(v => {
-                if (v.id === variantId) {
-                  return {
-                    ...v,
-                    variantSize: sizeVal || v.variantSize,
-                    variantColor: colorVal || v.variantColor,
-                    variantMrp: matchedVariant.mrp ? String(matchedVariant.mrp) : v.variantMrp,
-                    variantSellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : v.variantSellingPrice,
-                    variantStock: matchedVariant.stock ? String(matchedVariant.stock) : v.variantStock,
-                    variantImages: [],
-                    variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
-                    variantMainImage: null,
-                    variantExistingMainImage: mainImg,
-                    isVariantMapped: true,
-                  };
-                }
-                return v;
-              }));
-
-              setVariantBarcodeMessages(prev => ({
-                ...prev,
-                [variantId]: { type: 'success', text: 'Variant matched! Mapped details onto this variant.' }
-              }));
-            } else {
-              setVariantBarcodeMessages(prev => ({
-                ...prev,
-                [variantId]: { type: 'error', text: 'Barcode matched another product but has no matching variant. Creating new.' }
-              }));
-            }
+            setVariantBarcodeMessages(prev => ({
+              ...prev,
+              [variantId]: { type: 'error', text: 'Barcode matched another product but has no matching variant. Creating new.' }
+            }));
           }
-        } else {
-          setVariantBarcodeMessages(prev => ({
-            ...prev,
-            [variantId]: { type: 'success', text: 'New variant barcode. Please enter details manually.' }
-          }));
         }
       } else {
         setVariantBarcodeMessages(prev => ({
