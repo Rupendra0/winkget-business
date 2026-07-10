@@ -1014,6 +1014,7 @@ const normalizeVendorProduct = (input: Partial<VendorProductRecord>, index: numb
     subcategorySlug: String(input.subcategorySlug || "").trim(),
     subcategoryName: String(input.subcategoryName || "").trim(),
     productName: String(input.productName || "").trim(),
+    barcode: input.barcode ? String(input.barcode).trim() : undefined,
     shortDescription: String(input.shortDescription || "").trim() || undefined,
     description: String(input.description || "").trim() || undefined,
     image: String(input.image || "").trim(),
