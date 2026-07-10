@@ -1363,7 +1363,7 @@ export default function VendorAddProductForm({
         status: isEditMode ? initialProduct?.status || "live" : "live",
         sellerName: String(fieldValues.sellerName || sellerName || "").trim() || "Vendor",
         vendorSource: "vendor-panel",
-        sourcePlatform: "winkget_vendor",
+        sourcePlatform: "winkget_business",
         storePlacement: placement,
         isCancellable: compactMode ? undefined : highlightValues.isCancellable,
         isReturnable: compactMode ? undefined : highlightValues.isReturnable,

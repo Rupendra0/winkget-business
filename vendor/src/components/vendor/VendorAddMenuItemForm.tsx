@@ -524,7 +524,7 @@ export default function VendorAddMenuItemForm({
         highlights: customHighlights.map((h) => String(h || "").trim()).filter(Boolean),
         sellerName: String(fieldValues.sellerName || sellerName || "").trim() || "Vendor",
         vendorSource: "vendor-panel",
-        sourcePlatform: "winkget_vendor",
+        sourcePlatform: "winkget_business",
         storePlacement: undefined,
         descriptionPoints: descPairs
           .map((p) => ({ heading: String(p?.heading || "").trim(), content: String(p?.content || "").trim() }))

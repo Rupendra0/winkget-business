@@ -6570,7 +6570,7 @@ function buildVendorProductPayload(
     variantData: parseVariantLines(form.variantDataText),
     status: form.status,
     storePlacement,
-    sourcePlatform: "winkget_vendor",
+    sourcePlatform: "winkget_business",
   };
 }
 

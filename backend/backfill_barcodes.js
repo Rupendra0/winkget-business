@@ -32,11 +32,13 @@ async function run() {
   let parentUpdatedCount = 0;
   let variantUpdatedCount = 0;
 
-  for (const product of products) {
-    if (isPhysicalProduct(product.categoryLabel)) {
-      let isModified = false;
+  let sourcePlatformUpdatedCount = 0;
 
-      // 1. Backfill parent barcode if missing
+  for (const product of products) {
+    let isModified = false;
+
+    // 1. Backfill parent barcode if missing (physical products only)
+    if (isPhysicalProduct(product.categoryLabel)) {
       if (!product.barcode || !product.barcode.trim()) {
         const tempBarcode = `TEMP-UPC-${product._id.toString().toUpperCase()}`;
         product.barcode = tempBarcode;
@@ -57,14 +59,21 @@ async function run() {
           product.markModified('variantData');
         }
       }
+    }
 
-      if (isModified) {
-        await product.save();
-      }
+    // 3. Update sourcePlatform from winkget_vendor to winkget_business for all items
+    if (!product.sourcePlatform || product.sourcePlatform === "winkget_vendor") {
+      product.sourcePlatform = "winkget_business";
+      isModified = true;
+      sourcePlatformUpdatedCount++;
+    }
+
+    if (isModified) {
+      await product.save();
     }
   }
 
-  console.log(`Successfully backfilled ${parentUpdatedCount} parent barcodes and ${variantUpdatedCount} variant barcodes.`);
+  console.log(`Successfully backfilled ${parentUpdatedCount} parent barcodes, ${variantUpdatedCount} variant barcodes, and updated sourcePlatform for ${sourcePlatformUpdatedCount} products.`);
   await mongoose.disconnect();
 }
 
