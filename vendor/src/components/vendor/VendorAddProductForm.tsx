@@ -526,7 +526,20 @@ export default function VendorAddProductForm({
             variantImages: [],
           };
 
-          setVariants([parentVariant]);
+          // Filter out the promoted variant
+          const otherVariants = createInitialVariants(prod).filter(
+            v => !v.variantBarcode || v.variantBarcode.toLowerCase() !== code.toLowerCase()
+          );
+
+          setVariants([parentVariant, ...otherVariants]);
+          setDescriptionBlocks(createInitialDescriptionBlocks(prod));
+          setSpecPairs(parseSpecificationsInput(prod.specifications || []));
+          setDescPairs(createInitialDescriptionPoints(prod));
+          setHighlightValues(createInitialHighlightValues(prod));
+          if (Array.isArray(prod.highlights) && prod.highlights.length > 0) {
+            setCustomHighlights(prod.highlights);
+          }
+
           setIsBarcodeLocked(true);
           setSubmitNotice("Variant barcode detected! Promoted variant to main product and mapped parent details.");
         } else {
@@ -555,6 +568,16 @@ export default function VendorAddProductForm({
           }
           if (Array.isArray(prod.gallery)) {
             setExistingGalleryUrls(prod.gallery.filter((g: string) => g !== prod.image));
+          }
+
+          // Sync missing fields from DB
+          setVariants(createInitialVariants(prod));
+          setDescriptionBlocks(createInitialDescriptionBlocks(prod));
+          setSpecPairs(parseSpecificationsInput(prod.specifications || []));
+          setDescPairs(createInitialDescriptionPoints(prod));
+          setHighlightValues(createInitialHighlightValues(prod));
+          if (Array.isArray(prod.highlights) && prod.highlights.length > 0) {
+            setCustomHighlights(prod.highlights);
           }
 
           setIsBarcodeLocked(true);
@@ -588,7 +611,7 @@ export default function VendorAddProductForm({
         const matchedProduct = payload.product;
 
         // 1. Check if variant barcode is parent's barcode
-        if (matchedProduct.barcode === code || matchedProduct.id === initialProduct?.id) {
+        if ((matchedProduct.barcode && matchedProduct.barcode.toLowerCase() === code.toLowerCase()) || matchedProduct.id === initialProduct?.id) {
           const mainImg = matchedProduct.image || "";
           const galleryImgs = matchedProduct.gallery || [];
 
@@ -615,7 +638,7 @@ export default function VendorAddProductForm({
           }));
         } else {
           // 2. Otherwise search inside variants list
-          const matchedVariant = (matchedProduct.variantData || []).find((v: any) => v.barcode === code);
+          const matchedVariant = (matchedProduct.variantData || []).find((v: any) => v.barcode && v.barcode.toLowerCase() === code.toLowerCase());
           if (matchedVariant) {
             let sizeVal = matchedVariant.size || "";
             let colorVal = matchedVariant.color || "";
