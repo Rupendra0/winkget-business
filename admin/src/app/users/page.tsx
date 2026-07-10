@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import useSWR from "swr";
 import AdminShell from "@/components/admin/AdminShell";
 import Modal from "@/components/admin/Modal";
@@ -1403,7 +1404,9 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
     }
 
     try {
-      const dataUrl = await toDataUrl(file);
+      setDocumentError("Uploading document...");
+      const dataUrl = await uploadToCloudinary(file, "winkget_documents");
+      setDocumentError(null);
       if (field === "idProofDocument") {
         setIdProofDocument(dataUrl);
         setSelectedIdProofDocumentName(file.name);
@@ -1414,8 +1417,9 @@ function UserFormModal({ open, mode, title, initialValue, submitting, onClose, o
         setCardImage(dataUrl);
         setSelectedCardImageName(file.name);
       }
-    } catch {
-      setDocumentError("Failed to read selected file.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload selected file.";
+      setDocumentError(message);
     }
   };
 

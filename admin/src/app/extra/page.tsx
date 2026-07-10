@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import AdminShell from "@/components/admin/AdminShell";
 import Modal from "@/components/admin/Modal";
 import PageLayout from "@/components/admin/PageLayout";
@@ -118,11 +119,13 @@ export default function ExtraPage() {
     }
 
     try {
-      const dataUrl = await fileToDataUrl(file);
+      setImageUploadError("Uploading image...");
+      const dataUrl = await uploadToCloudinary(file, "winkget_cities");
       setCityImage(dataUrl);
       setImageUploadError(null);
-    } catch {
-      setImageUploadError("Failed to read image file.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload image file.";
+      setImageUploadError(message);
     }
   };
 
@@ -142,11 +145,13 @@ export default function ExtraPage() {
     }
 
     try {
-      const dataUrl = await fileToDataUrl(file);
+      setEditImageUploadError("Uploading image...");
+      const dataUrl = await uploadToCloudinary(file, "winkget_cities");
       setEditCityImage(dataUrl);
       setEditImageUploadError(null);
-    } catch {
-      setEditImageUploadError("Failed to read image file.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload image file.";
+      setEditImageUploadError(message);
     }
   };
 

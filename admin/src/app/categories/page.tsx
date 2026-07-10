@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import useSWR from "swr";
 import AdminShell from "@/components/admin/AdminShell";
 import Modal from "@/components/admin/Modal";
@@ -1135,11 +1136,13 @@ function CreateNodeModal({
     }
 
     try {
-      const imageData = await fileToDataUrl(file);
+      setIconUploadError("Uploading icon...");
+      const imageData = await uploadToCloudinary(file, "winkget_categories");
       onIconImageChange(imageData);
       setIconUploadError(null);
-    } catch {
-      setIconUploadError("Could not read the selected image. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not upload the selected image. Please try again.";
+      setIconUploadError(message);
     }
   };
 
@@ -1166,11 +1169,13 @@ function CreateNodeModal({
     }
 
     try {
-      const imageData = await fileToDataUrl(file);
+      setCoverUploadError("Uploading cover...");
+      const imageData = await uploadToCloudinary(file, "winkget_categories");
       onCoverImageChange(imageData);
       setCoverUploadError(null);
-    } catch {
-      setCoverUploadError("Could not read the selected image. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not upload the selected image. Please try again.";
+      setCoverUploadError(message);
     }
   };
 

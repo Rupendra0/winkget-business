@@ -8,6 +8,7 @@ import type {
   VendorProductRecord,
   VendorProductUpsertInput,
 } from "@/lib/vendorApi";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import { Star, X, ShoppingCart, Heart } from "lucide-react";
 
 type VendorAddServiceFormProps = {
@@ -367,14 +368,14 @@ export default function VendorAddServiceForm({
       return;
     }
 
-    setSubmitNotice("");
+    setSubmitNotice("Uploading service image...");
 
     try {
-      const mainImageDataUrl = fieldValues.mainImage
-        ? await readFileAsDataUrl(fieldValues.mainImage)
+      const mainImageUrl = fieldValues.mainImage
+        ? await uploadToCloudinary(fieldValues.mainImage, "winkget_products")
         : String(existingMainImageUrl || "").trim();
 
-      const orderedGallery = [mainImageDataUrl].filter(Boolean);
+      const orderedGallery = [mainImageUrl].filter(Boolean);
 
       const payload: VendorProductUpsertInput = {
         categorySlug: selectedCategorySlug,

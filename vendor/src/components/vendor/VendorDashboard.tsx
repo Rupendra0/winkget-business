@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState, type ComponentType } from "react";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import RegisterIntro from "@/components/vendor/RegisterIntro";
 import {
   BarChart3,
@@ -5163,20 +5164,23 @@ export default function VendorDashboard() {
     }
 
     try {
-      const imageData = await fileToDataUrl(file);
+      setShopProfileMessage("Uploading image...");
+      const imageData = await uploadToCloudinary(file, "winkget_shop");
       setShopProfileForm((current) => ({
         ...current,
         [field]: imageData,
       }));
       setShopProfileMessage(
         field === "image"
-          ? "Shop DP selected."
+          ? "Shop DP updated."
           : field === "shopBannerImage"
-            ? "Shop banner selected."
-            : "Card view image selected."
+            ? "Shop banner updated."
+            : "Card view image updated."
       );
-    } catch {
-      setShopProfileError("Could not read image file. Please try again.");
+    } catch (err) {
+      setShopProfileMessage(null);
+      const message = err instanceof Error ? err.message : "Could not upload image file. Please try again.";
+      setShopProfileError(message);
     }
   };
 
@@ -5207,7 +5211,8 @@ export default function VendorDashboard() {
     );
 
     try {
-      const uploadedGallery = await Promise.all(validImageFiles.map((file) => fileToDataUrl(file)));
+      setShopProfileMessage("Uploading gallery images...");
+      const uploadedGallery = await Promise.all(validImageFiles.map((file) => uploadToCloudinary(file, "winkget_shop")));
       const mergedGallery = filterShopGalleryItems(
         [...sanitizedExistingGallery, ...uploadedGallery],
         shopProfileForm.image,
@@ -5219,8 +5224,10 @@ export default function VendorDashboard() {
         shopGalleryText: mergedGallery.join("\n"),
       }));
       setShopProfileMessage(`${uploadedGallery.length} shop photo${uploadedGallery.length === 1 ? "" : "s"} added.`);
-    } catch {
-      setShopProfileError("Could not process one or more photos. Please try again.");
+    } catch (err) {
+      setShopProfileMessage(null);
+      const message = err instanceof Error ? err.message : "Could not upload one or more photos. Please try again.";
+      setShopProfileError(message);
     }
   };
 
@@ -5358,7 +5365,8 @@ export default function VendorDashboard() {
     }
 
     try {
-      const imageData = await fileToDataUrl(file);
+      setMyStoreMediaMessage("Uploading image...");
+      const imageData = await uploadToCloudinary(file, "winkget_shop");
       const nextImage = field === "image" ? imageData : String(myStoreMediaForm.image || "").trim();
       const nextBannerImage = field === "banner" ? imageData : String(myStoreMediaForm.bannerImage || "").trim();
       const nextPaymentQrCode = field === "qr" ? imageData : String(myStoreMediaForm.paymentQrCode || "").trim();
@@ -5370,9 +5378,10 @@ export default function VendorDashboard() {
       });
 
       await persistMyStoreMedia(field, nextImage, nextBannerImage, nextPaymentQrCode);
-    } catch {
+    } catch (err) {
       setMyStoreMediaMessage(null);
-      setMyStoreMediaError("Could not process image file. Please try again.");
+      const message = err instanceof Error ? err.message : "Could not upload image file. Please try again.";
+      setMyStoreMediaError(message);
     }
   };
 

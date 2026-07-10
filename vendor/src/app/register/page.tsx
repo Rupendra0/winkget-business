@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Building2, CheckCircle2, Coins, Lock, ShieldCheck, Sparkles, Store, TrendingUp, UserRound } from "lucide-react";
 import { fetchCurrentUser } from "@/lib/authClient";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import RegisterIntro from "@/components/vendor/RegisterIntro";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -593,6 +594,7 @@ export default function VendorRegisterPage() {
   const [selectedGstDocumentName, setSelectedGstDocumentName] = useState("");
   const [serviceTagInput, setServiceTagInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState<"gstDocument" | "idProofDocument" | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1038,14 +1040,21 @@ export default function VendorRegisterPage() {
     }
 
     try {
-      const dataUrl = await toDataUrl(file);
-      updateField(field, dataUrl);
-      setDocumentName(file.name);
+      setUploadingDoc(field);
       setError(null);
+      
+      const secureUrl = await uploadToCloudinary(file, "winkget_documents");
+      
+      updateField(field, secureUrl);
+      setDocumentName(file.name);
     } catch (fileError) {
-      const message = fileError instanceof Error ? fileError.message : "Failed to read selected document";
+      const message = fileError instanceof Error ? fileError.message : "Failed to upload selected document";
       setError(message);
       event.target.value = "";
+      updateField(field, "");
+      setDocumentName("");
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -1842,14 +1851,17 @@ export default function VendorRegisterPage() {
                     <input
                       type="file"
                       accept={DOCUMENT_ACCEPT_ATTR}
+                      disabled={uploadingDoc !== null}
                       onChange={(event) =>
                         void handleDocumentChange(event, "gstDocument", setSelectedGstDocumentName, "GST document")
                       }
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800 disabled:opacity-60 disabled:cursor-not-allowed"
                       required={!form.gstDocument}
                     />
                     <p className="mt-1 text-xs text-slate-500">Accepted: PNG, JPG, JPEG, WEBP, PDF, DOC, DOCX up to 8MB.</p>
-                    {selectedGstDocumentName ? (
+                    {uploadingDoc === "gstDocument" ? (
+                      <p className="mt-1 text-xs text-orange-600 animate-pulse font-medium">Uploading document to secure server...</p>
+                    ) : selectedGstDocumentName ? (
                       <p className="mt-1 text-xs text-emerald-700">Selected: {selectedGstDocumentName}</p>
                     ) : null}
                   </label>
@@ -1905,14 +1917,19 @@ export default function VendorRegisterPage() {
                     <input
                       type="file"
                       accept={DOCUMENT_ACCEPT_ATTR}
+                      disabled={uploadingDoc !== null}
                       onChange={(event) =>
                         void handleDocumentChange(event, "idProofDocument", setSelectedIdDocumentName, "ID proof document")
                       }
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-orange-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-orange-800 disabled:opacity-60 disabled:cursor-not-allowed"
                       required={!form.idProofDocument}
                     />
                     <p className="mt-1 text-xs text-slate-500">Accepted: PNG, JPG, JPEG, WEBP, PDF, DOC, DOCX up to 8MB.</p>
-                    {selectedIdDocumentName ? <p className="mt-1 text-xs text-emerald-700">Selected: {selectedIdDocumentName}</p> : null}
+                    {uploadingDoc === "idProofDocument" ? (
+                      <p className="mt-1 text-xs text-orange-600 animate-pulse font-medium">Uploading document to secure server...</p>
+                    ) : selectedIdDocumentName ? (
+                      <p className="mt-1 text-xs text-emerald-700">Selected: {selectedIdDocumentName}</p>
+                    ) : null}
                   </label>
 
                   <div className="sm:col-span-2 mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
@@ -2014,18 +2031,19 @@ export default function VendorRegisterPage() {
                   {step < 3 ? (
                     <button
                       type="button"
+                      disabled={uploadingDoc !== null}
                       onClick={handleNext}
-                      className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-600"
+                      className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Next step
+                      {uploadingDoc !== null ? "Uploading..." : "Next step"}
                     </button>
                   ) : (
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || uploadingDoc !== null}
                       className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                      {loading ? "Submitting..." : "Submit registration"}
+                      {loading ? "Submitting..." : uploadingDoc !== null ? "Uploading..." : "Submit registration"}
                     </button>
                   )}
                 </div>

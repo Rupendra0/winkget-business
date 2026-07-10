@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 import AdminShell from "@/components/admin/AdminShell";
 import PageLayout from "@/components/admin/PageLayout";
 import { findSidebarItem } from "@/data/adminNavigation";
@@ -595,7 +596,7 @@ function AdsPageContent() {
 		setMessage(null);
 
 		try {
-			const dataUrl = await fileToDataUrl(file);
+			const dataUrl = await uploadToCloudinary(file, "winkget_ads");
 			const result = await updateHomeTrending({ trendingItems, icon: dataUrl });
 			setTrendingItems(result.trendingItems);
 			setTrendingIcon(result.icon);
@@ -741,7 +742,7 @@ function AdsPageContent() {
 		};
 
 		try {
-			const imageData = await fileToDataUrl(file);
+			const imageData = await uploadToCloudinary(file, "winkget_ads");
 			const nextForm = {
 				leftImage: key === "leftImage" ? imageData : previousForm.leftImage,
 				middleImage: key === "middleImage" ? imageData : previousForm.middleImage,
@@ -793,7 +794,7 @@ function AdsPageContent() {
 		};
 
 		try {
-			const imageData = await fileToDataUrl(file);
+			const imageData = await uploadToCloudinary(file, "winkget_ads");
 			const nextForm: PromoSectionForm = {
 				heading: previousForm.heading,
 				cards: previousForm.cards.map((card) =>
@@ -845,7 +846,7 @@ function AdsPageContent() {
 		};
 
 		try {
-			const imageData = await fileToDataUrl(file);
+			const imageData = await uploadToCloudinary(file, "winkget_ads");
 			const nextForm: PromoSectionForm = {
 				heading: previousForm.heading,
 				cards: previousForm.cards.map((card) =>
@@ -897,7 +898,7 @@ function AdsPageContent() {
 		};
 
 		try {
-			const imageData = await fileToDataUrl(file);
+			const imageData = await uploadToCloudinary(file, "winkget_ads");
 			const nextForm: PromoSectionForm = {
 				heading: previousForm.heading,
 				cards: previousForm.cards.map((card) =>
@@ -949,7 +950,7 @@ function AdsPageContent() {
 		};
 
 		try {
-			const imageData = await fileToDataUrl(file);
+			const imageData = await uploadToCloudinary(file, "winkget_ads");
 			const nextForm: PromoSectionForm = {
 				heading: previousForm.heading,
 				cards: previousForm.cards.map((card) =>

@@ -14,6 +14,7 @@ const reviewRoutes = require("./routes/reviews.routes");
 const vendorProductsRoutes = require("./routes/vendorProducts.routes");
 const ordersRoutes = require("./routes/orders.routes");
 const searchRoutes = require("./routes/search.routes");
+const mediaRoutes = require("./routes/media.routes");
 
 const app = express();
 const envOrigins = String(process.env.CORS_ORIGIN || "")
@@ -77,6 +78,7 @@ app.use("/api", reviewRoutes);
 app.use("/api", vendorProductsRoutes);
 app.use("/api", ordersRoutes);
 app.use("/api", searchRoutes);
+app.use("/api", mediaRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ ok: true, message: "Winkget backend service" });

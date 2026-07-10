@@ -462,19 +462,24 @@ router.post("/auth/vendor/signup", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Password must be at least 6 characters" });
     }
 
-    if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocument)) {
-      return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
+    const isUrlOrUploadPath = (str) => {
+      if (typeof str !== 'string') return false;
+      return str.startsWith('http://') || str.startsWith('https://') || str.startsWith('/uploads/');
+    };
+
+    if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocument) && !isUrlOrUploadPath(idProofDocument)) {
+      return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC, DOCX or a valid URL" });
     }
 
-    if (idProofDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
+    if (!isUrlOrUploadPath(idProofDocument) && idProofDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
       return res.status(400).json({ ok: false, message: "ID proof document is too large" });
     }
 
-    if (!DOCUMENT_DATA_URL_REGEX.test(gstDocument)) {
-      return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+    if (!DOCUMENT_DATA_URL_REGEX.test(gstDocument) && !isUrlOrUploadPath(gstDocument)) {
+      return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC, DOCX or a valid URL" });
     }
 
-    if (gstDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
+    if (!isUrlOrUploadPath(gstDocument) && gstDocument.length > MAX_DOCUMENT_DATA_LENGTH) {
       return res.status(400).json({ ok: false, message: "GST document is too large" });
     }
 
@@ -1113,22 +1118,27 @@ router.put("/auth/me", async (req, res) => {
       return res.status(400).json({ ok: false, message: "Aadhaar number must be exactly 12 digits" });
     }
 
+    const isUrlOrUploadPath = (str) => {
+      if (typeof str !== 'string') return false;
+      return str.startsWith('http://') || str.startsWith('https://') || str.startsWith('/uploads/');
+    };
+
     if (idProofDocumentInput) {
-      if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocumentInput)) {
-        return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC or DOCX" });
+      if (!DOCUMENT_DATA_URL_REGEX.test(idProofDocumentInput) && !isUrlOrUploadPath(idProofDocumentInput)) {
+        return res.status(400).json({ ok: false, message: "ID proof document must be image, PDF, DOC, DOCX or a valid URL" });
       }
 
-      if (idProofDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
+      if (!isUrlOrUploadPath(idProofDocumentInput) && idProofDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
         return res.status(400).json({ ok: false, message: "ID proof document is too large" });
       }
     }
 
     if (gstDocumentInput) {
-      if (!DOCUMENT_DATA_URL_REGEX.test(gstDocumentInput)) {
-        return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC or DOCX" });
+      if (!DOCUMENT_DATA_URL_REGEX.test(gstDocumentInput) && !isUrlOrUploadPath(gstDocumentInput)) {
+        return res.status(400).json({ ok: false, message: "GST document must be image, PDF, DOC, DOCX or a valid URL" });
       }
 
-      if (gstDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
+      if (!isUrlOrUploadPath(gstDocumentInput) && gstDocumentInput.length > MAX_DOCUMENT_DATA_LENGTH) {
         return res.status(400).json({ ok: false, message: "GST document is too large" });
       }
     }

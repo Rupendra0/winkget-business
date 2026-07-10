@@ -8,6 +8,7 @@ import type {
   VendorProductRecord,
   VendorProductUpsertInput,
 } from "@/lib/vendorApi";
+import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 
 type VendorAddProductFormProps = {
   categories: VendorCatalogCategory[];
@@ -1004,21 +1005,26 @@ export default function VendorAddProductForm({
     }
 
     try {
-      const mainImageDataUrl = fieldValues.mainImage instanceof File
-        ? await readFileAsDataUrl(fieldValues.mainImage)
+      setSubmitNotice("Uploading product images...");
+      const mainImageUrl = fieldValues.mainImage instanceof File
+        ? await uploadToCloudinary(fieldValues.mainImage, "winkget_products")
         : String(existingMainImageUrl || "").trim();
-      const newGalleryDataUrls = await Promise.all(fieldValues.images.map((file) => readFileAsDataUrl(file)));
+      const newGalleryUrls = await Promise.all(
+        fieldValues.images.map((file) => uploadToCloudinary(file, "winkget_products"))
+      );
       const orderedGallery = Array.from(
-        new Set([mainImageDataUrl, ...existingGalleryUrls, ...newGalleryDataUrls].map((item) => String(item || "").trim()).filter(Boolean))
+        new Set([mainImageUrl, ...existingGalleryUrls, ...newGalleryUrls].map((item) => String(item || "").trim()).filter(Boolean))
       );
 
       const serializedVariantsRaw = await Promise.all(
         variants.map(async (variant) => {
           const mainImgUrl = variant.variantMainImage instanceof File
-            ? await readFileAsDataUrl(variant.variantMainImage)
+            ? await uploadToCloudinary(variant.variantMainImage, "winkget_products")
             : String(variant.variantExistingMainImage || "").trim();
             
-          const newUrls = await Promise.all((variant.variantImages || []).map((file) => readFileAsDataUrl(file)));
+          const newUrls = await Promise.all(
+            (variant.variantImages || []).map((file) => uploadToCloudinary(file, "winkget_products"))
+          );
           const existingUrls = Array.isArray(variant.variantExistingImages) ? variant.variantExistingImages : [];
           const combined = Array.from(
             new Set([mainImgUrl, ...existingUrls, ...newUrls].map((item) => String(item || "").trim()).filter(Boolean))
@@ -1057,7 +1063,7 @@ export default function VendorAddProductForm({
 
       const serializedDescriptionBlocks = await Promise.all(
         descriptionBlocks.map(async (block) => ({
-          image: block.image instanceof File ? await readFileAsDataUrl(block.image) : String(block.image || "").trim(),
+          image: block.image instanceof File ? await uploadToCloudinary(block.image, "winkget_products") : String(block.image || "").trim(),
           headline: String(block.headline || "").trim(),
           text: String(block.text || "").trim(),
         }))
