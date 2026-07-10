@@ -1440,7 +1440,8 @@ export default function VendorAddProductForm({
                     type="text"
                     value={fieldValues.productName}
                     onChange={(event) => updateField("productName", event.target.value)}
-                    className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm outline-none transition ${
+                    disabled={isEditMode || isBarcodeLocked}
+                    className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm outline-none transition disabled:bg-slate-100 disabled:text-slate-500 ${
                       fieldErrors.productName ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
                     }`}
                     placeholder={isServiceVendor ? "Enter service name" : "Enter product name"}
