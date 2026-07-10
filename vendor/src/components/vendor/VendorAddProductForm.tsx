@@ -660,8 +660,27 @@ export default function VendorAddProductForm({
           if (matchedVariant) {
             let sizeVal = matchedVariant.size || "";
             let colorVal = matchedVariant.color || "";
-            let mainImg = matchedVariant.image || "";
-            let galleryImgs = matchedVariant.gallery || [];
+            
+            let parsedImages: string[] = [];
+            const rawImg = String(matchedVariant.image || "").trim();
+            if (rawImg) {
+              if (rawImg.startsWith("[") && rawImg.endsWith("]")) {
+                try {
+                  parsedImages = JSON.parse(rawImg);
+                } catch {
+                  parsedImages = [rawImg];
+                }
+              } else {
+                parsedImages = [rawImg];
+              }
+            }
+            const gallery = matchedVariant.gallery;
+            if (Array.isArray(gallery)) {
+              parsedImages = Array.from(new Set([...parsedImages, ...gallery.map(String).filter(Boolean)]));
+            }
+
+            const mainImg = parsedImages[0] || "";
+            const galleryImgs = parsedImages.slice(1);
 
             setVariants(current => current.map(v => {
               if (v.id === variantId) {
@@ -673,7 +692,7 @@ export default function VendorAddProductForm({
                   variantSellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : v.variantSellingPrice,
                   variantStock: matchedVariant.stock ? String(matchedVariant.stock) : v.variantStock,
                   variantImages: [],
-                  variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
+                  variantExistingImages: galleryImgs,
                   variantMainImage: null,
                   variantExistingMainImage: mainImg,
                   isVariantMapped: true,
