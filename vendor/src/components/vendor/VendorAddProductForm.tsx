@@ -506,10 +506,28 @@ export default function VendorAddProductForm({
             }
           }
 
-          let varMainImg = matchedVariant.image || "";
-          let varGallery = matchedVariant.gallery || [];
+          let parsedImages: string[] = [];
+          const rawImg = String(matchedVariant.image || "").trim();
+          if (rawImg) {
+            if (rawImg.startsWith("[") && rawImg.endsWith("]")) {
+              try {
+                parsedImages = JSON.parse(rawImg);
+              } catch {
+                parsedImages = [rawImg];
+              }
+            } else {
+              parsedImages = [rawImg];
+            }
+          }
+          const gallery = matchedVariant.gallery;
+          if (Array.isArray(gallery)) {
+            parsedImages = Array.from(new Set([...parsedImages, ...gallery.map(String).filter(Boolean)]));
+          }
+
+          const varMainImg = parsedImages[0] || "";
+          const varGallery = parsedImages.slice(1);
           setExistingMainImageUrl(varMainImg);
-          setExistingGalleryUrls(varGallery.filter((g: string) => g !== varMainImg));
+          setExistingGalleryUrls(varGallery);
 
           const parentVariant: VariantDraft = {
             id: `variant-exchanged-${Date.now()}`,
