@@ -385,6 +385,7 @@ const toProductStoreSummary = (product) => ({
   subcategorySlug: product.subcategorySlug,
   subcategoryName: product.subcategoryName,
   productName: product.productName,
+  barcode: product.barcode,
   shortDescription: product.shortDescription,
   description: product.description,
   detailedDescription: product.detailedDescription,
@@ -480,12 +481,15 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
     body?.descriptionPoints ?? existingProduct?.descriptionPoints
   );
 
+  const barcode = normalizeString(body?.barcode ?? existingProduct?.barcode);
+
   const payload = {
     categorySlug,
     categoryLabel: categoryLabel || categorySlug,
     subcategorySlug,
     subcategoryName: subcategoryName || subcategorySlug || "",
     productName,
+    barcode,
     shortDescription: normalizeString(body?.shortDescription ?? existingProduct?.shortDescription),
     description: normalizeString(body?.description ?? existingProduct?.description),
     image,
@@ -536,6 +540,30 @@ const buildProductDocumentInput = (body, existingProduct = null) => {
 
   if (!payload.image) {
     return { error: "Primary product image is required" };
+  }
+
+  const isPhysicalProduct = (catLabel) => {
+    const cat = String(catLabel || '').trim().toLowerCase();
+    if (['restaurant', 'bars', 'food', 'beverages', 'bakery', 'cafe', 'meal', 'dinner', 'lunch', 'breakfast'].includes(cat)) {
+      return false;
+    }
+    if (['home services', 'salon', 'beauty', 'health', 'fitness', 'education', 'classes', 'cleaning', 'repair', 'local services', 'services'].includes(cat)) {
+      return false;
+    }
+    return true;
+  };
+
+  if (isPhysicalProduct(payload.categoryLabel)) {
+    if (!payload.barcode) {
+      return { error: "Barcode is required for physical products" };
+    }
+    if (Array.isArray(payload.variantData) && payload.variantData.length > 0) {
+      for (const variant of payload.variantData) {
+        if (!variant.barcode || !String(variant.barcode).trim()) {
+          return { error: `Barcode is required for all variants of physical products (e.g., Size: ${variant.size || 'N/A'}, Color: ${variant.color || 'N/A'})` };
+        }
+      }
+    }
   }
 
   if (payload.status === "live") {
@@ -639,6 +667,28 @@ router.post("/vendor/products", requireVendor, async (req, res) => {
       return res.status(400).json({ ok: false, message: error });
     }
 
+    const barcodesToCheck = [];
+    if (payload.barcode) barcodesToCheck.push(payload.barcode);
+    if (Array.isArray(payload.variantData)) {
+      payload.variantData.forEach(v => {
+        if (v.barcode) barcodesToCheck.push(v.barcode);
+      });
+    }
+
+    if (barcodesToCheck.length > 0) {
+      const dupBarcode = await VendorProduct.findOne({
+        vendor: req.vendorUser._id,
+        $or: [
+          { barcode: { $in: barcodesToCheck } },
+          { "variantData.barcode": { $in: barcodesToCheck } }
+        ],
+        isDeleted: { $ne: true }
+      });
+      if (dupBarcode) {
+        return res.status(400).json({ ok: false, message: `One or more barcodes (parent or variant) already exist in your inventory.` });
+      }
+    }
+
     // Resolve base64 images asynchronously before saving to MongoDB
     await resolvePayloadImages(payload);
 
@@ -661,6 +711,35 @@ router.post("/vendor/products", requireVendor, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to create product", error: error.message });
+  }
+});
+
+router.get("/vendor/products/check-barcode", requireVendor, async (req, res) => {
+  try {
+    const barcode = normalizeString(req.query.barcode);
+    if (!barcode) {
+      return res.status(400).json({ ok: false, message: "Barcode parameter is required" });
+    }
+
+    const matched = await VendorProduct.findOne({
+      $or: [
+        { barcode },
+        { "variantData.barcode": barcode }
+      ],
+      isDeleted: { $ne: true }
+    }).lean();
+
+    if (!matched) {
+      return res.status(404).json({ ok: false, exists: false, message: "No product found with this barcode" });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      exists: true,
+      product: toProductSummary(matched)
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: "Failed to check barcode", error: error.message });
   }
 });
 
@@ -737,6 +816,29 @@ router.patch("/vendor/products/:id", requireVendor, async (req, res) => {
     const { payload, error } = buildProductDocumentInput(req.body, existing.toObject());
     if (error) {
       return res.status(400).json({ ok: false, message: error });
+    }
+
+    const barcodesToCheck = [];
+    if (payload.barcode) barcodesToCheck.push(payload.barcode);
+    if (Array.isArray(payload.variantData)) {
+      payload.variantData.forEach(v => {
+        if (v.barcode) barcodesToCheck.push(v.barcode);
+      });
+    }
+
+    if (barcodesToCheck.length > 0) {
+      const dupBarcode = await VendorProduct.findOne({
+        _id: { $ne: existing._id },
+        vendor: req.vendorUser._id,
+        $or: [
+          { barcode: { $in: barcodesToCheck } },
+          { "variantData.barcode": { $in: barcodesToCheck } }
+        ],
+        isDeleted: { $ne: true }
+      });
+      if (dupBarcode) {
+        return res.status(400).json({ ok: false, message: `One or more barcodes (parent or variant) already exist in your inventory.` });
+      }
     }
 
     // Resolve base64 images asynchronously before saving to MongoDB

@@ -280,6 +280,7 @@ export type VendorProductRecord = {
   subcategorySlug: string;
   subcategoryName: string;
   productName: string;
+  barcode?: string;
   shortDescription?: string;
   description?: string;
   image: string;
@@ -332,6 +333,7 @@ export type VendorProductUpsertInput = {
   subcategorySlug: string;
   subcategoryName?: string;
   productName: string;
+  barcode?: string;
   shortDescription?: string;
   description?: string;
   image: string;

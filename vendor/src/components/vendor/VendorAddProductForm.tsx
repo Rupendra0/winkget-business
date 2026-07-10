@@ -35,6 +35,8 @@ type VariantDraft = {
   variantMrp: string;
   variantSellingPrice: string;
   variantStock: string;
+  variantBarcode: string;
+  isVariantMapped?: boolean;
   variantMainImage: File | null;
   variantExistingMainImage: string;
   variantImages: File[];
@@ -61,6 +63,7 @@ type DescriptionPoint = {
 
 type FieldValues = {
   productName: string;
+  barcode: string;
   shortDescription: string;
   mrp: string;
   sellingPrice: string;
@@ -148,6 +151,8 @@ const createVariant = (): VariantDraft => ({
   variantMrp: "",
   variantSellingPrice: "",
   variantStock: "",
+  variantBarcode: "",
+  isVariantMapped: false,
   variantMainImage: null,
   variantExistingMainImage: "",
   variantImages: [],
@@ -237,6 +242,7 @@ const readAttributeValue = (attributes: VendorProductRecord["keyAttributes"] | u
 
 const createDefaultFieldValues = (initialProduct?: VendorProductRecord | null): FieldValues => ({
   productName: String(initialProduct?.productName || "").trim(),
+  barcode: String(initialProduct?.barcode || "").trim(),
   shortDescription: String(initialProduct?.shortDescription || "").trim(),
   mrp: Number.isFinite(Number(initialProduct?.oldPrice)) ? String(initialProduct?.oldPrice || "") : "",
   sellingPrice: Number.isFinite(Number(initialProduct?.price)) ? String(initialProduct?.price || "") : "",
@@ -287,6 +293,8 @@ const createInitialVariants = (initialProduct?: VendorProductRecord | null): Var
       variantMrp: Number.isFinite(Number(variant.mrp)) ? String(variant.mrp || "") : "",
       variantSellingPrice: Number.isFinite(Number(variant.sellingPrice)) ? String(variant.sellingPrice || "") : "",
       variantStock: Number.isFinite(Number(variant.stock)) ? String(variant.stock || "") : "",
+      variantBarcode: String((variant as any).barcode || "").trim(),
+      isVariantMapped: !!(variant as any).barcode,
       variantMainImage: null,
       variantExistingMainImage: mainImage,
       variantImages: [],
@@ -457,6 +465,221 @@ export default function VendorAddProductForm({
   const mainImageInputRef = useRef<HTMLInputElement | null>(null);
   const highlightOptionsPopupRef = useRef<HTMLDivElement | null>(null);
   const isEditMode = mode === "edit";
+
+  const [checkingBarcode, setCheckingBarcode] = useState(false);
+  const [isBarcodeLocked, setIsBarcodeLocked] = useState(false);
+  const [validatingVariantBarcodes, setValidatingVariantBarcodes] = useState<Record<string, boolean>>({});
+  const [variantBarcodeMessages, setVariantBarcodeMessages] = useState<Record<string, { type: 'success' | 'error'; text: string }>>({});
+
+  const verifyBarcode = async () => {
+    const code = String(fieldValues.barcode || "").trim();
+    if (!code || isEditMode) return;
+
+    setCheckingBarcode(true);
+    setSubmitNotice("");
+    try {
+      const response = await fetch(`/api/vendor/products/check-barcode?barcode=${encodeURIComponent(code)}`);
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload.ok && payload.exists && payload.product) {
+          const prod = payload.product;
+          
+          // Check if this barcode matches a variant of the matched product instead of parent
+          const matchedVariant = (prod.variantData || []).find((v: any) => v.barcode === code);
+          if (matchedVariant) {
+            // Swap: Promote variant to parent, and demote parent defaults to a variant draft
+            setFieldValues(current => ({
+              ...current,
+              productName: prod.productName || current.productName,
+              shortDescription: prod.shortDescription || current.shortDescription,
+              mrp: matchedVariant.mrp ? String(matchedVariant.mrp) : "",
+              sellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : "",
+              stock: matchedVariant.stock ? String(matchedVariant.stock) : "",
+              badge: prod.badge || current.badge,
+              brand: prod.brand || current.brand,
+              tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
+            }));
+
+            if (prod.categorySlug) {
+              handleCategoryChange(prod.categorySlug);
+              if (prod.subcategorySlug) {
+                setSubcategorySlug(prod.subcategorySlug);
+              }
+            }
+
+            let varMainImg = matchedVariant.image || "";
+            let varGallery = matchedVariant.gallery || [];
+            setExistingMainImageUrl(varMainImg);
+            setExistingGalleryUrls(varGallery.filter((g: string) => g !== varMainImg));
+
+            const parentVariant: VariantDraft = {
+              id: `variant-exchanged-${Date.now()}`,
+              variantSize: "Parent Default",
+              variantColor: "Original",
+              variantMrp: prod.oldPrice ? String(prod.oldPrice) : "",
+              variantSellingPrice: prod.price ? String(prod.price) : "",
+              variantStock: prod.inventory ? String(prod.inventory) : "",
+              variantBarcode: prod.barcode || "",
+              isVariantMapped: !!prod.barcode,
+              variantMainImage: null,
+              variantExistingMainImage: prod.image || "",
+              variantExistingImages: (prod.gallery || []).filter((g: string) => g !== prod.image),
+              variantImages: [],
+            };
+
+            setVariants([parentVariant]);
+            setIsBarcodeLocked(true);
+            setSubmitNotice("Variant barcode detected! Promoted variant to main product and mapped parent details.");
+          } else {
+            // Normal parent barcode matched
+            setFieldValues(current => ({
+              ...current,
+              productName: prod.productName || current.productName,
+              shortDescription: prod.shortDescription || current.shortDescription,
+              mrp: prod.oldPrice ? String(prod.oldPrice) : "",
+              sellingPrice: prod.price ? String(prod.price) : "",
+              stock: prod.inventory ? String(prod.inventory) : "",
+              badge: prod.badge || current.badge,
+              brand: prod.brand || current.brand,
+              tagsText: Array.isArray(prod.tags) ? prod.tags.join(", ") : current.tagsText,
+            }));
+
+            if (prod.categorySlug) {
+              handleCategoryChange(prod.categorySlug);
+              if (prod.subcategorySlug) {
+                setSubcategorySlug(prod.subcategorySlug);
+              }
+            }
+
+            if (prod.image) {
+              setExistingMainImageUrl(prod.image);
+            }
+            if (Array.isArray(prod.gallery)) {
+              setExistingGalleryUrls(prod.gallery.filter((g: string) => g !== prod.image));
+            }
+
+            setIsBarcodeLocked(true);
+            setSubmitNotice("Barcode matched! Product details pre-loaded from catalog.");
+          }
+        } else {
+          setSubmitNotice("Barcode not found. You can enter product details manually.");
+        }
+      } else {
+        setSubmitNotice("Barcode not found. You can enter product details manually.");
+      }
+    } catch (err) {
+      console.error("Barcode check failed:", err);
+      setSubmitNotice("Failed to check barcode. Please enter details manually.");
+    } finally {
+      setCheckingBarcode(false);
+    }
+  };
+
+  const verifyVariantBarcode = async (variantId: string, barcodeVal: string) => {
+    const code = String(barcodeVal || "").trim();
+    if (!code) return;
+
+    setValidatingVariantBarcodes(prev => ({ ...prev, [variantId]: true }));
+    setVariantBarcodeMessages(prev => {
+      const next = { ...prev };
+      delete next[variantId];
+      return next;
+    });
+
+    try {
+      const response = await fetch(`/api/vendor/products/check-barcode?barcode=${encodeURIComponent(code)}`);
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload.ok && payload.exists && payload.product) {
+          const matchedProduct = payload.product;
+
+          // 1. Check if variant barcode is parent's barcode
+          if (matchedProduct.barcode === code || matchedProduct.id === initialProduct?.id) {
+            const mainImg = matchedProduct.image || "";
+            const galleryImgs = matchedProduct.gallery || [];
+
+            setVariants(current => current.map(v => {
+              if (v.id === variantId) {
+                return {
+                  ...v,
+                  variantMrp: matchedProduct.oldPrice ? String(matchedProduct.oldPrice) : v.variantMrp,
+                  variantSellingPrice: matchedProduct.price ? String(matchedProduct.price) : v.variantSellingPrice,
+                  variantStock: matchedProduct.inventory ? String(matchedProduct.inventory) : v.variantStock,
+                  variantImages: [],
+                  variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
+                  variantMainImage: null,
+                  variantExistingMainImage: mainImg,
+                  isVariantMapped: true,
+                };
+              }
+              return v;
+            }));
+
+            setVariantBarcodeMessages(prev => ({
+              ...prev,
+              [variantId]: { type: 'success', text: 'Parent barcode matched! Mapped default product details onto this variant.' }
+            }));
+          } else {
+            // 2. Otherwise search inside variants list
+            const matchedVariant = (matchedProduct.variantData || []).find((v: any) => v.barcode === code);
+            if (matchedVariant) {
+              let sizeVal = matchedVariant.size || "";
+              let colorVal = matchedVariant.color || "";
+              let mainImg = matchedVariant.image || "";
+              let galleryImgs = matchedVariant.gallery || [];
+
+              setVariants(current => current.map(v => {
+                if (v.id === variantId) {
+                  return {
+                    ...v,
+                    variantSize: sizeVal || v.variantSize,
+                    variantColor: colorVal || v.variantColor,
+                    variantMrp: matchedVariant.mrp ? String(matchedVariant.mrp) : v.variantMrp,
+                    variantSellingPrice: matchedVariant.sellingPrice ? String(matchedVariant.sellingPrice) : v.variantSellingPrice,
+                    variantStock: matchedVariant.stock ? String(matchedVariant.stock) : v.variantStock,
+                    variantImages: [],
+                    variantExistingImages: galleryImgs.filter((g: string) => g !== mainImg),
+                    variantMainImage: null,
+                    variantExistingMainImage: mainImg,
+                    isVariantMapped: true,
+                  };
+                }
+                return v;
+              }));
+
+              setVariantBarcodeMessages(prev => ({
+                ...prev,
+                [variantId]: { type: 'success', text: 'Variant matched! Mapped details onto this variant.' }
+              }));
+            } else {
+              setVariantBarcodeMessages(prev => ({
+                ...prev,
+                [variantId]: { type: 'error', text: 'Barcode matched another product but has no matching variant. Creating new.' }
+              }));
+            }
+          }
+        } else {
+          setVariantBarcodeMessages(prev => ({
+            ...prev,
+            [variantId]: { type: 'success', text: 'New variant barcode. Please enter details manually.' }
+          }));
+        }
+      } else {
+        setVariantBarcodeMessages(prev => ({
+          ...prev,
+          [variantId]: { type: 'success', text: 'New variant barcode. Please enter details manually.' }
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      setVariantBarcodeMessages(prev => ({
+        ...prev,
+        [variantId]: { type: 'error', text: 'Error verifying variant barcode.' }
+      }));
+    } finally {
+      setValidatingVariantBarcodes(prev => ({ ...prev, [variantId]: false }));
+    }
+  };
 
   const categoryOptions = useMemo<VendorCatalogSubcategory[]>(() => {
     const lockedCategorySlug = String(lockedCategory?.categorySlug || "").trim();
@@ -983,11 +1206,35 @@ export default function VendorAddProductForm({
     if (!String(fieldValues.productName || "").trim()) {
       errors.productName = isServiceVendor ? "Service name is required." : "Product name is required.";
     }
+    if (!String(fieldValues.barcode || "").trim()) {
+      errors.barcode = "Barcode is required.";
+    }
     if (!(fieldValues.mainImage instanceof File) && !existingMainImageUrl) errors.mainImage = "Main image is required.";
 
     const sellingPrice = Number(fieldValues.sellingPrice);
     if (!Number.isFinite(sellingPrice) || sellingPrice <= 0) {
       errors.sellingPrice = "Selling price must be greater than 0.";
+    }
+
+    const activeVariants = compactMode ? [] : variants.filter(
+      (v) =>
+        v.variantSize ||
+        v.variantColor ||
+        Number(v.variantMrp) > 0 ||
+        Number(v.variantSellingPrice) > 0 ||
+        Number(v.variantStock) > 0 ||
+        v.variantMainImage ||
+        v.variantExistingMainImage ||
+        v.variantBarcode ||
+        Object.values(v.customFields || {}).some((val) => String(val || "").trim())
+    );
+
+    if (activeVariants.length > 0) {
+      activeVariants.forEach((v) => {
+        if (!String(v.variantBarcode || "").trim()) {
+          errors[`variantBarcode-${v.id}`] = "Barcode is required.";
+        }
+      });
     }
 
     return errors;
@@ -1044,6 +1291,7 @@ export default function VendorAddProductForm({
             sellingPrice: Number(variant.variantSellingPrice) || 0,
             stock: Number(variant.variantStock) || 0,
             image: serializedImage,
+            barcode: String(variant.variantBarcode || "").trim() || undefined,
             customFields: variant.customFields || {},
           };
         })
@@ -1058,6 +1306,7 @@ export default function VendorAddProductForm({
               variant.sellingPrice > 0 ||
               variant.stock > 0 ||
               variant.image ||
+              variant.barcode ||
               Object.values(variant.customFields || {}).some((v) => String(v || "").trim())
           );
 
@@ -1092,6 +1341,7 @@ export default function VendorAddProductForm({
         subcategorySlug: selectedSubcategorySlug,
         subcategoryName: selectedSubcategoryLabel,
         productName: String(fieldValues.productName || "").trim(),
+        barcode: String(fieldValues.barcode || "").trim(),
         image: orderedGallery[0] || "",
         gallery: compactMode ? orderedGallery.slice(0, 1) : orderedGallery,
         price: Number(fieldValues.sellingPrice) || 0,
@@ -1189,6 +1439,36 @@ export default function VendorAddProductForm({
                   </p>
                   {fieldErrors.productName ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p> : null}
                 </label>
+
+                <div className="block text-sm text-slate-700">
+                  <span className="block text-sm text-slate-700 font-semibold mb-1">
+                    Barcode<span className="ml-1 text-rose-500">*</span>
+                  </span>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={fieldValues.barcode}
+                      onChange={(event) => updateField("barcode", event.target.value)}
+                      className={`h-11 flex-1 rounded-lg border px-3 text-sm outline-none transition ${
+                        fieldErrors.barcode ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
+                      }`}
+                      placeholder="Enter barcode or SKU code"
+                      disabled={isEditMode || isBarcodeLocked || checkingBarcode}
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyBarcode}
+                      disabled={isEditMode || isBarcodeLocked || !fieldValues.barcode.trim() || checkingBarcode}
+                      className="h-11 px-4 rounded-lg bg-[#c7a97a] hover:bg-[#b09265] text-white text-xs font-bold transition disabled:bg-slate-300 disabled:text-slate-500"
+                    >
+                      {checkingBarcode ? "Verifying..." : "Verify"}
+                    </button>
+                  </div>
+                  {isBarcodeLocked && (
+                    <p className="mt-1 text-xs text-emerald-600 font-semibold">✓ Barcode Locked & Mapped</p>
+                  )}
+                  {fieldErrors.barcode ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.barcode}</p> : null}
+                </div>
 
                 <label className="block text-sm text-slate-700">
                   Category<span className="ml-1 text-rose-500">*</span>
@@ -1526,6 +1806,36 @@ export default function VendorAddProductForm({
                             className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a]"
                           />
                         </label>
+
+                        <div className="block text-sm text-slate-700">
+                          Variant Barcode / UPC<span className="ml-1 text-rose-500">*</span>
+                          <div className="mt-1 flex gap-2">
+                            <input
+                              type="text"
+                              value={variant.variantBarcode || ""}
+                              onChange={(event) => onVariantChange(variant.id, "variantBarcode", event.target.value)}
+                              disabled={isEditMode || variant.isVariantMapped || validatingVariantBarcodes[variant.id]}
+                              className="h-10 flex-1 rounded-lg border border-[#e6dbcc] bg-white px-3 text-sm outline-none transition focus:border-[#c7a97a] disabled:bg-slate-100 disabled:text-slate-500"
+                              placeholder="Scan or enter barcode"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => verifyVariantBarcode(variant.id, variant.variantBarcode || "")}
+                              disabled={isEditMode || variant.isVariantMapped || !(variant.variantBarcode || "").trim() || validatingVariantBarcodes[variant.id]}
+                              className="h-10 px-3 rounded-lg bg-[#c7a97a] hover:bg-[#b09265] text-white text-[11px] font-bold transition disabled:bg-slate-300 disabled:text-slate-500"
+                            >
+                              {validatingVariantBarcodes[variant.id] ? "..." : "Verify"}
+                            </button>
+                          </div>
+                          {variantBarcodeMessages[variant.id] && (
+                            <p className={`mt-1 text-[10px] font-semibold ${variantBarcodeMessages[variant.id].type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                              {variantBarcodeMessages[variant.id].text}
+                            </p>
+                          )}
+                          {fieldErrors[`variantBarcode-${variant.id}`] && (
+                            <p className="mt-1 text-[10px] text-rose-600 font-semibold">{fieldErrors[`variantBarcode-${variant.id}`]}</p>
+                          )}
+                        </div>
 
                         {/* Custom fields inputs */}
                         {customVariantFields.map((fieldName) => (

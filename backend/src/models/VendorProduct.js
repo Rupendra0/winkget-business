@@ -22,6 +22,7 @@ const variantSchema = new Schema(
     sellingPrice: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },
     image: { type: String, trim: true },
+    barcode: { type: String, trim: true },
     customFields: { type: Schema.Types.Mixed, default: {} },
   },
   {
@@ -57,6 +58,7 @@ const vendorProductSchema = new Schema(
   {
     vendor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     slug: { type: String, required: true, trim: true, lowercase: true },
+    barcode: { type: String, trim: true, index: true },
 
     categorySlug: { type: String, required: true, trim: true, lowercase: true },
     categoryLabel: { type: String, trim: true },
