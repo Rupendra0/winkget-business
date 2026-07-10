@@ -222,6 +222,7 @@ const toProductSummary = (product) => ({
   subcategorySlug: product.subcategorySlug,
   subcategoryName: product.subcategoryName,
   productName: product.productName,
+  barcode: product.barcode,
   shortDescription: product.shortDescription,
   description: product.description,
   detailedDescription: product.detailedDescription,
