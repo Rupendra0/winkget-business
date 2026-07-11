@@ -28,7 +28,6 @@ type SponsorCard = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const SPONSOR_DEFAULT_HEADING = "Trusted by Leading Partners";
-const SPONSOR_LIMIT = 7;
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
@@ -70,8 +69,7 @@ export default function PartnersSection() {
         const nextCards = (Array.isArray(payload.section?.cards) ? payload.section?.cards : [])
           .map((card, index) => normalizeSponsorCard(card, index))
           .filter((card) => card.image)
-          .sort((left, right) => left.order - right.order)
-          .slice(0, SPONSOR_LIMIT);
+          .sort((left, right) => left.order - right.order);
 
         if (nextCards.length > 0) {
           setHeading(nextHeading);
@@ -118,7 +116,7 @@ export default function PartnersSection() {
         <div className="w-full animate-pulse rounded-xl bg-white px-0 py-0">
           <div className="mb-5 h-8 w-56 rounded bg-slate-200/70" />
           <div className="flex gap-4 overflow-x-auto pb-2">
-            {Array.from({ length: SPONSOR_LIMIT }).map((_, index) => (
+            {Array.from({ length: 7 }).map((_, index) => (
               <div key={`sponsor-skeleton-${index}`} className="h-[110px] w-[110px] md:h-[130px] md:w-[130px] shrink-0 rounded-lg bg-slate-200/70" />
             ))}
           </div>
