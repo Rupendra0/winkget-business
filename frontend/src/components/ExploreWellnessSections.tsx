@@ -280,13 +280,13 @@ export default function ExploreWellnessSections() {
               ))}
             </div>
 
-            {/* Desktop: Grid layout */}
-            <div className="hidden grid-cols-1 gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+            {/* Desktop: Strip layout */}
+            <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex no-scrollbar">
               {exploreCards.map((card) => (
                 <Link
                   key={`explore-desktop-${card.cardId}`}
                   href={buildCategoryHref(card.categorySlug)}
-                  className="group relative h-[18vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                  className="group relative h-[18vw] w-[18.4%] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 >
                   <img
                     src={card.image}
