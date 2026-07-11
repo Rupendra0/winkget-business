@@ -32,13 +32,6 @@ async function startServer() {
   try {
     await connectDatabase();
 
-    try {
-      const { migrateCityImages } = require("./lib/migrate_city_images");
-      await migrateCityImages();
-    } catch (migErr) {
-      console.error("City images migration hook failed:", migErr.message);
-    }
-
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
     const syncModelIndexes = async (modelName, modelObj) => {
       try {
