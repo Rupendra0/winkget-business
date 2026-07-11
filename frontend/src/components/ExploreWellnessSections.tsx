@@ -33,7 +33,7 @@ type SectionCard = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const EXPLORE_DEFAULT_HEADING = "Explore";
 const WELLNESS_DEFAULT_HEADING = "Health & Wellness";
-const CARD_LIMIT = 5;
+const CARD_LIMIT = 6;
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
