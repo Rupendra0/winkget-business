@@ -32,6 +32,27 @@ async function startServer() {
   try {
     await connectDatabase();
 
+    // One-time database backfill for categories platforms field
+    try {
+      const categoriesToBackfill = await Category.find({
+        $or: [
+          { platforms: { $exists: false } },
+          { platforms: { $size: 0 } },
+          { platforms: null }
+        ]
+      });
+      if (categoriesToBackfill.length > 0) {
+        console.log(`[Backfill] Found ${categoriesToBackfill.length} categories missing platforms. Backfilling...`);
+        for (const cat of categoriesToBackfill) {
+          cat.platforms = ["winkget_business"];
+          await cat.save();
+        }
+        console.log("[Backfill] Category platforms backfill completed successfully.");
+      }
+    } catch (backfillErr) {
+      console.error("[Backfill Error] Category platforms backfill failed:", backfillErr.message);
+    }
+
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
     const syncModelIndexes = async (modelName, modelObj) => {
       try {

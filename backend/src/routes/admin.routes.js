@@ -2337,7 +2337,9 @@ router.get("/admin/categories", requireAdmin, async (req, res) => {
     const includeInactive = String(req.query.includeInactive || "true").toLowerCase() !== "false";
     const search = String(req.query.search || "").trim();
 
-    const query = includeInactive ? {} : { isActive: true };
+    const query = includeInactive
+      ? { platforms: "winkget_business" }
+      : { isActive: true, platforms: "winkget_business" };
     if (search) {
       query.name = new RegExp(escapeRegex(search), "i");
     }

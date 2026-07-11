@@ -642,7 +642,7 @@ router.get("/home-sponsor-cards", withPublicGetCache(async (req, res) => {
 
 router.get("/categories", withPublicGetCache(async (_req, res) => {
   try {
-    const categories = await Category.find({ isActive: true })
+    const categories = await Category.find({ isActive: true, platforms: "winkget_business" })
       .sort({ sortOrder: 1, name: 1 })
       .select("_id name slug description image icon isActive sortOrder customFormEnabled customFormTitle customFormFields")
       .lean();

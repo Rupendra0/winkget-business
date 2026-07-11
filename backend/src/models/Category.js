@@ -34,6 +34,7 @@ const categorySchema = new Schema(
     customFormEnabled: { type: Boolean, default: false },
     customFormTitle: { type: String, trim: true },
     customFormFields: { type: [customFormFieldSchema], default: [] },
+    platforms: { type: [String], default: ["winkget_business"] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
