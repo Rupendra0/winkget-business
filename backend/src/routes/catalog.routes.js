@@ -460,7 +460,7 @@ router.get("/cities", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-placements", withPublicGetCache(async (req, res) => {
+router.get("/home-placements", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
@@ -475,9 +475,9 @@ router.get("/home-placements", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load home placements", error: error.message });
   }
-}));
+});
 
-router.get("/home-trending", withPublicGetCache(async (req, res) => {
+router.get("/home-trending", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ key: `home-trending-${platform}` }).lean();
@@ -541,9 +541,9 @@ router.get("/home-trending", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load trending items", error: error.message });
   }
-}));
+});
 
-router.get("/home-promo-cards", withPublicGetCache(async (req, res) => {
+router.get("/home-promo-cards", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
@@ -561,9 +561,9 @@ router.get("/home-promo-cards", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load home promo cards", error: error.message });
   }
-}));
+});
 
-router.get("/home-explore-cards", withPublicGetCache(async (req, res) => {
+router.get("/home-explore-cards", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
@@ -581,9 +581,9 @@ router.get("/home-explore-cards", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load explore cards", error: error.message });
   }
-}));
+});
 
-router.get("/home-wellness-cards", withPublicGetCache(async (req, res) => {
+router.get("/home-wellness-cards", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
@@ -601,9 +601,9 @@ router.get("/home-wellness-cards", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load health and wellness cards", error: error.message });
   }
-}));
+});
 
-router.get("/home-sponsor-cards", withPublicGetCache(async (req, res) => {
+router.get("/home-sponsor-cards", async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
     let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
@@ -618,7 +618,7 @@ router.get("/home-sponsor-cards", withPublicGetCache(async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load sponsor cards", error: error.message });
   }
-}));
+});
 
 router.get("/categories", withPublicGetCache(async (_req, res) => {
   try {
