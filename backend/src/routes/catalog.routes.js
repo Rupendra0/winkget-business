@@ -481,9 +481,13 @@ router.get("/cities", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-placements", withPublicGetCache(async (_req, res) => {
+router.get("/home-placements", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_PLACEMENT_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_PLACEMENT_KEY }).lean();
+    }
 
     return res.status(200).json({
       ok: true,
@@ -494,9 +498,13 @@ router.get("/home-placements", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-trending", withPublicGetCache(async (_req, res) => {
+router.get("/home-trending", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
+    }
     const trendingItems = placement?.trendingItems || [];
     
     const catIds = trendingItems.filter(item => item.type === "category").map(item => item.itemId);
@@ -555,9 +563,13 @@ router.get("/home-trending", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-promo-cards", withPublicGetCache(async (_req, res) => {
+router.get("/home-promo-cards", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY }).lean();
+    }
     if (placement) {
       await HomePlacement.populate(placement, { path: "promoCards.category", select: "_id name slug isActive" });
     }
@@ -571,9 +583,13 @@ router.get("/home-promo-cards", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-explore-cards", withPublicGetCache(async (_req, res) => {
+router.get("/home-explore-cards", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY }).lean();
+    }
     if (placement) {
       await HomePlacement.populate(placement, { path: "exploreCards.category", select: "_id name slug isActive" });
     }
@@ -587,9 +603,13 @@ router.get("/home-explore-cards", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-wellness-cards", withPublicGetCache(async (_req, res) => {
+router.get("/home-wellness-cards", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY }).lean();
+    }
     if (placement) {
       await HomePlacement.populate(placement, { path: "wellnessCards.category", select: "_id name slug isActive" });
     }
@@ -603,9 +623,13 @@ router.get("/home-wellness-cards", withPublicGetCache(async (_req, res) => {
   }
 }));
 
-router.get("/home-sponsor-cards", withPublicGetCache(async (_req, res) => {
+router.get("/home-sponsor-cards", withPublicGetCache(async (req, res) => {
   try {
-    const placement = await HomePlacement.findOne({ key: HOME_SPONSOR_SECTION_KEY }).lean();
+    const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
+    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    if (!placement) {
+      placement = await HomePlacement.findOne({ key: HOME_SPONSOR_SECTION_KEY }).lean();
+    }
 
     return res.status(200).json({
       ok: true,

@@ -29,6 +29,7 @@ const homeTrendingItemSchema = new Schema(
 const homePlacementSchema = new Schema(
   {
     key: { type: String, required: true, trim: true, lowercase: true, unique: true },
+    platform: { type: String, trim: true, lowercase: true, default: "" },
     slots: {
       leftImage: { type: String, trim: true },
       middleImage: { type: String, trim: true },
@@ -48,6 +49,7 @@ const homePlacementSchema = new Schema(
   },
   {
     timestamps: true,
+    strict: false,
   }
 );
 
