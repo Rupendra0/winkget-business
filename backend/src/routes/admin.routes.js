@@ -87,6 +87,24 @@ const isValidCategoryMediaValue = (value) => {
   return URL_REGEX.test(normalized) || IMAGE_DATA_URL_REGEX.test(normalized);
 };
 
+const handleCardsImageCleanup = async (existingCards, newCards) => {
+  if (!Array.isArray(existingCards)) return;
+  const newCardsMap = new Map((newCards || []).map(c => [c.cardId, c]));
+
+  for (const oldCard of existingCards) {
+    const newCard = newCardsMap.get(oldCard.cardId);
+    if (newCard) {
+      if (oldCard.image && oldCard.image !== newCard.image) {
+        await deleteImage(oldCard.image);
+      }
+    } else {
+      if (oldCard.image) {
+        await deleteImage(oldCard.image);
+      }
+    }
+  }
+};
+
 const toHomePlacementSummary = (placement) => {
   const slots = placement?.slots && typeof placement.slots === "object" ? placement.slots : {};
 
@@ -1061,6 +1079,8 @@ router.put("/admin/ads/home-explore-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const existing = await HomePlacement.findOne({ key: HOME_EXPLORE_SECTION_KEY }).lean();
+
     const resolvedCards = await Promise.all(
       cards.map(async (card) => ({
         cardId: card.cardId,
@@ -1070,6 +1090,10 @@ router.put("/admin/ads/home-explore-cards", requireAdmin, async (req, res) => {
         sortOrder: card.sortOrder,
       }))
     );
+
+    if (existing) {
+      await handleCardsImageCleanup(existing.exploreCards, resolvedCards);
+    }
 
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_EXPLORE_SECTION_KEY },
@@ -1126,6 +1150,8 @@ router.put("/admin/ads/home-wellness-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const existing = await HomePlacement.findOne({ key: HOME_WELLNESS_SECTION_KEY }).lean();
+
     const resolvedCards = await Promise.all(
       cards.map(async (card) => ({
         cardId: card.cardId,
@@ -1135,6 +1161,10 @@ router.put("/admin/ads/home-wellness-cards", requireAdmin, async (req, res) => {
         sortOrder: card.sortOrder,
       }))
     );
+
+    if (existing) {
+      await handleCardsImageCleanup(existing.wellnessCards, resolvedCards);
+    }
 
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_WELLNESS_SECTION_KEY },
@@ -1194,6 +1224,8 @@ router.put("/admin/ads/home-sponsor-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const existing = await HomePlacement.findOne({ key: HOME_SPONSOR_SECTION_KEY }).lean();
+
     const resolvedCards = await Promise.all(
       cards.map(async (card) => ({
         cardId: card.cardId,
@@ -1203,6 +1235,10 @@ router.put("/admin/ads/home-sponsor-cards", requireAdmin, async (req, res) => {
         sortOrder: card.sortOrder,
       }))
     );
+
+    if (existing) {
+      await handleCardsImageCleanup(existing.sponsorCards, resolvedCards);
+    }
 
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_SPONSOR_SECTION_KEY },
@@ -2111,9 +2147,23 @@ router.put("/admin/ads/home-placements", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Right banner image must be a valid URL or image data" });
     }
 
+    const existing = await HomePlacement.findOne({ key: HOME_PLACEMENT_KEY }).lean();
+
     const resolvedLeft = leftImage ? await uploadImage(leftImage) : "";
     const resolvedMiddle = middleImage ? await uploadImage(middleImage) : "";
     const resolvedRight = rightImage ? await uploadImage(rightImage) : "";
+
+    if (existing && existing.slots) {
+      if (existing.slots.leftImage && existing.slots.leftImage !== resolvedLeft) {
+        await deleteImage(existing.slots.leftImage);
+      }
+      if (existing.slots.middleImage && existing.slots.middleImage !== resolvedMiddle) {
+        await deleteImage(existing.slots.middleImage);
+      }
+      if (existing.slots.rightImage && existing.slots.rightImage !== resolvedRight) {
+        await deleteImage(existing.slots.rightImage);
+      }
+    }
 
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_PLACEMENT_KEY },
@@ -2237,6 +2287,8 @@ router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const existing = await HomePlacement.findOne({ key: HOME_PROMO_SECTION_KEY }).lean();
+
     const resolvedCards = await Promise.all(
       cards.map(async (card) => ({
         cardId: card.cardId,
@@ -2246,6 +2298,10 @@ router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
         sortOrder: card.sortOrder,
       }))
     );
+
+    if (existing) {
+      await handleCardsImageCleanup(existing.promoCards, resolvedCards);
+    }
 
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_PROMO_SECTION_KEY },
@@ -2397,7 +2453,11 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
       if (iconVal && !isValidCategoryMediaValue(iconVal)) {
         return res.status(400).json({ ok: false, message: "Category icon image must be a valid URL or image data" });
       }
-      category.icon = iconVal ? await uploadImage(iconVal) : undefined;
+      const newIcon = iconVal ? await uploadImage(iconVal) : undefined;
+      if (category.icon && category.icon !== newIcon) {
+        await deleteImage(category.icon);
+      }
+      category.icon = newIcon;
     }
 
     if (req.body?.isActive !== undefined) {
@@ -2718,7 +2778,11 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       if (iconVal && !isValidCategoryMediaValue(iconVal)) {
         return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
       }
-      subcategory.icon = iconVal ? await uploadImage(iconVal) : undefined;
+      const newIcon = iconVal ? await uploadImage(iconVal) : undefined;
+      if (subcategory.icon && subcategory.icon !== newIcon) {
+        await deleteImage(subcategory.icon);
+      }
+      subcategory.icon = newIcon;
     }
 
     if (req.body?.coverImage !== undefined) {
@@ -2726,7 +2790,11 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
       if (coverImageVal && !isValidCategoryMediaValue(coverImageVal)) {
         return res.status(400).json({ ok: false, message: "Subcategory cover image must be a valid URL or image data" });
       }
-      subcategory.coverImage = coverImageVal ? await uploadImage(coverImageVal) : undefined;
+      const newCover = coverImageVal ? await uploadImage(coverImageVal) : undefined;
+      if (subcategory.coverImage && subcategory.coverImage !== newCover) {
+        await deleteImage(subcategory.coverImage);
+      }
+      subcategory.coverImage = newCover;
     }
 
     if (req.body?.isActive !== undefined) {
@@ -2958,12 +3026,13 @@ router.post("/admin/cities", requireAdmin, async (req, res) => {
     }
 
     const slug = await resolveUniqueCitySlug(slugify(name));
+    const uploadedImage = image ? await uploadImage(image) : "";
     const city = await City.create({
       name,
       slug,
       state,
       isActive,
-      image,
+      image: uploadedImage,
       sortOrder: sortOrderRequest.value || 0,
       createdBy: req.adminUser._id,
     });
@@ -3039,7 +3108,12 @@ router.patch("/admin/cities/:id", requireAdmin, async (req, res) => {
     }
 
     if (req.body?.image !== undefined) {
-      city.image = String(req.body.image || "").trim();
+      const imgVal = String(req.body.image || "").trim();
+      const newImg = imgVal ? await uploadImage(imgVal) : undefined;
+      if (city.image && city.image !== newImg) {
+        await deleteImage(city.image);
+      }
+      city.image = newImg;
     }
 
     await city.save();

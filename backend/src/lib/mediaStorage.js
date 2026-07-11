@@ -87,7 +87,53 @@ const uploadImage = async (value) => {
   return normalized;
 };
 
+// Extract Cloudinary public ID from secure URL
+const extractPublicIdFromUrl = (url) => {
+  if (!url || typeof url !== "string") return null;
+  if (!url.includes("res.cloudinary.com")) return null;
+
+  try {
+    const parts = url.split("/image/upload/");
+    if (parts.length < 2) return null;
+
+    let path = parts[1];
+    if (path.match(/^v\d+\//)) {
+      path = path.replace(/^v\d+\//, "");
+    }
+
+    const dotIndex = path.lastIndexOf(".");
+    if (dotIndex !== -1) {
+      path = path.substring(0, dotIndex);
+    }
+
+    return path;
+  } catch (err) {
+    console.error("Error extracting public ID from Cloudinary URL:", err);
+    return null;
+  }
+};
+
+// Async function to delete a single image from Cloudinary
+const deleteImage = async (url) => {
+  const publicId = extractPublicIdFromUrl(url);
+  if (!publicId) return false;
+
+  if (isCloudinaryConfigured) {
+    try {
+      console.log(`[MediaStorage] Deleting old image from Cloudinary: ${publicId}`);
+      const result = await cloudinary.uploader.destroy(publicId);
+      console.log(`[MediaStorage] Cloudinary delete result for ${publicId}:`, result);
+      return result.result === "ok";
+    } catch (err) {
+      console.error(`[MediaStorage] Cloudinary delete failed for ${publicId}:`, err.message);
+      return false;
+    }
+  }
+  return false;
+};
+
 module.exports = {
   uploadImage,
   isBase64,
+  deleteImage,
 };

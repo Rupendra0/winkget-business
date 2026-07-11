@@ -33,10 +33,10 @@ async function startServer() {
     await connectDatabase();
 
     try {
-      const { migrateHomepageImages } = require("./lib/migrate_homepage_images");
-      await migrateHomepageImages();
+      const { migrateCityImages } = require("./lib/migrate_city_images");
+      await migrateCityImages();
     } catch (migErr) {
-      console.error("Homepage images migration hook failed:", migErr.message);
+      console.error("City images migration hook failed:", migErr.message);
     }
 
     // Ensure DB indexes match current schema. Wrap in try-catch to prevent startup crashes from legacy duplicate data.
