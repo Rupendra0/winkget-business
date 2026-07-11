@@ -21,6 +21,7 @@ const {
 } = require("../lib/customForm");
 const { resolveTokenFromRequest } = require("../lib/authCookies");
 const { scheduleCategoryIndex, scheduleVendorIndex } = require("../lib/search/indexer");
+const { uploadImage } = require("../lib/mediaStorage");
 
 const router = express.Router();
 
@@ -1060,19 +1061,23 @@ router.put("/admin/ads/home-explore-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const resolvedCards = await Promise.all(
+      cards.map(async (card) => ({
+        cardId: card.cardId,
+        category: card.categoryId || undefined,
+        title: card.title || undefined,
+        image: card.image ? await uploadImage(card.image) : undefined,
+        sortOrder: card.sortOrder,
+      }))
+    );
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_EXPLORE_SECTION_KEY },
       {
         $set: {
           key: HOME_EXPLORE_SECTION_KEY,
           exploreHeading: heading || HOME_EXPLORE_DEFAULT_HEADING,
-          exploreCards: cards.map((card) => ({
-            cardId: card.cardId,
-            category: card.categoryId || undefined,
-            title: card.title || undefined,
-            image: card.image || undefined,
-            sortOrder: card.sortOrder,
-          })),
+          exploreCards: resolvedCards,
           updatedBy: req.adminUser._id,
         },
       },
@@ -1121,19 +1126,23 @@ router.put("/admin/ads/home-wellness-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const resolvedCards = await Promise.all(
+      cards.map(async (card) => ({
+        cardId: card.cardId,
+        category: card.categoryId || undefined,
+        title: card.title || undefined,
+        image: card.image ? await uploadImage(card.image) : undefined,
+        sortOrder: card.sortOrder,
+      }))
+    );
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_WELLNESS_SECTION_KEY },
       {
         $set: {
           key: HOME_WELLNESS_SECTION_KEY,
           wellnessHeading: heading || HOME_WELLNESS_DEFAULT_HEADING,
-          wellnessCards: cards.map((card) => ({
-            cardId: card.cardId,
-            category: card.categoryId || undefined,
-            title: card.title || undefined,
-            image: card.image || undefined,
-            sortOrder: card.sortOrder,
-          })),
+          wellnessCards: resolvedCards,
           updatedBy: req.adminUser._id,
         },
       },
@@ -1185,19 +1194,23 @@ router.put("/admin/ads/home-sponsor-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const resolvedCards = await Promise.all(
+      cards.map(async (card) => ({
+        cardId: card.cardId,
+        title: card.title || undefined,
+        image: card.image ? await uploadImage(card.image) : undefined,
+        link: card.link || undefined,
+        sortOrder: card.sortOrder,
+      }))
+    );
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_SPONSOR_SECTION_KEY },
       {
         $set: {
           key: HOME_SPONSOR_SECTION_KEY,
           sponsorHeading: heading || HOME_SPONSOR_DEFAULT_HEADING,
-          sponsorCards: cards.map((card) => ({
-            cardId: card.cardId,
-            title: card.title || undefined,
-            image: card.image || undefined,
-            link: card.link || undefined,
-            sortOrder: card.sortOrder,
-          })),
+          sponsorCards: resolvedCards,
           updatedBy: req.adminUser._id,
         },
       },
@@ -2098,14 +2111,18 @@ router.put("/admin/ads/home-placements", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: "Right banner image must be a valid URL or image data" });
     }
 
+    const resolvedLeft = leftImage ? await uploadImage(leftImage) : "";
+    const resolvedMiddle = middleImage ? await uploadImage(middleImage) : "";
+    const resolvedRight = rightImage ? await uploadImage(rightImage) : "";
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_PLACEMENT_KEY },
       {
         $set: {
           key: HOME_PLACEMENT_KEY,
-          "slots.leftImage": leftImage || undefined,
-          "slots.middleImage": middleImage || undefined,
-          "slots.rightImage": rightImage || undefined,
+          "slots.leftImage": resolvedLeft || undefined,
+          "slots.middleImage": resolvedMiddle || undefined,
+          "slots.rightImage": resolvedRight || undefined,
           updatedBy: req.adminUser._id,
         },
       },
@@ -2220,19 +2237,23 @@ router.put("/admin/ads/home-promo-cards", requireAdmin, async (req, res) => {
       return res.status(400).json({ ok: false, message: validationMessage });
     }
 
+    const resolvedCards = await Promise.all(
+      cards.map(async (card) => ({
+        cardId: card.cardId,
+        category: card.categoryId || undefined,
+        title: card.title || undefined,
+        image: card.image ? await uploadImage(card.image) : undefined,
+        sortOrder: card.sortOrder,
+      }))
+    );
+
     const placement = await HomePlacement.findOneAndUpdate(
       { key: HOME_PROMO_SECTION_KEY },
       {
         $set: {
           key: HOME_PROMO_SECTION_KEY,
           promoHeading: heading || HOME_PROMO_DEFAULT_HEADING,
-          promoCards: cards.map((card) => ({
-            cardId: card.cardId,
-            category: card.categoryId || undefined,
-            title: card.title || undefined,
-            image: card.image || undefined,
-            sortOrder: card.sortOrder,
-          })),
+          promoCards: resolvedCards,
           updatedBy: req.adminUser._id,
         },
       },
@@ -2303,12 +2324,13 @@ router.post("/admin/categories", requireAdmin, async (req, res) => {
     }
 
     const slug = await resolveUniqueSlug(slugify(name));
+    const icon = iconInput ? await uploadImage(iconInput) : "";
 
     const category = await Category.create({
       name,
       slug,
       description: description || undefined,
-      icon: iconInput || undefined,
+      icon: icon || undefined,
       isActive,
       sortOrder: sortOrderRequest.value || 0,
       customFormEnabled,
@@ -2371,11 +2393,11 @@ router.patch("/admin/categories/:id", requireAdmin, async (req, res) => {
     }
 
     if (req.body?.icon !== undefined) {
-      const icon = String(req.body.icon || "").trim();
-      if (icon && !isValidCategoryMediaValue(icon)) {
+      const iconVal = String(req.body.icon || "").trim();
+      if (iconVal && !isValidCategoryMediaValue(iconVal)) {
         return res.status(400).json({ ok: false, message: "Category icon image must be a valid URL or image data" });
       }
-      category.icon = icon || undefined;
+      category.icon = iconVal ? await uploadImage(iconVal) : undefined;
     }
 
     if (req.body?.isActive !== undefined) {
@@ -2535,14 +2557,17 @@ router.post("/admin/subcategories", requireAdmin, async (req, res) => {
 
     const slug = await resolveUniqueSubcategorySlug(slugify(name), category._id, parentSubcategory?._id || null);
 
+    const icon = iconInput ? await uploadImage(iconInput) : "";
+    const coverImage = coverImageInput ? await uploadImage(coverImageInput) : "";
+
     const subcategory = await Subcategory.create({
       category: category._id,
       parentSubcategory: parentSubcategory?._id || null,
       name,
       slug,
       description: description || undefined,
-      icon: iconInput || undefined,
-      coverImage: coverImageInput || undefined,
+      icon: icon || undefined,
+      coverImage: coverImage || undefined,
       isActive,
       sortOrder: sortOrderRequest.value || 0,
       customFormEnabled,
@@ -2689,19 +2714,19 @@ router.patch("/admin/subcategories/:id", requireAdmin, async (req, res) => {
     }
 
     if (req.body?.icon !== undefined) {
-      const icon = String(req.body.icon || "").trim();
-      if (icon && !isValidCategoryMediaValue(icon)) {
+      const iconVal = String(req.body.icon || "").trim();
+      if (iconVal && !isValidCategoryMediaValue(iconVal)) {
         return res.status(400).json({ ok: false, message: "Subcategory icon image must be a valid URL or image data" });
       }
-      subcategory.icon = icon || undefined;
+      subcategory.icon = iconVal ? await uploadImage(iconVal) : undefined;
     }
 
     if (req.body?.coverImage !== undefined) {
-      const coverImage = String(req.body.coverImage || "").trim();
-      if (coverImage && !isValidCategoryMediaValue(coverImage)) {
+      const coverImageVal = String(req.body.coverImage || "").trim();
+      if (coverImageVal && !isValidCategoryMediaValue(coverImageVal)) {
         return res.status(400).json({ ok: false, message: "Subcategory cover image must be a valid URL or image data" });
       }
-      subcategory.coverImage = coverImage || undefined;
+      subcategory.coverImage = coverImageVal ? await uploadImage(coverImageVal) : undefined;
     }
 
     if (req.body?.isActive !== undefined) {
