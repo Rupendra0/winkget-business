@@ -121,52 +121,31 @@ const toHomeCardSectionSummary = ({
   key,
   heading,
   defaultHeading,
-  cardIds,
   cards,
   updatedAt,
 }) => {
-  const mappedByCardId = new Map();
-
-  cards.forEach((card, index) => {
-    const cardIdInput = String(card?.cardId || "").trim();
-    const fallbackCardId = cardIds[index];
-    const cardId = cardIds.includes(cardIdInput) ? cardIdInput : fallbackCardId;
-    if (!cardId || mappedByCardId.has(cardId)) {
-      return;
-    }
-
+  const mappedCards = (Array.isArray(cards) ? cards : []).map((card, index) => {
     const categoryDoc = card?.category && typeof card.category === "object" ? card.category : null;
     const categoryId = categoryDoc
       ? String(categoryDoc._id || categoryDoc.id || "").trim()
       : String(card?.category || "").trim();
 
-    mappedByCardId.set(cardId, {
-      cardId,
+    return {
+      cardId: String(card?.cardId || `card-${index + 1}`).trim(),
+      order: index + 1,
       categoryId,
       categoryName: String(categoryDoc?.name || "").trim(),
       categorySlug: String(categoryDoc?.slug || "").trim(),
       title: String(card?.title || "").trim(),
       image: normalizeMediaValue(card?.image) || "",
       link: String(card?.link || "").trim(),
-    });
+    };
   });
 
   return {
     key,
     heading: String(heading || "").trim() || defaultHeading,
-    cards: cardIds.map((cardId, index) => {
-      const card = mappedByCardId.get(cardId);
-      return {
-        cardId,
-        order: index + 1,
-        categoryId: card?.categoryId || "",
-        categoryName: card?.categoryName || "",
-        categorySlug: card?.categorySlug || "",
-        title: card?.title || "",
-        image: card?.image || "",
-        link: card?.link || "",
-      };
-    }),
+    cards: mappedCards,
     updatedAt,
   };
 };
@@ -176,7 +155,6 @@ const toHomePromoSectionSummary = (placement) =>
     key: HOME_PROMO_SECTION_KEY,
     heading: placement?.promoHeading,
     defaultHeading: HOME_PROMO_DEFAULT_HEADING,
-    cardIds: HOME_PROMO_CARD_IDS,
     cards: Array.isArray(placement?.promoCards) ? placement.promoCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -186,7 +164,6 @@ const toHomeExploreSectionSummary = (placement) =>
     key: HOME_EXPLORE_SECTION_KEY,
     heading: placement?.exploreHeading,
     defaultHeading: HOME_EXPLORE_DEFAULT_HEADING,
-    cardIds: HOME_EXPLORE_CARD_IDS,
     cards: Array.isArray(placement?.exploreCards) ? placement.exploreCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -196,7 +173,6 @@ const toHomeWellnessSectionSummary = (placement) =>
     key: HOME_WELLNESS_SECTION_KEY,
     heading: placement?.wellnessHeading,
     defaultHeading: HOME_WELLNESS_DEFAULT_HEADING,
-    cardIds: HOME_WELLNESS_CARD_IDS,
     cards: Array.isArray(placement?.wellnessCards) ? placement.wellnessCards : [],
     updatedAt: placement?.updatedAt,
   });
@@ -206,49 +182,28 @@ const toHomeSponsorSectionSummary = (placement) =>
     key: HOME_SPONSOR_SECTION_KEY,
     heading: placement?.sponsorHeading,
     defaultHeading: HOME_SPONSOR_DEFAULT_HEADING,
-    cardIds: HOME_SPONSOR_CARD_IDS,
     cards: Array.isArray(placement?.sponsorCards) ? placement.sponsorCards : [],
     updatedAt: placement?.updatedAt,
   });
 
-const normalizeHomeCardSectionInput = (cardsInput, cardIds) => {
+const normalizeHomeCardSectionInput = (cardsInput) => {
   const cards = Array.isArray(cardsInput) ? cardsInput : [];
-  const cardById = new Map();
-
-  cards.forEach((card, index) => {
-    const cardIdInput = String(card?.cardId || "").trim();
-    const fallbackCardId = cardIds[index];
-    const cardId = cardIds.includes(cardIdInput) ? cardIdInput : fallbackCardId;
-    if (!cardId || cardById.has(cardId)) {
-      return;
-    }
-
-    cardById.set(cardId, {
-      cardId,
-      categoryId: String(card?.categoryId || "").trim(),
+  return cards.map((card, index) => {
+    return {
+      cardId: String(card?.cardId || `card-${index + 1}`).trim(),
+      sortOrder: index + 1,
+      categoryId: String(card?.categoryId || card?.category || "").trim(),
       title: String(card?.title || "").trim().slice(0, HOME_CARD_TITLE_MAX_LENGTH),
       image: normalizeMediaValue(card?.image) || "",
       link: String(card?.link || "").trim(),
-    });
-  });
-
-  return cardIds.map((cardId, index) => {
-    const card = cardById.get(cardId);
-    return {
-      cardId,
-      sortOrder: index + 1,
-      categoryId: card?.categoryId || "",
-      title: card?.title || "",
-      image: card?.image || "",
-      link: card?.link || "",
     };
   });
 };
 
-const normalizeHomePromoCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_PROMO_CARD_IDS);
-const normalizeHomeExploreCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_EXPLORE_CARD_IDS);
-const normalizeHomeWellnessCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_WELLNESS_CARD_IDS);
-const normalizeHomeSponsorCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput, HOME_SPONSOR_CARD_IDS);
+const normalizeHomePromoCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeExploreCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeWellnessCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
+const normalizeHomeSponsorCardsInput = (cardsInput) => normalizeHomeCardSectionInput(cardsInput);
 
 const validateHomeSectionCards = async (cards, options = {}) => {
   const {

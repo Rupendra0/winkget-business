@@ -33,7 +33,6 @@ type SectionCard = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const EXPLORE_DEFAULT_HEADING = "Explore";
 const WELLNESS_DEFAULT_HEADING = "Health & Wellness";
-const CARD_LIMIT = 6;
 
 const normalizeMedia = (value?: string) => String(value || "").trim();
 
@@ -105,14 +104,12 @@ export default function ExploreWellnessSections() {
         const normalizedExploreCards = (Array.isArray(explorePayload.section?.cards) ? explorePayload.section?.cards : [])
           .map((card, index) => normalizeCard(card, index))
           .filter((card) => card.image && card.categorySlug)
-          .sort((left, right) => left.order - right.order)
-          .slice(0, CARD_LIMIT);
+          .sort((left, right) => left.order - right.order);
 
         const normalizedWellnessCards = (Array.isArray(wellnessPayload.section?.cards) ? wellnessPayload.section?.cards : [])
           .map((card, index) => normalizeCard(card, index))
           .filter((card) => card.image && card.categorySlug)
-          .sort((left, right) => left.order - right.order)
-          .slice(0, CARD_LIMIT);
+          .sort((left, right) => left.order - right.order);
 
         setExploreHeading(normalizedExploreHeading);
         setWellnessHeading(normalizedWellnessHeading);
