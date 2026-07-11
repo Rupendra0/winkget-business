@@ -1889,17 +1889,7 @@ export default function ServiceListingPage({
                       </p>
                     )}
 
-                    {/* Mobile-only Enquiry Button */}
-                    <div className="block sm:hidden pt-4">
-                      <button
-                        type="button"
-                        onClick={openInquiryModal}
-                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
-                      >
-                        <Send size={16} />
-                        Enquire Now
-                      </button>
-                    </div>
+
                   </section>
                 ) : (
                   <section id="listing-services-horizontal" className="space-y-3.5">
@@ -1938,17 +1928,7 @@ export default function ServiceListingPage({
                       </p>
                     )}
 
-                    {/* Mobile-only Enquiry Button */}
-                    <div className="block sm:hidden pt-4">
-                      <button
-                        type="button"
-                        onClick={openInquiryModal}
-                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
-                      >
-                        <Send size={16} />
-                        Enquire Now
-                      </button>
-                    </div>
+
                   </section>
                 )}
 
@@ -2030,17 +2010,7 @@ export default function ServiceListingPage({
                         </div>
                       )}
 
-                      {/* Mobile-only Enquiry Button */}
-                      <div className="block sm:hidden pt-4">
-                        <button
-                          type="button"
-                          onClick={openInquiryModal}
-                          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-155"
-                        >
-                          <Send size={16} />
-                          Enquire Now
-                        </button>
-                      </div>
+
                     </section>
                   );
                 })()}
