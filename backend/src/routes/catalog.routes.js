@@ -480,7 +480,7 @@ router.get("/home-placements", withPublicGetCache(async (req, res) => {
 router.get("/home-trending", withPublicGetCache(async (req, res) => {
   try {
     const platform = String(req.query.platform || req.headers["x-platform"] || "winkget_business").trim().toLowerCase();
-    let placement = await HomePlacement.findOne({ $or: [{ platform }, { key: platform }] }).lean();
+    let placement = await HomePlacement.findOne({ key: `home-trending-${platform}` }).lean();
     if (!placement) {
       placement = await HomePlacement.findOne({ key: HOME_TRENDING_KEY }).lean();
     }
