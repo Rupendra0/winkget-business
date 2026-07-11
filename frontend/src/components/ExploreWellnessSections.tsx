@@ -334,7 +334,7 @@ export default function ExploreWellnessSections() {
             </div>
 
             {/* Desktop: Strip layout */}
-            <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex">
+            <div className="hidden w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap p-0 md:flex no-scrollbar">
               {wellnessCards.map((card) => (
                 <Link
                   key={`wellness-desktop-${card.cardId}`}

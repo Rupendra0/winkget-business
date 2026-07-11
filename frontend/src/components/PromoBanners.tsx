@@ -215,7 +215,7 @@ export default function PromoBanners() {
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-start">
+        <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-start no-scrollbar">
           {visibleCards.map((card) => (
             <Link
               key={card.cardId}
