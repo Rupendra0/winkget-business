@@ -195,6 +195,7 @@ export default function CategoryTabExplorer() {
   const [subcategories, setSubcategories] = useState<CatalogSubcategory[]>([]);
   const [trendingItems, setTrendingItems] = useState<any[]>([]);
   const [trendingIcon, setTrendingIcon] = useState<string>("");
+  const [trendingHeading, setTrendingHeading] = useState<string>("Trending");
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -246,6 +247,7 @@ export default function CategoryTabExplorer() {
             setTrendingItems(trendPayload.items);
           }
           setTrendingIcon(trendPayload.icon || "");
+          setTrendingHeading(trendPayload.heading || "Trending");
         }
 
         setCategories(sortedCats);
@@ -490,10 +492,10 @@ export default function CategoryTabExplorer() {
                     <span className={`truncate text-[10px] sm:text-xs md:text-base font-medium transition-colors block ${
                       activeCategoryId === "trending" ? "text-blue-600" : "text-slate-700"
                     }`}>
-                      Trending
+                      {trendingHeading}
                     </span>
                     <span className="hidden md:block text-[11px] text-slate-500 font-medium mt-1">
-                      8 Categories
+                      {trendingItems.length} Categories
                     </span>
                   </div>
                 </div>

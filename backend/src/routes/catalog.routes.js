@@ -536,6 +536,7 @@ router.get("/home-trending", withPublicGetCache(async (req, res) => {
       ok: true,
       items: populatedItems,
       icon: placement?.icon || "",
+      heading: placement?.trendingHeading || "Trending",
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: "Failed to load trending items", error: error.message });
