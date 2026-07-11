@@ -103,7 +103,7 @@ export default function PromoBanners() {
     };
   }, []);
 
-  const visibleCards = useMemo(() => cards.slice(0, 5), [cards]);
+  const visibleCards = useMemo(() => cards, [cards]);
 
   useEffect(() => {
     if (visibleCards.length <= 1) return;
@@ -215,7 +215,7 @@ export default function PromoBanners() {
           <h2 className="text-xl font-semibold text-gray-900 sm:text-2xl">{heading}</h2>
         </div>
 
-        <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-center no-scrollbar">
+        <div className="flex w-full justify-start gap-[2%] overflow-x-auto overflow-y-hidden whitespace-nowrap pb-2 md:justify-start">
           {visibleCards.map((card) => (
             <Link
               key={card.cardId}
