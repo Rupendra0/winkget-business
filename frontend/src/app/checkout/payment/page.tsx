@@ -30,7 +30,7 @@ import {
   readCheckoutItems,
   paymentMethodLabel,
   placeOrder,
-  readAddresses,
+  readAddressesSync,
   readCheckoutDraft,
   saveCheckoutDraft,
   type PaymentMethod,
@@ -159,7 +159,7 @@ export default function CheckoutPaymentPage() {
     }
 
     // Fallback for dev refresh/direct-entry: rebuild checkout draft from current items + selected address.
-    const { addresses, selectedAddressId: storedSelectedAddressId } = readAddresses(userId);
+    const { addresses, selectedAddressId: storedSelectedAddressId } = readAddressesSync(userId);
     const resolvedAddressId = storedSelectedAddressId || addresses[0]?.id || "";
     if (!resolvedAddressId) {
       return null;
@@ -197,7 +197,7 @@ export default function CheckoutPaymentPage() {
       return null;
     }
 
-    const { addresses } = readAddresses(userId);
+    const { addresses } = readAddressesSync(userId);
     return addresses.find((item) => item.id === selectedAddressId) || null;
   }, [selectedAddressId, userId]);
 

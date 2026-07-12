@@ -135,8 +135,8 @@ export default function CheckoutPage() {
       setUser(currentUser);
 
       if (currentUser?.id) {
-        seedAddressFromUserProfile(currentUser);
-        const nextAddressState = readAddresses(currentUser.id);
+        await seedAddressFromUserProfile(currentUser);
+        const nextAddressState = await readAddresses(currentUser.id);
         setAddresses(nextAddressState.addresses);
         setSelectedAddressIdState(nextAddressState.selectedAddressId || nextAddressState.addresses[0]?.id || "");
         setShowAddressForm(nextAddressState.addresses.length === 0);
@@ -228,7 +228,7 @@ export default function CheckoutPage() {
     setAddressError("");
     setSavingAddress(true);
 
-    const saved = saveAddress(user.id, addressDraft, {
+    const saved = await saveAddress(user.id, addressDraft, {
       addressId: editingAddressId || undefined,
       setAsDefault: true,
     });
@@ -241,7 +241,7 @@ export default function CheckoutPage() {
 
     await syncPrimaryAddressToProfile(saved);
 
-    const nextAddressState = readAddresses(user.id);
+    const nextAddressState = await readAddresses(user.id);
     setAddresses(nextAddressState.addresses);
     setSelectedAddressIdState(nextAddressState.selectedAddressId || saved.id);
     setIsAddressPickerOpen(false);

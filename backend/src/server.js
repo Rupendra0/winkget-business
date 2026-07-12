@@ -13,6 +13,7 @@ const FailureLog = require("./models/FailureLog");
 const VendorProduct = require("./models/VendorProduct");
 const Order = require("./models/Order");
 const ProductReview = require("./models/ProductReview");
+const Address = require("./models/Address");
 const { ensureSearchIndex, reindexSearchDocuments } = require("./lib/search/indexer");
 
 const PORT = Number(process.env.PORT || 5000);
@@ -77,6 +78,7 @@ async function startServer() {
       await syncModelIndexes("VendorProduct", VendorProduct);
       await syncModelIndexes("ProductReview", ProductReview);
       await syncModelIndexes("Order", Order);
+      await syncModelIndexes("Address", Address);
     } else {
       console.log("Database index synchronization skipped (production mode). Set SYNC_INDEXES_ON_START=true to override.");
     }

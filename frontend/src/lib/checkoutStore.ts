@@ -457,7 +457,7 @@ export const computeCheckoutTotals = (items: StorefrontCartItem[]): CheckoutTota
   };
 };
 
-export const readAddresses = (userId: string) => {
+export const readAddressesSync = (userId: string) => {
   const normalizedUserId = normalizeString(userId);
   if (!normalizedUserId) {
     return {
@@ -485,67 +485,166 @@ export const readAddresses = (userId: string) => {
   };
 };
 
+export const readAddresses = async (userId: string) => {
+  const normalizedUserId = normalizeString(userId);
+  if (!normalizedUserId) {
+    return {
+      addresses: [] as SavedAddress[],
+      selectedAddressId: "",
+    };
+  }
+
+  const localState = readAddressesSync(normalizedUserId);
+
+  try {
+    const payload = await requestJson<{ addresses?: unknown[] }>("/api/addresses");
+    const remoteAddresses = Array.isArray(payload.addresses)
+      ? payload.addresses
+          .map((addr: any) => ({
+            id: addr._id || addr.id,
+            fullName: addr.fullName,
+            phone: addr.phone,
+            line1: addr.line1,
+            line2: addr.line2,
+            landmark: addr.landmark,
+            city: addr.city,
+            state: addr.state,
+            postalCode: addr.postalCode,
+            tag: addr.tag || "Home",
+            createdAt: addr.createdAt || new Date().toISOString(),
+            updatedAt: addr.updatedAt || new Date().toISOString(),
+          }))
+          .filter((addr) => addr && addr.id)
+      : [];
+
+    const store = readAddressStore();
+    store[normalizedUserId] = {
+      selectedAddressId: localState.selectedAddressId || (remoteAddresses[0]?.id || ""),
+      addresses: remoteAddresses,
+    };
+    writeAddressStore(store);
+
+    return {
+      addresses: remoteAddresses,
+      selectedAddressId: localState.selectedAddressId || (remoteAddresses[0]?.id || ""),
+    };
+  } catch {
+    return localState;
+  }
+};
+
 export const getSelectedAddress = (userId: string) => {
-  const { addresses, selectedAddressId } = readAddresses(userId);
+  const normalizedUserId = normalizeString(userId);
+  if (!normalizedUserId) {
+    return null;
+  }
+  const store = readAddressStore();
+  const entry = store[normalizedUserId];
+  if (!entry) {
+    return null;
+  }
+  const addresses = Array.isArray(entry.addresses)
+    ? entry.addresses.filter((item) => item && normalizeString(item.id))
+    : [];
   if (addresses.length === 0) {
     return null;
   }
-
+  const selectedAddressId = normalizeString(entry.selectedAddressId);
   return addresses.find((item) => item.id === selectedAddressId) || addresses[0] || null;
 };
 
-export const saveAddress = (userId: string, draft: AddressDraft, options?: { addressId?: string; setAsDefault?: boolean }) => {
+export const saveAddress = async (
+  userId: string,
+  draft: AddressDraft,
+  options?: { addressId?: string; setAsDefault?: boolean }
+) => {
   const normalizedUserId = normalizeString(userId);
   if (!normalizedUserId) {
     return null;
   }
 
-  const { addresses, selectedAddressId } = readAddresses(normalizedUserId);
   const editingId = normalizeString(options?.addressId);
-  const existing = editingId ? addresses.find((item) => item.id === editingId) : undefined;
-  const nextAddress = sanitizeAddress(draft, editingId, existing);
 
-  if (!nextAddress) {
-    return null;
+  try {
+    let payload;
+    if (editingId) {
+      payload = await requestJson<{ address: unknown }>(`/api/addresses/${editingId}`, {
+        method: "PUT",
+        body: JSON.stringify(draft),
+      });
+    } else {
+      payload = await requestJson<{ address: unknown }>("/api/addresses", {
+        method: "POST",
+        body: JSON.stringify(draft),
+      });
+    }
+
+    const saved = sanitizeSavedAddress(payload.address);
+    if (!saved) {
+      return null;
+    }
+
+    await readAddresses(normalizedUserId);
+
+    if (options?.setAsDefault !== false) {
+      setSelectedAddress(normalizedUserId, saved.id);
+    }
+
+    return saved;
+  } catch {
+    // Local fallback
+    const { addresses, selectedAddressId } = readAddressesSync(normalizedUserId);
+    const existing = editingId ? addresses.find((item) => item.id === editingId) : undefined;
+    const nextAddress = sanitizeAddress(draft, editingId, existing);
+    if (!nextAddress) {
+      return null;
+    }
+
+    const nextAddresses = editingId
+      ? addresses.map((item) => (item.id === editingId ? nextAddress : item))
+      : [nextAddress, ...addresses];
+
+    const nextSelectedAddressId = options?.setAsDefault === false
+      ? selectedAddressId || nextAddress.id
+      : nextAddress.id;
+
+    const store = readAddressStore();
+    store[normalizedUserId] = {
+      selectedAddressId: nextSelectedAddressId,
+      addresses: nextAddresses,
+    };
+    writeAddressStore(store);
+
+    return nextAddress;
   }
-
-  const nextAddresses = editingId
-    ? addresses.map((item) => (item.id === editingId ? nextAddress : item))
-    : [nextAddress, ...addresses];
-
-  const nextSelectedAddressId = options?.setAsDefault === false
-    ? selectedAddressId || nextAddress.id
-    : nextAddress.id;
-
-  const store = readAddressStore();
-  store[normalizedUserId] = {
-    selectedAddressId: nextSelectedAddressId,
-    addresses: nextAddresses,
-  };
-  writeAddressStore(store);
-
-  return nextAddress;
 };
 
-export const deleteAddress = (userId: string, addressId: string) => {
+export const deleteAddress = async (userId: string, addressId: string) => {
   const normalizedUserId = normalizeString(userId);
   const normalizedAddressId = normalizeString(addressId);
   if (!normalizedUserId || !normalizedAddressId) {
-    return readAddresses(userId);
+    return readAddressesSync(normalizedUserId);
   }
 
-  const { addresses, selectedAddressId } = readAddresses(normalizedUserId);
-  const nextAddresses = addresses.filter((item) => item.id !== normalizedAddressId);
+  try {
+    await requestJson(`/api/addresses/${normalizedAddressId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // Local fallback
+    const { addresses, selectedAddressId } = readAddressesSync(normalizedUserId);
+    const nextAddresses = addresses.filter((item) => item.id !== normalizedAddressId);
 
-  const store = readAddressStore();
-  store[normalizedUserId] = {
-    selectedAddressId:
-      selectedAddressId === normalizedAddressId
-        ? nextAddresses[0]?.id || ""
-        : selectedAddressId,
-    addresses: nextAddresses,
-  };
-  writeAddressStore(store);
+    const store = readAddressStore();
+    store[normalizedUserId] = {
+      selectedAddressId:
+        selectedAddressId === normalizedAddressId
+          ? nextAddresses[0]?.id || ""
+          : selectedAddressId,
+      addresses: nextAddresses,
+    };
+    writeAddressStore(store);
+  }
 
   return readAddresses(normalizedUserId);
 };
@@ -557,25 +656,28 @@ export const setSelectedAddress = (userId: string, addressId: string) => {
     return;
   }
 
-  const { addresses } = readAddresses(normalizedUserId);
+  const { addresses } = readAddressesSync(normalizedUserId);
   if (!addresses.some((item) => item.id === normalizedAddressId)) {
     return;
   }
 
   const store = readAddressStore();
+  const entry = store[normalizedUserId];
+  const currentAddresses = entry ? entry.addresses : [];
+
   store[normalizedUserId] = {
     selectedAddressId: normalizedAddressId,
-    addresses,
+    addresses: currentAddresses,
   };
   writeAddressStore(store);
 };
 
-export const seedAddressFromUserProfile = (user: AuthUser | null) => {
+export const seedAddressFromUserProfile = async (user: AuthUser | null) => {
   if (!user?.id) {
     return null;
   }
 
-  const existing = readAddresses(user.id);
+  const existing = await readAddresses(user.id);
   if (existing.addresses.length > 0) {
     return existing;
   }
@@ -585,7 +687,7 @@ export const seedAddressFromUserProfile = (user: AuthUser | null) => {
     return existing;
   }
 
-  const saved = saveAddress(
+  const saved = await saveAddress(
     user.id,
     {
       fullName: normalizeString(user.name) || "Saved Address",

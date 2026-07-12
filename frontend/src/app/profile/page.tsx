@@ -292,8 +292,8 @@ export default function ProfilePage() {
         setPhoneVal(currentUser.phone || "");
 
         // Seed addresses
-        seedAddressFromUserProfile(currentUser);
-        const nextAddressState = readAddresses(currentUser.id);
+        await seedAddressFromUserProfile(currentUser);
+        const nextAddressState = await readAddresses(currentUser.id);
         setAddresses(nextAddressState.addresses);
         setSelectedAddressId(nextAddressState.selectedAddressId || "");
       }
@@ -313,10 +313,13 @@ export default function ProfilePage() {
 
   // Keep address book refreshed when switching to addresses tab
   useEffect(() => {
-    if (user && activeTab === "addresses") {
-      const nextAddressState = readAddresses(user.id);
-      setAddresses(nextAddressState.addresses);
-    }
+    const fetchAddr = async () => {
+      if (user && activeTab === "addresses") {
+        const nextAddressState = await readAddresses(user.id);
+        setAddresses(nextAddressState.addresses);
+      }
+    };
+    void fetchAddr();
   }, [user, activeTab]);
 
   // Clean messages after a few seconds
@@ -543,7 +546,7 @@ export default function ProfilePage() {
     setShowAddressForm(true);
   };
 
-  const handleSaveAddress = () => {
+  const handleSaveAddress = async () => {
     setAddressError("");
     if (!user) return;
     if (
@@ -559,9 +562,9 @@ export default function ProfilePage() {
     }
     setSavingAddress(true);
     try {
-      const saved = saveAddress(user.id, addressDraft, { addressId: editingAddressId || undefined });
+      const saved = await saveAddress(user.id, addressDraft, { addressId: editingAddressId || undefined });
       if (saved) {
-        const nextAddressState = readAddresses(user.id);
+        const nextAddressState = await readAddresses(user.id);
         setAddresses(nextAddressState.addresses);
         setShowAddressForm(false);
         setEditingAddressId("");
@@ -577,9 +580,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDeleteAddress = (addrId: string) => {
+  const handleDeleteAddress = async (addrId: string) => {
     if (!user) return;
-    const nextState = deleteAddress(user.id, addrId);
+    const nextState = await deleteAddress(user.id, addrId);
     setAddresses(nextState.addresses);
     setSuccessMessage("Address deleted successfully");
   };
