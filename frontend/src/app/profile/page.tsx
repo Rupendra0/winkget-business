@@ -275,9 +275,13 @@ export default function ProfilePage() {
       setUser(currentUser);
 
       if (currentUser) {
-        const savedImage = localStorage.getItem(`winkget:profile:image:${currentUser.id}`);
-        if (savedImage) {
-          setProfileImage(savedImage);
+        if (currentUser.image) {
+          setProfileImage(currentUser.image);
+        } else {
+          const savedImage = localStorage.getItem(`winkget:profile:image:${currentUser.id}`);
+          if (savedImage) {
+            setProfileImage(savedImage);
+          }
         }
 
         // Initialize edit fields
@@ -348,23 +352,61 @@ export default function ProfilePage() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64String = reader.result as string;
         setProfileImage(base64String);
         if (user?.id) {
-          localStorage.setItem(`winkget:profile:image:${user.id}`, base64String);
-          setSuccessMessage("Profile picture updated successfully");
+          try {
+            setSuccessMessage(null);
+            setErrorMessage(null);
+            const response = await fetch(`${AUTH_BACKEND_URL}/api/auth/me`, {
+              method: "PUT",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: base64String }),
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) {
+              throw new Error(payload.message || "Failed to upload profile picture");
+            }
+            localStorage.setItem(`winkget:profile:image:${user.id}`, base64String);
+            setSuccessMessage("Profile picture updated successfully");
+            window.dispatchEvent(new Event("auth:changed"));
+            const updatedUser = await fetchCurrentUser();
+            if (updatedUser) setUser(updatedUser);
+          } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : "Failed to upload profile picture");
+          }
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
     setProfileImage(null);
     if (user?.id) {
-      localStorage.removeItem(`winkget:profile:image:${user.id}`);
-      setSuccessMessage("Profile picture removed");
+      try {
+        setSuccessMessage(null);
+        setErrorMessage(null);
+        const response = await fetch(`${AUTH_BACKEND_URL}/api/auth/me`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: "" }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || "Failed to remove profile picture");
+        }
+        localStorage.removeItem(`winkget:profile:image:${user.id}`);
+        setSuccessMessage("Profile picture removed");
+        window.dispatchEvent(new Event("auth:changed"));
+        const updatedUser = await fetchCurrentUser();
+        if (updatedUser) setUser(updatedUser);
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : "Failed to remove profile picture");
+      }
     }
   };
 

@@ -203,6 +203,7 @@ router.post("/auth/signup", async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        image: user.image,
         vendorStatus: user.vendorStatus,
       },
     });
@@ -283,6 +284,7 @@ router.post("/auth/login", async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        image: user.image,
         vendorStatus: user.vendorStatus,
       },
     });
@@ -1316,6 +1318,11 @@ router.put("/auth/me", async (req, res) => {
       user.sublocality = sublocalityInput || undefined;
       user.state = stateInput || undefined;
       user.postalCode = postalCodeInput || undefined;
+
+      const resolvedImages = await resolveUserProfileImages({
+        imageInput,
+      });
+      user.image = resolvedImages.imageInput || undefined;
     }
 
     await user.save();

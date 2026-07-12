@@ -40,6 +40,7 @@ export type AuthUser = {
   phone?: string;
   alternatePhone?: string;
   businessName?: string;
+  image?: string;
   role: "admin" | "vendor" | "customer";
   vendorStatus?: "pending" | "approved" | "rejected";
   businessCategory?: AuthReference;
@@ -72,7 +73,6 @@ export type AuthUser = {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const AUTH_TOKEN_KEY = "winkget:auth:token:v1";
 let currentUserRequest: Promise<AuthUser | null> | null = null;
-
 export function getStoredAuthToken(): string {
   if (typeof window === "undefined") return "";
   try {
