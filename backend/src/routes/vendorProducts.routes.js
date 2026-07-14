@@ -717,18 +717,43 @@ router.post("/vendor/products", requireVendor, async (req, res) => {
 
 router.get("/vendor/products/check-barcode", requireVendor, async (req, res) => {
   try {
-    const barcode = normalizeString(req.query.barcode);
-    if (!barcode) {
+    const barcodeStr = normalizeString(req.query.barcode);
+    if (!barcodeStr) {
       return res.status(400).json({ ok: false, message: "Barcode parameter is required" });
     }
 
-    const matched = await VendorProduct.findOne({
-      $or: [
-        { barcode },
-        { "variantData.barcode": barcode }
-      ],
+    const barcodeNum = Number(barcodeStr);
+    const queryConditions = [
+      { barcode: barcodeStr },
+      { "variantData.barcode": barcodeStr }
+    ];
+
+    if (Number.isFinite(barcodeNum)) {
+      queryConditions.push(
+        { barcode: barcodeNum },
+        { "variantData.barcode": barcodeNum }
+      );
+    }
+
+    let matched = await VendorProduct.findOne({
+      $or: queryConditions,
       isDeleted: { $ne: true }
     }).lean();
+
+    if (!matched) {
+      // Fallback: Check the admin master catalog (masterproducts collection) directly at the driver level
+      try {
+        const masterProduct = await VendorProduct.db.collection("masterproducts").findOne({
+          $or: queryConditions,
+          isDeleted: { $ne: true }
+        });
+        if (masterProduct) {
+          matched = masterProduct;
+        }
+      } catch (err) {
+        console.error("Master catalog check failed:", err.message);
+      }
+    }
 
     if (!matched) {
       return res.status(404).json({ ok: false, exists: false, message: "No product found with this barcode" });
