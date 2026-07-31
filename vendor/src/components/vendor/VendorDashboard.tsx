@@ -2962,15 +2962,12 @@ function VendorProductsSection({
   const productEntityLabel = isRestaurantVendor ? "Menu" : isServiceVendor ? "Services" : "Products";
   const addActionLabel = isRestaurantVendor ? "Add Menu Item" : isServiceVendor ? "Add Service" : "Add Product";
 
-  const handlePublishToPlatform = async (product: any, platform: string) => {
+  const handlePublishToPlatform = async (product: VendorProductRecord, platform: string) => {
     try {
-      const payload = {
-        productName: product.productName,
-        categorySlug: product.categorySlug,
-        image: product.image,
-        price: Number(product.price) || 1,
-        sourcePlatform: platform
-      };
+      const payload = buildVendorProductUpsertFromRecord(product, {
+        sourcePlatform: platform,
+        price: Number(product.price) || 1, // Validation check: price must be > 0
+      });
       await onQuickUpsert(payload, product.id);
       if (platform === 'both') {
         alert('Product successfully published on both E-Commerce and Business!');
