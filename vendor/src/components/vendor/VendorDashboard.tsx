@@ -3269,6 +3269,15 @@ function VendorProductsSection({
                         >
                           {deletingProductId === product.id ? "Deleting..." : "Delete"}
                         </button>
+                        {product.sourcePlatform !== "eccom" ? (
+                          <button
+                            type="button"
+                            onClick={() => handlePublishToPlatform(product, "eccom")}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Publish on E-Commerce
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -5560,6 +5569,24 @@ export default function VendorDashboard() {
       setProductFormError(message);
     } finally {
       setProductFormSaving(false);
+    }
+  };
+
+  const handlePublishToPlatform = async (product: any, platform: string) => {
+    try {
+      // Form fields are validated by the backend PATCH endpoint
+      const payload = {
+        productName: product.productName,
+        categorySlug: product.categorySlug,
+        image: product.image,
+        price: product.price,
+        sourcePlatform: platform
+      };
+      const updated = await updateVendorProduct(product.id, payload);
+      setVendorProducts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
+      alert(`Product successfully published on E-Commerce!`);
+    } catch (err) {
+      alert("Failed to publish product to platform.");
     }
   };
 
