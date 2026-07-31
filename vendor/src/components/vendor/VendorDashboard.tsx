@@ -2972,7 +2972,13 @@ function VendorProductsSection({
         sourcePlatform: platform
       };
       await onQuickUpsert(payload, product.id);
-      alert(`Product successfully published on E-Commerce!`);
+      if (platform === 'both') {
+        alert('Product successfully published on both E-Commerce and Business!');
+      } else if (platform === 'winkget_business') {
+        alert('Product removed from E-Commerce and kept on Business storefront.');
+      } else if (platform === 'eccom') {
+        alert('Product successfully published on E-Commerce storefront!');
+      }
     } catch (err) {
       console.error("Failed to publish to platform:", err);
       alert("Failed to publish product to platform.");
@@ -3286,15 +3292,31 @@ function VendorProductsSection({
                         >
                           {deletingProductId === product.id ? "Deleting..." : "Delete"}
                         </button>
-                        {product.sourcePlatform !== "eccom" ? (
+                        {product.sourcePlatform === "both" ? (
                           <button
                             type="button"
-                            onClick={() => handlePublishToPlatform(product, "eccom")}
+                            onClick={() => handlePublishToPlatform(product, "winkget_business")}
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                          >
+                            Remove from E-Commerce
+                          </button>
+                        ) : product.sourcePlatform === "eccom" ? (
+                          <button
+                            type="button"
+                            onClick={() => handlePublishToPlatform(product, "both")}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Publish on Business
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handlePublishToPlatform(product, "both")}
                             className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                           >
                             Publish on E-Commerce
                           </button>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   </div>
