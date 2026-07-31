@@ -780,6 +780,7 @@ router.get("/vendor/products", requireVendor, async (req, res) => {
     const query = {
       vendor: req.vendorUser._id,
       isDeleted: { $ne: true },
+      sourcePlatform: { $in: ["winkget_business", "winkget-business", "both"] },
     };
 
     if (statusInput) {
