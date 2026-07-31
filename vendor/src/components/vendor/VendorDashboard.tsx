@@ -2962,6 +2962,23 @@ function VendorProductsSection({
   const productEntityLabel = isRestaurantVendor ? "Menu" : isServiceVendor ? "Services" : "Products";
   const addActionLabel = isRestaurantVendor ? "Add Menu Item" : isServiceVendor ? "Add Service" : "Add Product";
 
+  const handlePublishToPlatform = async (product: any, platform: string) => {
+    try {
+      const payload = {
+        productName: product.productName,
+        categorySlug: product.categorySlug,
+        image: product.image,
+        price: Number(product.price) || 1,
+        sourcePlatform: platform
+      };
+      await onQuickUpsert(payload, product.id);
+      alert(`Product successfully published on E-Commerce!`);
+    } catch (err) {
+      console.error("Failed to publish to platform:", err);
+      alert("Failed to publish product to platform.");
+    }
+  };
+
   const lockedCategory = useMemo(() => {
     if (!isRestaurantVendor || !Array.isArray(categories) || categories.length === 0) {
       return null;
@@ -5569,24 +5586,6 @@ export default function VendorDashboard() {
       setProductFormError(message);
     } finally {
       setProductFormSaving(false);
-    }
-  };
-
-  const handlePublishToPlatform = async (product: any, platform: string) => {
-    try {
-      // Form fields are validated by the backend PATCH endpoint
-      const payload = {
-        productName: product.productName,
-        categorySlug: product.categorySlug,
-        image: product.image,
-        price: product.price,
-        sourcePlatform: platform
-      };
-      const updated = await updateVendorProduct(product.id, payload);
-      setVendorProducts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
-      alert(`Product successfully published on E-Commerce!`);
-    } catch (err) {
-      alert("Failed to publish product to platform.");
     }
   };
 
