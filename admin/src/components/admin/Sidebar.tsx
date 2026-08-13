@@ -180,7 +180,7 @@ export default function Sidebar({ sections, pathname, activeItemId, collapsed, o
             const sectionBadgeCount = sectionBadgeTotals[section.id] || 0;
 
             return (
-              <div key={section.id} className="rounded-xl border border-(--border) bg-(--surface-muted)/50">
+              <div key={section.id} className="rounded-xl bg-(--surface-muted)/50">
                 <button
                   type="button"
                   onClick={() => {
