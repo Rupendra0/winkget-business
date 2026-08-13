@@ -769,6 +769,65 @@ router.get("/vendor/products/check-barcode", requireVendor, async (req, res) => 
   }
 });
 
+router.get("/vendor/products/suggest", requireVendor, async (req, res) => {
+  const { q } = req.query;
+  if (!q || !String(q).trim()) {
+    return res.status(200).json({ ok: true, suggestions: [] });
+  }
+
+  const queryStr = String(q).trim();
+  const regex = new RegExp(queryStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+  try {
+    // 1. Query masterproducts collection
+    const db = VendorProduct.db;
+    const masterProducts = await db.collection('masterproducts').find({
+      $or: [
+        { name: regex },
+        { productName: regex }
+      ],
+      isDeleted: { $ne: true },
+      barcode: { $exists: true, $ne: null }
+    }).project({ name: 1, productName: 1, barcode: 1 }).limit(15).toArray();
+
+    // 2. Query VendorProduct collection
+    const vendorProducts = await VendorProduct.find({
+      $or: [
+        { productName: regex },
+        { name: regex }
+      ],
+      isDeleted: { $ne: true },
+      barcode: { $exists: true, $ne: null }
+    }).select('productName name barcode').limit(15).lean();
+
+    // Consolidate suggestions by barcode
+    const suggestionsMap = new Map();
+
+    const addSuggestion = (name, barcode, source) => {
+      const cleanBarcode = String(barcode || '').trim();
+      const cleanName = String(name || '').trim();
+      if (!cleanBarcode || !cleanName) return;
+
+      if (!suggestionsMap.has(cleanBarcode)) {
+        suggestionsMap.set(cleanBarcode, {
+          name: cleanName,
+          barcode: cleanBarcode,
+          source
+        });
+      }
+    };
+
+    vendorProducts.forEach(p => addSuggestion(p.productName || p.name, p.barcode, 'vendorproducts'));
+    masterProducts.forEach(p => addSuggestion(p.name || p.productName, p.barcode, 'masterproducts'));
+
+    const suggestions = Array.from(suggestionsMap.values()).slice(0, 15);
+    return res.status(200).json({ ok: true, suggestions });
+  } catch (error) {
+    console.error('[Suggest Endpoint Error]', error);
+    return res.status(500).json({ ok: false, message: 'Database query failed.', error: error.message });
+  }
+});
+
 router.get("/vendor/products", requireVendor, async (req, res) => {
   try {
     const statusInput = normalizeString(req.query.status).toLowerCase();

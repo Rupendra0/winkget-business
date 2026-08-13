@@ -8,7 +8,8 @@ import type {
   VendorProductRecord,
   VendorProductUpsertInput,
 } from "@/lib/vendorApi";
-import { checkBarcodeExists } from "@/lib/vendorApi";
+import { checkBarcodeExists, fetchSuggestions } from "@/lib/vendorApi";
+import type { AutocompleteSuggestion } from "@/lib/vendorApi";
 import { uploadToCloudinary } from "@/lib/cloudinaryHelper";
 
 type VendorAddProductFormProps = {
@@ -472,8 +473,10 @@ export default function VendorAddProductForm({
   const [validatingVariantBarcodes, setValidatingVariantBarcodes] = useState<Record<string, boolean>>({});
   const [variantBarcodeMessages, setVariantBarcodeMessages] = useState<Record<string, { type: 'success' | 'error'; text: string }>>({});
 
-  const verifyBarcode = async () => {
-    const code = String(fieldValues.barcode || "").trim();
+
+
+  const verifyBarcode = async (customBarcode?: string) => {
+    const code = String(customBarcode !== undefined ? customBarcode : fieldValues.barcode || "").trim();
     if (!code || isEditMode) return;
 
     setCheckingBarcode(true);
@@ -775,6 +778,33 @@ export default function VendorAddProductForm({
   const [categorySlug, setCategorySlug] = useState(() => resolveCategorySelection(initialProduct).categorySlug);
   const [subcategorySlug, setSubcategorySlug] = useState(() => resolveCategorySelection(initialProduct).subcategorySlug);
   const [fieldValues, setFieldValues] = useState<FieldValues>(() => createDefaultFieldValues(initialProduct));
+
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+
+  useEffect(() => {
+    const query = String(fieldValues.barcode || "").trim();
+    if (!query || query.length < 1 || /^\d+$/.test(query)) {
+      setSuggestions([]);
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setIsSearchingSuggestions(true);
+      try {
+        const data = await fetchSuggestions(query);
+        if (data.ok) {
+          setSuggestions(data.suggestions || []);
+        }
+      } catch (err) {
+        console.error("Error fetching suggestions:", err);
+      } finally {
+        setIsSearchingSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [fieldValues.barcode]);
   const [variants, setVariants] = useState<VariantDraft[]>(() => createInitialVariants(initialProduct));
   const [descriptionBlocks, setDescriptionBlocks] = useState<DescriptionBlock[]>(() => createInitialDescriptionBlocks(initialProduct));
   const [specPairs, setSpecPairs] = useState<SpecificationPair[]>(() => parseSpecificationsInput(initialProduct?.specifications || []));
@@ -1493,20 +1523,45 @@ export default function VendorAddProductForm({
                   <span className="block text-sm text-slate-700 font-semibold mb-1">
                     Barcode<span className="ml-1 text-rose-500">*</span>
                   </span>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={fieldValues.barcode}
-                      onChange={(event) => updateField("barcode", event.target.value)}
-                      className={`h-11 flex-1 rounded-lg border px-3 text-sm outline-none transition ${
-                        fieldErrors.barcode ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
-                      }`}
-                      placeholder="Enter barcode or SKU code"
-                      disabled={isEditMode || isBarcodeLocked || checkingBarcode}
-                    />
+                  <div className="flex gap-2 relative">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={fieldValues.barcode}
+                        onChange={(event) => updateField("barcode", event.target.value)}
+                        className={`h-11 w-full rounded-lg border px-3 text-sm outline-none transition ${
+                          fieldErrors.barcode ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
+                        }`}
+                        placeholder="Enter barcode, SKU code or name"
+                        disabled={isEditMode || isBarcodeLocked || checkingBarcode}
+                      />
+                      {suggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+                          {suggestions.map((option) => (
+                            <button
+                              key={option.barcode}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                updateField("barcode", option.barcode);
+                                setSuggestions([]);
+                                void verifyBarcode(option.barcode);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-0 transition"
+                            >
+                              <div className="font-semibold text-slate-800">{option.name}</div>
+                              <div className="text-xs text-slate-500 flex justify-between mt-0.5">
+                                <span>Barcode: {option.barcode}</span>
+                                <span className="italic capitalize">{option.source === 'masterproducts' ? 'Master Catalog' : 'My Store'}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={verifyBarcode}
+                      onClick={() => void verifyBarcode()}
                       disabled={isEditMode || isBarcodeLocked || !fieldValues.barcode.trim() || checkingBarcode}
                       className="h-11 px-4 rounded-lg bg-[#c7a97a] hover:bg-[#b09265] text-white text-xs font-bold transition disabled:bg-slate-300 disabled:text-slate-500"
                     >

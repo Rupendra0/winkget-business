@@ -1304,3 +1304,24 @@ export async function checkBarcodeExists(barcode: string): Promise<{ exists: boo
     product: payload.product ? normalizeVendorProduct(payload.product, 0) : undefined,
   };
 }
+
+export interface AutocompleteSuggestion {
+  name: string;
+  barcode: string;
+  source: string;
+}
+
+export async function fetchSuggestions(query: string): Promise<{ ok: boolean; suggestions: AutocompleteSuggestion[] }> {
+  try {
+    const payload = await requestJson<{ ok: boolean; suggestions: AutocompleteSuggestion[] }>(
+      `/api/vendor/products/suggest?q=${encodeURIComponent(query)}`
+    );
+    return {
+      ok: payload.ok,
+      suggestions: payload.suggestions || []
+    };
+  } catch (error) {
+    console.error("Error in fetchSuggestions:", error);
+    return { ok: false, suggestions: [] };
+  }
+}
