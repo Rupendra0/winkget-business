@@ -606,10 +606,12 @@ export default function VendorAddProductForm({
         }
       } else {
         setSubmitNotice("Barcode not found. You can enter product details manually.");
+        setIsBarcodeLocked(true);
       }
     } catch (err) {
       console.error("Barcode check failed:", err);
       setSubmitNotice("Failed to check barcode. Please enter details manually.");
+      setIsBarcodeLocked(true);
     } finally {
       setCheckingBarcode(false);
     }
@@ -1496,10 +1498,84 @@ export default function VendorAddProductForm({
       </div>
 
       <form onSubmit={submitProduct} className="mt-5 space-y-5">
-        <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-          <div className="space-y-5">
-            <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
-              <h3 className="text-lg font-semibold text-slate-900">General Information</h3>
+        {/* Highlighted Barcode Field at the very top of the form */}
+        {!isServiceVendor && (
+          <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/40 p-4 shadow-[0_4px_12px_rgba(245,158,11,0.08)]">
+            <span className="block text-sm text-slate-800 font-bold mb-2">
+              Product Barcode / UPC Search<span className="ml-1 text-rose-500">*</span>
+            </span>
+            <div className="flex gap-2 relative">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={fieldValues.barcode}
+                  onChange={(event) => updateField("barcode", event.target.value)}
+                  className={`h-11 w-full rounded-lg border px-3 text-sm outline-none bg-white transition ${
+                    fieldErrors.barcode ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
+                  }`}
+                  placeholder="Enter barcode, SKU code or search product name..."
+                  disabled={isEditMode || isBarcodeLocked || checkingBarcode}
+                />
+                {suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+                    {suggestions.map((option) => (
+                      <button
+                        key={option.barcode}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          updateField("barcode", option.barcode);
+                          setSuggestions([]);
+                          void verifyBarcode(option.barcode);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-0 transition"
+                      >
+                        <div className="font-semibold text-slate-800">{option.name}</div>
+                        <div className="text-xs text-slate-500 flex justify-between mt-0.5">
+                          <span>Barcode: {option.barcode}</span>
+                          <span className="italic capitalize">{option.source === 'masterproducts' ? 'Master Catalog' : 'My Store'}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => void verifyBarcode()}
+                disabled={isEditMode || isBarcodeLocked || !fieldValues.barcode.trim() || checkingBarcode}
+                className="h-11 px-4 rounded-lg bg-[#c7a97a] hover:bg-[#b09265] text-white text-xs font-bold transition disabled:bg-slate-300 disabled:text-slate-500"
+              >
+                {checkingBarcode ? "Verifying..." : "Verify"}
+              </button>
+            </div>
+            {isBarcodeLocked && (
+              <span className="flex items-center gap-2 mt-1.5">
+                <p className="text-xs text-emerald-600 font-semibold">✓ Barcode Verified & Locked</p>
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsBarcodeLocked(false);
+                      setSubmitNotice("");
+                      updateField("barcode", "");
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline font-semibold transition"
+                  >
+                    Change Barcode
+                  </button>
+                )}
+              </span>
+            )}
+            {fieldErrors.barcode ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.barcode}</p> : null}
+          </div>
+        )}
+
+        <fieldset disabled={!isEditMode && !isBarcodeLocked && !isServiceVendor} className="block space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+            <div className="space-y-5">
+              <section className="rounded-2xl border-2 border-[#d9ccb7] bg-[#fffdf8] p-4 shadow-[0_8px_18px_rgba(87,63,38,0.06)]">
+                <h3 className="text-lg font-semibold text-slate-900">General Information</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <label className="block text-sm text-slate-700">
                   {isServiceVendor ? "Service Name" : "Product Name"}<span className="ml-1 text-rose-500">*</span>
@@ -1519,60 +1595,7 @@ export default function VendorAddProductForm({
                   {fieldErrors.productName ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p> : null}
                 </label>
 
-                <div className="block text-sm text-slate-700">
-                  <span className="block text-sm text-slate-700 font-semibold mb-1">
-                    Barcode<span className="ml-1 text-rose-500">*</span>
-                  </span>
-                  <div className="flex gap-2 relative">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={fieldValues.barcode}
-                        onChange={(event) => updateField("barcode", event.target.value)}
-                        className={`h-11 w-full rounded-lg border px-3 text-sm outline-none transition ${
-                          fieldErrors.barcode ? "border-rose-400 bg-rose-50" : "border-[#d9ccb7] focus:border-[#c7a97a]"
-                        }`}
-                        placeholder="Enter barcode, SKU code or name"
-                        disabled={isEditMode || isBarcodeLocked || checkingBarcode}
-                      />
-                      {suggestions.length > 0 && (
-                        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-50">
-                          {suggestions.map((option) => (
-                            <button
-                              key={option.barcode}
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                updateField("barcode", option.barcode);
-                                setSuggestions([]);
-                                void verifyBarcode(option.barcode);
-                              }}
-                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-0 transition"
-                            >
-                              <div className="font-semibold text-slate-800">{option.name}</div>
-                              <div className="text-xs text-slate-500 flex justify-between mt-0.5">
-                                <span>Barcode: {option.barcode}</span>
-                                <span className="italic capitalize">{option.source === 'masterproducts' ? 'Master Catalog' : 'My Store'}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void verifyBarcode()}
-                      disabled={isEditMode || isBarcodeLocked || !fieldValues.barcode.trim() || checkingBarcode}
-                      className="h-11 px-4 rounded-lg bg-[#c7a97a] hover:bg-[#b09265] text-white text-xs font-bold transition disabled:bg-slate-300 disabled:text-slate-500"
-                    >
-                      {checkingBarcode ? "Verifying..." : "Verify"}
-                    </button>
-                  </div>
-                  {isBarcodeLocked && (
-                    <p className="mt-1 text-xs text-emerald-600 font-semibold">✓ Barcode Locked & Mapped</p>
-                  )}
-                  {fieldErrors.barcode ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.barcode}</p> : null}
-                </div>
+
 
                 <label className="block text-sm text-slate-700">
                   Category<span className="ml-1 text-rose-500">*</span>
@@ -2411,6 +2434,7 @@ className="mt-1 h-10 w-full rounded-lg border border-[#e6dbcc] bg-white px-3 tex
           {submitNotice || actionMessage ? <p className="text-sm text-slate-600">{submitNotice || actionMessage}</p> : null}
           {actionError ? <p className="text-sm text-rose-600">{actionError}</p> : null}
         </div>
+        </fieldset>
       </form>
     </section>
   );
