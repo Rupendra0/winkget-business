@@ -132,3 +132,13 @@ body {
     transition: none !important;
   }
 }
+
+/* Remove structural card borders and table grid lines */
+.rounded-xl.border.border-\(--border\),
+.overflow-x-auto.rounded-xl.border.border-\(--border\) {
+  border-color: transparent !important;
+}
+
+table, tr, td, th {
+  border-color: transparent !important;
+}
