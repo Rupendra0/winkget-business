@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #f7f7f5;
+  --canvas: #ffffff;
   --surface: #ffffff;
   --surface-muted: #f3f4f6;
   --surface-hover: #eceef1;
@@ -78,23 +78,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  display: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 20px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  background-color: color-mix(in srgb, var(--text-soft) 35%, transparent);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--text-soft) 55%, transparent);
+.custom-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 @keyframes pageFade {
